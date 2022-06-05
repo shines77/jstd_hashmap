@@ -1,4 +1,130 @@
-Attribution-ShareAlike 4.0 International
+
+# CC BY-SA-4.0
+
+## 1. CC BY-SA 4.0 License
+
+Copyright (c) 2018-2022 XiongHui Guo (gz_shines@msn.com)
+
+### 1.1 English version / 英文版
+
+[CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/deed.en) (Attribution-ShareAlike 4.0 International)
+
+You are free to:
+
+1. Share -- copy and redistribute the material in any medium or format.
+
+2. Adapt -- remix, transforn, and build upon the material for any purpose, even commerically.
+
+   The licensor cannot revoke these freedoms as long as you follow the license terms.
+
+Under the following terms:
+
+* Attribution -- You must give appropriate credit, provide a link to the license, and indicate if changes were made. You may do so in any reasonable manner, but not in any way that suggests the licensor endorses you or your use.
+
+* ShareAlike -- If you remix, transform, or build upon the material, you must distribute your contributions under the same license as the original.
+
+* No additional restrictions -- You may not apply legal terms or technological measures that legally restrict others from doing anything the license permits.
+
+Notices:
+
+* You do not have to comply with the license for elements of the material in the public domain or where your use is permitted by an applicable exception or limitation.
+
+* No warranties are given. The license may not give you all of the permissions necessary for your intended use. For example, other rights such as publicity, privacy, or moral rights may limit how you use the material.
+
+### 1.2 Chinese version / 中文版
+
+[CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/deed.cn) (署名-相同方式共享 4.0 国际)
+
+您可以自由地：
+
+   1. 分享 -- 通过任何媒介和任何形式复制、转载本作品。
+
+   2. 改编 -- 在任意用途下合成、转换和改造本作品，甚至是商业性的。
+
+      只要您遵循许可证条款，版权方就不能收回您的这些权利。
+
+根据以下条款：
+
+* 署名 -- 您必须注明原始作品的作者和来源，提供许可证的名称和链接，并说明是否进行了更改。您可以用任何合理的方式这样，但不得以任何方式暗示许可人认可您或您的使用。
+
+* 相同方式共享 -- 如果您对原始作品重新合成、转换或改造，您必须使用和原始作品相同的许可证来分发您的衍生作品。
+
+* 不得附加限制 -- 您不得使用任何法律条款或技术措施，在法律上限制别人做许可证准许的任何事情。
+
+注意事项：
+
+* 当你使用本作品中属于公众领域的元素，或当法律有例外或限制条款允许您使用时，您无需遵从本许可证。
+
+* 不提供任何保证。本许可证可能不会为您提供预期用途所需的所有权限。 例如，公开权、隐私权或精神权利等其他权利可能会限制您使用该材料的方式。
+
+## 2. 中文详细版 / Chinese datail version
+
+全称为 `Creative Commons Attribution-ShareAlike 4.0 International Public License`（知识共享 版权归属-相同方式共享 4.0 国际 公共许可证），简称为 “`CC BY-SA 4.0`”，官方说明：[https://creativecommons.org/licenses/by-sa/4.0/legalcode](https://creativecommons.org/licenses/by-sa/4.0/legalcode) 。
+
+### 适用范围
+
+本许可证适用于自由文化作品，包括但不限于网站、图像、视频、博客、电子文档、书籍、数据集、源代码等。
+
+### 内容摘要
+
+#### 您可以自由地
+
+* `分享` — 通过任何媒介和任何形式复制、转载本作品。
+
+* `改编` — 在任意用途下合成、转换和改造本作品，甚至是商业性的。
+
+   只要您遵循许可证条款，版权方就不能收回您的这些权利。
+
+#### 依据下列条款
+
+* `署名` — 您必须注明原始作品的作者和来源，以及许可证的名称以及许可证的链接，或本许可证的副本，同时说明是否修改了原始作品。您可以用任何合理的方式这样做，但是不得以任何方式暗示版权方认可您或您的使用。
+
+* `相同方式共享` — 如果您对原始作品重新合成、转换或改造，则您必须使用和原始作品相同的许可证来分发您的衍生作品。
+
+* `不得附加限制` — 您不得使用任何法律条款或技术措施，在法律上限制别人做许可证准许的任何事情。
+
+* `其他建议性条款` — 如果您的衍生作品中还使用了别的不方便公开的第三方作品或代码，可以只公开跟本作品相关的代码或文档，尽量保证衍生作品是可以再次复现的，如不方便公开的第三方作品或代码，也尽量提供使用或安装说明，至少提供调用接口或文档。
+
+#### 注意事项
+
+* 当你使用本作品中属于公众领域的元素，或当法律有例外或限制条款允许您使用时，您无需遵从本许可证。
+
+* 不提供任何保证。本许可证可能不会授予能满足您使用所必须的所有许可，诸如肖像权、隐私权、人格权等可能会限制您使用本作品的方式。
+
+* 上面这个只是 “`CC BY-SA 4.0`” 许可证的内容摘要，仅强调许可证的部分关键特点及条款，不具备法律效力，您应该仔细阅读完整的许可证的所有条款及条件。
+
+## 3. CC 系列许可证版本说明
+
+截至目前（2019年9月18日），CC 4.0 系列许可证共有 6 种形式 5 个版本：
+
+4.0：
+
+* [BY](https://creativecommons.org/licenses/by/4.0/legalcode)
+* [BY-SA](https://creativecommons.org/licenses/by-sa/4.0/legalcode)
+* [BY-NC](https://creativecommons.org/licenses/by-nc/4.0/legalcode)
+* [BY-NC-SA](https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode)
+* [BY-ND](https://creativecommons.org/licenses/by-nd/4.0/legalcode)
+* [BY-NC-ND](https://creativecommons.org/licenses/by-nc-nd/4.0/legalcode)
+
+其中的 6 种形式拆分说明如下：
+
+* `BY`（`Attribution`，署名归属）：您可自由地分享和改编本作品，但您必须注明创作者的版权归属。
+* `SA`（`Share Alike`，同样分享）：您可自由地分享和改编本作品，但您的衍生作品须以同样方式共享。
+* `NC`（`Non Commercial`，非商业性）：您可自由地分享和改编本作品，但您不得用于商业目的。
+* `ND`（`No Derivatives`，禁止改编）：您可自由地分享本作品，但您不得合成、转换和改造本作品。
+
+在没有指定 “`NC`” 的情况下，将授权进行商业利用；在没有指定 “`ND`” 的情况下，将授权进行改编；在没有指定 “`SA`” 的情况下，将不限制进行同样方式分享。
+
+`CC` 系列许可证版本，可参见 [https://wiki.creativecommons.org/wiki/License_Versions#Licenses](https://wiki.creativecommons.org/wiki/License_Versions#Licenses) 。
+
+## 4. License full version / 许可证完整版
+
+```text
+CC BY-SA-4.0
+
+Copyright (c) 2018-2022 XiongHui Guo (gz_shines@msn.com)
+
+Creative Commons Attribution-ShareAlike 4.0 International Public License
 
 =======================================================================
 
@@ -33,7 +159,7 @@ exhaustive, and do not form part of our licenses.
      material not subject to the license. This includes other CC-
      licensed material, or material used under an exception or
      limitation to copyright. More considerations for licensors:
-	wiki.creativecommons.org/Considerations_for_licensors
+     wiki.creativecommons.org/Considerations_for_licensors
 
      Considerations for the public: By using one of our public
      licenses, a licensor grants the public permission to use the
@@ -50,7 +176,7 @@ exhaustive, and do not form part of our licenses.
      Although not required by our licenses, you are encouraged to
      respect those requests where reasonable. More_considerations
      for the public:
-	wiki.creativecommons.org/Considerations_for_licensees
+     wiki.creativecommons.org/Considerations_for_licensees
 
 =======================================================================
 
@@ -66,7 +192,6 @@ acceptance of these terms and conditions, and the Licensor grants You
 such rights in consideration of benefits the Licensor receives from
 making the Licensed Material available under these terms and
 conditions.
-
 
 Section 1 -- Definitions.
 
@@ -138,7 +263,6 @@ Section 1 -- Definitions.
 
   m. You means the individual or entity exercising the Licensed Rights
      under this Public License. Your has a corresponding meaning.
-
 
 Section 2 -- Scope.
 
@@ -222,7 +346,6 @@ Section 2 -- Scope.
           licensing scheme. In all other cases the Licensor expressly
           reserves any right to collect such royalties.
 
-
 Section 3 -- License Conditions.
 
 Your exercise of the Licensed Rights is expressly made subject to the
@@ -289,7 +412,6 @@ following conditions.
           Measures to, Adapted Material that restrict exercise of the
           rights granted under the Adapter's License You apply.
 
-
 Section 4 -- Sui Generis Database Rights.
 
 Where the Licensed Rights include Sui Generis Database Rights that
@@ -311,7 +433,6 @@ apply to Your use of the Licensed Material:
 For the avoidance of doubt, this Section 4 supplements and does not
 replace Your obligations under this Public License where the Licensed
 Rights include other Copyright and Similar Rights.
-
 
 Section 5 -- Disclaimer of Warranties and Limitation of Liability.
 
@@ -341,7 +462,6 @@ Section 5 -- Disclaimer of Warranties and Limitation of Liability.
      possible, most closely approximates an absolute disclaimer and
      waiver of all liability.
 
-
 Section 6 -- Term and Termination.
 
   a. This Public License applies for the term of the Copyright and
@@ -370,7 +490,6 @@ Section 6 -- Term and Termination.
   d. Sections 1, 5, 6, 7, and 8 survive termination of this Public
      License.
 
-
 Section 7 -- Other Terms and Conditions.
 
   a. The Licensor shall not be bound by any additional or different
@@ -379,7 +498,6 @@ Section 7 -- Other Terms and Conditions.
   b. Any arrangements, understandings, or agreements regarding the
      Licensed Material not stated herein are separate from and
      independent of the terms and conditions of this Public License.
-
 
 Section 8 -- Interpretation.
 
@@ -404,7 +522,6 @@ Section 8 -- Interpretation.
      that apply to the Licensor or You, including from the legal
      processes of any jurisdiction or authority.
 
-
 =======================================================================
 
 Creative Commons is not a party to its public
@@ -425,3 +542,4 @@ the avoidance of doubt, this paragraph does not form part of the
 public licenses.
 
 Creative Commons may be contacted at creativecommons.org.
+```
