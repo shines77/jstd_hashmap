@@ -23,11 +23,11 @@
 //
 // You can use below command:
 //
-//    git update-index --assume-unchanged ./src/main/jstd/basic/vld_def.h
+//    git update-index --assume-unchanged ./src/jstd/basic/vld_def.h
 //
 // If you want to cancel the effect, you can use:
 //
-//    git update-index --no-assume-unchanged ./src/main/jstd/basic/vld_def.h
+//    git update-index --no-assume-unchanged ./src/jstd/basic/vld_def.h
 //
 
 #endif // JSTD_BASIC_VLD_DEF_H
