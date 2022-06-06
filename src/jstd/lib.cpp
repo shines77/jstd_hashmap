@@ -1,7 +1,7 @@
 
 #include "jstd/lib.h"
 
-int main()
+int lib_main()
 {
     return 0;
 }
