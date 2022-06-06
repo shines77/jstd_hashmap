@@ -1,7 +1,5 @@
 
 #ifdef _MSC_VER
-// Your can edit 'JSTD_ENABLE_VLD' marco in <jstd/basic/vld_def.h> file
-// to switch Visual Leak Detector(vld).
 #include <jstd/basic/vld.h>
 #endif
 
@@ -64,6 +62,7 @@
 #include <jstd/basic/stdint.h>
 #include <jstd/basic/inttypes.h>
 
+#if 0
 #include <jstd/hash/dictionary.h>
 #include <jstd/hash/hashmap_analyzer.h>
 #include <jstd/string/string_view.h>
@@ -73,12 +72,11 @@
 #include <jstd/test/StopWatch.h>
 #include <jstd/test/CPUWarmUp.h>
 #include <jstd/test/ProcessMemInfo.h>
-
-//#include <jstd/all.h>
+#endif
 
 #include "BenchmarkResult.h"
 
-using namespace jstd;
+//using namespace jstd;
 using namespace jtest;
 
 static std::vector<std::string> dict_words;
@@ -175,6 +173,8 @@ static const char * header_fields[] = {
 
     "Last"
 };
+
+#if 0
 
 static const size_t kHeaderFieldSize = sizeof(header_fields) / sizeof(char *);
 
@@ -1295,3 +1295,44 @@ int main(int argc, char * argv[])
     jstd::Console::ReadKey();
     return 0;
 }
+
+#else
+
+bool read_dict_words(const std::string & filename)
+{
+    bool is_ok = false;
+    try {
+        std::ifstream dict(filename.c_str());
+
+        if (dict.is_open()) {
+            std::string word;
+            while (!dict.eof()) {
+                char buf[256];
+                dict.getline(buf, sizeof(buf));
+                word = buf;
+                dict_words.push_back(word);
+            }
+
+            is_ok = true;
+            dict.close();
+        }
+    }
+    catch (const std::exception & ex) {
+        std::cout << "read_dict_file() Exception: " << ex.what() << std::endl << std::endl;
+        is_ok = false;
+    }
+    return is_ok;
+}
+
+int main(int argc, char * argv[])
+{
+    if (argc == 2) {
+        std::string filename = argv[1];
+        bool read_ok = read_dict_words(filename);
+        dict_words_is_ready = read_ok;
+        dict_filename = filename;
+    }
+    return 0;
+}
+
+#endif

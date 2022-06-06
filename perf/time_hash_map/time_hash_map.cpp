@@ -1,7 +1,5 @@
 
 #ifdef _MSC_VER
-// Your can edit 'JSTD_ENABLE_VLD' marco in <jstd/basic/vld_def.h> file
-// to switch Visual Leak Detector(vld).
 #include <jstd/basic/vld.h>
 #endif
 
@@ -75,6 +73,7 @@
 #include <jstd/basic/stdint.h>
 #include <jstd/basic/inttypes.h>
 
+#if 0
 #include <jstd/hash/dictionary.h>
 #include <jstd/hash/hashmap_analyzer.h>
 #include <jstd/string/string_view.h>
@@ -84,6 +83,7 @@
 #include <jstd/test/StopWatch.h>
 #include <jstd/test/CPUWarmUp.h>
 #include <jstd/test/ProcessMemInfo.h>
+#endif
 
 //#include <jstd/all.h>
 
@@ -114,6 +114,8 @@
 #endif // HASH_FUNCTION_MODE
 
 #pragma message(PRINT_MACRO_VAR(HASH_MAP_FUNCTION))
+
+#if 0
 
 using namespace jstd;
 using namespace jtest;
@@ -1609,3 +1611,12 @@ int main(int argc, char * argv[])
     jstd::Console::ReadKey();
     return 0;
 }
+
+#else
+
+int main(int argc, char * argv[])
+{
+    return 0;
+}
+
+#endif
