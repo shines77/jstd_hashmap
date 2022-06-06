@@ -8,6 +8,12 @@
     <Filter Include="src\hash">
       <UniqueIdentifier>{21b4ff51-3441-4937-9394-f4c5936231f1}</UniqueIdentifier>
     </Filter>
+    <Filter Include="src\basic">
+      <UniqueIdentifier>{e2452254-ee31-4dac-afa1-59b72c3f3658}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\basic\msvc">
+      <UniqueIdentifier>{9c607880-4587-4319-b013-47ae49bf2522}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\src\jstd\flat16_hash_map.h">
@@ -21,6 +27,36 @@
     </ClInclude>
     <ClInclude Include="..\..\..\src\jstd\lib.h">
       <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\basic\msvc\inttypes.h">
+      <Filter>src\basic\msvc</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\basic\msvc\stdbool.h">
+      <Filter>src\basic\msvc</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\basic\msvc\stdint.h">
+      <Filter>src\basic\msvc</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\basic\inttypes.h">
+      <Filter>src\basic</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\basic\stddef.h">
+      <Filter>src\basic</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\basic\stdint.h">
+      <Filter>src\basic</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\basic\stdsize.h">
+      <Filter>src\basic</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\basic\unistd.h">
+      <Filter>src\basic</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\basic\vld.h">
+      <Filter>src\basic</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\basic\vld_def.h">
+      <Filter>src\basic</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

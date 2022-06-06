@@ -19,6 +19,16 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\..\src\jstd\basic\inttypes.h" />
+    <ClInclude Include="..\..\..\src\jstd\basic\msvc\inttypes.h" />
+    <ClInclude Include="..\..\..\src\jstd\basic\msvc\stdbool.h" />
+    <ClInclude Include="..\..\..\src\jstd\basic\msvc\stdint.h" />
+    <ClInclude Include="..\..\..\src\jstd\basic\stddef.h" />
+    <ClInclude Include="..\..\..\src\jstd\basic\stdint.h" />
+    <ClInclude Include="..\..\..\src\jstd\basic\stdsize.h" />
+    <ClInclude Include="..\..\..\src\jstd\basic\unistd.h" />
+    <ClInclude Include="..\..\..\src\jstd\basic\vld.h" />
+    <ClInclude Include="..\..\..\src\jstd\basic\vld_def.h" />
     <ClInclude Include="..\..\..\src\jstd\flat16_hash_map.h" />
     <ClInclude Include="..\..\..\src\jstd\flat32_hash_map.h" />
     <ClInclude Include="..\..\..\src\jstd\lib.h" />
