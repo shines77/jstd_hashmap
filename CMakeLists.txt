@@ -183,19 +183,19 @@ endif()
 
 include_directories(include)
 include_directories(src)
-include_directories(pref/benchmark)
-include_directories(pref/time_hash_map)
+include_directories(perf/benchmark)
+include_directories(perf/time_hash_map)
 
 set(JSTD_SOURCE_FILES
     src/jstd/lib.cpp
 )
 
 set(BENCHMARK_SOURCE_FILES
-    pref/benchmark/benchmark.cpp
+    perf/benchmark/benchmark.cpp
 )
 
 set(TIME_HASH_MAP_SOURCE_FILES
-    pref/time_hash_map/time_hash_map.cpp
+    perf/time_hash_map/time_hash_map.cpp
 )
 
 # add_subdirectory(main EXCLUDE_FROM_ALL src/main/asm)
