@@ -62,6 +62,8 @@
 #include <jstd/basic/stdint.h>
 #include <jstd/basic/inttypes.h>
 
+#include <jstd/flat16_hash_map.h>
+
 #if 0
 #include <jstd/hash/dictionary.h>
 #include <jstd/hash/hashmap_analyzer.h>
@@ -1332,6 +1334,11 @@ int main(int argc, char * argv[])
         dict_words_is_ready = read_ok;
         dict_filename = filename;
     }
+
+    jstd::flat16_hash_map<int, int> flat_hash_map;
+    flat_hash_map.size();
+    flat_hash_map.capacity();
+
     return 0;
 }
 
