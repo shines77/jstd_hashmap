@@ -1342,8 +1342,8 @@ int main(int argc, char * argv[])
     flat_hash_map.size();
     flat_hash_map.capacity();
 
-    cluster_type * clustersPtr = flat_hash_map.getClusterPtr();
-    printf("flat_hash_map.getClusterPtr() = 0x%p\n", clustersPtr);
+    cluster_type * clustersPtr = flat_hash_map.clusters();
+    printf("flat_hash_map.clusters() = 0x%p\n", clustersPtr);
     printf("sizeof(entry_type) = %u\n", (uint32_t)sizeof(entry_type));
     printf("sizeof(cluster_type) = %u\n\n", (uint32_t)sizeof(cluster_type));
 

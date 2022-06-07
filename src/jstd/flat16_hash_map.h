@@ -72,10 +72,23 @@
 namespace jstd {
 
 static inline
-constexpr
 std::size_t round_size(std::size_t size, std::size_t alignment)
 {
-    return (size + alignment - 1) / alignment * alignment;
+    assert(alignment > 0);
+    assert((alignment & (alignment - 1)) == 0);
+    size = (size + alignment - 1) / alignment * alignment;
+    assert((size / alignment * alignment) == size);
+    return size;
+}
+
+static inline
+std::size_t align_to(std::size_t size, std::size_t alignment)
+{
+    assert(alignment > 0);
+    assert((alignment & (alignment - 1)) == 0);
+    size = (size + alignment - 1) & ~(alignment - 1);
+    assert((size / alignment * alignment) == size);
+    return size;
 }
 
 template < typename Key, typename Value,
@@ -101,8 +114,7 @@ public:
     typedef std::size_t                     hash_code_t;
     typedef flat16_hash_map<Key, Value, Hasher, KeyEqual, Allocator>
                                             this_type;
-
-    struct alignas(16) hash_entry {
+    struct hash_entry {
         value_type value;
     };
 
@@ -117,7 +129,7 @@ public:
     static constexpr size_type kClusterEntries  = 16;
     static constexpr size_type kDefaultInitialCapacity = kClusterEntries;
 
-    struct alignas(32) cluster {
+    struct alignas(16) cluster {
         std::uint8_t controls[kClusterEntries];
         hash_entry   entries[kClusterEntries];
 
@@ -144,51 +156,66 @@ private:
     size_type       entry_size_;
     size_type       entry_capacity_;
 
-    size_type       entry_limit_;
+    size_type       entry_threshold_;
     double          load_factor_;
 
 public:
-    flat16_hash_map() :
+    explicit flat16_hash_map(size_type initialCapacity = kDefaultInitialCapacity) :
         clusters_(nullptr), cluster_count_(0),
-        entry_size_(0), entry_capacity_(kDefaultInitialCapacity),
-        entry_limit_((size_type)(kDefaultInitialCapacity * FLAT16_DEFAULT_LOAD_FACTOR)),
-        load_factor_(FLAT16_DEFAULT_LOAD_FACTOR) {
-        clusters_ = new cluster[1];
-        cluster_count_ = 1;
-    }
-
-    explicit flat16_hash_map(size_type initialCapacity) :
-        clusters_(nullptr), cluster_count_(0),
-        entry_size_(0), entry_capacity_(round_size(initialCapacity, kClusterEntries)),
-        entry_limit_((size_type)(round_size(initialCapacity, kClusterEntries) * FLAT16_DEFAULT_LOAD_FACTOR)),
-        load_factor_(FLAT16_DEFAULT_LOAD_FACTOR) {
-        size_type cluster_count = round_size(initialCapacity, kClusterEntries) / kClusterEntries;
-        clusters_ = new cluster[cluster_count];
-        cluster_count_ = cluster_count;
+        entry_size_(0), entry_capacity_(0),
+        entry_threshold_(0), load_factor_(FLAT16_DEFAULT_LOAD_FACTOR) {
+        create_cluster(initialCapacity);
     }
 
     ~flat16_hash_map() {
+        this->destroy();
+    }
+
+    void destroy() {
         if (clusters_ != nullptr) {
             delete[] clusters_;
             clusters_ = nullptr;
         }
     }
 
-    size_type size() const {
-        return entry_size_;
-    }
+    bool is_valid() const { return (this->clusters() != nullptr); }
+    bool is_empty() const { return (this->size() == 0); }
+    bool is_full() const  { return (this->size() == this->entry_capacity()); }
 
-    size_type capacity() const {
-        return entry_capacity_;
-    }
+    bool empty() const { return this->is_empty(); }
 
-    cluster_type * getClusterPtr() {
+    size_type size() const { return entry_size_; }
+    size_type capacity() const { return entry_capacity_; }
+
+    size_type entry_size() const { return entry_size_; }
+    size_type entry_capacity() const { return entry_capacity_; }
+
+    cluster_type * clusters() { 
         return clusters_;
     }
 
-    const cluster_type * getClusterPtr() const {
+    const cluster_type * clusters() const {
         return clusters_;
     }
+
+    size_type cluster_count() const { return cluster_count_; }
+
+private:
+    void create_cluster(size_type init_capacity) {
+        size_type new_capacity = align_to(init_capacity, kClusterEntries);
+        size_type cluster_count = new_capacity / kClusterEntries;
+        cluster_type * clusters = new cluster_type[cluster_count];
+        clusters_ = clusters;
+        cluster_count_ = cluster_count;
+        entry_capacity_ = new_capacity;
+        entry_threshold_ = (size_type)(new_capacity * FLAT16_DEFAULT_LOAD_FACTOR);
+    }
+
+    cluster_type * create_n_cluster(size_type cluster_count) {
+        cluster_type * clusters = new cluster_type[cluster_count];
+        return clusters;
+    }
+
 };
 
 } // namespace jstd
