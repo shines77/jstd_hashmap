@@ -69,6 +69,10 @@
 
 #define FLAT16_DEFAULT_LOAD_FACTOR  (0.5)
 
+#ifndef __SSE2__
+#define __SSE2__
+#endif
+
 namespace jstd {
 
 static inline
@@ -89,6 +93,15 @@ std::size_t align_to(std::size_t size, std::size_t alignment)
     size = (size + alignment - 1) & ~(alignment - 1);
     assert((size / alignment * alignment) == size);
     return size;
+}
+
+static inline
+std::size_t round_up_pow2(std::size_t n)
+{
+    assert(n > 1);
+    if ((n & (n - 1)) == 0)
+        return n;
+    return n;
 }
 
 template < typename Key, typename Value,
@@ -124,14 +137,34 @@ public:
     static constexpr std::uint8_t kDeletedEntry = 0b10000000;
     static constexpr std::uint8_t kFullMask     = 0b10000000;
     static constexpr std::uint8_t kHash2Mask    = 0b01111111;
-    static constexpr size_type kControlHashMask = 0x0000007Ful;
 
-    static constexpr size_type kClusterEntries  = 16;
+    static constexpr size_type kControlHashMask = 0x0000007Ful;
+    static constexpr size_type kControlShift    = 7;
+
+    static constexpr size_type kClusterBits     = 4;
+    static constexpr size_type kClusterEntries  = size_type(1) << kClusterBits;
+    static constexpr size_type kClusterMask     = kClusterEntries - 1;
+    static constexpr size_type kClusterShift    = kControlShift + kClusterBits;
+
     static constexpr size_type kDefaultInitialCapacity = kClusterEntries;
+    static constexpr size_type kMinimumCapacity = kClusterEntries;
+
+    static constexpr float kDefaultLoadFactor = 0.5;
+    static constexpr float kMaxLoadFactor = 1.0;
+
+    struct uint128_t {
+        std::uint64_t low;
+        std::uint64_t high;
+
+        uint128_t() noexcept : low(0), high(0) {}
+    };
 
     struct alignas(16) cluster {
-        std::uint8_t controls[kClusterEntries];
-        hash_entry   entries[kClusterEntries];
+        union {
+            std::uint8_t controls[kClusterEntries];
+            uint128_t    u128;
+        };
+        hash_entry entries[kClusterEntries];
 
         cluster() {
 #if defined(__SSE2__)
@@ -145,26 +178,131 @@ public:
         ~cluster() {
             //
         }
+
+        std::uint32_t getMatchMask(std::uint8_t control_tag) const {
+#if defined(__SSE2__)
+            __m128i tag_bits = _mm_set1_epi8(control_tag);
+            __m128i control_bits = _mm_load_si128((const __m128i *)&this->controls[0]);
+            __m128i compare_mask = _mm_cmpeq_epi8(control_bits, tag_bits);
+            std::uint32_t mask = (std::uint32_t)_mm_movemask_epi8(compare_mask);
+            return mask;
+#else
+            std::uint32_t mask = 0, bit = 1;
+            for (size_type i = 0; i < kClusterEntries; i++) {
+                if (this->controls[i] == control_tag) {
+                    mask |= bit;
+                }
+                bit <<= 1;
+            }
+            return mask;
+#endif
+        }
+
+#if defined(__SSE2__)
+        __m128i getMatchMask128(std::uint8_t control_tag) const {
+            __m128i tag_bits = _mm_set1_epi8(control_tag);
+            __m128i control_bits = _mm_load_si128((const __m128i *)&this->controls[0]);
+            __m128i match_mask = _mm_cmpeq_epi8(control_bits, tag_bits);
+            return compare_mask;
+        }
+#else
+        uint128_t getMatchMask128(std::uint8_t control_tag) const {
+            std::uint64_t control_tag64;
+            control_tag64 = (std::uint64_t)control_tag | ((std::uint64_t)control_tag << 8);
+            control_tag64 = control_tag64 | (control_tag64 << 16);
+            control_tag64 = control_tag64 | (control_tag64 << 32);
+
+            uint128_t mask128;
+            mask128.low  = this->u128.low  ^ control_tag64;
+            mask128.high = this->u128.high ^ control_tag64;
+            return mask128;
+        }
+#endif
+        std::uint32_t matchHash(std::uint8_t control_hash) const {
+            return this->getMatchMask(control_hash);
+        }
+
+        std::uint32_t matchEmpty() const {
+            return this->getMatchMask(kEmptyEntry);
+        }
+
+        std::uint32_t matchDeleted() const {
+            return this->getMatchMask(kDeletedEntry);
+        }
+
+        bool hasAnyMatch(std::uint8_t control_hash) const {
+            return (this->matchHash(control_hash) != 0);
+        }
+
+        bool hasAnyEmpty() const {
+            return (this->matchEmpty() != 0);
+        }
+
+        bool hasAnyDeleted() const {
+            return (this->matchDeleted() != 0);
+        }
+
+        bool matchEmptyOrDelete() const {
+#if defined(__SSE2__)
+            __m128i zero_bits = _mm_set1_epi8(0);
+            __m128i control_bits = _mm_load_si128((const __m128i *)&this->controls[0]);
+            __m128i compare_mask = _mm_cmplt_epi8(control_bits, zero_bits);
+            std::uint32_t mask = (std::uint32_t)_mm_movemask_epi8(compare_mask);
+            return mask;
+#else
+            std::uint32_t mask = 0, bit = 1;
+            for (size_type i = 0; i < kClusterEntries; i++) {
+                if ((this->controls[i] & kFullMask) != 0) {
+                    mask |= bit;
+                }
+                bit <<= 1;
+            }
+            return mask;
+#endif            
+        }
+
+        bool hasAnyEmptyOrDelete() const {
+            return (this->matchEmptyOrDelete() != 0);
+        }
+
+        bool isFull() const {
+            return (this->matchEmptyOrDelete() == 0);
+        }
     };
 
     typedef cluster cluster_type;
 
+    struct const_iterator;
+    struct iterator {
+        //
+    };
+
+    struct const_iterator {
+        //
+    };
+
 private:
     cluster_type *  clusters_;
+    size_type       cluster_mask_;
     size_type       cluster_count_;
 
+    entry_type *    entries_;
     size_type       entry_size_;
+    size_type       entry_mask_;
     size_type       entry_capacity_;
 
     size_type       entry_threshold_;
     double          load_factor_;
 
+    hasher_type     hasher_;
+    key_equal       key_is_equal_;
+
 public:
     explicit flat16_hash_map(size_type initialCapacity = kDefaultInitialCapacity) :
-        clusters_(nullptr), cluster_count_(0),
-        entry_size_(0), entry_capacity_(0),
-        entry_threshold_(0), load_factor_(FLAT16_DEFAULT_LOAD_FACTOR) {
-        create_cluster(initialCapacity);
+        clusters_(nullptr), cluster_mask_(0), cluster_count_(0),
+        entries_(nullptr), entry_size_(0), entry_mask_(0), entry_capacity_(0),
+        entry_threshold_(0), load_factor_((double)kDefaultLoadFactor) {
+        init_cluster(initialCapacity);
     }
 
     ~flat16_hash_map() {
@@ -198,20 +336,125 @@ public:
         return clusters_;
     }
 
+    size_type cluster_mask() const { return cluster_mask_; }
     size_type cluster_count() const { return cluster_count_; }
 
+    double load_factor() const {
+        return load_factor_;
+    }
+
+    double max_load_factor() const {
+        return static_cast<double>(kMaxLoadFactor);
+    }
+
+    iterator iterator_at(size_type index) {
+        return iterator(&this->entries_[index]);
+    }
+
+    iterator begin() const {
+        return iterator_at(0);
+    }
+
+    iterator end() const {
+        return iterator_at(this->entry_capacity_);
+    }
+
+    iterator find(const key_type & key) {
+        hash_code_t hash_code = this->get_hash(key);
+        std::uint8_t control_hash = this->get_control_hash(hash_code);
+        index_type cluster_index = this->index_for(hash_code);
+        index_type start_index = cluster_index;
+        do {
+            cluster_type & cluster = this->get_cluster(cluster_index);
+            std::uint32_t mask16 = cluster.matchHash(control_hash);
+            while (mask16 != 0) {
+                std::uint32_t bit = mask16 & -mask16;
+                size_type pos = BitUtils::bsr32(bit);
+                const key_type & target_key = cluster.entries[pos].value.first;
+                if (this->key_is_equal_(key, target_key)) {
+                    return iterator_at(cluster_index * kClusterEntries + pos);
+                }
+            }
+            if (cluster.hasAnyEmpty())
+                return this->end();
+            cluster_index = (cluster_index + 1) & cluster_mask_;
+        } while (cluster_index != start_index);
+
+        return this->end();
+    }
+
+    std::pair<iterator, bool> insert(const value_type & value) {
+        return this->emplace(value);
+    }
+
+    std::pair<iterator, bool> insert(value_type && value) {
+        return this->emplace(std::forward<value_type>(value));
+    }
+
+    std::pair<iterator, bool> emplace(const value_type & value) {
+        iterator iter = this->find(value.first);
+        if (iter == this->end()) {
+            //
+        }
+        return this->emplace(value);
+    }
+
+    std::pair<iterator, bool> emplace(value_type && value) {
+        iterator iter = this->find(value.first);
+        if (iter == this->end()) {
+            //
+        }
+        return this->emplace(value);
+    }
+
+protected:
+    inline size_type calc_capacity(size_type capacity) const {
+        size_type new_capacity = (capacity >= kMinimumCapacity) ? capacity : kMinimumCapacity;
+        new_capacity = round_up_pow2(new_capacity);
+        return new_capacity;
+    }
+
+    inline hash_code_t get_hash(const key_type & key) const {
+        hash_code_t hash_code = static_cast<hash_code_t>(this->hasher_(key));
+        return hash_code;
+    }
+
+    inline std::uint8_t get_control_hash(hash_code_t hash_code) const {
+        return static_cast<std::uint8_t>(hash_code & kControlHashMask);
+    }
+
+    inline index_type index_for(hash_code_t hash_code) const {
+        return (index_type)(((size_type)hash_code >> kControlShift) & cluster_mask_);
+    }
+
+    inline index_type index_for(hash_code_t hash_code, size_type cluster_mask) const {
+        return (index_type)(((size_type)hash_code >> kControlShift) & cluster_mask);
+    }
+
+    cluster_type & get_cluster(size_type index) {
+        assert(index < this->cluster_count());
+        return this->clusters_[index];
+    }
+
+    const cluster_type & get_cluster(size_type index) const {
+        assert(index < this->cluster_count());
+        return this->clusters_[index];
+    }
+
 private:
-    void create_cluster(size_type init_capacity) {
+    void init_cluster(size_type init_capacity) {
         size_type new_capacity = align_to(init_capacity, kClusterEntries);
         size_type cluster_count = new_capacity / kClusterEntries;
+        assert(cluster_count > 0);
         cluster_type * clusters = new cluster_type[cluster_count];
         clusters_ = clusters;
+        cluster_mask_ = cluster_count - 1;
         cluster_count_ = cluster_count;
         entry_capacity_ = new_capacity;
         entry_threshold_ = (size_type)(new_capacity * FLAT16_DEFAULT_LOAD_FACTOR);
     }
 
-    cluster_type * create_n_cluster(size_type cluster_count) {
+    cluster_type * create_cluster(size_type cluster_count) {
         cluster_type * clusters = new cluster_type[cluster_count];
         return clusters;
     }
