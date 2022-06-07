@@ -81,7 +81,7 @@
 #if defined(_MSC_VER) || __has_declspec_attribute(dllimport)
   #define DLL_IMPORT        __declspec(dllimport)
 #else
-  #define DLL_EXPORT
+  #define DLL_IMPORT
 #endif
 
 #if __is_identifier(__wchar_t)
