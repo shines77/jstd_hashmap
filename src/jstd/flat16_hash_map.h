@@ -102,9 +102,11 @@ public:
     typedef flat16_hash_map<Key, Value, Hasher, KeyEqual, Allocator>
                                             this_type;
 
-    struct hash_entry {
+    struct alignas(16) hash_entry {
         value_type value;
     };
+
+    typedef hash_entry entry_type;
 
     static constexpr std::uint8_t kEmptyEntry   = 0b11111111;
     static constexpr std::uint8_t kDeletedEntry = 0b10000000;
@@ -115,7 +117,7 @@ public:
     static constexpr size_type kClusterEntries  = 16;
     static constexpr size_type kDefaultInitialCapacity = kClusterEntries;
 
-    struct alignas(16) cluster {
+    struct alignas(32) cluster {
         std::uint8_t controls[kClusterEntries];
         hash_entry   entries[kClusterEntries];
 
@@ -133,15 +135,17 @@ public:
         }
     };
 
+    typedef cluster cluster_type;
+
 private:
-    cluster *   clusters_;
-    size_type   cluster_count_;
+    cluster_type *  clusters_;
+    size_type       cluster_count_;
 
-    size_type   entry_size_;
-    size_type   entry_capacity_;
+    size_type       entry_size_;
+    size_type       entry_capacity_;
 
-    size_type   entry_limit_;
-    double      load_factor_;
+    size_type       entry_limit_;
+    double          load_factor_;
 
 public:
     flat16_hash_map() :
@@ -176,6 +180,14 @@ public:
 
     size_type capacity() const {
         return entry_capacity_;
+    }
+
+    cluster_type * getClusterPtr() {
+        return clusters_;
+    }
+
+    const cluster_type * getClusterPtr() const {
+        return clusters_;
     }
 };
 
