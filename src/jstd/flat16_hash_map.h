@@ -132,7 +132,7 @@ public:
 
     static constexpr std::uint8_t kEmptyEntry   = 0b11111111;
     static constexpr std::uint8_t kDeletedEntry = 0b10000000;
-    static constexpr std::uint8_t kFullMask     = 0b10000000;
+    static constexpr std::uint8_t kValidMask    = 0b10000000;
     static constexpr std::uint8_t kHash2Mask    = 0b01111111;
 
     static constexpr std::uint64_t kEmptyEntry64 = 0xFFFFFFFFFFFFFFFFull;
@@ -250,7 +250,7 @@ public:
 #else
             std::uint32_t mask = 0, bit = 1;
             for (size_type i = 0; i < kClusterEntries; i++) {
-                if ((this->controls[i] & kFullMask) != 0) {
+                if ((this->controls[i] & kValidMask) != 0) {
                     mask |= bit;
                 }
                 bit <<= 1;
@@ -278,7 +278,7 @@ public:
         }
     };
 
-    using entry_type = hash_entry;
+    typedef hash_entry entry_type;
 
     template <typename ValueType>
     struct basic_iterator {
@@ -415,12 +415,40 @@ public:
         return iterator(&this->entries_[index]);
     }
 
-    iterator begin() const {
-        return iterator_at(0);
+    const_iterator iterator_at(size_type index) const {
+        return const_iterator(&this->entries_[index]);
     }
 
-    iterator end() const {
+    iterator begin() {
+        entry_type * last = this->entries_ + this->entry_capacity_;
+        for (entry_type * iter = this->entries_; iter < last; ++iter) {
+            if (this->has_value(iter))
+                return { iter };
+        }
+    }
+
+    const_iterator begin() const {
+        entry_type * last = this->entries_ + this->entry_capacity_;
+        for (entry_type * iter = this->entries_; iter < last; ++iter) {
+            if (this->has_value(iter))
+                return { iter };
+        }
+    }
+
+    const_iterator cbegin() const {
+        return this->begin();
+    }
+
+    iterator end() {
         return iterator_at(this->entry_capacity_);
+    }
+
+    const_iterator end() const {
+        return iterator_at(this->entry_capacity_);
+    }
+
+    const_iterator cend() const {
+        return this->end();
     }
 
     iterator find(const key_type & key) {
@@ -431,16 +459,18 @@ public:
         do {
             cluster_type & cluster = this->get_cluster(cluster_index);
             std::uint32_t mask16 = cluster.matchHash(control_hash);
+            size_type entry_start = cluster_index * kClusterEntries;
             while (mask16 != 0) {
                 std::uint32_t bit = BitUtils::ls1b32(mask16);
                 size_type pos = BitUtils::bsr32(bit);
-                const key_type & target_key = cluster.entries[pos].value.first;
-                if (this->key_is_equal_(key, target_key)) {
-                    return iterator_at(cluster_index * kClusterEntries + pos);
+                const key_type & target_key = this->get_entry(entry_start + pos).value.first;
+                if (this->key_is_equal_(target_key, key)) {
+                    return iterator_at(entry_start + pos);
                 }
             }
-            if (cluster.hasAnyEmpty())
+            if (cluster.hasAnyEmpty()) {
                 return this->end();
+            }
             cluster_index = (cluster_index + 1) & cluster_mask_;
         } while (cluster_index != start_index);
 
@@ -460,7 +490,7 @@ public:
         if (iter == this->end()) {
             //
         }
-        return this->emplace(value);
+        return { iter, false };
     }
 
     std::pair<iterator, bool> emplace(value_type && value) {
@@ -468,7 +498,7 @@ public:
         if (iter == this->end()) {
             //
         }
-        return this->emplace(value);
+        return { iter, false };
     }
 
 private:
@@ -495,14 +525,40 @@ private:
         return (index_type)(((size_type)hash_code >> kControlShift) & cluster_mask);
     }
 
-    cluster_type & get_cluster(size_type index) {
-        assert(index < this->cluster_count());
-        return this->clusters_[index];
+    cluster_type & get_cluster(size_type cluster_index) {
+        assert(cluster_index < this->cluster_count());
+        return this->clusters_[cluster_index];
     }
 
-    const cluster_type & get_cluster(size_type index) const {
-        assert(index < this->cluster_count());
-        return this->clusters_[index];
+    const cluster_type & get_cluster(size_type cluster_index) const {
+        assert(cluster_index < this->cluster_count());
+        return this->clusters_[cluster_index];
+    }
+
+    cluster_type & get_entry(size_type index) {
+        assert(index < this->entry_capacity());
+        return this->entries_[index];
+    }
+
+    const cluster_type & get_entry(size_type index) const {
+        assert(index < this->entry_capacity());
+        return this->entries_[index];
+    }
+
+    index_type index_of(entry_type * entry) const {
+        assert(entry >= this->entries_);
+        index_type index = (index_type)(entry - this->entries());
+        return index;
+    }
+
+    bool cluster_has_value(size_type index) const {
+        std::uint8_t * controls = (std::uint8_t *)this->clusters();
+        return ((controls[index] & kValidMask) == 0);
+    }
+
+    bool has_value(entry_type * entry) const {
+        index_type entry_index = this->index_of(entry);
+        return this->cluster_has_value(entry_index);
     }
 
     void init_cluster(size_type init_capacity) {
