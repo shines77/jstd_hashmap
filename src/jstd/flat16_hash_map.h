@@ -67,6 +67,8 @@
 #include <nmmintrin.h>
 #include <immintrin.h>
 
+#include "jstd/support/BitUtils.h"
+
 #define FLAT16_DEFAULT_LOAD_FACTOR  (0.5)
 
 #ifndef __SSE2__
@@ -138,6 +140,8 @@ public:
     static constexpr std::uint8_t kFullMask     = 0b10000000;
     static constexpr std::uint8_t kHash2Mask    = 0b01111111;
 
+    static constexpr std::uint64_t kEmptyEntry64 = 0xFFFFFFFFFFFFFFFFull;
+
     static constexpr size_type kControlHashMask = 0x0000007Ful;
     static constexpr size_type kControlShift    = 7;
 
@@ -164,7 +168,6 @@ public:
             std::uint8_t controls[kClusterEntries];
             uint128_t    u128;
         };
-        hash_entry entries[kClusterEntries];
 
         cluster() {
 #if defined(__SSE2__)
@@ -314,6 +317,10 @@ public:
             delete[] clusters_;
             clusters_ = nullptr;
         }
+        if (entries_ != nullptr) {
+            delete[] entries_;
+            entries_ = nullptr;
+        }
     }
 
     bool is_valid() const { return (this->clusters() != nullptr); }
@@ -325,19 +332,18 @@ public:
     size_type size() const { return entry_size_; }
     size_type capacity() const { return entry_capacity_; }
 
-    size_type entry_size() const { return entry_size_; }
-    size_type entry_capacity() const { return entry_capacity_; }
-
-    cluster_type * clusters() { 
-        return clusters_;
-    }
-
-    const cluster_type * clusters() const {
-        return clusters_;
-    }
+    cluster_type * clusters() { return clusters_; }
+    const cluster_type * clusters() const { return clusters_; }
 
     size_type cluster_mask() const { return cluster_mask_; }
     size_type cluster_count() const { return cluster_count_; }
+
+    entry_type * entries() { return entries_; }
+    const entry_type * entries() const { return entries_; }
+
+    size_type entry_size() const { return entry_size_; }
+    size_type entry_mask() const { return entry_mask_; }
+    size_type entry_capacity() const { return entry_capacity_; }
 
     double load_factor() const {
         return load_factor_;
@@ -368,7 +374,7 @@ public:
             cluster_type & cluster = this->get_cluster(cluster_index);
             std::uint32_t mask16 = cluster.matchHash(control_hash);
             while (mask16 != 0) {
-                std::uint32_t bit = mask16 & -mask16;
+                std::uint32_t bit = BitUtils::ls1b32(mask16);
                 size_type pos = BitUtils::bsr32(bit);
                 const key_type & target_key = cluster.entries[pos].value.first;
                 if (this->key_is_equal_(key, target_key)) {
@@ -407,7 +413,7 @@ public:
         return this->emplace(value);
     }
 
-protected:
+private:
     inline size_type calc_capacity(size_type capacity) const {
         size_type new_capacity = (capacity >= kMinimumCapacity) ? capacity : kMinimumCapacity;
         new_capacity = round_up_pow2(new_capacity);
@@ -441,15 +447,22 @@ protected:
         return this->clusters_[index];
     }
 
-private:
     void init_cluster(size_type init_capacity) {
         size_type new_capacity = align_to(init_capacity, kClusterEntries);
+        assert(new_capacity > 1);
+        assert(new_capacity >= kMinimumCapacity);
+
         size_type cluster_count = new_capacity / kClusterEntries;
         assert(cluster_count > 0);
         cluster_type * clusters = new cluster_type[cluster_count];
         clusters_ = clusters;
         cluster_mask_ = cluster_count - 1;
         cluster_count_ = cluster_count;
+
+        entry_type * entries = new entry_type[new_capacity];
+        entries_ = entries;
+        assert(entry_size_ == 0);
+        entry_mask_ = new_capacity - 1;
         entry_capacity_ = new_capacity;
         entry_threshold_ = (size_type)(new_capacity * FLAT16_DEFAULT_LOAD_FACTOR);
     }

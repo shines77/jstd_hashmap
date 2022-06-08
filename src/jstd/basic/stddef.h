@@ -6,6 +6,92 @@
 #pragma once
 #endif
 
+/// \macro __GNUC_PREREQ
+/// \brief Defines __GNUC_PREREQ if glibc's features.h isn't available.
+#ifndef __GNUC_PREREQ
+# if defined(__GNUC__) && defined(__GNUC_MINOR__)
+#  define __GNUC_PREREQ(major, minor) \
+    (((__GNUC__ << 16) + __GNUC_MINOR__) >= (((major) << 16) + (minor)))
+# else
+#  define __GNUC_PREREQ(major, minor) 0
+# endif
+#endif
+
+#ifndef __CLANG_PREREQ
+# if defined(__clang__) && defined(__clang_major__) && defined(__clang_minor__)
+#  define __CLANG_PREREQ(major, minor) \
+    (((__clang_major__ << 16) + __clang_minor__) >= (((major) << 16) + (minor)))
+# else
+#  define __CLANG_PREREQ(major, minor) 0
+# endif
+#endif
+
+#if defined(WIN64) || defined(_WIN64) || defined(_M_X64) || defined(_M_AMD64) \
+ || defined(_M_IA64) || defined(__amd64__) || defined(__x86_64__)
+  #define JSTD_IS_X86           1
+  #define JSTD_IS_X86_64        1
+  #define JSTD_WORD_SIZE        64
+#else
+  #if defined(WIN32) || defined(_WIN32) || defined (_M_IX86) || defined(__i386__)
+    #define JSTD_IS_X86         1
+    #define JSTD_IS_X86_I386    1
+  #endif
+  #define JSTD_WORD_SIZE        32
+#endif
+
+//
+// What compiler is it?
+//
+#if defined(__INTEL_COMPILER) || defined(__ICL) || defined(__ICC) || defined(__ECC) \
+ || defined(__ICPC) || defined(__ECL)
+  #ifndef JSTD_IS_ICC
+  #define JSTD_IS_ICC     1
+  #endif
+#endif
+
+#if defined(_MSC_VER)
+  #ifndef JSTD_IS_MSVC
+  #define JSTD_IS_MSVC    1
+  #endif
+#elif defined(__GNUC__) && !defined(__clang__)
+  #ifndef JSTD_IS_GCC
+  #define JSTD_IS_GCC     1
+  #endif
+#elif defined(__clang__)
+  #ifndef JSTD_IS_CLANG
+  #define JSTD_IS_CLANG   1
+  #endif
+#elif !defined(JSTD_IS_ICC)
+  #ifndef JSTD_IS_UNKNOWN_COMPILER
+  #define JSTD_IS_UNKNOWN_COMPILER   1
+  #endif
+#endif // _MSC_VER
+
+#if defined(__GNUC__) || defined(__clang__) || (defined(JSTD_IS_ICC) && defined(__linux__))
+#define JSTD_GCC_STYLE_ASM  1
+#endif
+
+#if defined(__GNUC__) && (!defined(__clang__) && !defined(JSTD_IS_ICC))
+#define JSTD_IS_PURE_GCC    1
+#endif
+
+//
+// Intel C++ compiler version
+//
+#if defined(__INTEL_COMPILER)
+  #if (__INTEL_COMPILER == 9999)
+    #define __INTEL_CXX_VERSION     1200    // Intel's bug in 12.1.
+  #else
+    #define __INTEL_CXX_VERSION     __INTEL_COMPILER
+  #endif
+#elif defined(__ICL)
+#  define __INTEL_CXX_VERSION       __ICL
+#elif defined(__ICC)
+#  define __INTEL_CXX_VERSION       __ICC
+#elif defined(__ECC)
+#  define __INTEL_CXX_VERSION       __ECC
+#endif
+
 ////////////////////////////////////////////////////////////////////////////////
 //
 // Clang Language Extensions
@@ -85,7 +171,7 @@
 #endif
 
 #if __is_identifier(__wchar_t)
-    // __wchar_t is not a reserved keyword
+  // __wchar_t is not a reserved keyword
   #if !defined(_MSC_VER)
     typedef wchar_t __wchar_t;
   #endif // !_MSC_VER
@@ -108,27 +194,7 @@
 // 
 ////////////////////////////////////////////////////////////////////////////////
 
-//
-// Intel C++ compiler version
-//
-#if defined(__INTEL_COMPILER)
-  #if (__INTEL_COMPILER == 9999)
-    #define __INTEL_CXX_VERSION     1200    // Intel's bug in 12.1.
-  #else
-    #define __INTEL_CXX_VERSION     __INTEL_COMPILER
-  #endif
-#elif defined(__ICL)
-#  define __INTEL_CXX_VERSION       __ICL
-#elif defined(__ICC)
-#  define __INTEL_CXX_VERSION       __ICC
-#elif defined(__ECC)
-#  define __INTEL_CXX_VERSION       __ECC
-#endif
-
 ////////////////////////////////////////////////////////////////////////////////
-//
-// C++ compiler macro define
-// See: http://www.cnblogs.com/zyl910/archive/2012/08/02/printmacro.html
 //
 // LLVM Branch Weight Metadata
 // See: http://llvm.org/docs/BranchWeightMetadata.html
@@ -191,7 +257,7 @@
 //
 // Aligned prefix and suffix declare
 //
-#if defined(_MSC_VER) || defined(__INTEL_COMPILER) || defined(__ICL) || defined(__ICC) || defined(__ECC)
+#if defined(_MSC_VER)
 #ifndef ALIGNED_PREFIX
 #define ALIGNED_PREFIX(n)       __declspec(align(n))
 #endif
@@ -207,6 +273,34 @@
 #endif
 #endif // ALIGNED(n)
 
+//
+// From: https://hackage.haskell.org/package/LibClang-3.4.0/src/llvm/include/llvm/Support/Compiler.h
+//
+// __builtin_assume_aligned() is support by GCC >= 4.7 and clang >= 3.6.
+//
+
+/// \macro JSTD_ASSUME_ALIGNED
+/// \brief Returns a pointer with an assumed alignment.
+#if __has_builtin(__builtin_assume_aligned) && __CLANG_PREREQ(3, 6)
+# define JSTD_ASSUME_ALIGNED(ptr, alignment)  __builtin_assume_aligned((ptr), (alignment))
+#elif __has_builtin(__builtin_assume_aligned) && __GNUC_PREREQ(4, 7)
+# define JSTD_ASSUME_ALIGNED(ptr, alignment)  __builtin_assume_aligned((ptr), (alignment))
+#elif defined(LLVM_BUILTIN_UNREACHABLE)
+// Clang 3.4 does not support __builtin_assume_aligned().
+# define JSTD_ASSUME_ALIGNED(ptr, alignment) \
+           (((uintptr_t(ptr) % (alignment)) == 0) ? (ptr) : (LLVM_BUILTIN_UNREACHABLE, (ptr)))
+#else
+# define JSTD_ASSUME_ALIGNED(ptr, alignment)  (ptr)
+#endif
+
+#if __has_builtin(__builtin_assume_aligned) && __CLANG_PREREQ(3, 6)
+#define ASSUME_IS_ALIGNED(ptr, alignment)   __builtin_assume_aligned((ptr), (alignment))
+#elif __has_builtin(__builtin_assume_aligned) && __GNUC_PREREQ(4, 7)
+#define ASSUME_IS_ALIGNED(ptr, alignment)   __builtin_assume_aligned((ptr), (alignment))
+#else   
+#define ASSUME_IS_ALIGNED(ptr, alignment)   ((void *)(ptr))
+#endif
+
 #if defined(__GNUC__) && !defined(__GNUC_STDC_INLINE__) && !defined(__GNUC_GNU_INLINE__)
   #define __GNUC_GNU_INLINE__   1
 #endif
@@ -214,77 +308,45 @@
 /**
  * For inline, force-inline and no-inline define.
  */
-#if defined(_MSC_VER) || defined(__INTEL_COMPILER) || defined(__ICL) || defined(__ICC)
+#if defined(_MSC_VER)
 
-#define JSTD_HAS_INLINE                     1
+#define JSTD_INLINE             __inline
+#define JSTD_FORCED_INLINE      __forceinline
+#define JSTD_NO_INLINE          __declspec(noinline)
 
-#define JSTD_INLINE                         __inline
-#define JSTD_FORCE_INLINE                   __forceinline
-#define JSTD_NO_INLINE                      __declspec(noinline)
+#define JSTD_RESTRICT           __restrict
 
-#define JSTD_INLINE_DECLARE(type)           __inline type
-#define JSTD_FORCE_INLINE_DECLARE(type)     __forceinline type
-#define JSTD_NOINLINE_DECLARE(type)         __declspec(noinline) type
+#elif defined(__GNUC__) || defined(__clang__) || defined(__MINGW32__) || defined(__CYGWIN__)
 
-#define JSTD_CRT_INLINE                     extern __inline
-#define JSTD_CRT_FORCE_INLINE               extern __forceinline
-#define JSTD_CRT_NO_INLINE                  extern __declspec(noinline)
+#define JSTD_INLINE             inline __attribute__((gnu_inline))
+#define JSTD_FORCED_INLINE      inline __attribute__((always_inline))
+#define JSTD_NO_INLINE          __attribute__((noinline))
 
-#define JSTD_CRT_INLINE_DECLARE(type)       extern __inline type
-#define JSTD_CRT_FORCE_INLINE_DECLARE(type) extern __forceinline type
-#define JSTD_CRT_NO_INLINE_DECLARE(type)    extern __declspec(noinline) type
-
-#define JSTD_RESTRICT                       __restrict
-
-#elif defined(__GNUC__) || defined(__clang__) || defined(__MINGW32__) || defined(__CYGWIN__) || defined(__linux__)
-
-#define JSTD_HAS_INLINE                     1
-
-#define JSTD_INLINE                         inline __attribute__((gnu_inline))
-#define JSTD_FORCE_INLINE                   inline __attribute__((always_inline))
-#define JSTD_NO_INLINE                      __attribute__((noinline))
-
-#define JSTD_INLINE_DECLARE(type)           inline __attribute__((gnu_inline)) type
-#define JSTD_FORCE_INLINE_DECLARE(type)     inline __attribute__((always_inline)) type
-#define JSTD_NOINLINE_DECLARE(type)         __attribute__((noinline)) type
-
-#define JSTD_CRT_INLINE                     extern inline __attribute__((gnu_inline))
-#define JSTD_CRT_FORCE_INLINE               extern inline __attribute__((always_inline))
-#define JSTD_CRT_NO_INLINE                  extern __attribute__((noinline))
-
-#define JSTD_CRT_INLINE_DECLARE(type)       extern inline __attribute__((gnu_inline)) type
-#define JSTD_CRT_FORCE_INLINE_DECLARE(type) extern inline __attribute__((always_inline)) type
-#define JSTD_CRT_NO_INLINE_DECLARE(type)    extern __attribute__((noinline)) type
-
-#define JSTD_RESTRICT                       __restrict__
+#define JSTD_RESTRICT           __restrict__
 
 #else // Unknown compiler
 
-#define JSTD_INLINE                         inline
-#define JSTD_FORCE_INLINE                   inline
+#define JSTD_INLINE             inline
+#define JSTD_FORCED_INLINE      inline
 #define JSTD_NO_INLINE
-
-#define JSTD_INLINE_DECLARE(type)           inline type
-#define JSTD_FORCE_INLINE_DECLARE(type)     inline type
-#define JSTD_NOINLINE_DECLARE(type)         type
-
-#define JSTD_CRT_INLINE                     extern inline
-#define JSTD_CRT_FORCE_INLINE               extern inline
-#define JSTD_CRT_NO_INLINE                  extern
-
-#define JSTD_CRT_INLINE_DECLARE(type)       extern inline type
-#define JSTD_CRT_FORCE_INLINE_DECLARE(type) extern inline type
-#define JSTD_CRT_NO_INLINE_DECLARE(type)    extern type
 
 #define JSTD_RESTRICT
 
 #endif // _MSC_VER
 
-#ifndef JSTD_CDECL
-#if defined(_MSC_VER) || defined(__INTEL_COMPILER) || defined(__ICL) || defined(__ICC)
-#define JSTD_CDECL        __cdecl
+#if defined(_MSC_VER)
+#define NAKED_DECL      __declspec(naked)
+#elif defined(__attribute__)
+#define NAKED_DECL      __attribute__((naked))
 #else
-#define JSTD_CDECL        __attribute__((__cdecl__))
+#define NAKED_DECL
+#endif
+
+#ifndef JSTD_CDECL
+#if defined(_MSC_VER)
+#define JSTD_CDECL      __cdecl
+#else
+#define JSTD_CDECL      __attribute__((__cdecl__))
 #endif
 #endif // JSTD_CDECL
 
@@ -292,22 +354,27 @@
  * For exported func
  */
 #if defined(_MSC_VER) && (_MSC_VER >= 1400)
-    #define JSTD_EXPORTED_FUNC      __cdecl
-    #define JSTD_EXPORTED_METHOD    __thiscall
+  #define JSTD_EXPORTED_FUNC        __cdecl
+  #define JSTD_EXPORTED_METHOD      __thiscall
 #else
-    #define JSTD_EXPORTED_FUNC
-    #define JSTD_EXPORTED_METHOD
+  #define JSTD_EXPORTED_FUNC
+  #define JSTD_EXPORTED_METHOD
 #endif
 
 #ifndef __cplusplus
-#ifndef nullptr
-#define nullptr     ((void *)NULL)
-#endif
+  #ifndef nullptr
+    #define nullptr     ((void *)NULL)
+  #endif
 #endif // __cplusplus
 
-#ifndef JSTD_UNUSED_VARS
-#define JSTD_UNUSED_VARS(x)     (void)(x)
+#ifndef JSTD_UNUSED_VAR
+#define JSTD_UNUSED_VAR(x)      ((void)(x))
 #endif
+
+#define UNUSED_VARIABLE(var) \
+    do { \
+        (void)var; \
+    } while (0)
 
 #ifndef JSTD_TO_STRING
 #define JSTD_TO_STRING(Text)    #Text
@@ -322,9 +389,38 @@
 #define STD_IOS_DEFAULT() \
     std::left << std::setw(0)
 
-#define UNUSED_VARIANT(var) \
-    do { \
-        (void)var; \
-    } while (0)
+#ifndef JSTD_ASSERT
+#ifdef _DEBUG
+#define JSTD_ASSERT(express)            assert(!!(express))
+#else
+#define JSTD_ASSERT(express)            ((void)0)
+#endif
+#endif // JSTD_ASSERT
+
+#ifndef JSTD_ASSERT_EX
+#ifdef _DEBUG
+#define JSTD_ASSERT_EX(express, text)   assert(!!(express))
+#else
+#define JSTD_ASSERT_EX(express, text)   ((void)0)
+#endif
+#endif // JSTD_ASSERT
+
+#ifndef JSTD_STATIC_ASSERT
+#if (__cplusplus < 201103L) || (defined(_MSC_VER) && (_MSC_VER < 1800))
+#define JSTD_STATIC_ASSERT(express, text)       assert(!!(express))
+#else
+#define JSTD_STATIC_ASSERT(express, text)       static_assert(!!(express), text)
+#endif
+#endif // JSTD_STATIC_ASSERT
+
+//
+// Little-Endian or Big-Endian
+//
+#define JSTD_LITTLE_ENDIAN  0
+#define JSTD_BIG_ENDIAN     1
+
+#ifndef JSTD_ENDIAN
+#define JSTD_ENDIAN  JSTD_LITTLE_ENDIAN
+#endif
 
 #endif // JSTD_BASIC_STDDEF_H

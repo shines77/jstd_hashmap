@@ -14,6 +14,9 @@
     <Filter Include="src\basic\msvc">
       <UniqueIdentifier>{9c607880-4587-4319-b013-47ae49bf2522}</UniqueIdentifier>
     </Filter>
+    <Filter Include="src\support">
+      <UniqueIdentifier>{9822423e-263e-4fa9-80de-204dbc038170}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\src\jstd\flat16_hash_map.h">
@@ -57,6 +60,9 @@
     </ClInclude>
     <ClInclude Include="..\..\..\src\jstd\basic\vld_def.h">
       <Filter>src\basic</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\support\BitUtils.h">
+      <Filter>src\support</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
