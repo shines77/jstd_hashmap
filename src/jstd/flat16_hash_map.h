@@ -129,11 +129,6 @@ public:
     typedef std::size_t                     hash_code_t;
     typedef flat16_hash_map<Key, Value, Hasher, KeyEqual, Allocator>
                                             this_type;
-    struct hash_entry {
-        value_type value;
-    };
-
-    typedef hash_entry entry_type;
 
     static constexpr std::uint8_t kEmptyEntry   = 0b11111111;
     static constexpr std::uint8_t kDeletedEntry = 0b10000000;
@@ -186,8 +181,8 @@ public:
 #if defined(__SSE2__)
             __m128i tag_bits = _mm_set1_epi8(control_tag);
             __m128i control_bits = _mm_load_si128((const __m128i *)&this->controls[0]);
-            __m128i compare_mask = _mm_cmpeq_epi8(control_bits, tag_bits);
-            std::uint32_t mask = (std::uint32_t)_mm_movemask_epi8(compare_mask);
+            __m128i match_mask = _mm_cmpeq_epi8(control_bits, tag_bits);
+            std::uint32_t mask = (std::uint32_t)_mm_movemask_epi8(match_mask);
             return mask;
 #else
             std::uint32_t mask = 0, bit = 1;
@@ -206,7 +201,7 @@ public:
             __m128i tag_bits = _mm_set1_epi8(control_tag);
             __m128i control_bits = _mm_load_si128((const __m128i *)&this->controls[0]);
             __m128i match_mask = _mm_cmpeq_epi8(control_bits, tag_bits);
-            return compare_mask;
+            return match_mask;
         }
 #else
         uint128_t getMatchMask128(std::uint8_t control_tag) const {
@@ -275,14 +270,77 @@ public:
 
     typedef cluster cluster_type;
 
-    struct const_iterator;
-    struct iterator {
-        //
+    struct hash_entry {
+        value_type value;
+
+        bool is_empty() const {
+            return false;
+        }
     };
 
-    struct const_iterator {
-        //
+    using entry_type = hash_entry;
+
+    template <typename ValueType>
+    struct basic_iterator {
+        using iterator_category = std::forward_iterator_tag;
+
+        using value_type = ValueType;
+        using pointer = ValueType *;
+        using reference = ValueType &;
+
+        using size_type = std::size_t;
+        using difference_type = std::ptrdiff_t;
+
+        entry_type * current;
+
+        explicit basic_iterator(entry_type * _current = nullptr) noexcept
+            : current(_current) {
+        }
+        basic_iterator(const basic_iterator & src) noexcept
+            : current(src->current) {
+        }
+
+        basic_iterator & operator = (const basic_iterator & rhs) {
+            this->current = rhs.current;
+            return *this;
+        }
+
+        friend bool operator == (const basic_iterator & lhs, const basic_iterator & rhs) {
+            return (lhs.current == rhs.current);
+        }
+
+        friend bool operator != (const basic_iterator & lhs, const basic_iterator & rhs) {
+            return !(lhs == rhs);
+        }
+
+        basic_iterator & operator ++ () {
+            do {
+                ++current;
+            } while (current->is_empty());
+            return *this;
+        }
+
+        basic_iterator operator ++ (int) {
+            basic_iterator copy(*this);
+            ++*this;
+            return copy;
+        }
+
+        reference operator * () const {
+            return current->value;
+        }
+
+        pointer operator -> () const {
+            return std::addressof(current->value);
+        }
+
+        operator basic_iterator<const value_type>() const {
+            return { current };
+        }
     };
+
+    using iterator       = basic_iterator<value_type>;
+    using const_iterator = basic_iterator<const value_type>;
 
 private:
     cluster_type *  clusters_;
