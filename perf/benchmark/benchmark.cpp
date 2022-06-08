@@ -1347,6 +1347,11 @@ int main(int argc, char * argv[])
     printf("sizeof(entry_type) = %u\n", (uint32_t)sizeof(entry_type));
     printf("sizeof(cluster_type) = %u\n\n", (uint32_t)sizeof(cluster_type));
 
+    auto iter = flat_hash_map.find(33);
+    if (iter != flat_hash_map.end()) {
+        //
+    }
+
     return 0;
 }
 

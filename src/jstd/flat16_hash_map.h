@@ -535,12 +535,12 @@ private:
         return this->clusters_[cluster_index];
     }
 
-    cluster_type & get_entry(size_type index) {
+    entry_type & get_entry(size_type index) {
         assert(index < this->entry_capacity());
         return this->entries_[index];
     }
 
-    const cluster_type & get_entry(size_type index) const {
+    const entry_type & get_entry(size_type index) const {
         assert(index < this->entry_capacity());
         return this->entries_[index];
     }
