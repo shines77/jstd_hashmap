@@ -26,18 +26,38 @@
 # endif
 #endif
 
-#if defined(WIN64) || defined(_WIN64) || defined(_M_X64) || defined(_M_AMD64) \
+#if defined(_M_X64) || defined(_M_AMD64) \
  || defined(_M_IA64) || defined(__amd64__) || defined(__x86_64__)
   #define JSTD_IS_X86           1
   #define JSTD_IS_X86_64        1
   #define JSTD_WORD_SIZE        64
-#else
-  #if defined(WIN32) || defined(_WIN32) || defined (_M_IX86) || defined(__i386__)
-    #define JSTD_IS_X86         1
-    #define JSTD_IS_X86_I386    1
-  #endif
+#elif defined (_M_IX86) || defined(__i386__)
+  #define JSTD_IS_X86           1
+  #define JSTD_IS_X86_I386      1
+  #define JSTD_WORD_SIZE        32
+#elif defined(_M_ARM64) || defined(__ARM64__) || defined(__arm64__)
+  #define JSTD_IS_ARM           1
+  #define JSTD_IS_ARM_64        1
+  #define JSTD_WORD_SIZE        64
+#elif defined(_M_ARM) || defined(__ARM__) || defined(__arm__)
+  #define JSTD_IS_ARM           1
+  #define JSTD_IS_ARM_32        1
+  #define JSTD_WORD_SIZE        32
+#elif defined(_M_MPPC)
+  // Power Macintosh PowerPC
+  #define JSTD_WORD_SIZE        32
+#elif defined(_M_PPC)
+  // PowerPC
   #define JSTD_WORD_SIZE        32
 #endif
+
+#ifndef JSTD_WORD_SIZE
+  #if defined(WIN32) || defined(_WIN32)
+    #define JSTD_WORD_SIZE      32
+  #elif defined(WIN64) || defined(_WIN64)
+    #define JSTD_WORD_SIZE      64
+  #endif
+#endif // !JSTD_WORD_SIZE
 
 //
 // What compiler is it?
