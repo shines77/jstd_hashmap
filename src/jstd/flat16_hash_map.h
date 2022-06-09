@@ -451,24 +451,16 @@ public:
         return static_cast<double>(kMaxLoadFactor);
     }
 
-    iterator iterator_at(size_type index) {
-        return { (this->controls() + index), (this->entries() + index) };
-    }
-
-    const_iterator iterator_at(size_type index) const {
-        return { (this->controls() + index), (this->entries() + index) };
-    }
-
     iterator begin() {
         control_byte * control = this->controls();
         size_type index;
         for (index = 0; index <= this->entry_mask(); index++) {
             if (control->isUsed()) {
-                return { control, (this->entries() + index) };
+                return { control, this->entry_at(index) };
             }
             control++;
         }
-        return { control, (this->entries() + index) };
+        return { control, this->entry_at(index) };
     }
 
     const_iterator begin() const {
@@ -476,11 +468,11 @@ public:
         size_type index;
         for (index = 0; index <= this->entry_mask(); index++) {
             if (control->isUsed()) {
-                return { control, (this->entries() + index) };
+                return { control, this->entry_at(index) };
             }
             control++;
         }
-        return { control, (this->entries() + index) };
+        return { control, this->entry_at(index) };
     }
 
     const_iterator cbegin() const {
@@ -556,6 +548,14 @@ private:
         return new_capacity;
     }
 
+    iterator iterator_at(size_type index) {
+        return { this->control_at(index), this->entry_at(index) };
+    }
+
+    const_iterator iterator_at(size_type index) const {
+        return { this->control_at(index), this->entry_at(index) };
+    }
+
     inline hash_code_t get_hash(const key_type & key) const {
         hash_code_t hash_code = static_cast<hash_code_t>(this->hasher_(key));
         return hash_code;
@@ -573,6 +573,26 @@ private:
         return (index_type)(((size_type)hash_code >> kControlShift) & cluster_mask);
     }
 
+    control_byte * control_at(size_type index) {
+        assert(index < this->entry_capacity());
+        return (this->controls() + index);
+    }
+
+    const control_byte * control_at(size_type index) const {
+        assert(index < this->entry_capacity());
+        return (this->controls() + index);
+    }
+
+    cluster_type * cluster_at(size_type cluster_index) {
+        assert(cluster_index < this->cluster_count());
+        return (this->clusters() + cluster_index);
+    }
+
+    const cluster_type * cluster_at(size_type cluster_index) const {
+        assert(cluster_index < this->cluster_count());
+        return (this->clusters() + cluster_index);
+    }
+
     cluster_type & get_cluster(size_type cluster_index) {
         assert(cluster_index < this->cluster_count());
         return this->clusters_[cluster_index];
@@ -581,6 +601,16 @@ private:
     const cluster_type & get_cluster(size_type cluster_index) const {
         assert(cluster_index < this->cluster_count());
         return this->clusters_[cluster_index];
+    }
+
+    entry_type * entry_at(size_type index) {
+        assert(index < this->entry_capacity());
+        return (this->entries() + index);
+    }
+
+    const entry_type * entry_at(size_type index) const {
+        assert(index < this->entry_capacity());
+        return (this->entries() + index);
     }
 
     entry_type & get_entry(size_type index) {
@@ -611,7 +641,7 @@ private:
 
     void init_cluster(size_type init_capacity) {
         size_type new_capacity = align_to(init_capacity, kClusterEntries);
-        assert(new_capacity > 1);
+        assert(new_capacity > 0);
         assert(new_capacity >= kMinimumCapacity);
 
         size_type cluster_count = new_capacity / kClusterEntries;
