@@ -298,7 +298,7 @@ public:
             return (this->matchEmptyOrDeleted() != 0);
         }
 
-        bool isUsed() const {
+        bool isFull() const {
             return (this->matchEmptyOrDeleted() == 0);
         }
     };
@@ -310,6 +310,7 @@ public:
     };
 
     typedef hash_entry entry_type;
+    typedef std::allocator<hash_entry> entry_allocator_type;
 
     template <typename ValueType>
     class basic_iterator {
@@ -392,6 +393,9 @@ private:
     size_type       entry_threshold_;
     double          load_factor_;
 
+    allocator_type          value_allocator_;
+    entry_allocator_type    entry_allocator_;
+
     hasher_type     hasher_;
     key_equal       key_equal_;
 
@@ -408,13 +412,28 @@ public:
     }
 
     void destroy() {
-        if (clusters_ != nullptr) {
-            delete[] clusters_;
-            clusters_ = nullptr;
+        this->destory_entries();
+
+        // Note!!: destory_entries() need use this->clusters()
+        if (this->clusters_ != nullptr) {
+            delete[] this->clusters_;
+            this->clusters_ = nullptr;
         }
-        if (entries_ != nullptr) {
-            delete[] entries_;
-            entries_ = nullptr;
+    }
+
+    void destory_entries() {
+        // Destroy all entries.
+        if (this->entries_ != nullptr) {
+            control_byte * control = this->controls();
+            for (size_type index = 0; index <= this->entry_mask(); index++) {
+                if (control->isUsed()) {
+                    entry_type * entry = this->entry_at(index);
+                    this->entry_allocator_.destroy(entry);
+                }
+                control++;
+            }
+            this->entry_allocator_.deallocate(this->entries_, this->entry_capacity());
+            this->entries_ = nullptr;
         }
     }
 
@@ -574,12 +593,12 @@ private:
     }
 
     control_byte * control_at(size_type index) {
-        assert(index < this->entry_capacity());
+        assert(index <= this->entry_capacity());
         return (this->controls() + index);
     }
 
     const control_byte * control_at(size_type index) const {
-        assert(index < this->entry_capacity());
+        assert(index <= this->entry_capacity());
         return (this->controls() + index);
     }
 
@@ -604,12 +623,12 @@ private:
     }
 
     entry_type * entry_at(size_type index) {
-        assert(index < this->entry_capacity());
+        assert(index <= this->entry_capacity());
         return (this->entries() + index);
     }
 
     const entry_type * entry_at(size_type index) const {
-        assert(index < this->entry_capacity());
+        assert(index <= this->entry_capacity());
         return (this->entries() + index);
     }
 
@@ -629,14 +648,14 @@ private:
         return index;
     }
 
-    bool cluster_has_value(size_type index) const {
-        std::uint8_t * controls = (std::uint8_t *)this->clusters();
-        return ((controls[index] & kUnusedMask) == 0);
+    bool is_used(entry_type * entry) const {
+        index_type entry_index = this->index_of(entry);
+        return this->control_is_used(entry_index);
     }
 
-    bool has_value(entry_type * entry) const {
-        index_type entry_index = this->index_of(entry);
-        return this->cluster_has_value(entry_index);
+    bool control_is_used(size_type index) const {
+        std::uint8_t * control_bytes = (std::uint8_t *)this->clusters();
+        return ((control_bytes[index] & kUnusedMask) == 0);
     }
 
     void init_cluster(size_type init_capacity) {
@@ -650,7 +669,7 @@ private:
         clusters_ = clusters;
         cluster_mask_ = cluster_count - 1;
 
-        entry_type * entries = new entry_type[new_capacity];
+        entry_type * entries = entry_allocator_.allocate(new_capacity);
         entries_ = entries;
         assert(entry_size_ == 0);
         entry_mask_ = new_capacity - 1;

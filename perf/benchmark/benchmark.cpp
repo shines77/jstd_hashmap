@@ -1342,10 +1342,11 @@ int main(int argc, char * argv[])
     flat_hash_map.size();
     flat_hash_map.capacity();
 
-    cluster_type * clustersPtr = flat_hash_map.clusters();
-    printf("flat_hash_map.clusters() = 0x%p\n", clustersPtr);
-    printf("sizeof(entry_type) = %u\n", (uint32_t)sizeof(entry_type));
+    printf("flat_hash_map.clusters() = 0x%p\n", flat_hash_map.clusters());
     printf("sizeof(cluster_type) = %u\n\n", (uint32_t)sizeof(cluster_type));
+
+    printf("flat_hash_map.entries() = 0x%p\n", flat_hash_map.entries());
+    printf("sizeof(entry_type) = %u\n\n", (uint32_t)sizeof(entry_type));
 
     auto iter = flat_hash_map.find(33);
     if (iter != flat_hash_map.end()) {
