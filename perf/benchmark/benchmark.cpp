@@ -1348,12 +1348,14 @@ int main(int argc, char * argv[])
     printf("flat_hash_map.entries() = 0x%p\n", flat_hash_map.entries());
     printf("sizeof(entry_type) = %u\n\n", (uint32_t)sizeof(entry_type));
 
+    flat_hash_map.emplace(std::make_pair(33, 22));
+
     auto iter = flat_hash_map.find(33);
     if (iter != flat_hash_map.end()) {
-        //
+        printf("Found, key = %d, value = %d\n\n", iter->first, iter->second);
+    } else {
+        printf("key = %d, No Found\n\n", 33);
     }
-
-    flat_hash_map.emplace(std::make_pair(33, 22));
 
     return 0;
 }
