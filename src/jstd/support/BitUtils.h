@@ -17,6 +17,7 @@
 #include <intrin.h>
 #endif
 
+// defined(__GNUC__) && (__GNUC__ * 1000 + __GNUC_MINOR__ >= 4005)
 #if defined(__GNUC__) || defined(__clang__)
 #include <x86intrin.h>
 #endif
