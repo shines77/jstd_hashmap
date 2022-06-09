@@ -172,7 +172,8 @@ public:
     struct control_byte {
         std::uint8_t value;
 
-        control_byte() noexcept : {}
+        control_byte() noexcept {
+        }
 
         bool isEmpty() const {
             return (this->value = kEmptyEntry);
