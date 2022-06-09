@@ -137,6 +137,8 @@ public:
     typedef flat16_hash_map<Key, Value, Hasher, KeyEqual, Allocator>
                                             this_type;
 
+    static constexpr size_type npos = size_type(-1);
+
     static constexpr std::uint8_t kEmptyEntry   = 0b11111111;
     static constexpr std::uint8_t kDeletedEntry = 0b10000000;
     static constexpr std::uint8_t kUnusedMask   = 0b10000000;
@@ -510,28 +512,56 @@ public:
         return this->end();
     }
 
+private:
+    size_type find_impl(const key_type & key) {
+        hash_code_t hash_code = this->get_hash(key);
+        std::uint8_t control_hash = this->get_control_hash(hash_code);
+        index_type cluster_index = this->index_for(hash_code);
+        index_type start_cluster = cluster_index;
+        do {
+            cluster_type & cluster = this->get_cluster(cluster_index);
+            std::uint32_t mask16 = cluster.matchHash(control_hash);
+            size_type start_index = cluster_index * kClusterEntries;
+            while (mask16 != 0) {
+                size_type pos = BitUtils::bsr32(mask16);
+                mask16 = BitUtils::clearLowBit32(mask16);
+                const key_type & target_key = this->get_entry(start_index + pos).value.first;
+                if (this->key_equal_(target_key, key)) {
+                    return (start_index + pos);
+                }
+            }
+            if (cluster.hasAnyEmpty()) {
+                return npos;
+            }
+            cluster_index = this->next_cluster(cluster_index);
+        } while (cluster_index != start_cluster);
+
+        return npos;
+    }
+
+public:
     iterator find(const key_type & key) {
         hash_code_t hash_code = this->get_hash(key);
         std::uint8_t control_hash = this->get_control_hash(hash_code);
         index_type cluster_index = this->index_for(hash_code);
-        index_type start_index = cluster_index;
+        index_type start_cluster = cluster_index;
         do {
             cluster_type & cluster = this->get_cluster(cluster_index);
             std::uint32_t mask16 = cluster.matchHash(control_hash);
-            size_type entry_start = cluster_index * kClusterEntries;
+            size_type start_index = cluster_index * kClusterEntries;
             while (mask16 != 0) {
-                std::uint32_t bit = BitUtils::ls1b32(mask16);
-                size_type pos = BitUtils::bsr32(bit);
-                const key_type & target_key = this->get_entry(entry_start + pos).value.first;
+                size_type pos = BitUtils::bsr32(mask16);
+                mask16 = BitUtils::clearLowBit32(mask16);
+                const key_type & target_key = this->get_entry(start_index + pos).value.first;
                 if (this->key_equal_(target_key, key)) {
-                    return iterator_at(entry_start + pos);
+                    return iterator_at(start_index + pos);
                 }
             }
             if (cluster.hasAnyEmpty()) {
                 return this->end();
             }
-            cluster_index = (cluster_index + 1) & cluster_mask_;
-        } while (cluster_index != start_index);
+            cluster_index = this->next_cluster(cluster_index);
+        } while (cluster_index != start_cluster);
 
         return this->end();
     }
@@ -545,19 +575,23 @@ public:
     }
 
     std::pair<iterator, bool> emplace(const value_type & value) {
-        iterator iter = this->find(value.first);
-        if (iter == this->end()) {
+        size_type index = this->find_impl(value.first);
+        if (index == npos) {
             //
+            return { this->iterator_at(0), true };
+        } else {
+            return { this->iterator_at(index), false };
         }
-        return { iter, false };
     }
 
     std::pair<iterator, bool> emplace(value_type && value) {
-        iterator iter = this->find(value.first);
-        if (iter == this->end()) {
+        size_type index = this->find_impl(value.first);
+        if (index == npos) {
             //
+            return { this->iterator_at(0), true };
+        } else {
+            return { this->iterator_at(index), false };
         }
-        return { iter, false };
     }
 
 private:
@@ -590,6 +624,10 @@ private:
 
     inline index_type index_for(hash_code_t hash_code, size_type cluster_mask) const {
         return (index_type)(((size_type)hash_code >> kControlShift) & cluster_mask);
+    }
+
+    inline index_type next_cluster(index_type cluster_index) const {
+        return (index_type)((cluster_index + 1) & cluster_mask_);
     }
 
     control_byte * control_at(size_type index) {

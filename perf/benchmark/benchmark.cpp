@@ -1353,6 +1353,8 @@ int main(int argc, char * argv[])
         //
     }
 
+    flat_hash_map.emplace(std::make_pair(33, 22));
+
     return 0;
 }
 
