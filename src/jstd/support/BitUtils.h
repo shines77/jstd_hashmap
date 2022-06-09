@@ -324,17 +324,17 @@ struct BitUtils {
     }
 #else
     static inline
-    unsigned int bsf64(uint64_t x) {
+    unsigned int bsr64(uint64_t x) {
         assert(x != 0);
         unsigned int index;
         unsigned int high = (unsigned int)(x >> 32U);
         if (high != 0) {
-            index = bsf32(high) + 32;
+            index = bsr32(high) + 32;
         }
         else {
             unsigned int low = (unsigned int)(x & 0xFFFFFFFFU);
             assert(low != 0);
-            index = bsf32(low);
+            index = bsr32(low);
         }
         return index;
     }

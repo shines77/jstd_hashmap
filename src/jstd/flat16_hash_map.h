@@ -172,6 +172,8 @@ public:
     struct control_byte {
         std::uint8_t value;
 
+        control_byte() noexcept : {}
+
         bool isEmpty() const {
             return (this->value = kEmptyEntry);
         }
@@ -186,6 +188,23 @@ public:
 
         bool isEmptyOrDeleted() const {
             return ((std::int8_t)this->value < 0);
+        }
+
+        std::uint8_t getValue() const {
+            return this->value;
+        }
+
+        void setEmpty() {
+            this->value = kEmptyEntry;
+        }
+
+        void setDeleted() {
+            this->value = kDeletedEntry;
+        }
+
+        void setUsed(std::int8_t control_hash) {
+            assert((control_hash & kUnusedMask) == 0);
+            this->value = control_hash;
         }
     };
 
@@ -309,7 +328,45 @@ public:
 
     struct hash_entry {
         value_type value;
+
+        hash_entry() : value() {
+        }
+        hash_entry(const hash_entry & src) : value(src.value) {
+        }
+        hash_entry(hash_entry && src) : value(std::move(src.value)) {
+        }
+
+        hash_entry(const value_type & val) : value(val) {
+        }
+        hash_entry(value_type && val) noexcept : value(std::move(val)) {
+        }
+
+        ~hash_entry() { }
+
+        hash_entry & operator = (const hash_entry & rhs) {
+            if (this != std::addressof(rhs)) {
+                this->value = rhs.value;
+            }
+            return *this;
+        }
+
+        hash_entry & operator = (hash_entry && rhs) {
+            if (this != std::addressof(rhs)) {
+                this->value = std::move(rhs.value);
+            }
+            return *this;
+        }
+
+        void swap(hash_entry & other) {
+            if (this != std::addressof(other)) {
+                std::swap(this->value, other.value);
+            }
+        }
     };
+
+    inline void swap(hash_entry & lhs, hash_entry & rhs) {
+        lhs.swap(rhs);
+    }
 
     typedef hash_entry entry_type;
     typedef std::allocator<hash_entry> entry_allocator_type;
@@ -513,29 +570,36 @@ public:
     }
 
 private:
-    size_type find_impl(const key_type & key) {
+    JSTD_FORCED_INLINE
+    size_type find_impl(const key_type & key, index_type & first_cluster,
+                        index_type & last_cluster, std::uint8_t & ctrl_hash) {
         hash_code_t hash_code = this->get_hash(key);
         std::uint8_t control_hash = this->get_control_hash(hash_code);
         index_type cluster_index = this->index_for(hash_code);
         index_type start_cluster = cluster_index;
+        first_cluster = start_cluster;
+        ctrl_hash = control_hash;
         do {
             cluster_type & cluster = this->get_cluster(cluster_index);
             std::uint32_t mask16 = cluster.matchHash(control_hash);
             size_type start_index = cluster_index * kClusterEntries;
             while (mask16 != 0) {
-                size_type pos = BitUtils::bsr32(mask16);
+                size_type pos = BitUtils::bsf32(mask16);
                 mask16 = BitUtils::clearLowBit32(mask16);
                 const key_type & target_key = this->get_entry(start_index + pos).value.first;
                 if (this->key_equal_(target_key, key)) {
+                    last_cluster = cluster_index;
                     return (start_index + pos);
                 }
             }
             if (cluster.hasAnyEmpty()) {
+                last_cluster = cluster_index;
                 return npos;
             }
             cluster_index = this->next_cluster(cluster_index);
         } while (cluster_index != start_cluster);
 
+        last_cluster = npos;
         return npos;
     }
 
@@ -550,11 +614,11 @@ public:
             std::uint32_t mask16 = cluster.matchHash(control_hash);
             size_type start_index = cluster_index * kClusterEntries;
             while (mask16 != 0) {
-                size_type pos = BitUtils::bsr32(mask16);
+                size_type pos = BitUtils::bsf32(mask16);
                 mask16 = BitUtils::clearLowBit32(mask16);
                 const key_type & target_key = this->get_entry(start_index + pos).value.first;
                 if (this->key_equal_(target_key, key)) {
-                    return iterator_at(start_index + pos);
+                    return this->iterator_at(start_index + pos);
                 }
             }
             if (cluster.hasAnyEmpty()) {
@@ -575,21 +639,127 @@ public:
     }
 
     std::pair<iterator, bool> emplace(const value_type & value) {
-        size_type index = this->find_impl(value.first);
+        index_type first_cluster, last_cluster;
+        std::uint8_t ctrl_hash;
+        size_type index = this->find_impl(value.first, first_cluster, last_cluster, ctrl_hash);
         if (index == npos) {
-            //
-            return { this->iterator_at(0), true };
+            // Find the first DeletedEntry from first_cluster to last_cluster.
+            index_type cluster_index = first_cluster;
+            do {
+                cluster_type & cluster = this->get_cluster(cluster_index);
+                std::uint32_t mask16 = cluster.matchDeleted();
+                if (mask16 != 0) {
+                    size_type start_index = cluster_index * kClusterEntries;
+                    size_type pos = BitUtils::bsf32(mask16);
+                    index = start_index + pos;
+                    break;
+                }
+                if (cluster_index == last_cluster)
+                    break;
+                cluster_index = this->next_cluster(cluster_index);
+            } while (cluster_index != first_cluster);
+
+            if (index != npos) {
+                // Found a [DeletedEntry] to insert
+                control_byte * control = this->control_at(index);
+                control->setUsed(ctrl_hash);
+                entry_type * entry = this->entry_at(index);
+                this->entry_allocator_.construct(entry, value);
+                this->entry_size_++;
+                return { this->iterator_at(index), true };
+            } else {
+                if (last_cluster != npos) {
+                    cluster_type & cluster = this->get_cluster(last_cluster);
+                    std::uint32_t mask16 = cluster.matchEmpty();
+                    if (mask16 != 0) {
+                        size_type start_index = cluster_index * kClusterEntries;
+                        size_type pos = BitUtils::bsf32(mask16);
+                        index = start_index + pos;
+
+                        // Found a [EmptyEntry] to insert
+                        control_byte * control = this->control_at(index);
+                        control->setUsed(ctrl_hash);
+                        entry_type * entry = this->entry_at(index);
+                        this->entry_allocator_.construct(entry, value);
+                        this->entry_size_++;
+                        return { this->iterator_at(index), true };
+                    } else {
+                        // Error
+                        assert(true);
+                    }
+                } else {
+                    // Container is full and there is no anyone empty entry.
+                }
+            }
+
+            // Failed to insert
+            return { this->end(), false };
         } else {
+            entry_type * entry = this->entry_at(index);
+            entry->value.second = value.second;
             return { this->iterator_at(index), false };
         }
     }
 
     std::pair<iterator, bool> emplace(value_type && value) {
-        size_type index = this->find_impl(value.first);
+        index_type first_cluster, last_cluster;
+        std::uint8_t ctrl_hash;
+        size_type index = this->find_impl(value.first, first_cluster, last_cluster, ctrl_hash);
         if (index == npos) {
-            //
-            return { this->iterator_at(0), true };
+            // Find the first DeletedEntry from first_cluster to last_cluster.
+            index_type cluster_index = first_cluster;
+            do {
+                cluster_type & cluster = this->get_cluster(cluster_index);
+                std::uint32_t mask16 = cluster.matchDeleted();
+                if (mask16 != 0) {
+                    size_type start_index = cluster_index * kClusterEntries;
+                    size_type pos = BitUtils::bsf32(mask16);
+                    index = start_index + pos;
+                    break;
+                }
+                if (cluster_index == last_cluster)
+                    break;
+                cluster_index = this->next_cluster(cluster_index);
+            } while (cluster_index != first_cluster);
+
+            if (index != npos) {
+                // Found a [DeletedEntry] to insert
+                control_byte * control = this->control_at(index);
+                control->setUsed(ctrl_hash);
+                entry_type * entry = this->entry_at(index);
+                this->entry_allocator_.construct(entry, std::move(value));
+                this->entry_size_++;
+                return { this->iterator_at(index), true };
+            } else {
+                if (last_cluster != npos) {
+                    cluster_type & cluster = this->get_cluster(last_cluster);
+                    std::uint32_t mask16 = cluster.matchEmpty();
+                    if (mask16 != 0) {
+                        size_type start_index = cluster_index * kClusterEntries;
+                        size_type pos = BitUtils::bsf32(mask16);
+                        index = start_index + pos;
+
+                        // Found a [EmptyEntry] to insert
+                        control_byte * control = this->control_at(index);
+                        control->setUsed(ctrl_hash);
+                        entry_type * entry = this->entry_at(index);
+                        this->entry_allocator_.construct(entry, std::move(value));
+                        this->entry_size_++;
+                        return { this->iterator_at(index), true };
+                    } else {
+                        // Error
+                        assert(true);
+                    }
+                } else {
+                    // Container is full and there is no anyone empty entry.
+                }
+            }
+
+            // Failed to insert
+            return { this->end(), false };
         } else {
+            entry_type * entry = this->entry_at(index);
+            entry->value.second = std::move(value.second);
             return { this->iterator_at(index), false };
         }
     }
