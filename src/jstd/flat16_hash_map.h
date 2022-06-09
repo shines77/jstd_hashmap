@@ -139,12 +139,12 @@ public:
 
     static constexpr std::uint8_t kEmptyEntry   = 0b11111111;
     static constexpr std::uint8_t kDeletedEntry = 0b10000000;
-    static constexpr std::uint8_t kInvalidMask  = 0b10000000;
+    static constexpr std::uint8_t kUnusedMask   = 0b10000000;
     static constexpr std::uint8_t kHash2Mask    = 0b01111111;
 
     static constexpr std::uint64_t kEmptyEntry64   = 0xFFFFFFFFFFFFFFFFull;
     static constexpr std::uint64_t kDeletedEntry64 = 0x8080808080808080ull;
-    static constexpr std::uint64_t kValidMask64    = 0x8080808080808080ull;
+    static constexpr std::uint64_t kUnusedMask64   = 0x8080808080808080ull;
 
     static constexpr size_type kControlHashMask = 0x0000007Ful;
     static constexpr size_type kControlShift    = 7;
@@ -178,7 +178,7 @@ public:
             return (this->value = kDeletedEntry);
         }
 
-        bool isFilled() const {
+        bool isUsed() const {
             return ((std::int8_t)this->value >= 0);
         }
 
@@ -269,7 +269,7 @@ public:
             return (this->matchDeleted() != 0);
         }
 
-        std::uint32_t matchEmptyOrDelete() const {
+        std::uint32_t matchEmptyOrDeleted() const {
 #if defined(__SSE2__)
   #if 1
             __m128i control_bits = _mm_load_si128((const __m128i *)&this->controls[0]);
@@ -285,7 +285,7 @@ public:
 #else
             std::uint32_t mask = 0, bit = 1;
             for (size_type i = 0; i < kClusterEntries; i++) {
-                if ((this->controls[i].value & kInvalidMask) != 0) {
+                if ((this->controls[i].value & kUnusedMask) != 0) {
                     mask |= bit;
                 }
                 bit <<= 1;
@@ -294,12 +294,12 @@ public:
 #endif // __SSE2__       
         }
 
-        bool hasAnyEmptyOrDelete() const {
-            return (this->matchEmptyOrDelete() != 0);
+        bool hasAnyEmptyOrDeleted() const {
+            return (this->matchEmptyOrDeleted() != 0);
         }
 
-        bool isFull() const {
-            return (this->matchEmptyOrDelete() == 0);
+        bool isUsed() const {
+            return (this->matchEmptyOrDeleted() == 0);
         }
     };
 
@@ -307,16 +307,13 @@ public:
 
     struct hash_entry {
         value_type value;
-
-        bool is_empty() const {
-            return false;
-        }
     };
 
     typedef hash_entry entry_type;
 
     template <typename ValueType>
-    struct basic_iterator {
+    class basic_iterator {
+    public:
         using iterator_category = std::forward_iterator_tag;
 
         using value_type = ValueType;
@@ -326,22 +323,28 @@ public:
         using size_type = std::size_t;
         using difference_type = std::ptrdiff_t;
 
-        entry_type * current;
+    private:
+        control_byte * control_;
+        entry_type *   entry_;
 
-        explicit basic_iterator(entry_type * _current = nullptr) noexcept
-            : current(_current) {
+    public:
+        basic_iterator() noexcept : control_(nullptr), entry_(nullptr) {
+        }
+        basic_iterator(control_byte * control, entry_type * entry) noexcept
+            : control_(control), entry_(entry) {
         }
         basic_iterator(const basic_iterator & src) noexcept
-            : current(src.current) {
+            : control_(src.control_), entry_(src.entry_) {
         }
 
         basic_iterator & operator = (const basic_iterator & rhs) {
-            this->current = rhs.current;
+            this->control_ = rhs.control_;
+            this->entry_ = rhs.entry_;
             return *this;
         }
 
         friend bool operator == (const basic_iterator & lhs, const basic_iterator & rhs) {
-            return (lhs.current == rhs.current);
+            return (lhs.entry_ == rhs.entry_);
         }
 
         friend bool operator != (const basic_iterator & lhs, const basic_iterator & rhs) {
@@ -350,8 +353,9 @@ public:
 
         basic_iterator & operator ++ () {
             do {
-                ++current;
-            } while (current->is_empty());
+                ++(this->control_);
+                ++(this->entry_);
+            } while (control_->isEmptyOrDeleted());
             return *this;
         }
 
@@ -362,15 +366,15 @@ public:
         }
 
         reference operator * () const {
-            return current->value;
+            return this->entry_->value;
         }
 
         pointer operator -> () const {
-            return std::addressof(current->value);
+            return std::addressof(this->entry_->value);
         }
 
         operator basic_iterator<const value_type>() const {
-            return { current };
+            return { this->entry_ };
         }
     };
 
@@ -380,23 +384,21 @@ public:
 private:
     cluster_type *  clusters_;
     size_type       cluster_mask_;
-    size_type       cluster_count_;
 
     entry_type *    entries_;
     size_type       entry_size_;
     size_type       entry_mask_;
-    size_type       entry_capacity_;
 
     size_type       entry_threshold_;
     double          load_factor_;
 
     hasher_type     hasher_;
-    key_equal       key_is_equal_;
+    key_equal       key_equal_;
 
 public:
     explicit flat16_hash_map(size_type initialCapacity = kDefaultInitialCapacity) :
-        clusters_(nullptr), cluster_mask_(0), cluster_count_(0),
-        entries_(nullptr), entry_size_(0), entry_mask_(0), entry_capacity_(0),
+        clusters_(nullptr), cluster_mask_(0),
+        entries_(nullptr), entry_size_(0), entry_mask_(0),
         entry_threshold_(0), load_factor_((double)kDefaultLoadFactor) {
         init_cluster(initialCapacity);
     }
@@ -423,20 +425,23 @@ public:
     bool empty() const { return this->is_empty(); }
 
     size_type size() const { return entry_size_; }
-    size_type capacity() const { return entry_capacity_; }
+    size_type capacity() const { return (entry_mask_ + 1); }
+
+    control_byte * controls() { return (control_byte *)clusters_; }
+    const control_byte * controls() const { return (const control_byte *)clusters_; }
 
     cluster_type * clusters() { return clusters_; }
     const cluster_type * clusters() const { return clusters_; }
 
     size_type cluster_mask() const { return cluster_mask_; }
-    size_type cluster_count() const { return cluster_count_; }
+    size_type cluster_count() const { return (cluster_mask_ + 1); }
 
     entry_type * entries() { return entries_; }
     const entry_type * entries() const { return entries_; }
 
     size_type entry_size() const { return entry_size_; }
     size_type entry_mask() const { return entry_mask_; }
-    size_type entry_capacity() const { return entry_capacity_; }
+    size_type entry_capacity() const { return (entry_mask_ + 1); }
 
     double load_factor() const {
         return load_factor_;
@@ -447,27 +452,35 @@ public:
     }
 
     iterator iterator_at(size_type index) {
-        return iterator(&this->entries_[index]);
+        return { (this->controls() + index), (this->entries() + index) };
     }
 
     const_iterator iterator_at(size_type index) const {
-        return const_iterator(&this->entries_[index]);
+        return { (this->controls() + index), (this->entries() + index) };
     }
 
     iterator begin() {
-        entry_type * last = this->entries_ + this->entry_capacity_;
-        for (entry_type * iter = this->entries_; iter < last; ++iter) {
-            if (this->has_value(iter))
-                return { iter };
+        control_byte * control = this->controls();
+        size_type index;
+        for (index = 0; index <= this->entry_mask(); index++) {
+            if (control->isUsed()) {
+                return { control, (this->entries() + index) };
+            }
+            control++;
         }
+        return { control, (this->entries() + index) };
     }
 
     const_iterator begin() const {
-        entry_type * last = this->entries_ + this->entry_capacity_;
-        for (entry_type * iter = this->entries_; iter < last; ++iter) {
-            if (this->has_value(iter))
-                return { iter };
+        control_byte * control = this->controls();
+        size_type index;
+        for (index = 0; index <= this->entry_mask(); index++) {
+            if (control->isUsed()) {
+                return { control, (this->entries() + index) };
+            }
+            control++;
         }
+        return { control, (this->entries() + index) };
     }
 
     const_iterator cbegin() const {
@@ -475,11 +488,11 @@ public:
     }
 
     iterator end() {
-        return iterator_at(this->entry_capacity_);
+        return iterator_at(this->entry_capacity());
     }
 
     const_iterator end() const {
-        return iterator_at(this->entry_capacity_);
+        return iterator_at(this->entry_capacity());
     }
 
     const_iterator cend() const {
@@ -499,7 +512,7 @@ public:
                 std::uint32_t bit = BitUtils::ls1b32(mask16);
                 size_type pos = BitUtils::bsr32(bit);
                 const key_type & target_key = this->get_entry(entry_start + pos).value.first;
-                if (this->key_is_equal_(target_key, key)) {
+                if (this->key_equal_(target_key, key)) {
                     return iterator_at(entry_start + pos);
                 }
             }
@@ -588,7 +601,7 @@ private:
 
     bool cluster_has_value(size_type index) const {
         std::uint8_t * controls = (std::uint8_t *)this->clusters();
-        return ((controls[index] & kInvalidMask) == 0);
+        return ((controls[index] & kUnusedMask) == 0);
     }
 
     bool has_value(entry_type * entry) const {
@@ -606,13 +619,11 @@ private:
         cluster_type * clusters = new cluster_type[cluster_count];
         clusters_ = clusters;
         cluster_mask_ = cluster_count - 1;
-        cluster_count_ = cluster_count;
 
         entry_type * entries = new entry_type[new_capacity];
         entries_ = entries;
         assert(entry_size_ == 0);
         entry_mask_ = new_capacity - 1;
-        entry_capacity_ = new_capacity;
         entry_threshold_ = (size_type)(new_capacity * FLAT16_DEFAULT_LOAD_FACTOR);
     }
 
