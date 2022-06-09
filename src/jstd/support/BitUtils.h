@@ -24,7 +24,7 @@
 
 #include <nmmintrin.h>  // For SSE 4.2, _mm_popcnt_u32(), _mm_popcnt_u64()
 
-#if defined(_MSC_VER) && (_MSC_VER >= 1500) // >= MSVC 2008
+#if (defined(_MSC_VER) && (_MSC_VER >= 1500)) && !defined(__clang__) // >= MSVC 2008
     #pragma intrinsic(_BitScanReverse)
     #pragma intrinsic(_BitScanForward)
     #if defined(_WIN64) || defined(_M_X64) || defined(_M_AMD64) || defined(_M_IA64) || defined(_M_ARM64)
@@ -273,18 +273,18 @@ struct BitUtils {
 
 #if (JSTD_WORD_SIZE == 64)
     static inline
-    unsigned int bsf64(unsigned long long x) {
+    unsigned int bsf64(uint64_t x) {
         assert(x != 0);
 #if __has_builtin(__builtin_ctzll)
         // gcc: __bsfq(x)
-        return (unsigned int)__builtin_ctzll(x);
+        return (unsigned int)__builtin_ctzll((unsigned long long)x);
 #else
-        return (unsigned int)BitUtils::__internal_ctzll((uint64_t)x);
+        return (unsigned int)BitUtils::__internal_ctzll(x);
 #endif
     }
 #else
     static inline
-    unsigned int bsf64(unsigned long long x) {
+    unsigned int bsf64(uint64_t x) {
         assert(x != 0);
         unsigned int index;
         unsigned int low = (unsigned int)(x & 0xFFFFFFFFU);
@@ -313,18 +313,18 @@ struct BitUtils {
 
 #if (JSTD_WORD_SIZE == 64)
     static inline
-    unsigned int bsr64(unsigned long long x) {
+    unsigned int bsr64(uint64_t x) {
         assert(x != 0);
 #if __has_builtin(__builtin_clzll)
         // gcc: __bsrq(x)
-        return (unsigned int)(63 - __builtin_clzll(x));
+        return (unsigned int)(63 - __builtin_clzll((unsigned long long)x));
 #else
-        return (unsigned int)BitUtils::__internal_clzll((uint64_t)x);
+        return (unsigned int)BitUtils::__internal_clzll(x);
 #endif
     }
 #else
     static inline
-    unsigned int bsf64(unsigned long long x) {
+    unsigned int bsf64(uint64_t x) {
         assert(x != 0);
         unsigned int index;
         unsigned int high = (unsigned int)(x >> 32U);
@@ -405,7 +405,8 @@ struct BitUtils {
     }
 #endif // (JSTD_WORD_SIZE == 64)
 
-    static inline unsigned int bsf(size_t x) {
+    static inline
+    unsigned int bsf(size_t x) {
 #if (JSTD_WORD_SIZE == 64)
         return BitUtils::bsf64(x);
 #else
@@ -413,7 +414,8 @@ struct BitUtils {
 #endif
     }
 
-    static inline unsigned int bsr(size_t x) {
+    static inline
+    unsigned int bsr(size_t x) {
 #if (JSTD_WORD_SIZE == 64)
         return BitUtils::bsr64(x);
 #else
@@ -421,7 +423,8 @@ struct BitUtils {
 #endif
     }
 
-    static inline unsigned int popcnt(size_t x) {
+    static inline
+    unsigned int popcnt(size_t x) {
 #if (JSTD_WORD_SIZE == 64)
         return BitUtils::popcnt64(x);
 #else
