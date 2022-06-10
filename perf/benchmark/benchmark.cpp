@@ -1413,10 +1413,10 @@ void flat16_hash_map_int_test()
     flat_hash_map.size();
     flat_hash_map.capacity();
 
-    printf("flat_hash_map.clusters() = 0x%p\n", flat_hash_map.clusters());
+    printf("flat_hash_map.clusters() = %p\n", flat_hash_map.clusters());
     printf("sizeof(cluster_type) = %u\n\n", (uint32_t)sizeof(cluster_type));
 
-    printf("flat_hash_map.entries() = 0x%p\n", flat_hash_map.entries());
+    printf("flat_hash_map.entries()  = %p\n", flat_hash_map.entries());
     printf("sizeof(entry_type) = %u\n\n", (uint32_t)sizeof(entry_type));
 
     flat_hash_map.insert(std::make_pair(1, 111));
@@ -1450,10 +1450,10 @@ void flat16_hash_map_string_test()
     flat_hash_map.size();
     flat_hash_map.capacity();
 
-    printf("flat_hash_map.clusters() = 0x%p\n", flat_hash_map.clusters());
+    printf("flat_hash_map.clusters() = %p\n", flat_hash_map.clusters());
     printf("sizeof(cluster_type) = %u\n\n", (uint32_t)sizeof(cluster_type));
 
-    printf("flat_hash_map.entries() = 0x%p\n", flat_hash_map.entries());
+    printf("flat_hash_map.entries()  = %p\n", flat_hash_map.entries());
     printf("sizeof(entry_type) = %u\n\n", (uint32_t)sizeof(entry_type));
 
     flat_hash_map.insert(std::make_pair(0, "abc"));
@@ -1484,17 +1484,9 @@ int main(int argc, char * argv[])
     // Random number seed
     srand((unsigned int)time(NULL));
 
-    if (0) {
-        IntegalHash_test();
-    }
-
-    if (1) {
-        flat16_hash_map_int_test();
-    }
-
-    if (1) {
-        flat16_hash_map_string_test();
-    }
+    if (0) { IntegalHash_test(); }
+    if (1) { flat16_hash_map_int_test(); }
+    if (1) { flat16_hash_map_string_test(); }
 
     return 0;
 }
