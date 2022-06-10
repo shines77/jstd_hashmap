@@ -1414,10 +1414,10 @@ void flat16_hash_map_int_test()
     flat_hash_map.capacity();
 
     printf("flat_hash_map.clusters() = %p\n", flat_hash_map.clusters());
-    printf("sizeof(cluster_type) = %u\n\n", (uint32_t)sizeof(cluster_type));
+    printf("sizeof(cluster_type)     = %u\n\n", (uint32_t)sizeof(cluster_type));
 
     printf("flat_hash_map.entries()  = %p\n", flat_hash_map.entries());
-    printf("sizeof(entry_type) = %u\n\n", (uint32_t)sizeof(entry_type));
+    printf("sizeof(entry_type)       = %u\n\n", (uint32_t)sizeof(entry_type));
 
     flat_hash_map.insert(std::make_pair(1, 111));
     flat_hash_map.insert(std::make_pair(1, 999));
@@ -1451,10 +1451,10 @@ void flat16_hash_map_string_test()
     flat_hash_map.capacity();
 
     printf("flat_hash_map.clusters() = %p\n", flat_hash_map.clusters());
-    printf("sizeof(cluster_type) = %u\n\n", (uint32_t)sizeof(cluster_type));
+    printf("sizeof(cluster_type)     = %u\n\n", (uint32_t)sizeof(cluster_type));
 
     printf("flat_hash_map.entries()  = %p\n", flat_hash_map.entries());
-    printf("sizeof(entry_type) = %u\n\n", (uint32_t)sizeof(entry_type));
+    printf("sizeof(entry_type)       = %u\n\n", (uint32_t)sizeof(entry_type));
 
     flat_hash_map.insert(std::make_pair(0, "abc"));
     flat_hash_map.insert(std::make_pair(0, "ABC"));
