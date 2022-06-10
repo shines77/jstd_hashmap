@@ -762,9 +762,8 @@ public:
               !std::is_constructible<value_type, First &&>::value>::type * = nullptr,
               typename ... Args>
     std::pair<iterator, bool> emplace_impl(First && first, Args && ... args) {
-        value_type value(std::forward<First>(first), std::forward<Args>(args)...);
-
         std::uint8_t ctrl_hash;
+        value_type value(std::forward<First>(first), std::forward<Args>(args)...);
         auto find_info = this->find_and_prepare_insert(value.first, ctrl_hash);
         size_type target = find_info.first;
         size_type is_exists = find_info.second;
@@ -783,7 +782,7 @@ public:
                 // Container is full and there is no anyone empty entry.
                 this->grow();
 
-                return this->emplace(std::forward<KeyT>(key), std::forward<Args>(args)...);
+                return this->emplace(std::forward<First>(first), std::forward<Args>(args)...);
             }
         } else {
             // The key to be inserted already exists.
