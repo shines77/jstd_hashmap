@@ -1304,6 +1304,62 @@ int main(int argc, char * argv[])
 
 #else
 
+static inline
+uint32_t next_random_u32()
+{
+#if (RAND_MAX == 0x7FFF)
+    uint32_t rnd32 = (((uint32_t)rand() & 0x03) << 30) |
+                      ((uint32_t)rand() << 15) |
+                       (uint32_t)rand();
+#else
+    uint32_t rnd32 = ((uint32_t)rand() << 16) | (uint32_t)rand();
+#endif
+    return rnd32;
+}
+
+static inline
+uint64_t next_random_u64()
+{
+#if (RAND_MAX == 0x7FFF)
+    uint64_t rnd64 = (((uint64_t)rand() & 0x0F) << 60) |
+                      ((uint64_t)rand() << 45) |
+                      ((uint64_t)rand() << 30) |
+                      ((uint64_t)rand() << 15) |
+                       (uint64_t)rand();
+#else
+    uint64_t rnd64 = ((uint64_t)rand() << 32) | (uint64_t)rand();
+#endif
+    return rnd64;
+}
+
+// Returns a number in the range [min, max) - uint32
+template <uint32_t min_val, uint32_t max_val>
+static inline
+uint32_t get_range_u32(uint32_t num)
+{
+    if (min_val < max_val) {
+        return (min_val + (num % (uint32_t)(max_val - min_val)));
+    } else if (min_val > max_val) {
+        return (max_val + (num % (uint32_t)(min_val - max_val)));
+    } else {
+        return num;
+    }
+}
+
+// Returns a number in the range [min, max) - uint64
+template <uint64_t min_val, uint64_t max_val>
+static inline
+uint64_t get_range_u32(uint64_t num)
+{
+    if (min_val < max_val) {
+        return (min_val + (num % (uint64_t)(max_val - min_val)));
+    } else if (min_val > max_val) {
+        return (max_val + (num % (uint64_t)(min_val - max_val)));
+    } else {
+        return num;
+    }
+}
+
 bool read_dict_words(const std::string & filename)
 {
     bool is_ok = false;
@@ -1332,6 +1388,9 @@ bool read_dict_words(const std::string & filename)
 
 int main(int argc, char * argv[])
 {
+    // Random number seed
+    srand((unsigned int)time(NULL));
+
     if (argc == 2) {
         std::string filename = argv[1];
         bool read_ok = read_dict_words(filename);
@@ -1363,19 +1422,21 @@ int main(int argc, char * argv[])
 
     jstd::hash::IntegalHash integalHasher;
 
-    printf("hash::IntegalHash(uint32_t);\n\n");
+    printf("hash::IntegalHash(uint32_t)\n\n");
     for (std::uint32_t i = 0; i < 32; i++) {
-        std::uint32_t hash32 = integalHasher(i);
-        printf("value = %4u, hash_code = %-11u (0x%08X), \n",
-               i, hash32, hash32);
+        std::uint32_t value = next_random_u32();
+        std::uint32_t hash32 = integalHasher(value);
+        printf("value = %-10u, hash_code = %-10u (0x%08X), \n",
+               value, hash32, hash32);
     }
     printf("\n");
 
-    printf("hash::IntegalHash(uint64_t);\n\n");
+    printf("hash::IntegalHash(uint64_t)\n\n");
     for (std::uint64_t i = 0; i < 32; i++) {
-        std::uint64_t hash64 = integalHasher(i);
-        printf("value = %4u, hash_code = %-21" PRIu64 "(0x%08X%08X)\n",
-               (std::uint32_t)i, hash64,
+        std::uint64_t value = next_random_u64();
+        std::uint64_t hash64 = integalHasher(value);
+        printf("value = %-20" PRIu64 ", hash_code = %-20" PRIu64 " (0x%08X%08X)\n",
+               value, hash64,
                (std::uint32_t)(hash64 >> 32),
                (std::uint32_t)(hash64 & 0xFFFFFFFFul));
     }
