@@ -5,9 +5,6 @@
       <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
       <Extensions>h;hh;hpp;hxx;hm;inl;inc;xsd;cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
     </Filter>
-    <Filter Include="src\hash">
-      <UniqueIdentifier>{21b4ff51-3441-4937-9394-f4c5936231f1}</UniqueIdentifier>
-    </Filter>
     <Filter Include="src\basic">
       <UniqueIdentifier>{e2452254-ee31-4dac-afa1-59b72c3f3658}</UniqueIdentifier>
     </Filter>
@@ -17,17 +14,11 @@
     <Filter Include="src\support">
       <UniqueIdentifier>{9822423e-263e-4fa9-80de-204dbc038170}</UniqueIdentifier>
     </Filter>
+    <Filter Include="src\hashmap">
+      <UniqueIdentifier>{21b4ff51-3441-4937-9394-f4c5936231f1}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\..\src\jstd\flat16_hash_map.h">
-      <Filter>src\hash</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\src\jstd\flat32_hash_map.h">
-      <Filter>src\hash</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\src\jstd\unordered_map.h">
-      <Filter>src\hash</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\..\src\jstd\lib.h">
       <Filter>src</Filter>
     </ClInclude>
@@ -63,6 +54,18 @@
     </ClInclude>
     <ClInclude Include="..\..\..\src\jstd\support\BitUtils.h">
       <Filter>src\support</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\hashmap\flat16_hash_map.h">
+      <Filter>src\hashmap</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\hashmap\flat32_hash_map.h">
+      <Filter>src\hashmap</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\hashmap\key_extractor.h">
+      <Filter>src\hashmap</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\hashmap\unordered_map.h">
+      <Filter>src\hashmap</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

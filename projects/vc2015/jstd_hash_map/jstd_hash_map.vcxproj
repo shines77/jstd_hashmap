@@ -29,11 +29,12 @@
     <ClInclude Include="..\..\..\src\jstd\basic\unistd.h" />
     <ClInclude Include="..\..\..\src\jstd\basic\vld.h" />
     <ClInclude Include="..\..\..\src\jstd\basic\vld_def.h" />
-    <ClInclude Include="..\..\..\src\jstd\flat16_hash_map.h" />
-    <ClInclude Include="..\..\..\src\jstd\flat32_hash_map.h" />
+    <ClInclude Include="..\..\..\src\jstd\hashmap\flat16_hash_map.h" />
+    <ClInclude Include="..\..\..\src\jstd\hashmap\flat32_hash_map.h" />
+    <ClInclude Include="..\..\..\src\jstd\hashmap\key_extractor.h" />
+    <ClInclude Include="..\..\..\src\jstd\hashmap\unordered_map.h" />
     <ClInclude Include="..\..\..\src\jstd\lib.h" />
     <ClInclude Include="..\..\..\src\jstd\support\BitUtils.h" />
-    <ClInclude Include="..\..\..\src\jstd\unordered_map.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\src\jstd\lib.cpp" />
