@@ -1422,8 +1422,16 @@ int main(int argc, char * argv[])
 
     jstd::hash::IntegalHash integalHasher;
 
-    printf("hash::IntegalHash(uint32_t)\n\n");
-    for (std::uint32_t i = 0; i < 32; i++) {
+    printf("hash::IntegalHash(uint32_t) sequential\n\n");
+    for (std::uint32_t i = 0; i < 16; i++) {
+        std::uint32_t hash32 = integalHasher(i);
+        printf("value = %-10u, hash_code = %-10u (0x%08X), \n",
+               i, hash32, hash32);
+    }
+    printf("\n");
+
+    printf("hash::IntegalHash(uint32_t) random\n\n");
+    for (std::uint32_t i = 0; i < 16; i++) {
         std::uint32_t value = next_random_u32();
         std::uint32_t hash32 = integalHasher(value);
         printf("value = %-10u, hash_code = %-10u (0x%08X), \n",
@@ -1431,8 +1439,18 @@ int main(int argc, char * argv[])
     }
     printf("\n");
 
-    printf("hash::IntegalHash(uint64_t)\n\n");
-    for (std::uint64_t i = 0; i < 32; i++) {
+    printf("hash::IntegalHash(uint64_t) sequential\n\n");
+    for (std::uint64_t i = 0; i < 16; i++) {
+        std::uint64_t hash64 = integalHasher(i);
+        printf("value = %-20" PRIu64 ", hash_code = %-20" PRIu64 " (0x%08X%08X)\n",
+               i, hash64,
+               (std::uint32_t)(hash64 >> 32),
+               (std::uint32_t)(hash64 & 0xFFFFFFFFul));
+    }
+    printf("\n");
+
+    printf("hash::IntegalHash(uint64_t) random\n\n");
+    for (std::uint64_t i = 0; i < 16; i++) {
         std::uint64_t value = next_random_u64();
         std::uint64_t hash64 = integalHasher(value);
         printf("value = %-20" PRIu64 ", hash_code = %-20" PRIu64 " (0x%08X%08X)\n",
