@@ -1468,14 +1468,14 @@ void flat16_hash_map_string_test()
     if (iter != flat_hash_map.end()) {
         printf("Found, key = %d, value = \"%s\"\n\n", (int)iter->first, iter->second.c_str());
     } else {
-        printf("key = %d, No Found\n\n", 0);
+        printf("key = %d, Not found\n\n", 0);
     }
 
     iter = flat_hash_map.find(1);
     if (iter != flat_hash_map.end()) {
         printf("Found, key = %d, value = \"%s\"\n\n", (int)iter->first, iter->second.c_str());
     } else {
-        printf("key = %d, No Found\n\n", 1);
+        printf("key = %d, Not found\n\n", 1);
     }
 }
 

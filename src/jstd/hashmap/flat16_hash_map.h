@@ -1041,6 +1041,7 @@ private:
         std::uint8_t control_hash = this->get_control_hash(hash_code);
         index_type cluster_index = this->index_for(hash_code);
         index_type first_cluster = cluster_index;
+        ctrl_hash = control_hash;
 
         do {
             cluster_type & cluster = this->get_cluster(cluster_index);
