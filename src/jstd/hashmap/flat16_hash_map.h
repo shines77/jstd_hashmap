@@ -67,6 +67,7 @@
 #include <nmmintrin.h>
 #include <immintrin.h>
 
+#include "jstd/type_traits.h"
 #include "jstd/support/BitUtils.h"
 
 #define FLAT16_DEFAULT_LOAD_FACTOR  (0.5)
@@ -127,7 +128,6 @@ struct IntegalHash
     std::uint32_t operator () (std::uint32_t value) const {
         //std::uint32_t hash = value * 16777619ul ^ 2166136261ul;
         std::uint32_t hash = value * 2654435761ul + 16777619ul;
-        //std::uint32_t hash = value * 2654435761ul ^ 2166136261ul;
         return hash;
     }
 
@@ -141,10 +141,13 @@ struct IntegalHash
 } // namespace hash
 
 template <std::uint8_t Value>
-struct repeat_u8to64 {
-    static constexpr std::uint64_t u16 = (std::uint64_t)Value | ((std::uint64_t)Value << 8);
-    static constexpr std::uint64_t u32 = u16 | (u16 << 16);
-    static constexpr std::uint64_t value = u32 | (u32 << 16);
+struct repeat_u8x4 {
+    static constexpr std::uint32_t value = (std::uint32_t)Value * 0x01010101ul;
+};
+
+template <std::uint8_t Value>
+struct repeat_u8x8 {
+    static constexpr std::uint64_t value = (std::uint64_t)Value * 0x0101010101010101ull;
 };
 
 template < typename Key, typename Value,
@@ -368,12 +371,21 @@ public:
         }
         hash_entry(const hash_entry & src) : value(src.value) {
         }
-        hash_entry(hash_entry && src) : value(std::move(src.value)) {
+        hash_entry(hash_entry && src) noexcept : value(std::move(src.value)) {
         }
 
         hash_entry(const value_type & val) : value(val) {
         }
         hash_entry(value_type && val) noexcept : value(std::move(val)) {
+        }
+
+        hash_entry(const key_type & key, const mapped_type & value) : value(key, value) {
+        }
+        hash_entry(const key_type & key, mapped_type && value)
+            : value(key, std::forward<mapped_type>(value)) {
+        }
+        hash_entry(key_type && key, mapped_type && value) noexcept
+            : value(std::forward<key_type>(key), std::forward<mapped_type>(value)) {
         }
 
         ~hash_entry() { }
@@ -385,7 +397,7 @@ public:
             return *this;
         }
 
-        hash_entry & operator = (hash_entry && rhs) {
+        hash_entry & operator = (hash_entry && rhs) noexcept {
             if (this != std::addressof(rhs)) {
                 this->value = std::move(rhs.value);
             }
@@ -674,8 +686,8 @@ public:
     }
 
     template <typename P, typename std::enable_if<
-              (!std::is_same<typename std::remove_reference<P>::type, value_type>::value) &&
-              (!std::is_same<typename std::remove_reference<P>::type, nc_value_type>::value) &&
+              (!jstd::is_same_ex<P, value_type>::value) &&
+              (!jstd::is_same_ex<P, nc_value_type>::value) &&
               std::is_constructible<value_type, P &&>::value>::type * = nullptr>
     std::pair<iterator, bool> insert(P && value) {
         return this->emplace_impl<true>(std::move(value));
@@ -689,19 +701,9 @@ public:
         return this->emplace_impl<true>(std::move(value)).first;
     }
 
-#if 0
-    std::pair<iterator, bool> emplace(const value_type & value) {
-        return this->emplace_impl<false>(value);
-    }
-
-    std::pair<iterator, bool> emplace(value_type && value) {
-        return this->emplace_impl<false>(std::move(value));
-    }
-#endif
-
     template <typename ... Args>
     std::pair<iterator, bool> emplace(Args && ... args) {
-        return this->emplace_impl<false>(value_type(std::forward<Args>(args)...));
+        return this->emplace_impl<false>(std::forward<Args>(args)...);
     }
 
     template <typename ... Args>
@@ -771,7 +773,7 @@ public:
                 static constexpr bool is_rvalue_ref = std::is_rvalue_reference<decltype(value)>::value;
                 entry_type * entry = this->entry_at(index);
                 if (is_rvalue_ref)
-                    entry->value.second = std::move_if_noexcept(value.second);
+                    entry->value.second = std::move(value.second);
                 else
                     entry->value.second = value.second;
             }
@@ -779,11 +781,92 @@ public:
         }
     }
 
-    template <bool update_always, typename ... Args>
-    std::pair<iterator, bool> emplace_by_impl(Args && ... args) {
+    template <bool update_always, typename KeyT, typename std::enable_if<
+              (!jstd::is_same_ex<KeyT, value_type>::value) &&
+              (!jstd::is_same_ex<KeyT, nc_value_type>::value) &&
+              (jstd::is_same_ex<KeyT, key_type>::value ||
+               std::is_constructible<key_type, KeyT &&>::value) &&
+              !std::is_constructible<value_type, KeyT &&>::value>::type * = nullptr,
+              typename ... Args>
+    std::pair<iterator, bool> emplace_impl(KeyT && key, Args && ... args) {
         index_type first_cluster, last_cluster;
         std::uint8_t ctrl_hash;
-        value_type value(std::forward<Args>(args)...);
+        size_type index = this->find_impl(key, first_cluster, last_cluster, ctrl_hash);
+        if (index == npos) {
+            // Find the first DeletedEntry from first_cluster to last_cluster.
+            index_type cluster_index = first_cluster;
+            do {
+                cluster_type & cluster = this->get_cluster(cluster_index);
+                std::uint32_t mask16 = cluster.matchDeleted();
+                if (mask16 != 0) {
+                    size_type pos = BitUtils::bsf32(mask16);
+                    size_type start_index = cluster_index * kClusterEntries;
+                    index = start_index + pos;
+                    break;
+                }
+                if (cluster_index == last_cluster)
+                    break;
+                cluster_index = this->next_cluster(cluster_index);
+            } while (cluster_index != first_cluster);
+
+            if (index != npos) {
+                // Found a [DeletedEntry] to insert
+                control_byte * control = this->control_at(index);
+                assert(control->isDeleted());
+                control->setUsed(ctrl_hash);
+                entry_type * entry = this->entry_at(index);
+                this->entry_allocator_.construct(entry, std::forward<KeyT>(key),
+                                                        std::forward<Args>(args)...);
+                this->entry_size_++;
+                return { this->iterator_at(index), true };
+            } else {
+                if (last_cluster != npos) {
+                    cluster_type & cluster = this->get_cluster(last_cluster);
+                    std::uint32_t mask16 = cluster.matchEmpty();
+                    assert(mask16 != 0);
+
+                    size_type pos = BitUtils::bsf32(mask16);
+                    size_type start_index = cluster_index * kClusterEntries;
+                    index = start_index + pos;
+
+                    // Found a [EmptyEntry] to insert
+                    control_byte * control = this->control_at(index);
+                    assert(control->isEmpty());
+                    control->setUsed(ctrl_hash);
+                    entry_type * entry = this->entry_at(index);
+                    this->entry_allocator_.construct(entry, std::forward<KeyT>(key),
+                                                            std::forward<Args>(args)...);
+                    this->entry_size_++;
+                    return { this->iterator_at(index), true };
+                } else {
+                    // Container is full and there is no anyone empty entry.
+                    this->grow();
+
+                    return this->emplace(std::forward<KeyT>(key), std::forward<Args>(args)...);
+                }
+            }
+        } else {
+            // The key is exists.
+            if (update_always) {
+                mapped_type mapped_value(std::forward<Args>(args)...);
+                entry_type * entry = this->entry_at(index);
+                entry->value.second = std::move(mapped_value);
+            }
+            return { this->iterator_at(index), false };
+        }
+    }
+
+    template <bool update_always, typename First, typename std::enable_if<
+              (!jstd::is_same_ex<First, value_type>::value) &&
+              (!jstd::is_same_ex<First, nc_value_type>::value) &&
+              (!jstd::is_same_ex<First, key_type>::value) &&
+              (!std::is_constructible<key_type, First &&>::value) &&
+              !std::is_constructible<value_type, First &&>::value>::type * = nullptr,
+              typename ... Args>
+    std::pair<iterator, bool> emplace_impl(First && first, Args && ... args) {
+        index_type first_cluster, last_cluster;
+        std::uint8_t ctrl_hash;
+        value_type value(std::forward<First>(first), std::forward<Args>(args)...);
         size_type index = this->find_impl(value.first, first_cluster, last_cluster, ctrl_hash);
         if (index == npos) {
             // Find the first DeletedEntry from first_cluster to last_cluster.
@@ -833,7 +916,7 @@ public:
                     // Container is full and there is no anyone empty entry.
                     this->grow();
 
-                    return this->emplace(std::forward<Args>(args)...);
+                    return this->emplace(std::forward<First>(first), std::forward<Args>(args)...);
                 }
             }
         } else {

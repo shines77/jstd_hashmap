@@ -17,6 +17,9 @@
     <Filter Include="src\hashmap">
       <UniqueIdentifier>{21b4ff51-3441-4937-9394-f4c5936231f1}</UniqueIdentifier>
     </Filter>
+    <Filter Include="src\traits">
+      <UniqueIdentifier>{da527b74-6338-42ce-834f-dfcc0f91765d}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\src\jstd\lib.h">
@@ -66,6 +69,12 @@
     </ClInclude>
     <ClInclude Include="..\..\..\src\jstd\hashmap\unordered_map.h">
       <Filter>src\hashmap</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\type_traits.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\traits\has_member.h">
+      <Filter>src\traits</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

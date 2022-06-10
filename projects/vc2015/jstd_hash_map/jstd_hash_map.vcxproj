@@ -35,6 +35,8 @@
     <ClInclude Include="..\..\..\src\jstd\hashmap\unordered_map.h" />
     <ClInclude Include="..\..\..\src\jstd\lib.h" />
     <ClInclude Include="..\..\..\src\jstd\support\BitUtils.h" />
+    <ClInclude Include="..\..\..\src\jstd\traits\has_member.h" />
+    <ClInclude Include="..\..\..\src\jstd\type_traits.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\src\jstd\lib.cpp" />
