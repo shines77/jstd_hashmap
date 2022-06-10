@@ -9,6 +9,10 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdint.h>
+#include <stddef.h>
+#include <stdbool.h>
+#include <inttypes.h>
 #include <string.h>
 #include <math.h>
 
@@ -1370,7 +1374,7 @@ int main(int argc, char * argv[])
     printf("hash::IntegalHash(uint64_t);\n\n");
     for (std::uint64_t i = 0; i < 32; i++) {
         std::uint64_t hash64 = integalHasher(i);
-        printf("value = %4u, hash_code = %-20llu (0x%08X%08X)\n",
+        printf("value = %4u, hash_code = %-20" PRIu64 "(0x%08X%08X)\n",
                (std::uint32_t)i, hash64,
                (std::uint32_t)(hash64 >> 32),
                (std::uint32_t)(hash64 & 0xFFFFFFFFul));

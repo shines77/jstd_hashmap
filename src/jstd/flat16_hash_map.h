@@ -55,7 +55,6 @@
 #include <cstdint>
 #include <cstddef>      // For std::ptrdiff_t, std::size_t
 #include <cstdbool>
-#include <inttypes.h>
 #include <cassert>
 #include <memory>       // For std::swap(), std::pointer_traits<T>
 #include <limits>       // For std::numeric_limits<T>
