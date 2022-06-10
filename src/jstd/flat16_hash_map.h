@@ -55,6 +55,7 @@
 #include <cstdint>
 #include <cstddef>      // For std::ptrdiff_t, std::size_t
 #include <cstdbool>
+#include <inttypes.h>
 #include <cassert>
 #include <memory>       // For std::swap(), std::pointer_traits<T>
 #include <limits>       // For std::numeric_limits<T>
@@ -106,11 +107,45 @@ std::size_t round_up_pow2(std::size_t n)
     return n;
 }
 
+namespace hash {
+
+static inline
+std::uint32_t Integal_hash1_u32(std::uint32_t value)
+{
+    std::uint32_t hash = value * 2654435761ul;
+    return hash;
+}
+
+static inline
+std::uint32_t Integal_hash2_u32(std::uint32_t value)
+{
+    std::uint32_t hash = value * 2654435761ul ^ 2166136261ul;
+    return hash;
+}
+
+struct IntegalHash
+{
+    std::uint32_t operator () (std::uint32_t value) const {
+        //std::uint32_t hash = value * 16777619ul ^ 2166136261ul;
+        std::uint32_t hash = value * 2654435761ul + 16777619ul;
+        //std::uint32_t hash = value * 2654435761ul ^ 2166136261ul;
+        return hash;
+    }
+
+    std::uint64_t operator () (std::uint64_t value) const {
+        //std::uint64_t hash = value * 1099511628211ull ^ 14695981039346656037ull;
+        std::uint64_t hash = value * 14695981039346656037ull + 1099511628211ull;
+        return hash;
+    }
+};
+
+} // namespace hash
+
 template <std::uint8_t Value>
-struct repeat_8to64 {
-    static constexpr std::uint64_t r16 = (std::uint64_t)Value | ((std::uint64_t)Value << 8);
-    static constexpr std::uint64_t r32 = r16 | (r16 << 16);
-    static constexpr std::uint64_t value = r32 | (r32 << 16);
+struct repeat_u8to64 {
+    static constexpr std::uint64_t u16 = (std::uint64_t)Value | ((std::uint64_t)Value << 8);
+    static constexpr std::uint64_t u32 = u16 | (u16 << 16);
+    static constexpr std::uint64_t value = u32 | (u32 << 16);
 };
 
 template < typename Key, typename Value,
@@ -650,8 +685,8 @@ public:
                 cluster_type & cluster = this->get_cluster(cluster_index);
                 std::uint32_t mask16 = cluster.matchDeleted();
                 if (mask16 != 0) {
-                    size_type start_index = cluster_index * kClusterEntries;
                     size_type pos = BitUtils::bsf32(mask16);
+                    size_type start_index = cluster_index * kClusterEntries;
                     index = start_index + pos;
                     break;
                 }
@@ -672,22 +707,19 @@ public:
                 if (last_cluster != npos) {
                     cluster_type & cluster = this->get_cluster(last_cluster);
                     std::uint32_t mask16 = cluster.matchEmpty();
-                    if (mask16 != 0) {
-                        size_type start_index = cluster_index * kClusterEntries;
-                        size_type pos = BitUtils::bsf32(mask16);
-                        index = start_index + pos;
+                    assert(mask16 != 0);
 
-                        // Found a [EmptyEntry] to insert
-                        control_byte * control = this->control_at(index);
-                        control->setUsed(ctrl_hash);
-                        entry_type * entry = this->entry_at(index);
-                        this->entry_allocator_.construct(entry, value);
-                        this->entry_size_++;
-                        return { this->iterator_at(index), true };
-                    } else {
-                        // Error
-                        assert(true);
-                    }
+                    size_type pos = BitUtils::bsf32(mask16);
+                    size_type start_index = cluster_index * kClusterEntries;
+                    index = start_index + pos;
+
+                    // Found a [EmptyEntry] to insert
+                    control_byte * control = this->control_at(index);
+                    control->setUsed(ctrl_hash);
+                    entry_type * entry = this->entry_at(index);
+                    this->entry_allocator_.construct(entry, value);
+                    this->entry_size_++;
+                    return { this->iterator_at(index), true };
                 } else {
                     // Container is full and there is no anyone empty entry.
                 }
@@ -713,8 +745,8 @@ public:
                 cluster_type & cluster = this->get_cluster(cluster_index);
                 std::uint32_t mask16 = cluster.matchDeleted();
                 if (mask16 != 0) {
-                    size_type start_index = cluster_index * kClusterEntries;
                     size_type pos = BitUtils::bsf32(mask16);
+                    size_type start_index = cluster_index * kClusterEntries;
                     index = start_index + pos;
                     break;
                 }
@@ -726,6 +758,7 @@ public:
             if (index != npos) {
                 // Found a [DeletedEntry] to insert
                 control_byte * control = this->control_at(index);
+                assert(control->isDeleted());
                 control->setUsed(ctrl_hash);
                 entry_type * entry = this->entry_at(index);
                 this->entry_allocator_.construct(entry, std::move(value));
@@ -735,22 +768,20 @@ public:
                 if (last_cluster != npos) {
                     cluster_type & cluster = this->get_cluster(last_cluster);
                     std::uint32_t mask16 = cluster.matchEmpty();
-                    if (mask16 != 0) {
-                        size_type start_index = cluster_index * kClusterEntries;
-                        size_type pos = BitUtils::bsf32(mask16);
-                        index = start_index + pos;
+                    assert(mask16 != 0);
 
-                        // Found a [EmptyEntry] to insert
-                        control_byte * control = this->control_at(index);
-                        control->setUsed(ctrl_hash);
-                        entry_type * entry = this->entry_at(index);
-                        this->entry_allocator_.construct(entry, std::move(value));
-                        this->entry_size_++;
-                        return { this->iterator_at(index), true };
-                    } else {
-                        // Error
-                        assert(true);
-                    }
+                    size_type pos = BitUtils::bsf32(mask16);
+                    size_type start_index = cluster_index * kClusterEntries;
+                    index = start_index + pos;
+
+                    // Found a [EmptyEntry] to insert
+                    control_byte * control = this->control_at(index);
+                    assert(control->isEmpty());
+                    control->setUsed(ctrl_hash);
+                    entry_type * entry = this->entry_at(index);
+                    this->entry_allocator_.construct(entry, std::move(value));
+                    this->entry_size_++;
+                    return { this->iterator_at(index), true };
                 } else {
                     // Container is full and there is no anyone empty entry.
                 }
@@ -889,7 +920,6 @@ private:
         cluster_type * clusters = new cluster_type[cluster_count];
         return clusters;
     }
-
 };
 
 } // namespace jstd

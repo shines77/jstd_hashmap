@@ -1357,6 +1357,26 @@ int main(int argc, char * argv[])
         printf("key = %d, No Found\n\n", 33);
     }
 
+    jstd::hash::IntegalHash integalHasher;
+
+    printf("hash::IntegalHash(uint32_t);\n\n");
+    for (std::uint32_t i = 0; i < 32; i++) {
+        std::uint32_t hash32 = integalHasher(i);
+        printf("value = %4u, hash_code = %-12u (0x%08X), \n",
+               i, hash32, hash32);
+    }
+    printf("\n");
+
+    printf("hash::IntegalHash(uint64_t);\n\n");
+    for (std::uint64_t i = 0; i < 32; i++) {
+        std::uint64_t hash64 = integalHasher(i);
+        printf("value = %4u, hash_code = %-20llu (0x%08X%08X)\n",
+               (std::uint32_t)i, hash64,
+               (std::uint32_t)(hash64 >> 32),
+               (std::uint32_t)(hash64 & 0xFFFFFFFFul));
+    }
+    printf("\n");
+
     return 0;
 }
 

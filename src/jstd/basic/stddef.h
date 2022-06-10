@@ -35,11 +35,11 @@
   #define JSTD_IS_X86           1
   #define JSTD_IS_X86_I386      1
   #define JSTD_WORD_SIZE        32
-#elif defined(_M_ARM64) || defined(__ARM64__) || defined(__arm64__)
+#elif defined(__aarch64__) || defined(_M_ARM64) || defined(__ARM64__) || defined(__arm64__)
   #define JSTD_IS_ARM           1
   #define JSTD_IS_ARM_64        1
   #define JSTD_WORD_SIZE        64
-#elif defined(_M_ARM) || defined(__ARM__) || defined(__arm__)
+#elif defined(__aarch32__) || defined(_M_ARM) || defined(__ARM__) || defined(__arm__)
   #define JSTD_IS_ARM           1
   #define JSTD_IS_ARM_32        1
   #define JSTD_WORD_SIZE        32
