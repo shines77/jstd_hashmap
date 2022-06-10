@@ -156,7 +156,7 @@ public:
     typedef Key                             key_type;
     typedef Value                           mapped_type;
     typedef std::pair<const Key, Value>     value_type;
-    typedef std::pair<Key, Value>           n_value_type;
+    typedef std::pair<Key, Value>           nc_value_type;
 
     typedef Hasher                          hasher_type;
     typedef KeyEqual                        key_equal;
@@ -210,11 +210,11 @@ public:
         }
 
         bool isEmpty() const {
-            return (this->value = kEmptyEntry);
+            return (this->value == kEmptyEntry);
         }
 
         bool isDeleted() const {
-            return (this->value = kDeletedEntry);
+            return (this->value == kDeletedEntry);
         }
 
         bool isUsed() const {
@@ -666,14 +666,51 @@ public:
     }
 
     std::pair<iterator, bool> insert(const value_type & value) {
-        return this->emplace(value);
+        return this->emplace_impl<true>(value);
     }
 
     std::pair<iterator, bool> insert(value_type && value) {
-        return this->emplace(std::forward<value_type>(value));
+        return this->emplace_impl<true>(std::move(value));
     }
 
+    template <typename P, typename std::enable_if<
+              (!std::is_same<typename std::remove_reference<P>::type, value_type>::value) &&
+              (!std::is_same<typename std::remove_reference<P>::type, nc_value_type>::value) &&
+              std::is_constructible<value_type, P &&>::value>::type * = nullptr>
+    std::pair<iterator, bool> insert(P && value) {
+        return this->emplace_impl<true>(std::move(value));
+    }
+
+    iterator insert(const_iterator hint, const value_type & value) {
+        return this->emplace_impl<true>(value).first;
+    }
+
+    iterator insert(const_iterator hint, value_type && value) {
+        return this->emplace_impl<true>(std::move(value)).first;
+    }
+
+#if 0
     std::pair<iterator, bool> emplace(const value_type & value) {
+        return this->emplace_impl<false>(value);
+    }
+
+    std::pair<iterator, bool> emplace(value_type && value) {
+        return this->emplace_impl<false>(std::move(value));
+    }
+#endif
+
+    template <typename ... Args>
+    std::pair<iterator, bool> emplace(Args && ... args) {
+        return this->emplace_impl<false>(value_type(std::forward<Args>(args)...));
+    }
+
+    template <typename ... Args>
+    iterator emplace_hint(const_iterator hint, Args && ... args) {
+        return this->emplace(std::forward<Args>(args)...).first;
+    }
+
+    template <bool update_always>
+    std::pair<iterator, bool> emplace_impl(value_type && value) {
         index_type first_cluster, last_cluster;
         std::uint8_t ctrl_hash;
         size_type index = this->find_impl(value.first, first_cluster, last_cluster, ctrl_hash);
@@ -697,9 +734,10 @@ public:
             if (index != npos) {
                 // Found a [DeletedEntry] to insert
                 control_byte * control = this->control_at(index);
+                assert(control->isDeleted());
                 control->setUsed(ctrl_hash);
                 entry_type * entry = this->entry_at(index);
-                this->entry_allocator_.construct(entry, value);
+                this->entry_allocator_.construct(entry, std::forward<value_type>(value));
                 this->entry_size_++;
                 return { this->iterator_at(index), true };
             } else {
@@ -714,28 +752,38 @@ public:
 
                     // Found a [EmptyEntry] to insert
                     control_byte * control = this->control_at(index);
+                    assert(control->isEmpty());
                     control->setUsed(ctrl_hash);
                     entry_type * entry = this->entry_at(index);
-                    this->entry_allocator_.construct(entry, value);
+                    this->entry_allocator_.construct(entry, std::forward<value_type>(value));
                     this->entry_size_++;
                     return { this->iterator_at(index), true };
                 } else {
                     // Container is full and there is no anyone empty entry.
+                    this->grow();
+
+                    return this->emplace(std::forward<value_type>(value));
                 }
             }
-
-            // Failed to insert
-            return { this->end(), false };
         } else {
-            entry_type * entry = this->entry_at(index);
-            entry->value.second = value.second;
+            // The key is exists.
+            if (update_always) {
+                static constexpr bool is_rvalue_ref = std::is_rvalue_reference<decltype(value)>::value;
+                entry_type * entry = this->entry_at(index);
+                if (is_rvalue_ref)
+                    entry->value.second = std::move_if_noexcept(value.second);
+                else
+                    entry->value.second = value.second;
+            }
             return { this->iterator_at(index), false };
         }
     }
 
-    std::pair<iterator, bool> emplace(value_type && value) {
+    template <bool update_always, typename ... Args>
+    std::pair<iterator, bool> emplace_by_impl(Args && ... args) {
         index_type first_cluster, last_cluster;
         std::uint8_t ctrl_hash;
+        value_type value(std::forward<Args>(args)...);
         size_type index = this->find_impl(value.first, first_cluster, last_cluster, ctrl_hash);
         if (index == npos) {
             // Find the first DeletedEntry from first_cluster to last_cluster.
@@ -783,16 +831,28 @@ public:
                     return { this->iterator_at(index), true };
                 } else {
                     // Container is full and there is no anyone empty entry.
+                    this->grow();
+
+                    return this->emplace(std::forward<Args>(args)...);
                 }
             }
-
-            // Failed to insert
-            return { this->end(), false };
         } else {
-            entry_type * entry = this->entry_at(index);
-            entry->value.second = std::move(value.second);
+            // The key is exists.
+            if (update_always) {
+                entry_type * entry = this->entry_at(index);
+                entry->value.second = std::move(value.second);
+            }
             return { this->iterator_at(index), false };
         }
+    }
+
+    inline void grow() {
+        size_type new_capacity = (this->entry_mask_ + 1) * 2;
+        this->rehash(new_capacity);
+    }
+
+    void rehash(size_type new_capacity) {
+        //
     }
 
 private:

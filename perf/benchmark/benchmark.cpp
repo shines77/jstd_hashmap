@@ -1360,66 +1360,8 @@ uint64_t get_range_u32(uint64_t num)
     }
 }
 
-bool read_dict_words(const std::string & filename)
+void IntegalHash_test()
 {
-    bool is_ok = false;
-    try {
-        std::ifstream dict(filename.c_str());
-
-        if (dict.is_open()) {
-            std::string word;
-            while (!dict.eof()) {
-                char buf[256];
-                dict.getline(buf, sizeof(buf));
-                word = buf;
-                dict_words.push_back(word);
-            }
-
-            is_ok = true;
-            dict.close();
-        }
-    }
-    catch (const std::exception & ex) {
-        std::cout << "read_dict_file() Exception: " << ex.what() << std::endl << std::endl;
-        is_ok = false;
-    }
-    return is_ok;
-}
-
-int main(int argc, char * argv[])
-{
-    // Random number seed
-    srand((unsigned int)time(NULL));
-
-    if (argc == 2) {
-        std::string filename = argv[1];
-        bool read_ok = read_dict_words(filename);
-        dict_words_is_ready = read_ok;
-        dict_filename = filename;
-    }
-
-    typedef typename jstd::flat16_hash_map<int, int>::entry_type    entry_type;
-    typedef typename jstd::flat16_hash_map<int, int>::cluster_type  cluster_type;
-
-    jstd::flat16_hash_map<int, int> flat_hash_map;
-    flat_hash_map.size();
-    flat_hash_map.capacity();
-
-    printf("flat_hash_map.clusters() = 0x%p\n", flat_hash_map.clusters());
-    printf("sizeof(cluster_type) = %u\n\n", (uint32_t)sizeof(cluster_type));
-
-    printf("flat_hash_map.entries() = 0x%p\n", flat_hash_map.entries());
-    printf("sizeof(entry_type) = %u\n\n", (uint32_t)sizeof(entry_type));
-
-    flat_hash_map.emplace(std::make_pair(33, 22));
-
-    auto iter = flat_hash_map.find(33);
-    if (iter != flat_hash_map.end()) {
-        printf("Found, key = %d, value = %d\n\n", iter->first, iter->second);
-    } else {
-        printf("key = %d, No Found\n\n", 33);
-    }
-
     jstd::hash::IntegalHash integalHasher;
 
     printf("hash::IntegalHash(uint32_t) sequential\n\n");
@@ -1459,6 +1401,100 @@ int main(int argc, char * argv[])
                (std::uint32_t)(hash64 & 0xFFFFFFFFul));
     }
     printf("\n");
+}
+
+void flat16_hash_map_int_test()
+{
+    typedef jstd::flat16_hash_map<int, int> hash_map_t;
+    typedef typename hash_map_t::entry_type    entry_type;
+    typedef typename hash_map_t::cluster_type  cluster_type;
+
+    hash_map_t flat_hash_map;
+    flat_hash_map.size();
+    flat_hash_map.capacity();
+
+    printf("flat_hash_map.clusters() = 0x%p\n", flat_hash_map.clusters());
+    printf("sizeof(cluster_type) = %u\n\n", (uint32_t)sizeof(cluster_type));
+
+    printf("flat_hash_map.entries() = 0x%p\n", flat_hash_map.entries());
+    printf("sizeof(entry_type) = %u\n\n", (uint32_t)sizeof(entry_type));
+
+    flat_hash_map.insert(std::make_pair(1, 111));
+    flat_hash_map.insert(std::make_pair(1, 999));
+
+    flat_hash_map.emplace(std::make_pair(2, 222));
+    flat_hash_map.emplace(std::make_pair(2, 999));
+
+    auto iter = flat_hash_map.find(1);
+    if (iter != flat_hash_map.end()) {
+        printf("Found, key = %d, value = %d\n\n", iter->first, iter->second);
+    } else {
+        printf("key = %d, No Found\n\n", 1);
+    }
+
+    iter = flat_hash_map.find(2);
+    if (iter != flat_hash_map.end()) {
+        printf("Found, key = %d, value = %d\n\n", iter->first, iter->second);
+    } else {
+        printf("key = %d, No Found\n\n", 2);
+    }
+}
+
+void flat16_hash_map_string_test()
+{
+    typedef jstd::flat16_hash_map<int64_t, std::string> hash_map_t;
+    typedef typename hash_map_t::entry_type    entry_type;
+    typedef typename hash_map_t::cluster_type  cluster_type;
+
+    hash_map_t flat_hash_map;
+    flat_hash_map.size();
+    flat_hash_map.capacity();
+
+    printf("flat_hash_map.clusters() = 0x%p\n", flat_hash_map.clusters());
+    printf("sizeof(cluster_type) = %u\n\n", (uint32_t)sizeof(cluster_type));
+
+    printf("flat_hash_map.entries() = 0x%p\n", flat_hash_map.entries());
+    printf("sizeof(entry_type) = %u\n\n", (uint32_t)sizeof(entry_type));
+
+    flat_hash_map.insert(std::make_pair(0, "abc"));
+    flat_hash_map.insert(std::make_pair(0, "ABC"));
+
+    flat_hash_map.emplace(std::make_pair(1, "xyz"));
+    flat_hash_map.emplace(std::make_pair(1, "XYZ"));
+
+    flat_hash_map.emplace(2, "in-place");
+
+    auto iter = flat_hash_map.find(0);
+    if (iter != flat_hash_map.end()) {
+        printf("Found, key = %d, value = \"%s\"\n\n", (int)iter->first, iter->second.c_str());
+    } else {
+        printf("key = %d, No Found\n\n", 0);
+    }
+
+    iter = flat_hash_map.find(1);
+    if (iter != flat_hash_map.end()) {
+        printf("Found, key = %d, value = \"%s\"\n\n", (int)iter->first, iter->second.c_str());
+    } else {
+        printf("key = %d, No Found\n\n", 1);
+    }
+}
+
+int main(int argc, char * argv[])
+{
+    // Random number seed
+    srand((unsigned int)time(NULL));
+
+    if (0) {
+        IntegalHash_test();
+    }
+
+    if (1) {
+        flat16_hash_map_int_test();
+    }
+
+    if (1) {
+        flat16_hash_map_string_test();
+    }
 
     return 0;
 }
