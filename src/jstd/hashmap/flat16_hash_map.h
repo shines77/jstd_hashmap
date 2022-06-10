@@ -350,7 +350,7 @@ public:
                 bit <<= 1;
             }
             return mask;
-#endif // __SSE2__       
+#endif // __SSE2__
         }
 
         bool hasAnyEmptyOrDeleted() const {
