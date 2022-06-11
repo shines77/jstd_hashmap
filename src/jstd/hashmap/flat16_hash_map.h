@@ -60,7 +60,7 @@
 #include <limits>       // For std::numeric_limits<T>
 #include <cstring>      // For std::memset()
 #include <vector>
-#include <utility>      // For std::pair<First, Second>
+#include <utility>      // For std::pair<First, Second>, std::integer_sequence<T...>
 #include <tuple>        // For std::tuple<Ts...>
 #include <algorithm>    // For std::max(), std::min()
 #include <type_traits>
@@ -254,7 +254,7 @@ public:
         }
         hash_entry(const hash_entry & src) : value_type(src::value_type) {
         }
-        hash_entry(hash_entry && src) noexcept(std::is_nothrow_constructible<value_type &&>::value)
+        hash_entry(hash_entry && src) noexcept(std::is_nothrow_move_constructible<value_type>::value)
             : value_type(std::move(src::value_type)) {
         }
 
@@ -288,7 +288,8 @@ public:
             return *this;
         }
 
-        hash_entry & operator = (hash_entry && rhs) noexcept(std::is_nothrow_assignable<value_type &&>::value) {
+        hash_entry & operator = (hash_entry && rhs)
+            noexcept(std::is_nothrow_move_assignable<value_type &&>::value) {
             if (this != std::addressof(rhs)) {
                 *this = std::move(rhs);
             }
@@ -1120,10 +1121,12 @@ private:
 
         tuple_wrapper() : value_type() {
         }
-        tuple_wrapper(const tuple_wrapper & src) noexcept(std::is_nothrow_constructible<const value_type &>::value)
+        tuple_wrapper(const tuple_wrapper & src)
+            noexcept(std::is_nothrow_copy_constructible<value_type>::value)
             : value_type(src) {
         }
-        tuple_wrapper(tuple_wrapper && src) noexcept(std::is_nothrow_constructible<value_type &&>::value)
+        tuple_wrapper(tuple_wrapper && src)
+            noexcept(std::is_nothrow_move_constructible<value_type>::value)
             : value_type(std::move(src)) {
         }
 
@@ -1144,7 +1147,8 @@ private:
 
         template <typename ... Ts>
         tuple_wrapper(std::tuple<Ts...> && tuple)
-            : tuple_wrapper(std::forward<std::tuple<Ts...>>(tuple), std::make_integer_sequence<std::size_t, sizeof...(Ts)>()) {
+            : tuple_wrapper(std::forward<std::tuple<Ts...>>(tuple),
+                            std::make_integer_sequence<std::size_t, sizeof...(Ts)>()) {
         }
 
         value_type & value() {
@@ -1162,10 +1166,12 @@ private:
 
         tuple_wrapper() : value_() {
         }
-        tuple_wrapper(const tuple_wrapper & src) noexcept(std::is_nothrow_constructible<const value_type &>::value)
+        tuple_wrapper(const tuple_wrapper & src)
+            noexcept(std::is_nothrow_copy_constructible<value_type>::value)
             : value_(src.value_) {
         }
-        tuple_wrapper(tuple_wrapper && src) noexcept(std::is_nothrow_constructible<value_type &&>::value)
+        tuple_wrapper(tuple_wrapper && src)
+            noexcept(std::is_nothrow_move_constructible<value_type>::value)
             : value_(std::move(src.value_)) {
         }
 
@@ -1186,7 +1192,8 @@ private:
 
         template <typename ... Ts>
         tuple_wrapper(std::tuple<Ts...> && tuple)
-            : tuple_wrapper(std::forward<std::tuple<Ts...>>(tuple), std::make_integer_sequence<std::size_t, sizeof...(Ts)>()) {
+            : tuple_wrapper(std::forward<std::tuple<Ts...>>(tuple),
+                            std::make_integer_sequence<std::size_t, sizeof...(Ts)>()) {
         }
 
         value_type & value() {
@@ -1239,8 +1246,8 @@ private:
               !std::is_constructible<value_type, PieceWise &&>::value>::type * = nullptr,
               typename ... Ts1, typename ... Ts2>
     std::pair<iterator, bool> emplace_impl(PieceWise && hint,
-                                           std::tuple<Ts1...> & first,
-                                           std::tuple<Ts2...> & second) {
+                                           std::tuple<Ts1...> && first,
+                                           std::tuple<Ts2...> && second) {
         std::uint8_t ctrl_hash;
         tuple_wrapper<key_type> key_wrapper(first);
         break_tuple(first);
@@ -1257,14 +1264,17 @@ private:
                 control->setUsed(ctrl_hash);
                 entry_type * entry = this->entry_at(target);
                 this->entry_allocator_.construct(entry, std::piecewise_construct,
-                                                        std::move(first), std::move(second));
+                                                        std::forward<std::tuple<Ts1...>>(first),
+                                                        std::forward<std::tuple<Ts2...>>(second));
                 this->entry_size_++;
                 return { this->iterator_at(target), true };
             } else {
                 // Container is full and there is no anyone empty entry.
                 this->grow();
 
-                return this->emplace(hint, first, second);
+                return this->emplace(std::forward<PieceWise>(hint),
+                                     std::forward<std::tuple<Ts1...>>(first),
+                                     std::forward<std::tuple<Ts2...>>(second));
             }
         } else {
             // The key to be inserted already exists.
