@@ -1403,15 +1403,22 @@ void IntegalHash_test()
     printf("\n");
 }
 
-void flat16_hash_map_int_test()
+auto print_node = [](const auto & node) {
+    std::cout << "[" << node.first << "] = " << node.second << '\n';
+};
+ 
+auto print_result = [](auto const & pair) {
+    std::cout << (pair.second ? "inserted: " : "ignored:  ");
+    print_node(*pair.first);
+};
+
+void flat16_hash_map_int_int_test()
 {
     typedef jstd::flat16_hash_map<int, int> hash_map_t;
     typedef typename hash_map_t::entry_type    entry_type;
     typedef typename hash_map_t::cluster_type  cluster_type;
 
     hash_map_t flat_hash_map;
-    flat_hash_map.size();
-    flat_hash_map.capacity();
 
     printf("flat_hash_map.clusters() = %p\n", flat_hash_map.clusters());
     printf("sizeof(cluster_type)     = %u\n\n", (uint32_t)sizeof(cluster_type));
@@ -1440,15 +1447,13 @@ void flat16_hash_map_int_test()
     }
 }
 
-void flat16_hash_map_string_test()
+void flat16_hash_map_int64_string_test()
 {
     typedef jstd::flat16_hash_map<int64_t, std::string> hash_map_t;
     typedef typename hash_map_t::entry_type    entry_type;
     typedef typename hash_map_t::cluster_type  cluster_type;
 
     hash_map_t flat_hash_map;
-    flat_hash_map.size();
-    flat_hash_map.capacity();
 
     printf("flat_hash_map.clusters() = %p\n", flat_hash_map.clusters());
     printf("sizeof(cluster_type)     = %u\n\n", (uint32_t)sizeof(cluster_type));
@@ -1463,6 +1468,9 @@ void flat16_hash_map_string_test()
     flat_hash_map.emplace(std::make_pair(1, "XYZ"));
 
     flat_hash_map.emplace(2, "in-place");
+    flat_hash_map.emplace(std::piecewise_construct,
+                          std::forward_as_tuple(3),
+                          std::forward_as_tuple(10, 'c'));
 
     auto iter = flat_hash_map.find(0);
     if (iter != flat_hash_map.end()) {
@@ -1479,14 +1487,62 @@ void flat16_hash_map_string_test()
     }
 }
 
+void flat16_hash_map_string_string_test()
+{
+    typedef jstd::flat16_hash_map<std::string, std::string> hash_map_t;
+    typedef typename hash_map_t::entry_type    entry_type;
+    typedef typename hash_map_t::cluster_type  cluster_type;
+
+    hash_map_t flat_hash_map;
+
+    printf("flat_hash_map.clusters() = %p\n", flat_hash_map.clusters());
+    printf("sizeof(cluster_type)     = %u\n\n", (uint32_t)sizeof(cluster_type));
+
+    printf("flat_hash_map.entries()  = %p\n", flat_hash_map.entries());
+    printf("sizeof(entry_type)       = %u\n\n", (uint32_t)sizeof(entry_type));
+
+#if 0
+    print_result( flat_hash_map.insert("a", "a") );
+    print_result( flat_hash_map.insert("b", "abcd") );
+    print_result( flat_hash_map.insert("c", "Won't be inserted") );
+#endif
+
+    print_result( flat_hash_map.emplace("a0", "a") );
+    print_result( flat_hash_map.emplace("b0", "abcd") );
+    print_result( flat_hash_map.emplace("c0", 10, 'c') );
+    print_result( flat_hash_map.emplace("c0", "Won't be inserted") );
+
+    print_result( flat_hash_map.emplace("d0", "in-place") );
+    printf("\n");
+    print_result( flat_hash_map.emplace(std::piecewise_construct,
+                                        std::forward_as_tuple("e0"),
+                                        std::forward_as_tuple(10, 'd')) );
+    printf("\n");
+
+    auto iter = flat_hash_map.find("b0");
+    if (iter != flat_hash_map.end()) {
+        printf("Found, key = \"%s\", value = \"%s\"\n\n", iter->first.c_str(), iter->second.c_str());
+    } else {
+        printf("key = \"%s\", Not found\n\n", iter->first.c_str());
+    }
+
+    iter = flat_hash_map.find("c0");
+    if (iter != flat_hash_map.end()) {
+        printf("Found, key = \"%s\", value = \"%s\"\n\n", iter->first.c_str(), iter->second.c_str());
+    } else {
+        printf("key = \"%s\", Not found\n\n", iter->first.c_str());
+    }
+}
+
 int main(int argc, char * argv[])
 {
     // Random number seed
     srand((unsigned int)time(NULL));
 
     if (0) { IntegalHash_test(); }
-    if (1) { flat16_hash_map_int_test(); }
-    if (1) { flat16_hash_map_string_test(); }
+    if (1) { flat16_hash_map_int_int_test(); }
+    if (1) { flat16_hash_map_int64_string_test(); }
+    if (1) { flat16_hash_map_string_string_test(); }
 
     return 0;
 }

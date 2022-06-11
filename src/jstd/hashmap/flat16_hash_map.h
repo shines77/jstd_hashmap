@@ -60,7 +60,8 @@
 #include <limits>       // For std::numeric_limits<T>
 #include <cstring>      // For std::memset()
 #include <vector>
-#include <utility>
+#include <utility>      // For std::pair<First, Second>
+#include <tuple>        // For std::tuple<Ts...>
 #include <algorithm>    // For std::max(), std::min()
 #include <type_traits>
 
@@ -247,17 +248,131 @@ public:
         }
     };
 
-    struct alignas(16) cluster {
+#if 1
+    struct hash_entry : value_type {
+        hash_entry() : value_type() {
+        }
+        hash_entry(const hash_entry & src) : value_type(src::value_type) {
+        }
+        hash_entry(hash_entry && src) noexcept(std::is_nothrow_constructible<value_type &&>::value)
+            : value_type(std::move(src::value_type)) {
+        }
+
+        hash_entry(const value_type & val) : value_type(val) {
+        }
+        hash_entry(value_type && val) noexcept : value_type(std::move(val)) {
+        }
+
+        hash_entry(const key_type & key, const mapped_type & value) : value_type(key, value) {
+        }
+        hash_entry(const key_type & key, mapped_type && value)
+            : value_type(key, std::forward<mapped_type>(value)) {
+        }
+        hash_entry(key_type && key, mapped_type && value) noexcept
+            : value_type(std::forward<key_type>(key), std::forward<mapped_type>(value)) {
+        }
+
+#if 0
+        template <typename ... Args>
+        hash_entry(Args && ... args) : value_type(std::forward<Args>(args)...) {
+        }
+#endif
+
+        virtual ~hash_entry() {
+        }
+
+        hash_entry & operator = (const hash_entry & rhs) {
+            if (this != std::addressof(rhs)) {
+                *this = rhs;
+            }
+            return *this;
+        }
+
+        hash_entry & operator = (hash_entry && rhs) noexcept(std::is_nothrow_assignable<value_type &&>::value) {
+            if (this != std::addressof(rhs)) {
+                *this = std::move(rhs);
+            }
+            return *this;
+        }
+
+        void swap(hash_entry & other) noexcept {
+            if (this != std::addressof(other)) {
+                std::swap(*this, other);
+            }
+        }
+    };
+#else
+    struct hash_entry {
+        value_type value;
+
+        hash_entry() : value() {
+        }
+        hash_entry(const hash_entry & src) : value(src.value) {
+        }
+        hash_entry(hash_entry && src) noexcept : value(std::move(src.value)) {
+        }
+
+        hash_entry(const value_type & val) : value(val) {
+        }
+        hash_entry(value_type && val) noexcept : value(std::move(val)) {
+        }
+
+        hash_entry(const key_type & key, const mapped_type & value) : value(key, value) {
+        }
+        hash_entry(const key_type & key, mapped_type && value)
+            : value(key, std::forward<mapped_type>(value)) {
+        }
+        hash_entry(key_type && key, mapped_type && value) noexcept
+            : value(std::forward<key_type>(key), std::forward<mapped_type>(value)) {
+        }
+
+        template <typename ... Args>
+        hash_entry(Args && ... args) : value(std::forward<Args>(args)...) {
+        }
+
+        ~hash_entry() {
+        }
+
+        hash_entry & operator = (const hash_entry & rhs) {
+            if (this != std::addressof(rhs)) {
+                this->value = rhs.value;
+            }
+            return *this;
+        }
+
+        hash_entry & operator = (hash_entry && rhs) noexcept {
+            if (this != std::addressof(rhs)) {
+                this->value = std::move(rhs.value);
+            }
+            return *this;
+        }
+
+        void swap(hash_entry & other) {
+            if (this != std::addressof(other)) {
+                std::swap(this->value, other.value);
+            }
+        }
+    };
+#endif
+
+    inline void swap(hash_entry & lhs, hash_entry & rhs) noexcept {
+        lhs.swap(rhs);
+    }
+
+    typedef value_type entry_type;
+    typedef std::allocator<entry_type> entry_allocator_type;
+
+    struct alignas(16) hash_cluster {
         union {
             control_byte controls[kClusterEntries];
             bitmask128_t u128;
         };
 
-        cluster() noexcept {
+        hash_cluster() noexcept {
             this->clear();
         }
 
-        ~cluster() {
+        ~hash_cluster() {
         }
 
         void clear() {
@@ -367,62 +482,7 @@ public:
         }
     };
 
-    typedef cluster cluster_type;
-
-    struct hash_entry {
-        value_type value;
-
-        hash_entry() : value() {
-        }
-        hash_entry(const hash_entry & src) : value(src.value) {
-        }
-        hash_entry(hash_entry && src) noexcept : value(std::move(src.value)) {
-        }
-
-        hash_entry(const value_type & val) : value(val) {
-        }
-        hash_entry(value_type && val) noexcept : value(std::move(val)) {
-        }
-
-        hash_entry(const key_type & key, const mapped_type & value) : value(key, value) {
-        }
-        hash_entry(const key_type & key, mapped_type && value)
-            : value(key, std::forward<mapped_type>(value)) {
-        }
-        hash_entry(key_type && key, mapped_type && value) noexcept
-            : value(std::forward<key_type>(key), std::forward<mapped_type>(value)) {
-        }
-
-        ~hash_entry() {
-        }
-
-        hash_entry & operator = (const hash_entry & rhs) {
-            if (this != std::addressof(rhs)) {
-                this->value = rhs.value;
-            }
-            return *this;
-        }
-
-        hash_entry & operator = (hash_entry && rhs) noexcept {
-            if (this != std::addressof(rhs)) {
-                this->value = std::move(rhs.value);
-            }
-            return *this;
-        }
-
-        void swap(hash_entry & other) {
-            if (this != std::addressof(other)) {
-                std::swap(this->value, other.value);
-            }
-        }
-    };
-
-    inline void swap(hash_entry & lhs, hash_entry & rhs) {
-        lhs.swap(rhs);
-    }
-
-    typedef hash_entry entry_type;
-    typedef std::allocator<hash_entry> entry_allocator_type;
+    typedef hash_cluster cluster_type;
 
     template <typename ValueType>
     class basic_iterator {
@@ -479,11 +539,11 @@ public:
         }
 
         reference operator * () const {
-            return this->entry_->value;
+            return *(this->entry_);
         }
 
         pointer operator -> () const {
-            return std::addressof(this->entry_->value);
+            return std::addressof(*this->entry_);
         }
 
         operator basic_iterator<const value_type>() const {
@@ -861,7 +921,7 @@ private:
             while (mask16 != 0) {
                 size_type pos = BitUtils::bsf32(mask16);
                 mask16 = BitUtils::clearLowBit32(mask16);
-                const key_type & target_key = this->get_entry(start_index + pos).value.first;
+                const key_type & target_key = this->get_entry(start_index + pos).first;
                 if (this->key_equal_(target_key, key)) {
                     return (start_index + pos);
                 }
@@ -891,7 +951,7 @@ private:
             while (mask16 != 0) {
                 size_type pos = BitUtils::bsf32(mask16);
                 mask16 = BitUtils::clearLowBit32(mask16);
-                const key_type & target_key = this->get_entry(start_index + pos).value.first;
+                const key_type & target_key = this->get_entry(start_index + pos).first;
                 if (this->key_equal_(target_key, key)) {
                     last_cluster = cluster_index;
                     return (start_index + pos);
@@ -910,7 +970,7 @@ private:
 
     JSTD_FORCED_INLINE
     std::pair<size_type, bool>
-    find_and_prepare_insert(const key_type & key, std::uint8_t & ctrl_hash) const {
+    find_and_prepare_insert(const key_type & key, std::uint8_t & ctrl_hash) {
         hash_code_t hash_code = this->get_hash(key);
         std::uint8_t control_hash = this->get_control_hash(hash_code);
         index_type cluster_index = this->index_for(hash_code);
@@ -924,7 +984,7 @@ private:
             while (mask16 != 0) {
                 size_type pos = BitUtils::bsf32(mask16);
                 mask16 = BitUtils::clearLowBit32(mask16);
-                const key_type & target_key = this->get_entry(start_index + pos).value.first;
+                const key_type & target_key = this->get_entry(start_index + pos).first;
                 if (this->key_equal_(target_key, key)) {
                     return { (start_index + pos), true };
                 }
@@ -1002,9 +1062,9 @@ private:
                 static constexpr bool is_rvalue_ref = std::is_rvalue_reference<decltype(value)>::value;
                 entry_type * entry = this->entry_at(target);
                 if (is_rvalue_ref)
-                    entry->value.second = std::move(value.second);
+                    entry->second = std::move(value.second);
                 else
-                    entry->value.second = value.second;
+                    entry->second = value.second;
             }
             return { this->iterator_at(target), false };
         }
@@ -1013,6 +1073,7 @@ private:
     template <bool update_always, typename KeyT, typename std::enable_if<
               (!jstd::is_same_ex<KeyT, value_type>::value) &&
               (!jstd::is_same_ex<KeyT, nc_value_type>::value) &&
+              (!jstd::is_same_ex<KeyT, std::piecewise_construct_t>::value) &&
               (jstd::is_same_ex<KeyT, key_type>::value ||
                std::is_constructible<key_type, KeyT &&>::value) &&
               !std::is_constructible<value_type, KeyT &&>::value>::type * = nullptr,
@@ -1030,8 +1091,9 @@ private:
                 assert(control->isEmptyOrDeleted());
                 control->setUsed(ctrl_hash);
                 entry_type * entry = this->entry_at(target);
-                this->entry_allocator_.construct(entry, std::forward<KeyT>(key),
-                                                        std::forward<Args>(args)...);
+                this->entry_allocator_.construct(entry, std::piecewise_construct,
+                                                        std::forward_as_tuple(std::forward<KeyT>(key)),
+                                                        std::forward_as_tuple(std::forward<Args>(args)...));
                 this->entry_size_++;
                 return { this->iterator_at(target), true };
             } else {
@@ -1045,7 +1107,171 @@ private:
             if (update_always) {
                 mapped_type mapped_value(std::forward<Args>(args)...);
                 entry_type * entry = this->entry_at(target);
-                entry->value.second = std::move(mapped_value);
+                entry->second = std::move(mapped_value);
+            }
+            return { this->iterator_at(target), false };
+        }
+    }
+
+    template <typename T, typename DecayT = typename std::remove_reference<T>::type,
+                          bool IsIntegral = std::is_integral<DecayT>::value>
+    struct tuple_wrapper : public DecayT {
+        using value_type = typename std::remove_reference<T>::type;
+
+        tuple_wrapper() : value_type() {
+        }
+        tuple_wrapper(const tuple_wrapper & src) noexcept(std::is_nothrow_constructible<const value_type &>::value)
+            : value_type(src) {
+        }
+        tuple_wrapper(tuple_wrapper && src) noexcept(std::is_nothrow_constructible<value_type &&>::value)
+            : value_type(std::move(src)) {
+        }
+
+        template <typename Tuple, std::size_t... Indexs>
+        tuple_wrapper(const Tuple & tuple, std::integer_sequence<std::size_t, Indexs...>)
+            : value_type(std::get<Indexs>(tuple)...) {
+        }
+
+        template <typename Tuple, std::size_t... Indexs>
+        tuple_wrapper(Tuple && tuple, std::integer_sequence<std::size_t, Indexs...>)
+            : value_type(std::get<Indexs>(std::forward<Tuple>(tuple))...) {
+        }
+
+        template <typename ... Ts>
+        tuple_wrapper(const std::tuple<Ts...> & tuple)
+            : tuple_wrapper(tuple, std::make_integer_sequence<std::size_t, sizeof...(Ts)>()) {
+        }
+
+        template <typename ... Ts>
+        tuple_wrapper(std::tuple<Ts...> && tuple)
+            : tuple_wrapper(std::forward<std::tuple<Ts...>>(tuple), std::make_integer_sequence<std::size_t, sizeof...(Ts)>()) {
+        }
+
+        value_type & value() {
+            return *static_cast<value_type *>(this);
+        }
+
+        const value_type & value() const {
+            return *static_cast<const value_type *>(const_cast<tuple_wrapper *>(this));
+        }
+    };
+
+    template <typename T>
+    struct tuple_wrapper<T, typename std::remove_reference<T>::type, true> {
+        using value_type = typename std::remove_reference<T>::type;
+
+        tuple_wrapper() : value_() {
+        }
+        tuple_wrapper(const tuple_wrapper & src) noexcept(std::is_nothrow_constructible<const value_type &>::value)
+            : value_(src.value_) {
+        }
+        tuple_wrapper(tuple_wrapper && src) noexcept(std::is_nothrow_constructible<value_type &&>::value)
+            : value_(std::move(src.value_)) {
+        }
+
+        template <typename Tuple, std::size_t... Indexs>
+        tuple_wrapper(const Tuple & tuple, std::integer_sequence<std::size_t, Indexs...>)
+            : value_(std::get<Indexs>(tuple)...) {
+        }
+
+        template <typename Tuple, std::size_t... Indexs>
+        tuple_wrapper(Tuple && tuple, std::integer_sequence<std::size_t, Indexs...>)
+            : value_(std::get<Indexs>(std::forward<Tuple>(tuple))...) {
+        }
+
+        template <typename ... Ts>
+        tuple_wrapper(const std::tuple<Ts...> & tuple)
+            : tuple_wrapper(tuple, std::make_integer_sequence<std::size_t, sizeof...(Ts)>()) {
+        }
+
+        template <typename ... Ts>
+        tuple_wrapper(std::tuple<Ts...> && tuple)
+            : tuple_wrapper(std::forward<std::tuple<Ts...>>(tuple), std::make_integer_sequence<std::size_t, sizeof...(Ts)>()) {
+        }
+
+        value_type & value() {
+            return value_;
+        }
+
+        const value_type & value() const {
+            return value_;
+        }
+
+        value_type value_;
+    };
+
+    //
+    // From: https://blog.csdn.net/netyeaxi/article/details/83539928
+    //
+    void print() {
+        std::cout << std::endl;
+    }
+
+    template <typename HeadType, typename... Types>
+    void print(HeadType arg, Types... Args) {
+        std::cout << typeid(HeadType).name() << ": " << arg << std::endl;
+        print(Args...);
+    }
+
+    template <typename Tuple, typename... Types>
+    void tuple_element_type(Tuple && tuple, Types... Args) {
+        print(Args...);
+    }
+
+    template <typename Tuple, std::size_t... Indexs>
+    void tuple_element_index(Tuple && tuple, std::index_sequence<Indexs...>) {
+        tuple_element_type(tuple, std::get<Indexs>(std::forward<Tuple>(tuple))...);
+    }
+
+    template <typename Tuple>
+    void break_tuple(Tuple && tuple) {
+        tuple_element_index(tuple, std::make_index_sequence<
+                            std::tuple_size<typename std::remove_reference<Tuple>::type>::value
+                            >{});
+    }
+
+    template <bool update_always, typename PieceWise, typename std::enable_if<
+              (!jstd::is_same_ex<PieceWise, value_type>::value) &&
+              (!jstd::is_same_ex<PieceWise, nc_value_type>::value) &&
+              jstd::is_same_ex<PieceWise, std::piecewise_construct_t>::value &&
+              (!jstd::is_same_ex<PieceWise, key_type>::value &&
+               !std::is_constructible<key_type, PieceWise &&>::value) &&
+              !std::is_constructible<value_type, PieceWise &&>::value>::type * = nullptr,
+              typename ... Ts1, typename ... Ts2>
+    std::pair<iterator, bool> emplace_impl(PieceWise && hint,
+                                           std::tuple<Ts1...> & first,
+                                           std::tuple<Ts2...> & second) {
+        std::uint8_t ctrl_hash;
+        tuple_wrapper<key_type> key_wrapper(first);
+        break_tuple(first);
+        break_tuple(second);
+        auto find_info = this->find_and_prepare_insert(key_wrapper.value(), ctrl_hash);
+        size_type target = find_info.first;
+        size_type is_exists = find_info.second;
+        if (!is_exists) {
+            // The key to be inserted is not exists.
+            if (target != npos) {
+                // Found a [DeletedEntry] or [EMptyEntry] to insert
+                control_byte * control = this->control_at(target);
+                assert(control->isEmptyOrDeleted());
+                control->setUsed(ctrl_hash);
+                entry_type * entry = this->entry_at(target);
+                this->entry_allocator_.construct(entry, std::piecewise_construct,
+                                                        std::move(first), std::move(second));
+                this->entry_size_++;
+                return { this->iterator_at(target), true };
+            } else {
+                // Container is full and there is no anyone empty entry.
+                this->grow();
+
+                return this->emplace(hint, first, second);
+            }
+        } else {
+            // The key to be inserted already exists.
+            if (update_always) {
+                tuple_wrapper<mapped_type> mapped_wrapper(std::move(second));
+                entry_type * entry = this->entry_at(target);
+                entry->second = std::move(mapped_wrapper.value());
             }
             return { this->iterator_at(target), false };
         }
@@ -1054,8 +1280,9 @@ private:
     template <bool update_always, typename First, typename std::enable_if<
               (!jstd::is_same_ex<First, value_type>::value) &&
               (!jstd::is_same_ex<First, nc_value_type>::value) &&
-              (!jstd::is_same_ex<First, key_type>::value) &&
-              (!std::is_constructible<key_type, First &&>::value) &&
+              (!jstd::is_same_ex<First, std::piecewise_construct_t>::value) &&
+              (!jstd::is_same_ex<First, key_type>::value &&
+               !std::is_constructible<key_type, First &&>::value) &&
               !std::is_constructible<value_type, First &&>::value>::type * = nullptr,
               typename ... Args>
     std::pair<iterator, bool> emplace_impl(First && first, Args && ... args) {
@@ -1085,7 +1312,7 @@ private:
             // The key to be inserted already exists.
             if (update_always) {
                 entry_type * entry = this->entry_at(target);
-                entry->value.second = std::move(value.second);
+                entry->second = std::move(value.second);
             }
             return { this->iterator_at(target), false };
         }
