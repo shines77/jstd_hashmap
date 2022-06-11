@@ -60,9 +60,9 @@
 #include <limits>       // For std::numeric_limits<T>
 #include <cstring>      // For std::memset()
 #include <vector>
-#include <type_traits>
 #include <utility>
 #include <algorithm>    // For std::max(), std::min()
+#include <type_traits>
 
 #include <nmmintrin.h>
 #include <immintrin.h>
@@ -596,6 +596,192 @@ public:
         return this->end();
     }
 
+    void clear(bool need_destory = true) noexcept {
+        if (this->entry_capacity() > kDefaultCapacity) {
+            if (need_destory) {
+                this->destroy<true>();
+                this->create_cluster<false>(kDefaultCapacity);
+                assert(this->entry_size() == 0);
+                return;
+            }
+        }
+        this->destroy<false>();
+        assert(this->entry_size() == 0);
+    }
+
+    iterator find(const key_type & key) {
+        size_type index = this->find_impl(key);
+        if (index != npos)
+            return this->iterator_at(index);
+        else
+            return this->end();        
+    }
+
+    const_iterator find(const key_type & key) const {
+        size_type index = this->find_impl(key);
+        if (index != npos)
+            return this->iterator_at(index);
+        else
+            return this->end();        
+    }
+
+    std::pair<iterator, bool> insert(const value_type & value) {
+        return this->emplace_impl<true>(value);
+    }
+
+    std::pair<iterator, bool> insert(value_type && value) {
+        return this->emplace_impl<true>(std::move(value));
+    }
+
+    template <typename P, typename std::enable_if<
+              (!jstd::is_same_ex<P, value_type>::value) &&
+              (!jstd::is_same_ex<P, nc_value_type>::value) &&
+              std::is_constructible<value_type, P &&>::value>::type * = nullptr>
+    std::pair<iterator, bool> insert(P && value) {
+        return this->emplace_impl<true>(std::forward<P>(value));
+    }
+
+    iterator insert(const_iterator hint, const value_type & value) {
+        return this->emplace_impl<true>(value).first;
+    }
+
+    iterator insert(const_iterator hint, value_type && value) {
+        return this->emplace_impl<true>(std::move(value)).first;
+    }
+
+    template <typename P, typename std::enable_if<
+              (!jstd::is_same_ex<P, value_type>::value) &&
+              (!jstd::is_same_ex<P, nc_value_type>::value) &&
+              std::is_constructible<value_type, P &&>::value>::type * = nullptr>
+    std::pair<iterator, bool> insert(const_iterator hint, P && value) {
+        return this->emplace_impl<true>(std::forward<P>(value));
+    }
+
+    template <typename ... Args>
+    std::pair<iterator, bool> emplace(Args && ... args) {
+        return this->emplace_impl<false>(std::forward<Args>(args)...);
+    }
+
+    template <typename ... Args>
+    iterator emplace_hint(const_iterator hint, Args && ... args) {
+        return this->emplace(std::forward<Args>(args)...).first;
+    }
+
+    inline void grow() {
+        size_type new_capacity = (this->entry_mask_ + 1) * 2;
+        this->rehash(new_capacity);
+    }
+
+    void rehash(size_type new_capacity) {
+        //
+    }
+
+private:
+    inline size_type calc_capacity(size_type capacity) const noexcept {
+        size_type new_capacity = (std::max)(capacity, kMinimumCapacity);
+        new_capacity = round_up_pow2(new_capacity);
+        return new_capacity;
+    }
+
+    iterator iterator_at(size_type index) noexcept {
+        return { this->control_at(index), this->entry_at(index) };
+    }
+
+    const_iterator iterator_at(size_type index) const noexcept {
+        return { this->control_at(index), this->entry_at(index) };
+    }
+
+    inline hash_code_t get_hash(const key_type & key) const noexcept {
+        hash_code_t hash_code = static_cast<hash_code_t>(this->hasher_(key));
+        return hash_code;
+    }
+
+    inline std::uint8_t get_control_hash(hash_code_t hash_code) const noexcept {
+        return static_cast<std::uint8_t>(hash_code & kControlHashMask);
+    }
+
+    inline index_type index_for(hash_code_t hash_code) const noexcept {
+        return (index_type)(((size_type)hash_code >> kControlShift) & this->cluster_mask());
+    }
+
+    inline index_type index_for(hash_code_t hash_code, size_type cluster_mask) const noexcept {
+        return (index_type)(((size_type)hash_code >> kControlShift) & cluster_mask);
+    }
+
+    inline index_type prev_cluster(index_type cluster_index) const noexcept {
+        return (index_type)(((size_type)cluster_index + this->cluster_mask()) & this->cluster_mask());
+    }
+
+    inline index_type next_cluster(index_type cluster_index) const noexcept {
+        return (index_type)((size_type)(cluster_index + 1) & this->cluster_mask());
+    }
+
+    control_byte * control_at(size_type index) {
+        assert(index <= this->entry_capacity());
+        return (this->controls() + index);
+    }
+
+    const control_byte * control_at(size_type index) const {
+        assert(index <= this->entry_capacity());
+        return (this->controls() + index);
+    }
+
+    cluster_type * cluster_at(size_type cluster_index) {
+        assert(cluster_index < this->cluster_count());
+        return (this->clusters() + cluster_index);
+    }
+
+    const cluster_type * cluster_at(size_type cluster_index) const {
+        assert(cluster_index < this->cluster_count());
+        return (this->clusters() + cluster_index);
+    }
+
+    cluster_type & get_cluster(size_type cluster_index) {
+        assert(cluster_index < this->cluster_count());
+        return this->clusters_[cluster_index];
+    }
+
+    const cluster_type & get_cluster(size_type cluster_index) const {
+        assert(cluster_index < this->cluster_count());
+        return this->clusters_[cluster_index];
+    }
+
+    entry_type * entry_at(size_type index) noexcept {
+        assert(index <= this->entry_capacity());
+        return (this->entries() + index);
+    }
+
+    const entry_type * entry_at(size_type index) const noexcept {
+        assert(index <= this->entry_capacity());
+        return (this->entries() + index);
+    }
+
+    entry_type & get_entry(size_type index) {
+        assert(index < this->entry_capacity());
+        return this->entries_[index];
+    }
+
+    const entry_type & get_entry(size_type index) const {
+        assert(index < this->entry_capacity());
+        return this->entries_[index];
+    }
+
+    index_type index_of(entry_type * entry) const noexcept {
+        assert(entry >= this->entries_);
+        index_type index = (index_type)(entry - this->entries());
+        return index;
+    }
+
+    bool is_used(entry_type * entry) const {
+        index_type entry_index = this->index_of(entry);
+        return this->control_is_used(entry_index);
+    }
+
+    bool control_is_used(size_type index) const {
+        std::uint8_t * control_bytes = (std::uint8_t *)this->clusters();
+        return ((control_bytes[index] & kUnusedMask) == 0);
+    }
+
     template <bool finitial>
     void destroy() noexcept {
         this->destory_entries<finitial>();
@@ -639,67 +825,152 @@ public:
         }
     }
 
-    void clear(bool need_destory = true) noexcept {
-        if (this->entry_capacity() > kDefaultCapacity) {
-            if (need_destory) {
-                this->destroy<true>();
-                this->create_cluster<false>(kDefaultCapacity);
-                assert(this->entry_size() == 0);
-                return;
+    template <bool initialize = false>
+    void create_cluster(size_type init_capacity) {
+        init_capacity = (std::max)(init_capacity, kMinimumCapacity);
+        size_type new_capacity = align_to(init_capacity, kClusterEntries);
+        assert(new_capacity > 0);
+        assert(new_capacity >= kMinimumCapacity);
+
+        size_type cluster_count = new_capacity / kClusterEntries;
+        assert(cluster_count > 0);
+        cluster_type * clusters = new cluster_type[cluster_count];
+        clusters_ = clusters;
+        cluster_mask_ = cluster_count - 1;
+
+        entry_type * entries = entry_allocator_.allocate(new_capacity);
+        entries_ = entries;
+        if (initialize)
+            assert(entry_size_ == 0);
+        else
+            entry_size_ = 0;        
+        entry_mask_ = new_capacity - 1;
+        entry_threshold_ = (size_type)(new_capacity * FLAT16_DEFAULT_LOAD_FACTOR);
+    }
+
+    JSTD_FORCED_INLINE
+    size_type find_impl(const key_type & key) const {
+        hash_code_t hash_code = this->get_hash(key);
+        std::uint8_t control_hash = this->get_control_hash(hash_code);
+        index_type cluster_index = this->index_for(hash_code);
+        index_type start_cluster = cluster_index;
+        do {
+            const cluster_type & cluster = this->get_cluster(cluster_index);
+            std::uint32_t mask16 = cluster.matchHash(control_hash);
+            size_type start_index = cluster_index * kClusterEntries;
+            while (mask16 != 0) {
+                size_type pos = BitUtils::bsf32(mask16);
+                mask16 = BitUtils::clearLowBit32(mask16);
+                const key_type & target_key = this->get_entry(start_index + pos).value.first;
+                if (this->key_equal_(target_key, key)) {
+                    return (start_index + pos);
+                }
             }
-        }
-        this->destroy<false>();
-        assert(this->entry_size() == 0);
+            if (cluster.hasAnyEmpty()) {
+                return npos;
+            }
+            cluster_index = this->next_cluster(cluster_index);
+        } while (cluster_index != start_cluster);
+
+        return npos;
     }
 
-    iterator find(const key_type & key) {
-        size_type index = this->find_impl(key);
-        if (index != npos)
-            return this->iterator_at(index);
-        else
-            return this->end();        
+    JSTD_FORCED_INLINE
+    size_type find_impl(const key_type & key, index_type & first_cluster,
+                        index_type & last_cluster, std::uint8_t & ctrl_hash) const {
+        hash_code_t hash_code = this->get_hash(key);
+        std::uint8_t control_hash = this->get_control_hash(hash_code);
+        index_type cluster_index = this->index_for(hash_code);
+        index_type start_cluster = cluster_index;
+        first_cluster = start_cluster;
+        ctrl_hash = control_hash;
+        do {
+            const cluster_type & cluster = this->get_cluster(cluster_index);
+            std::uint32_t mask16 = cluster.matchHash(control_hash);
+            size_type start_index = cluster_index * kClusterEntries;
+            while (mask16 != 0) {
+                size_type pos = BitUtils::bsf32(mask16);
+                mask16 = BitUtils::clearLowBit32(mask16);
+                const key_type & target_key = this->get_entry(start_index + pos).value.first;
+                if (this->key_equal_(target_key, key)) {
+                    last_cluster = cluster_index;
+                    return (start_index + pos);
+                }
+            }
+            if (cluster.hasAnyEmpty()) {
+                last_cluster = cluster_index;
+                return npos;
+            }
+            cluster_index = this->next_cluster(cluster_index);
+        } while (cluster_index != start_cluster);
+
+        last_cluster = npos;
+        return npos;
     }
 
-    const_iterator find(const key_type & key) const {
-        size_type index = this->find_impl(key);
-        if (index != npos)
-            return this->iterator_at(index);
-        else
-            return this->end();        
-    }
+    JSTD_FORCED_INLINE
+    std::pair<size_type, bool>
+    find_and_prepare_insert(const key_type & key, std::uint8_t & ctrl_hash) const {
+        hash_code_t hash_code = this->get_hash(key);
+        std::uint8_t control_hash = this->get_control_hash(hash_code);
+        index_type cluster_index = this->index_for(hash_code);
+        index_type first_cluster = cluster_index;
+        ctrl_hash = control_hash;
 
-    std::pair<iterator, bool> insert(const value_type & value) {
-        return this->emplace_impl<true>(value);
-    }
+        do {
+            const cluster_type & cluster = this->get_cluster(cluster_index);
+            std::uint32_t mask16 = cluster.matchHash(control_hash);
+            size_type start_index = cluster_index * kClusterEntries;
+            while (mask16 != 0) {
+                size_type pos = BitUtils::bsf32(mask16);
+                mask16 = BitUtils::clearLowBit32(mask16);
+                const key_type & target_key = this->get_entry(start_index + pos).value.first;
+                if (this->key_equal_(target_key, key)) {
+                    return { (start_index + pos), true };
+                }
+            }
+            std::uint32_t maskEmpty = cluster.matchEmpty();
+            if (maskEmpty != 0) {
+                index_type last_cluster = cluster_index;
+                if (cluster_index != first_cluster) {
+                    // Find the first DeletedEntry from first_cluster to last_cluster.
+                    cluster_index = first_cluster;
+                    do {
+                        const cluster_type & cluster = this->get_cluster(cluster_index);
+                        std::uint32_t maskDeleted = cluster.matchDeleted();
+                        if (maskDeleted != 0) {
+                            // Found a [DeletedEntry] to insert
+                            size_type pos = BitUtils::bsf32(maskDeleted);
+                            size_type start_index = cluster_index * kClusterEntries;
+                            return { (start_index + pos), false };
+                        }
+                        if (cluster_index == last_cluster)
+                            break;
+                        cluster_index = this->next_cluster(cluster_index);
+                    } while (cluster_index != first_cluster);
 
-    std::pair<iterator, bool> insert(value_type && value) {
-        return this->emplace_impl<true>(std::move(value));
-    }
+                    // Found a [EmptyEntry] to insert
+                    // Skip to final processing
+                } else {
+                    std::uint32_t maskDeleted = cluster.matchDeleted();
+                    if (maskDeleted != 0) {
+                        // Found a [DeletedEntry] to insert
+                        maskEmpty = maskDeleted;
+                    } else {
+                        // Found a [EmptyEntry] to insert
+                        assert(maskEmpty != 0);
+                    }
+                }
 
-    template <typename P, typename std::enable_if<
-              (!jstd::is_same_ex<P, value_type>::value) &&
-              (!jstd::is_same_ex<P, nc_value_type>::value) &&
-              std::is_constructible<value_type, P &&>::value>::type * = nullptr>
-    std::pair<iterator, bool> insert(P && value) {
-        return this->emplace_impl<true>(std::move(value));
-    }
+                // Get [EmptyEntry] or [DeletedEntry] to insert
+                size_type pos = BitUtils::bsf32(maskEmpty);
+                size_type start_index = last_cluster * kClusterEntries;
+                return { (start_index + pos), false };
+            }
+            cluster_index = this->next_cluster(cluster_index);
+        } while (cluster_index != first_cluster);
 
-    iterator insert(const_iterator hint, const value_type & value) {
-        return this->emplace_impl<true>(value).first;
-    }
-
-    iterator insert(const_iterator hint, value_type && value) {
-        return this->emplace_impl<true>(std::move(value)).first;
-    }
-
-    template <typename ... Args>
-    std::pair<iterator, bool> emplace(Args && ... args) {
-        return this->emplace_impl<false>(std::forward<Args>(args)...);
-    }
-
-    template <typename ... Args>
-    iterator emplace_hint(const_iterator hint, Args && ... args) {
-        return this->emplace(std::forward<Args>(args)...).first;
+        return { npos, false };
     }
 
     template <bool update_always>
@@ -887,269 +1158,6 @@ public:
             }
             return { this->iterator_at(index), false };
         }
-    }
-
-    inline void grow() {
-        size_type new_capacity = (this->entry_mask_ + 1) * 2;
-        this->rehash(new_capacity);
-    }
-
-    void rehash(size_type new_capacity) {
-        //
-    }
-
-private:
-    inline size_type calc_capacity(size_type capacity) const noexcept {
-        size_type new_capacity = (capacity >= kMinimumCapacity) ? capacity : kMinimumCapacity;
-        new_capacity = round_up_pow2(new_capacity);
-        return new_capacity;
-    }
-
-    iterator iterator_at(size_type index) noexcept {
-        return { this->control_at(index), this->entry_at(index) };
-    }
-
-    const_iterator iterator_at(size_type index) const noexcept {
-        return { this->control_at(index), this->entry_at(index) };
-    }
-
-    inline hash_code_t get_hash(const key_type & key) const noexcept {
-        hash_code_t hash_code = static_cast<hash_code_t>(this->hasher_(key));
-        return hash_code;
-    }
-
-    inline std::uint8_t get_control_hash(hash_code_t hash_code) const noexcept {
-        return static_cast<std::uint8_t>(hash_code & kControlHashMask);
-    }
-
-    inline index_type index_for(hash_code_t hash_code) const noexcept {
-        return (index_type)(((size_type)hash_code >> kControlShift) & this->cluster_mask());
-    }
-
-    inline index_type index_for(hash_code_t hash_code, size_type cluster_mask) const noexcept {
-        return (index_type)(((size_type)hash_code >> kControlShift) & cluster_mask);
-    }
-
-    inline index_type prev_cluster(index_type cluster_index) const noexcept {
-        return (index_type)(((size_type)cluster_index + this->cluster_mask()) & this->cluster_mask());
-    }
-
-    inline index_type next_cluster(index_type cluster_index) const noexcept {
-        return (index_type)((size_type)(cluster_index + 1) & this->cluster_mask());
-    }
-
-    control_byte * control_at(size_type index) {
-        assert(index <= this->entry_capacity());
-        return (this->controls() + index);
-    }
-
-    const control_byte * control_at(size_type index) const {
-        assert(index <= this->entry_capacity());
-        return (this->controls() + index);
-    }
-
-    cluster_type * cluster_at(size_type cluster_index) {
-        assert(cluster_index < this->cluster_count());
-        return (this->clusters() + cluster_index);
-    }
-
-    const cluster_type * cluster_at(size_type cluster_index) const {
-        assert(cluster_index < this->cluster_count());
-        return (this->clusters() + cluster_index);
-    }
-
-    cluster_type & get_cluster(size_type cluster_index) {
-        assert(cluster_index < this->cluster_count());
-        return this->clusters_[cluster_index];
-    }
-
-    const cluster_type & get_cluster(size_type cluster_index) const {
-        assert(cluster_index < this->cluster_count());
-        return this->clusters_[cluster_index];
-    }
-
-    entry_type * entry_at(size_type index) noexcept {
-        assert(index <= this->entry_capacity());
-        return (this->entries() + index);
-    }
-
-    const entry_type * entry_at(size_type index) const noexcept {
-        assert(index <= this->entry_capacity());
-        return (this->entries() + index);
-    }
-
-    entry_type & get_entry(size_type index) {
-        assert(index < this->entry_capacity());
-        return this->entries_[index];
-    }
-
-    const entry_type & get_entry(size_type index) const {
-        assert(index < this->entry_capacity());
-        return this->entries_[index];
-    }
-
-    index_type index_of(entry_type * entry) const noexcept {
-        assert(entry >= this->entries_);
-        index_type index = (index_type)(entry - this->entries());
-        return index;
-    }
-
-    bool is_used(entry_type * entry) const {
-        index_type entry_index = this->index_of(entry);
-        return this->control_is_used(entry_index);
-    }
-
-    bool control_is_used(size_type index) const {
-        std::uint8_t * control_bytes = (std::uint8_t *)this->clusters();
-        return ((control_bytes[index] & kUnusedMask) == 0);
-    }
-
-    template <bool initialize = false>
-    void create_cluster(size_type init_capacity) {
-        init_capacity = (std::max)(init_capacity, kMinimumCapacity);
-        size_type new_capacity = align_to(init_capacity, kClusterEntries);
-        assert(new_capacity > 0);
-        assert(new_capacity >= kMinimumCapacity);
-
-        size_type cluster_count = new_capacity / kClusterEntries;
-        assert(cluster_count > 0);
-        cluster_type * clusters = new cluster_type[cluster_count];
-        clusters_ = clusters;
-        cluster_mask_ = cluster_count - 1;
-
-        entry_type * entries = entry_allocator_.allocate(new_capacity);
-        entries_ = entries;
-        if (initialize)
-            assert(entry_size_ == 0);
-        else
-            entry_size_ = 0;        
-        entry_mask_ = new_capacity - 1;
-        entry_threshold_ = (size_type)(new_capacity * FLAT16_DEFAULT_LOAD_FACTOR);
-    }
-
-    JSTD_FORCED_INLINE
-    size_type find_impl(const key_type & key) const {
-        hash_code_t hash_code = this->get_hash(key);
-        std::uint8_t control_hash = this->get_control_hash(hash_code);
-        index_type cluster_index = this->index_for(hash_code);
-        index_type start_cluster = cluster_index;
-        do {
-            const cluster_type & cluster = this->get_cluster(cluster_index);
-            std::uint32_t mask16 = cluster.matchHash(control_hash);
-            size_type start_index = cluster_index * kClusterEntries;
-            while (mask16 != 0) {
-                size_type pos = BitUtils::bsf32(mask16);
-                mask16 = BitUtils::clearLowBit32(mask16);
-                const key_type & target_key = this->get_entry(start_index + pos).value.first;
-                if (this->key_equal_(target_key, key)) {
-                    return (start_index + pos);
-                }
-            }
-            if (cluster.hasAnyEmpty()) {
-                return npos;
-            }
-            cluster_index = this->next_cluster(cluster_index);
-        } while (cluster_index != start_cluster);
-
-        return npos;
-    }
-
-    JSTD_FORCED_INLINE
-    size_type find_impl(const key_type & key, index_type & first_cluster,
-                        index_type & last_cluster, std::uint8_t & ctrl_hash) const {
-        hash_code_t hash_code = this->get_hash(key);
-        std::uint8_t control_hash = this->get_control_hash(hash_code);
-        index_type cluster_index = this->index_for(hash_code);
-        index_type start_cluster = cluster_index;
-        first_cluster = start_cluster;
-        ctrl_hash = control_hash;
-        do {
-            const cluster_type & cluster = this->get_cluster(cluster_index);
-            std::uint32_t mask16 = cluster.matchHash(control_hash);
-            size_type start_index = cluster_index * kClusterEntries;
-            while (mask16 != 0) {
-                size_type pos = BitUtils::bsf32(mask16);
-                mask16 = BitUtils::clearLowBit32(mask16);
-                const key_type & target_key = this->get_entry(start_index + pos).value.first;
-                if (this->key_equal_(target_key, key)) {
-                    last_cluster = cluster_index;
-                    return (start_index + pos);
-                }
-            }
-            if (cluster.hasAnyEmpty()) {
-                last_cluster = cluster_index;
-                return npos;
-            }
-            cluster_index = this->next_cluster(cluster_index);
-        } while (cluster_index != start_cluster);
-
-        last_cluster = npos;
-        return npos;
-    }
-
-    JSTD_FORCED_INLINE
-    std::pair<size_type, bool>
-    find_and_prepare_insert(const key_type & key, std::uint8_t & ctrl_hash) const {
-        hash_code_t hash_code = this->get_hash(key);
-        std::uint8_t control_hash = this->get_control_hash(hash_code);
-        index_type cluster_index = this->index_for(hash_code);
-        index_type first_cluster = cluster_index;
-        ctrl_hash = control_hash;
-
-        do {
-            const cluster_type & cluster = this->get_cluster(cluster_index);
-            std::uint32_t mask16 = cluster.matchHash(control_hash);
-            size_type start_index = cluster_index * kClusterEntries;
-            while (mask16 != 0) {
-                size_type pos = BitUtils::bsf32(mask16);
-                mask16 = BitUtils::clearLowBit32(mask16);
-                const key_type & target_key = this->get_entry(start_index + pos).value.first;
-                if (this->key_equal_(target_key, key)) {
-                    return { (start_index + pos), true };
-                }
-            }
-            std::uint32_t maskEmpty = cluster.matchEmpty();
-            if (maskEmpty != 0) {
-                index_type last_cluster = cluster_index;
-                if (cluster_index != first_cluster) {
-                    // Find the first DeletedEntry from first_cluster to last_cluster.
-                    cluster_index = first_cluster;
-                    do {
-                        const cluster_type & cluster = this->get_cluster(cluster_index);
-                        std::uint32_t maskDeleted = cluster.matchDeleted();
-                        if (maskDeleted != 0) {
-                            // Found a [DeletedEntry] to insert
-                            size_type pos = BitUtils::bsf32(maskDeleted);
-                            size_type start_index = cluster_index * kClusterEntries;
-                            return { (start_index + pos), false };
-                        }
-                        if (cluster_index == last_cluster)
-                            break;
-                        cluster_index = this->next_cluster(cluster_index);
-                    } while (cluster_index != first_cluster);
-
-                    // Found a [EmptyEntry] to insert
-                    // Skip to final processing
-                } else {
-                    std::uint32_t maskDeleted = cluster.matchDeleted();
-                    if (maskDeleted != 0) {
-                        // Found a [DeletedEntry] to insert
-                        maskEmpty = maskDeleted;
-                    } else {
-                        // Found a [EmptyEntry] to insert
-                        assert(maskEmpty != 0);
-                    }
-                }
-
-                // Get [EmptyEntry] or [DeletedEntry] to insert
-                size_type pos = BitUtils::bsf32(maskEmpty);
-                size_type start_index = last_cluster * kClusterEntries;
-                return { (start_index + pos), false };
-            }
-            cluster_index = this->next_cluster(cluster_index);
-        } while (cluster_index != first_cluster);
-
-        return { npos, false };
     }
 };
 
