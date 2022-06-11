@@ -1,5 +1,7 @@
 # CC BY-SA-4.0
 
+Copyright (c) 2018-2022 XiongHui Guo (gz_shines@msn.com)
+
 ## 1. CC BY-SA 4.0 License
 
 全称为 `Creative Commons Attribution-ShareAlike 4.0 International Public License`（知识共享 版权归属-相同方式共享 4.0 国际 公共许可证），简称为 “`CC BY-SA 4.0`”，官方说明：[https://creativecommons.org/licenses/by-sa/4.0/legalcode](https://creativecommons.org/licenses/by-sa/4.0/legalcode) 。
