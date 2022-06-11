@@ -193,8 +193,9 @@ public:
     static constexpr size_type kClusterMask     = kClusterEntries - 1;
     static constexpr size_type kClusterShift    = kControlShift + kClusterBits;
 
-    static constexpr size_type kDefaultInitialCapacity = kClusterEntries;
-    static constexpr size_type kMinimumCapacity = kClusterEntries;
+    // Must be kDefaultCapacity >= kMinimumCapacity
+    static constexpr size_type kMinimumCapacity = 4;
+    static constexpr size_type kDefaultCapacity = 4;
 
     static constexpr float kDefaultLoadFactor = 0.5;
     static constexpr float kMaxLoadFactor = 1.0;
@@ -253,15 +254,19 @@ public:
         };
 
         cluster() noexcept {
+            this->clear();
+        }
+
+        ~cluster() {
+        }
+
+        void clear() {
 #if defined(__SSE2__)
             __m128i empty_bits = _mm_set1_epi8(kEmptyEntry);
             _mm_store_si128((__m128i *)&controls[0], empty_bits);
 #else
             std::memset((void *)&controls[0], kEmptyEntry, kClusterEntries * sizeof(std::uint8_t));
 #endif // __SSE2__
-        }
-
-        ~cluster() {
         }
 
         std::uint32_t getMatchMask(std::uint8_t control_tag) const {
@@ -388,7 +393,8 @@ public:
             : value(std::forward<key_type>(key), std::forward<mapped_type>(value)) {
         }
 
-        ~hash_entry() { }
+        ~hash_entry() {
+        }
 
         hash_entry & operator = (const hash_entry & rhs) {
             if (this != std::addressof(rhs)) {
@@ -499,48 +505,22 @@ private:
     size_type       entry_threshold_;
     double          load_factor_;
 
-    allocator_type          value_allocator_;
-    entry_allocator_type    entry_allocator_;
-
     hasher_type     hasher_;
     key_equal       key_equal_;
 
+    allocator_type          value_allocator_;
+    entry_allocator_type    entry_allocator_;
+
 public:
-    explicit flat16_hash_map(size_type initialCapacity = kDefaultInitialCapacity) :
+    explicit flat16_hash_map(size_type initialCapacity = kDefaultCapacity) :
         clusters_(nullptr), cluster_mask_(0),
         entries_(nullptr), entry_size_(0), entry_mask_(0),
         entry_threshold_(0), load_factor_((double)kDefaultLoadFactor) {
-        init_cluster(initialCapacity);
+        this->create_cluster<true>(initialCapacity);
     }
 
     ~flat16_hash_map() {
-        this->destroy();
-    }
-
-    void destroy() {
-        this->destory_entries();
-
-        // Note!!: destory_entries() need use this->clusters()
-        if (this->clusters_ != nullptr) {
-            delete[] this->clusters_;
-            this->clusters_ = nullptr;
-        }
-    }
-
-    void destory_entries() {
-        // Destroy all entries.
-        if (this->entries_ != nullptr) {
-            control_byte * control = this->controls();
-            for (size_type index = 0; index <= this->entry_mask(); index++) {
-                if (control->isUsed()) {
-                    entry_type * entry = this->entry_at(index);
-                    this->entry_allocator_.destroy(entry);
-                }
-                control++;
-            }
-            this->entry_allocator_.deallocate(this->entries_, this->entry_capacity());
-            this->entries_ = nullptr;
-        }
+        this->destroy<true>();
     }
 
     bool is_valid() const { return (this->clusters() != nullptr); }
@@ -614,6 +594,62 @@ public:
 
     const_iterator cend() const {
         return this->end();
+    }
+
+    template <bool finitial>
+    void destroy() {
+        this->destory_entries<finitial>();
+
+        // Note!!: destory_entries() need use this->clusters()
+        this->destory_cluster<finitial>();
+    }
+
+    template <bool finitial>
+    void destory_cluster() {
+        if (finitial) {
+            if (this->clusters_ != nullptr) {
+                delete[] this->clusters_;
+                this->clusters_ = nullptr;
+            }
+        } else {
+            for (size_type index = 0; index <= this->cluster_mask(); index++) {
+                cluster_type * cluster = this->cluster_at(index);
+                cluster->clear();
+            }
+        }
+    }
+
+    template <bool finitial>
+    void destory_entries() {
+        // Destroy all entries.
+        if (this->entries_ != nullptr) {
+            control_byte * control = this->controls();
+            for (size_type index = 0; index <= this->entry_mask(); index++) {
+                if (control->isUsed()) {
+                    entry_type * entry = this->entry_at(index);
+                    this->entry_allocator_.destroy(entry);
+                }
+                control++;
+            }
+            if (finitial) {
+                this->entry_allocator_.deallocate(this->entries_, this->entry_capacity());
+                this->entries_ = nullptr;
+            }
+            this->entry_size_ = 0;
+        }
+    }
+
+    void clear(bool need_destory = true) {
+        if (this->entry_capacity() > kDefaultCapacity) {
+            if (need_destory) {
+                this->destroy<true>();
+                this->create_cluster<false>(kDefaultCapacity);
+                assert(this->entry_size() == 0);
+                return;
+            }
+        }
+        this->destory<false>();
+        assert(this->entry_size() == 0);
     }
 
     iterator find(const key_type & key) {
@@ -978,7 +1014,9 @@ private:
         return ((control_bytes[index] & kUnusedMask) == 0);
     }
 
-    void init_cluster(size_type init_capacity) {
+    template <bool initialize = false>
+    void create_cluster(size_type init_capacity) {
+        init_capacity = (std::max)(init_capacity, kMinimumCapacity);
         size_type new_capacity = align_to(init_capacity, kClusterEntries);
         assert(new_capacity > 0);
         assert(new_capacity >= kMinimumCapacity);
@@ -991,14 +1029,12 @@ private:
 
         entry_type * entries = entry_allocator_.allocate(new_capacity);
         entries_ = entries;
-        assert(entry_size_ == 0);
+        if (initialize)
+            assert(entry_size_ == 0);
+        else
+            entry_size_ = 0;        
         entry_mask_ = new_capacity - 1;
         entry_threshold_ = (size_type)(new_capacity * FLAT16_DEFAULT_LOAD_FACTOR);
-    }
-
-    cluster_type * create_cluster(size_type cluster_count) {
-        cluster_type * clusters = new cluster_type[cluster_count];
-        return clusters;
     }
 
     JSTD_FORCED_INLINE
