@@ -648,7 +648,7 @@ public:
                 return;
             }
         }
-        this->destory<false>();
+        this->destroy<false>();
         assert(this->entry_size() == 0);
     }
 
