@@ -1403,11 +1403,13 @@ void IntegalHash_test()
     printf("\n");
 }
 
-auto print_node = [](const auto & node) {
+template <typename PairType>
+void print_node(const PairType & node) {
     std::cout << "[" << node.first << "] = " << node.second << '\n';
 };
- 
-auto print_result = [](auto const & pair) {
+
+template <typename PairType>
+void print_result(const PairType & pair) {
     std::cout << (pair.second ? "inserted: " : "ignored:  ");
     print_node(*pair.first);
 };

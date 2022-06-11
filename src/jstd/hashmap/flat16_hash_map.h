@@ -249,13 +249,13 @@ public:
     };
 
 #if 1
-    struct hash_entry : value_type {
+    struct hash_entry : public value_type {
         hash_entry() : value_type() {
         }
-        hash_entry(const hash_entry & src) : value_type(src::value_type) {
+        hash_entry(const hash_entry & src) : value_type(*static_cast<value_type *>(&src)) {
         }
         hash_entry(hash_entry && src) noexcept(std::is_nothrow_move_constructible<value_type>::value)
-            : value_type(std::move(src::value_type)) {
+            : value_type(std::move(*static_cast<value_type *>(&src))) {
         }
 
         hash_entry(const value_type & val) : value_type(val) {
