@@ -3,8 +3,6 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 14
 VisualStudioVersion = 14.0.25420.1
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "jstd_hash_map", "projects\vc2015\jstd_hash_map\jstd_hash_map.vcxproj", "{C9282A5D-9424-4753-B9A4-9EFB2615A3F8}"
-EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "benchmark", "projects\vc2015\benchmark\benchmark.vcxproj", "{42EC228F-E2BB-4836-B10D-3DD58525E0EB}"
 	ProjectSection(ProjectDependencies) = postProject
 		{C9282A5D-9424-4753-B9A4-9EFB2615A3F8} = {C9282A5D-9424-4753-B9A4-9EFB2615A3F8}
@@ -14,6 +12,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "time_hash_map", "projects\v
 	ProjectSection(ProjectDependencies) = postProject
 		{C9282A5D-9424-4753-B9A4-9EFB2615A3F8} = {C9282A5D-9424-4753-B9A4-9EFB2615A3F8}
 	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "jstd_hashmap", "projects\vc2015\jstd_hashmap\jstd_hashmap.vcxproj", "{C9282A5D-9424-4753-B9A4-9EFB2615A3F8}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

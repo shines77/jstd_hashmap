@@ -44,7 +44,7 @@
   <PropertyGroup Label="Globals">
     <ProjectGuid>{C9282A5D-9424-4753-B9A4-9EFB2615A3F8}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
-    <RootNamespace>jstd_hash_map</RootNamespace>
+    <RootNamespace>jstd_hashmap</RootNamespace>
     <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
