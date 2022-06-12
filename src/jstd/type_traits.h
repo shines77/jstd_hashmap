@@ -9,33 +9,87 @@
 #include <cstdint>
 #include <cstddef>
 #include <cstdbool>
+#include <cassert>
 
 #include <string>
-#include <type_traits>
 #include <utility>      // For std::pair<T1, T2>
+#include <type_traits>
 
 #include "jstd/traits/has_member.h"
 
-#if (!defined(_MSC_VER) && defined(__cplusplus) && (__cplusplus < 201304L)) \
+#if (!defined(_MSC_VER) && defined(__cplusplus) && (__cplusplus < 201402L)) \
  || (defined(_MSC_VER) && (_MSC_FULL_VER < 190024210))
 
 namespace std {
 
-template <std::size_t... Indexs>
-using index_sequence = std::integer_sequence<std::size_t, Indexs...>;
+#ifndef __EDG__
+#define __EDG__
+#endif
 
-template <class T, T N>
-using make_integer_sequence = std::integer_sequence<T, /* a sequence 0, 1, 2, ..., N-1 */ >;
+template <class T, T... Vals>
+struct integer_sequence {
+    // sequence of integer parameters
+    static_assert(std::is_integral<T>::value,
+                  "std::integer_sequence<T, I...> requires T to be an integral type.");
 
-template <std::size_t N>
-using make_index_sequence = std::make_integer_sequence<std::size_t, N>;
+    typedef integer_sequence<T, Vals...> type;
+    typedef T value_type;
 
-template <class... T>
-using index_sequence_for = std::make_index_sequence<sizeof...(T)>;
+    // get length of parameter list
+    static constexpr std::size_t size() noexcept {
+        return (sizeof...(Vals));
+    }
+};
+
+// Alias template std::make_integer_sequence<T>
+#ifdef __EDG__
+
+// explodes gracefully below 0
+template <bool Negative, bool Zero, class Int_constant, class Int_sequence>
+struct make_integer_seq {
+    static_assert(!Negative, "std::make_integer_sequence<T, N> requires N to be non-negative.");
+};
+
+// ends recursion at 0
+template <class T, T... Vals>
+struct make_integer_seq<false, true,
+                        std::integral_constant<T, 0>,
+                        integer_sequence<T, Vals...>>
+    : integer_sequence<T, Vals...> {
+};
+
+// counts down to 0
+template<class T, T N, T... Vals>
+struct make_integer_seq<false, false,
+                        std::integral_constant<T, N>,
+                        integer_sequence<T, Vals...>>
+    : make_integer_seq<false, (N == 1),
+                       std::integral_constant<T, N - 1>,
+                       integer_sequence<T, N - 1, Vals...>> {
+};
+
+template <class T, T Size>
+using make_integer_sequence = typename make_integer_seq<(Size < 0), (Size == 0),
+                              std::integral_constant<T, Size>, integer_sequence<T>>::type;
+#else /* __EDG__ */
+
+template <class T, T Size>
+using make_integer_sequence = __make_integer_seq<integer_sequence, T, Size>;
+
+#endif /* __EDG__ */
+
+template <std::size_t... Vals>
+using index_sequence = std::integer_sequence<std::size_t, Vals...>;
+
+template <std::size_t Size>
+using make_index_sequence = std::make_integer_sequence<std::size_t, Size>;
+
+template <class... Ts>
+using index_sequence_for = std::make_index_sequence<sizeof...(Ts)>;
 
 } // namespace std
 
-#endif // __cplusplus
+#endif // (__cplusplus < 201402L)
 
 namespace jstd {
 
