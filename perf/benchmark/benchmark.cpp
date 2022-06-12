@@ -1438,14 +1438,16 @@ void flat16_hash_map_int_int_test()
     if (iter != flat_hash_map.end()) {
         printf("Found, key = %d, value = %d\n\n", iter->first, iter->second);
     } else {
-        printf("key = %d, No Found\n\n", 1);
+        printf("Not found, key = %d\n\n", 1);
     }
+
+    flat_hash_map.erase(2);
 
     iter = flat_hash_map.find(2);
     if (iter != flat_hash_map.end()) {
         printf("Found, key = %d, value = %d\n\n", iter->first, iter->second);
     } else {
-        printf("key = %d, No Found\n\n", 2);
+        printf("Not found, key = %d\n\n", 2);
     }
 }
 
@@ -1478,14 +1480,16 @@ void flat16_hash_map_int64_string_test()
     if (iter != flat_hash_map.end()) {
         printf("Found, key = %d, value = \"%s\"\n\n", (int)iter->first, iter->second.c_str());
     } else {
-        printf("key = %d, Not found\n\n", 0);
+        printf("Not found, key = %d\n\n", 0);
     }
+
+    flat_hash_map.erase(1);
 
     iter = flat_hash_map.find(1);
     if (iter != flat_hash_map.end()) {
         printf("Found, key = %d, value = \"%s\"\n\n", (int)iter->first, iter->second.c_str());
     } else {
-        printf("key = %d, Not found\n\n", 1);
+        printf("Not found, key = %d\n\n", 1);
     }
 }
 
@@ -1525,14 +1529,16 @@ void flat16_hash_map_string_string_test()
     if (iter != flat_hash_map.end()) {
         printf("Found, key = \"%s\", value = \"%s\"\n\n", iter->first.c_str(), iter->second.c_str());
     } else {
-        printf("key = \"%s\", Not found\n\n", iter->first.c_str());
+        printf("Not found, key = \"%s\"\n\n", "b0");
     }
+
+    flat_hash_map.erase("c0");
 
     iter = flat_hash_map.find("c0");
     if (iter != flat_hash_map.end()) {
         printf("Found, key = \"%s\", value = \"%s\"\n\n", iter->first.c_str(), iter->second.c_str());
     } else {
-        printf("key = \"%s\", Not found\n\n", iter->first.c_str());
+        printf("Not found, key = \"%s\"\n\n", "c0");
     }
 }
 
