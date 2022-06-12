@@ -37,6 +37,8 @@
     <ClInclude Include="..\..\..\src\jstd\support\BitUtils.h" />
     <ClInclude Include="..\..\..\src\jstd\traits\has_member.h" />
     <ClInclude Include="..\..\..\src\jstd\type_traits.h" />
+    <ClInclude Include="..\..\..\src\jstd\utility.h" />
+    <ClInclude Include="..\..\..\src\jstd\utility\integer_sequence.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\src\jstd\lib.cpp" />

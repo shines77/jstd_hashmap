@@ -20,6 +20,9 @@
     <Filter Include="src\traits">
       <UniqueIdentifier>{da527b74-6338-42ce-834f-dfcc0f91765d}</UniqueIdentifier>
     </Filter>
+    <Filter Include="src\utility">
+      <UniqueIdentifier>{3a7a023b-4210-4d25-b7c9-9b6b30079540}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\src\jstd\lib.h">
@@ -75,6 +78,12 @@
     </ClInclude>
     <ClInclude Include="..\..\..\src\jstd\traits\has_member.h">
       <Filter>src\traits</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\utility.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\utility\integer_sequence.h">
+      <Filter>src\utility</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
