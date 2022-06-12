@@ -80,12 +80,12 @@ struct tuple_wrapper : public DecayT {
     }
 
     template <typename Tuple, std::size_t... Indexs>
-    tuple_wrapper(const Tuple & tuple, std::integer_sequence<std::size_t, Indexs...>)
+    tuple_wrapper(const Tuple & tuple, std::index_sequence<Indexs...>)
         : value_type(std::get<Indexs>(tuple)...) {
     }
 
     template <typename Tuple, std::size_t... Indexs>
-    tuple_wrapper(Tuple && tuple, std::integer_sequence<std::size_t, Indexs...>)
+    tuple_wrapper(Tuple && tuple, std::index_sequence<Indexs...>)
         : value_type(std::get<Indexs>(std::forward<Tuple>(tuple))...) {
     }
 
@@ -128,12 +128,12 @@ struct tuple_wrapper<T, typename std::remove_reference<T>::type, true> {
     }
 
     template <typename Tuple, std::size_t... Indexs>
-    tuple_wrapper(const Tuple & tuple, std::integer_sequence<std::size_t, Indexs...>)
+    tuple_wrapper(const Tuple & tuple, std::index_sequence<Indexs...>)
         : value_(std::get<Indexs>(tuple)...) {
     }
 
     template <typename Tuple, std::size_t... Indexs>
-    tuple_wrapper(Tuple && tuple, std::integer_sequence<std::size_t, Indexs...>)
+    tuple_wrapper(Tuple && tuple, std::index_sequence<Indexs...>)
         : value_(std::get<Indexs>(std::forward<Tuple>(tuple))...) {
     }
 
