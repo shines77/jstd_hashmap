@@ -6,6 +6,12 @@
 #pragma once
 #endif
 
+// Minimum requirements: gcc/clang C++ 11 or MSVC 2015 Update 3.
+#if (!defined(_MSC_VER) && defined(__cplusplus) && (__cplusplus < 201103L)) \
+ || (defined(_MSC_VER) && (_MSC_FULL_VER < 190024210))
+#error "jstd requires C++11 support."
+#endif
+
 /// \macro __GNUC_PREREQ
 /// \brief Defines __GNUC_PREREQ if glibc's features.h isn't available.
 #ifndef __GNUC_PREREQ
@@ -211,7 +217,7 @@
 //      http://www.boost.org/doc/libs/1_60_0/boost/config/compiler/gcc.hpp10
 //      http://www.boost.org/doc/libs/1_60_0/boost/config/compiler/clang.hpp4
 //      http://www.boost.org/doc/libs/1_60_0/boost/config/compiler/intel.hpp2
-// 
+//
 ////////////////////////////////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -317,7 +323,7 @@
 #define ASSUME_IS_ALIGNED(ptr, alignment)   __builtin_assume_aligned((ptr), (alignment))
 #elif __has_builtin(__builtin_assume_aligned) && __GNUC_PREREQ(4, 7)
 #define ASSUME_IS_ALIGNED(ptr, alignment)   __builtin_assume_aligned((ptr), (alignment))
-#else   
+#else
 #define ASSUME_IS_ALIGNED(ptr, alignment)   ((void *)(ptr))
 #endif
 

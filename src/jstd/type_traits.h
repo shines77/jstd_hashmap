@@ -16,6 +16,27 @@
 
 #include "jstd/traits/has_member.h"
 
+#if (!defined(_MSC_VER) && defined(__cplusplus) && (__cplusplus < 201304L)) \
+ || (defined(_MSC_VER) && (_MSC_FULL_VER < 190024210))
+
+namespace std {
+
+template <std::size_t... Indexs>
+using index_sequence = std::integer_sequence<std::size_t, Indexs...>;
+
+template <class T, T N>
+using make_integer_sequence = std::integer_sequence<T, /* a sequence 0, 1, 2, ..., N-1 */ >;
+
+template <std::size_t N>
+using make_index_sequence = std::make_integer_sequence<std::size_t, N>;
+
+template <class... T>
+using index_sequence_for = std::make_index_sequence<sizeof...(T)>;
+
+} // namespace std
+
+#endif // __cplusplus
+
 namespace jstd {
 
 struct false_type {
