@@ -675,7 +675,7 @@ public:
         if (index != npos)
             return this->iterator_at(index);
         else
-            return this->end();        
+            return this->end();
     }
 
     const_iterator find(const key_type & key) const {
@@ -683,7 +683,7 @@ public:
         if (index != npos)
             return this->iterator_at(index);
         else
-            return this->end();        
+            return this->end();
     }
 
     std::pair<iterator, bool> insert(const value_type & value) {
@@ -904,7 +904,7 @@ private:
         if (initialize)
             assert(entry_size_ == 0);
         else
-            entry_size_ = 0;        
+            entry_size_ = 0;
         entry_mask_ = new_capacity - 1;
         entry_threshold_ = (size_type)(new_capacity * FLAT16_DEFAULT_LOAD_FACTOR);
     }
