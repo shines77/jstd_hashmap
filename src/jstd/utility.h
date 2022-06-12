@@ -11,6 +11,8 @@
 #include <cstdbool>
 #include <cassert>
 #include <memory>
+#include <tuple>
+#include <utility>
 #include <type_traits>
 
 #include "jstd/utility/integer_sequence.h"
@@ -58,6 +60,9 @@ auto const_castor(T * ptr) -> const typename std::remove_const<T>::type * {
 
 namespace jstd {
 
+//
+// tuple_wrapper<T, DecayT, bool IsIntegral>
+//
 template <typename T, typename DecayT = typename std::remove_reference<T>::type,
                       bool IsIntegral = std::is_integral<DecayT>::value>
 struct tuple_wrapper : public DecayT {
@@ -67,11 +72,11 @@ struct tuple_wrapper : public DecayT {
     }
     tuple_wrapper(const tuple_wrapper & src)
         noexcept(std::is_nothrow_copy_constructible<value_type>::value)
-        : value_type(src) {
+        : value_type(*static_cast<value_type *>(&src)) {
     }
     tuple_wrapper(tuple_wrapper && src)
         noexcept(std::is_nothrow_move_constructible<value_type>::value)
-        : value_type(std::move(src)) {
+        : value_type(std::move(*static_cast<value_type *>(&src))) {
     }
 
     template <typename Tuple, std::size_t... Indexs>
@@ -104,6 +109,9 @@ struct tuple_wrapper : public DecayT {
     }
 };
 
+//
+// tuple_wrapper<T, DecayT, true>
+//
 template <typename T>
 struct tuple_wrapper<T, typename std::remove_reference<T>::type, true> {
     using value_type = typename std::remove_reference<T>::type;
@@ -152,32 +160,139 @@ struct tuple_wrapper<T, typename std::remove_reference<T>::type, true> {
 };
 
 //
+// From: https://en.cppreference.com/w/cpp/utility/make_from_tuple
+//
+
+//
+// tuple_wrapper2<T, DecayT, IsIntegral>
+//
+template <typename T, typename DecayT = typename std::remove_reference<T>::type,
+                      bool IsIntegral = std::is_integral<DecayT>::value>
+struct tuple_wrapper2 : public DecayT {
+    using value_type = typename std::remove_reference<T>::type;
+
+    tuple_wrapper2() : value_type() {
+    }
+    tuple_wrapper2(const tuple_wrapper2 & src)
+        noexcept(std::is_nothrow_copy_constructible<value_type>::value)
+        : value_type(*static_cast<value_type *>(&src)) {
+    }
+    tuple_wrapper2(tuple_wrapper2 && src)
+        noexcept(std::is_nothrow_move_constructible<value_type>::value)
+        : value_type(std::move(*static_cast<value_type *>(&src))) {
+    }
+
+#if 0
+    template <typename... Args>
+    tuple_wrapper2(Args && ... args)
+        : value_type(std::forward<Args>(args)...) {
+    }
+#endif
+
+    template <typename Tuple, std::size_t... Indexs>
+    tuple_wrapper2(Tuple && tuple, std::index_sequence<Indexs...>)
+        : value_type(std::get<Indexs>(std::forward<Tuple>(tuple))...) {
+        static_assert(std::is_constructible<value_type,
+                      decltype(std::get<Indexs>(std::declval<Tuple>()))...>::value,
+                      "std::tuple<...> must be construct to tuple_wrapper2::value_type.");
+    }
+
+    template <typename Tuple>
+    tuple_wrapper2(Tuple && tuple)
+        : tuple_wrapper2(std::forward<Tuple>(tuple), std::make_index_sequence<
+                            std::tuple_size<typename std::remove_reference<Tuple>::type>::value
+                         >{}) {
+    }
+
+    value_type & value() {
+        return *static_cast<value_type *>(this);
+    }
+
+    const value_type & value() const {
+        return *static_cast<const value_type *>(const_cast<tuple_wrapper2 *>(this));
+    }
+};
+
+//
+// tuple_wrapper2<T, DecayT, true>
+//
+template <typename T>
+struct tuple_wrapper2<T, typename std::remove_reference<T>::type, true> {
+    using value_type = typename std::remove_reference<T>::type;
+
+    tuple_wrapper2() : value_() {
+    }
+    tuple_wrapper2(const tuple_wrapper2 & src)
+        noexcept(std::is_nothrow_copy_constructible<value_type>::value)
+        : value_(src.value_) {
+    }
+    tuple_wrapper2(tuple_wrapper2 && src)
+        noexcept(std::is_nothrow_move_constructible<value_type>::value)
+        : value_(std::move(src.value_)) {
+    }
+
+#if 0
+    template <typename... Args>
+    tuple_wrapper2(Args && ... args)
+        : value_(std::forward<Args>(args)...) {
+    }
+#endif
+
+    template <typename Tuple, std::size_t... Indexs>
+    tuple_wrapper2(Tuple && tuple, std::index_sequence<Indexs...>)
+        : value_(std::get<Indexs>(std::forward<Tuple>(tuple))...) {
+        static_assert(std::is_constructible<value_type,
+                      decltype(std::get<Indexs>(std::declval<Tuple>()))...>::value,
+                      "std::tuple<...> must be construct to tuple_wrapper2::value_type.");
+    }
+
+    template <typename Tuple>
+    tuple_wrapper2(Tuple && tuple)
+        : tuple_wrapper2(std::forward<Tuple>(tuple), std::make_index_sequence<
+                            std::tuple_size<typename std::remove_reference<Tuple>::type>::value
+                         >{}) {
+    }
+
+    value_type & value() {
+        return value_;
+    }
+
+    const value_type & value() const {
+        return value_;
+    }
+
+    value_type value_;
+};
+
+//
 // From: https://blog.csdn.net/netyeaxi/article/details/83539928
 //
-void print() {
+
+void print_tuple() {
     std::cout << std::endl;
 }
 
-template <typename HeadType, typename... Types>
-void print(HeadType arg, Types... Args) {
-    std::cout << typeid(HeadType).name() << ": " << arg << std::endl;
-    print(Args...);
+template <typename HeadType, typename... Args>
+void print_tuple(HeadType && head, Args && ... args) {
+    std::cout << typeid(decltype(head)).name() << ": "
+              << std::forward<HeadType>(head) << std::endl;
+    print_tuple(std::forward<Args>(args)...);
 }
 
-template <typename Tuple, typename... Types>
-void tuple_element_type(Tuple && tuple, Types... Args) {
-    print(Args...);
+template <typename Tuple, typename... Args>
+void tuple_element_type(Tuple && tuple, Args && ... args) {
+    print_tuple(std::forward<Args>(args)...);
 }
 
 template <typename Tuple, std::size_t... Indexs>
 void tuple_element_index(Tuple && tuple, std::index_sequence<Indexs...>) {
-    tuple_element_type(tuple, std::get<Indexs>(std::forward<Tuple>(tuple))...);
+    tuple_element_type(std::forward<Tuple>(tuple), std::get<Indexs>(std::forward<Tuple>(tuple))...);
 }
 
 template <typename Tuple>
-void break_tuple(Tuple && tuple) {
-    tuple_element_index(tuple, std::make_index_sequence<
-                        std::tuple_size<typename std::remove_reference<Tuple>::type>::value
+void break_from_tuple(Tuple && tuple) {
+    tuple_element_index(std::forward<Tuple>(tuple), std::make_index_sequence<
+                            std::tuple_size<typename std::remove_reference<Tuple>::type>::value
                         >{});
 }
 

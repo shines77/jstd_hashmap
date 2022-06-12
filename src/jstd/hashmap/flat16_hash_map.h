@@ -1127,9 +1127,9 @@ private:
                                            std::tuple<Ts1...> && first,
                                            std::tuple<Ts2...> && second) {
         std::uint8_t ctrl_hash;
-        tuple_wrapper<key_type> key_wrapper(first);
-        break_tuple(first);
-        break_tuple(second);
+        tuple_wrapper2<key_type> key_wrapper(first);
+        break_from_tuple(first);
+        break_from_tuple(second);
         auto find_info = this->find_and_prepare_insert(key_wrapper.value(), ctrl_hash);
         size_type target = find_info.first;
         size_type is_exists = find_info.second;
@@ -1157,7 +1157,7 @@ private:
         } else {
             // The key to be inserted already exists.
             if (update_always) {
-                tuple_wrapper<mapped_type> mapped_wrapper(std::move(second));
+                tuple_wrapper2<mapped_type> mapped_wrapper(std::move(second));
                 entry_type * entry = this->entry_at(target);
                 entry->second = std::move(mapped_wrapper.value());
             }
