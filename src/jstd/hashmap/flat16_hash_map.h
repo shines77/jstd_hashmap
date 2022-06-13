@@ -711,7 +711,7 @@ public:
     }
 
     std::pair<const_iterator, const_iterator> equal_range(const key_type & key) const {
-        const_iterator found = this->find(key);
+        const_iterator iter = this->find(key);
         if (iter != this->end())
             return { iter, std::next(iter) };
         else
@@ -1375,10 +1375,11 @@ private:
         assert(index <= this->entry_capacity());
         control_byte & control = this->get_control(index);
         assert(control.isUsed());
+        index_type start_cluster = (index_type)(index / kClusterEntries);
+        const cluster_type & cluster = this->get_cluster(start_cluster);
         if (cluster.hasAnyEmpty()) {
             control.setEmpty();
         } else {
-            index_type start_cluster = (index_type)(index / kClusterEntries);
             cluster_index = this->next_cluster(start_cluster);
             if (cluster_index != start_cluster) {
                 const cluster_type & cluster = this->get_cluster(cluster_index);
@@ -1391,7 +1392,7 @@ private:
             }
         }
         // Destroy entry
-        this->entry_allocator_.destroy(&target);
+        this->entry_allocator_.destroy(this->entry_at(index));
         assert(this->entry_size_ > 0);
         this->entry_size_--;
     }
