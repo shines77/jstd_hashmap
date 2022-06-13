@@ -500,6 +500,8 @@ public:
         using pointer = ValueType *;
         using reference = ValueType &;
 
+        using non_const_value_type = typename std::remove_const<ValueType>::type;
+
         using size_type = std::size_t;
         using difference_type = std::ptrdiff_t;
 
@@ -553,8 +555,16 @@ public:
             return std::addressof(*this->entry_);
         }
 
-        operator basic_iterator<const value_type>() const {
+        operator basic_iterator<const non_const_value_type>() const {
             return { this->entry_ };
+        }
+
+        entry_type * value() {
+            return this->entry_;
+        }
+
+        const entry_type * value() const {
+            return this->entry_;
         }
     };
 
@@ -692,12 +702,28 @@ public:
             return this->end();
     }
 
+    std::pair<iterator, iterator> equal_range(const key_type & key) {
+        iterator iter = this->find(key);
+        if (iter != this->end())
+            return { iter, std::next(iter) };
+        else
+            return { iter, iter };
+    }
+
+    std::pair<const_iterator, const_iterator> equal_range(const key_type & key) const {
+        const_iterator found = this->find(key);
+        if (iter != this->end())
+            return { iter, std::next(iter) };
+        else
+            return { iter, iter };
+    }
+
     std::pair<iterator, bool> insert(const value_type & value) {
-        return this->emplace_impl<true>(value);
+        return this->emplace(value);
     }
 
     std::pair<iterator, bool> insert(value_type && value) {
-        return this->emplace_impl<true>(std::move(value));
+        return this->emplace(std::move(value));
     }
 
     template <typename P, typename std::enable_if<
@@ -705,15 +731,15 @@ public:
               (!jstd::is_same_ex<P, nc_value_type>::value) &&
               std::is_constructible<value_type, P &&>::value>::type * = nullptr>
     std::pair<iterator, bool> insert(P && value) {
-        return this->emplace_impl<true>(std::forward<P>(value));
+        return this->emplace(std::forward<P>(value));
     }
 
     iterator insert(const_iterator hint, const value_type & value) {
-        return this->emplace_impl<true>(value).first;
+        return this->emplace(value).first;
     }
 
     iterator insert(const_iterator hint, value_type && value) {
-        return this->emplace_impl<true>(std::move(value)).first;
+        return this->emplace(std::move(value)).first;
     }
 
     template <typename P, typename std::enable_if<
@@ -721,6 +747,33 @@ public:
               (!jstd::is_same_ex<P, nc_value_type>::value) &&
               std::is_constructible<value_type, P &&>::value>::type * = nullptr>
     std::pair<iterator, bool> insert(const_iterator hint, P && value) {
+        return this->emplace(std::forward<P>(value));
+    }
+
+    template <typename InputIter>
+    void insert(InputIter first, InputIter last) {
+        for (; first != last; ++first) {
+            this->emplace(*first);
+        }
+    }
+
+    void insert(std::initializer_list<value_type> ilist) {
+        this->insert(ilist.begin(), ilist.end());
+    }
+
+    std::pair<iterator, bool> insert_always(const value_type & value) {
+        return this->emplace_impl<true>(value);
+    }
+
+    std::pair<iterator, bool> insert_always(value_type && value) {
+        return this->emplace_impl<true>(std::move(value));
+    }
+
+    template <typename P, typename std::enable_if<
+              (!jstd::is_same_ex<P, value_type>::value) &&
+              (!jstd::is_same_ex<P, nc_value_type>::value) &&
+              std::is_constructible<value_type, P &&>::value>::type * = nullptr>
+    std::pair<iterator, bool> insert_always(P && value) {
         return this->emplace_impl<true>(std::forward<P>(value));
     }
 
@@ -735,12 +788,28 @@ public:
     }
 
     size_type erase(const key_type & key) {
-        size_type deleted = this->find_and_erase(key);
-        return deleted;
+        size_type num_deleted = this->find_and_erase(key);
+        return num_deleted;
     }
 
-    size_type erase_at(size_type index) {
-        return 1;
+    iterator erase(iterator pos) {
+        size_type index = this->index_of(pos);
+        this->erase_entry(pos);
+        return ++pos;
+    }
+
+    const_iterator erase(const_iterator pos) {
+        size_type index = this->index_of(pos);
+        this->erase_entry(index);
+        return ++pos;
+    }
+
+    iterator erase(const_iterator first, const_iterator last) {
+        for (; first != last; ++first) {
+            size_type index = this->index_of(first);
+            this->erase_entry(index);
+        }
+        return { first };
     }
 
     inline void grow() {
@@ -757,6 +826,10 @@ private:
         size_type new_capacity = (std::max)(capacity, kMinimumCapacity);
         new_capacity = round_up_pow2(new_capacity);
         return new_capacity;
+    }
+
+    bool is_positive(size_type value) const {
+        return (std::intptr_t(value) >= 0);
     }
 
     iterator iterator_at(size_type index) noexcept {
@@ -854,10 +927,24 @@ private:
         return this->entries_[index];
     }
 
-    index_type index_of(entry_type * entry) const noexcept {
-        assert(entry >= this->entries_);
+    size_type index_of(iterator pos) const {
+        return this->index_of(pos.value());
+    }
+
+    size_type index_of(const_iterator pos) const {
+        return this->index_of(pos.value());
+    }
+
+    index_type index_of(entry_type * entry) const {
+        assert(entry != nullptr);
+        assert(entry >= this->entries());
         index_type index = (index_type)(entry - this->entries());
+        assert(is_positive(index));
         return index;
+    }
+
+    index_type index_of(const entry_type * entry) const {
+        return this->index_of((entry_type *)entry);
     }
 
     bool entry_is_used(entry_type * entry) const {
@@ -996,54 +1083,6 @@ private:
 
         last_cluster = npos;
         return npos;
-    }
-
-    JSTD_FORCED_INLINE
-    size_type find_and_erase(const key_type & key) {
-        hash_code_t hash_code = this->get_hash(key);
-        std::uint8_t control_hash = this->get_control_hash(hash_code);
-        index_type cluster_index = this->index_for(hash_code);
-        index_type start_cluster = cluster_index;
-        do {
-            const cluster_type & cluster = this->get_cluster(cluster_index);
-            std::uint32_t mask16 = cluster.matchHash(control_hash);
-            size_type start_index = cluster_index * kClusterEntries;
-            while (mask16 != 0) {
-                size_type pos = BitUtils::bsf32(mask16);
-                mask16 = BitUtils::clearLowBit32(mask16);
-                size_type index = start_index + pos;
-                const entry_type & target = this->get_entry(index);
-                if (this->key_equal_(target.first, key)) {
-                    control_byte & control = this->get_control(index);
-                    assert(control.isUsed());
-                    if (cluster.hasAnyEmpty()) {
-                        control.setEmpty();
-                    } else {
-                        cluster_index = this->next_cluster(cluster_index);
-                        if (cluster_index != start_cluster) {
-                            const cluster_type & cluster = this->get_cluster(cluster_index);
-                            if (!cluster.isAllEmpty())
-                                control.setDeleted();
-                            else
-                                control.setEmpty();
-                        } else {
-                            control.setEmpty();
-                        }
-                    }
-                    // Destroy entry
-                    this->entry_allocator_.destroy(&target);
-                    assert(this->entry_size_ > 0);
-                    this->entry_size_--;
-                    return 1;
-                }
-            }
-            if (cluster.hasAnyEmpty()) {
-                return 0;
-            }
-            cluster_index = this->next_cluster(cluster_index);
-        } while (cluster_index != start_cluster);
-
-        return 0;
     }
 
     JSTD_FORCED_INLINE
@@ -1281,6 +1320,80 @@ private:
             }
             return { this->iterator_at(target), false };
         }
+    }
+
+    JSTD_FORCED_INLINE
+    size_type find_and_erase(const key_type & key) {
+        hash_code_t hash_code = this->get_hash(key);
+        std::uint8_t control_hash = this->get_control_hash(hash_code);
+        index_type cluster_index = this->index_for(hash_code);
+        index_type start_cluster = cluster_index;
+        do {
+            const cluster_type & cluster = this->get_cluster(cluster_index);
+            std::uint32_t mask16 = cluster.matchHash(control_hash);
+            size_type start_index = cluster_index * kClusterEntries;
+            while (mask16 != 0) {
+                size_type pos = BitUtils::bsf32(mask16);
+                mask16 = BitUtils::clearLowBit32(mask16);
+                size_type index = start_index + pos;
+                const entry_type & target = this->get_entry(index);
+                if (this->key_equal_(target.first, key)) {
+                    control_byte & control = this->get_control(index);
+                    assert(control.isUsed());
+                    if (cluster.hasAnyEmpty()) {
+                        control.setEmpty();
+                    } else {
+                        cluster_index = this->next_cluster(cluster_index);
+                        if (cluster_index != start_cluster) {
+                            const cluster_type & cluster = this->get_cluster(cluster_index);
+                            if (!cluster.isAllEmpty())
+                                control.setDeleted();
+                            else
+                                control.setEmpty();
+                        } else {
+                            control.setEmpty();
+                        }
+                    }
+                    // Destroy entry
+                    this->entry_allocator_.destroy(&target);
+                    assert(this->entry_size_ > 0);
+                    this->entry_size_--;
+                    return 1;
+                }
+            }
+            if (cluster.hasAnyEmpty()) {
+                return 0;
+            }
+            cluster_index = this->next_cluster(cluster_index);
+        } while (cluster_index != start_cluster);
+
+        return 0;
+    }
+
+    JSTD_FORCED_INLINE
+    void erase_entry(size_type index) {
+        assert(index <= this->entry_capacity());
+        control_byte & control = this->get_control(index);
+        assert(control.isUsed());
+        if (cluster.hasAnyEmpty()) {
+            control.setEmpty();
+        } else {
+            index_type start_cluster = (index_type)(index / kClusterEntries);
+            cluster_index = this->next_cluster(start_cluster);
+            if (cluster_index != start_cluster) {
+                const cluster_type & cluster = this->get_cluster(cluster_index);
+                if (!cluster.isAllEmpty())
+                    control.setDeleted();
+                else
+                    control.setEmpty();
+            } else {
+                control.setEmpty();
+            }
+        }
+        // Destroy entry
+        this->entry_allocator_.destroy(&target);
+        assert(this->entry_size_ > 0);
+        this->entry_size_--;
     }
 
     template <bool update_always>
