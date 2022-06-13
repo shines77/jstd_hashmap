@@ -85,6 +85,9 @@
     <ClInclude Include="..\..\..\src\jstd\utility\integer_sequence.h">
       <Filter>src\utility</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\support\Power2.h">
+      <Filter>src\support</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\src\jstd\lib.cpp">

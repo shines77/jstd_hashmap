@@ -101,12 +101,12 @@ struct BitUtils {
         assert(x >= 0 && x <= 64);
         return (unsigned int)x;
     #else
-        unsigned int high, low;
+        unsigned int low, high;
         unsigned int n1, n2;
-        high = (unsigned int) (x & 0x00000000FFFFFFFFULL);
-        low  = (unsigned int)((x & 0xFFFFFFFF00000000ULL) >> 32U);
-        n1 = __internal_popcnt(high);
-        n2 = __internal_popcnt(low);
+        low  = (unsigned int)(x & 0x00000000FFFFFFFFull);
+        high = (unsigned int)(x >> 32u);
+        n1 = __internal_popcnt(low);
+        n2 = __internal_popcnt(high);
         return (n1 + n2);
     #endif
     }
