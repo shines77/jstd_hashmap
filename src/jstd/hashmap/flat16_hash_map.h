@@ -1380,7 +1380,7 @@ private:
         if (cluster.hasAnyEmpty()) {
             control.setEmpty();
         } else {
-            cluster_index = this->next_cluster(start_cluster);
+            index_type cluster_index = this->next_cluster(start_cluster);
             if (cluster_index != start_cluster) {
                 const cluster_type & cluster = this->get_cluster(cluster_index);
                 if (!cluster.isAllEmpty())
