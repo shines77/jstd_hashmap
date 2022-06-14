@@ -158,8 +158,10 @@ round_down(SizeType N)
     static_assert(std::is_integral<SizeType>::value,
                   "Error: pow2::round_down(SizeType n) -- n must be a integral type.");
     typedef typename std::make_unsigned<SizeType>::type unsigned_type;
-    typedef typename std::make_signed<SizeType>::type   signed_type;
     typedef typename jstd::size_type_t<SizeType>::type  return_type;
+#ifdef _DEBUG
+    typedef typename std::make_signed<SizeType>::type   signed_type;
+#endif
     unsigned_type n = static_cast<unsigned_type>(N);
     if ((n > 1) || (Min_n > 1)) {
         assert(signed_type(n - 1) > 0);
@@ -219,8 +221,10 @@ round_up(SizeType N)
     static_assert(std::is_integral<SizeType>::value,
                   "Error: pow2::round_up(SizeType n) -- n must be a integral type.");
     typedef typename std::make_unsigned<SizeType>::type unsigned_type;
-    typedef typename std::make_signed<SizeType>::type   signed_type;
     typedef typename jstd::size_type_t<SizeType>::type  return_type;
+#ifdef _DEBUG
+    typedef typename std::make_signed<SizeType>::type   signed_type;
+#endif
     unsigned_type n = static_cast<unsigned_type>(N);
     if ((n <= ((std::numeric_limits<unsigned_type>::max)() / 2 + 1)) || (sizeof(SizeType) != 4)) {
         if ((n > 1) || (Min_n > 1)) {
