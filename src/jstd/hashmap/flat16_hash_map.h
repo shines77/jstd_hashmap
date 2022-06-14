@@ -71,6 +71,7 @@
 #include "jstd/type_traits.h"
 #include "jstd/utility.h"
 #include "jstd/support/BitUtils.h"
+#include "jstd/support/Power2.h"
 
 #define FLAT16_DEFAULT_LOAD_FACTOR  (0.5)
 
@@ -196,8 +197,9 @@ public:
     static constexpr size_type kClusterMask     = kClusterEntries - 1;
     static constexpr size_type kClusterShift    = kControlShift + kClusterBits;
 
-    // Must be kDefaultCapacity >= kMinimumCapacity
+    // kMinimumCapacity must be >= 2
     static constexpr size_type kMinimumCapacity = 4;
+    // kDefaultCapacity must be >= kMinimumCapacity
     static constexpr size_type kDefaultCapacity = 4;
 
     static constexpr float kDefaultLoadFactor = 0.5;
@@ -824,7 +826,7 @@ public:
 private:
     inline size_type calc_capacity(size_type capacity) const noexcept {
         size_type new_capacity = (std::max)(capacity, kMinimumCapacity);
-        new_capacity = round_up_pow2(new_capacity);
+        new_capacity = pow2::round_up<size_type, kMinimumCapacity>(new_capacity);
         return new_capacity;
     }
 
@@ -1002,12 +1004,11 @@ private:
 
     template <bool initialize = false>
     void create_cluster(size_type init_capacity) {
-        init_capacity = (std::max)(init_capacity, kMinimumCapacity);
-        size_type new_capacity = align_to(init_capacity, kClusterEntries);
+        size_type new_capacity = calc_capacity(init_capacity);
         assert(new_capacity > 0);
         assert(new_capacity >= kMinimumCapacity);
 
-        size_type cluster_count = new_capacity / kClusterEntries;
+        size_type cluster_count = (new_capacity + (kClusterEntries - 1)) / kClusterEntries;
         assert(cluster_count > 0);
         cluster_type * clusters = new cluster_type[cluster_count];
         clusters_ = clusters;
@@ -1156,11 +1157,11 @@ private:
         std::uint8_t ctrl_hash;
         auto find_info = this->find_and_prepare_insert(value.first, ctrl_hash);
         size_type target = find_info.first;
-        size_type is_exists = find_info.second;
+        bool is_exists = find_info.second;
         if (!is_exists) {
             // The key to be inserted is not exists.
             if (target != npos) {
-                // Found a [DeletedEntry] or [EMptyEntry] to insert
+                // Found a [DeletedEntry] or [EmptyEntry] to insert
                 control_byte * control = this->control_at(target);
                 assert(control->isEmptyOrDeleted());
                 control->setUsed(ctrl_hash);
@@ -1200,11 +1201,11 @@ private:
         std::uint8_t ctrl_hash;
         auto find_info = this->find_and_prepare_insert(key, ctrl_hash);
         size_type target = find_info.first;
-        size_type is_exists = find_info.second;
+        bool is_exists = find_info.second;
         if (!is_exists) {
             // The key to be inserted is not exists.
             if (target != npos) {
-                // Found a [DeletedEntry] or [EMptyEntry] to insert
+                // Found a [DeletedEntry] or [EmptyEntry] to insert
                 control_byte * control = this->control_at(target);
                 assert(control->isEmptyOrDeleted());
                 control->setUsed(ctrl_hash);
@@ -1248,11 +1249,11 @@ private:
         break_from_tuple(second);
         auto find_info = this->find_and_prepare_insert(key_wrapper.value(), ctrl_hash);
         size_type target = find_info.first;
-        size_type is_exists = find_info.second;
+        bool is_exists = find_info.second;
         if (!is_exists) {
             // The key to be inserted is not exists.
             if (target != npos) {
-                // Found a [DeletedEntry] or [EMptyEntry] to insert
+                // Found a [DeletedEntry] or [EmptyEntry] to insert
                 control_byte * control = this->control_at(target);
                 assert(control->isEmptyOrDeleted());
                 control->setUsed(ctrl_hash);
@@ -1294,11 +1295,11 @@ private:
         value_type value(std::forward<First>(first), std::forward<Args>(args)...);
         auto find_info = this->find_and_prepare_insert(value.first, ctrl_hash);
         size_type target = find_info.first;
-        size_type is_exists = find_info.second;
+        bool is_exists = find_info.second;
         if (!is_exists) {
             // The key to be inserted is not exists.
             if (target != npos) {
-                // Found a [DeletedEntry] or [EMptyEntry] to insert
+                // Found a [DeletedEntry] or [EmptyEntry] to insert
                 control_byte * control = this->control_at(target);
                 assert(control->isEmptyOrDeleted());
                 control->setUsed(ctrl_hash);

@@ -36,6 +36,15 @@ namespace jstd {
 #endif
 
 template <typename SizeType>
+struct size_type_t {
+    typedef typename std::conditional<(sizeof(SizeType) <= 4),
+                                      std::uint32_t,
+                                      std::uint64_t>::type type;
+    typedef typename std::make_unsigned<type>::type unsigned_type;
+    typedef typename std::make_signed<type>::type   signed_type;
+};
+
+template <typename SizeType>
 inline
 bool is_pow2(SizeType N)
 {
@@ -110,21 +119,23 @@ std::uint32_t countLeadingZeros(SizeType N)
 //   next_pow2(7) = 2, next_pow2(8) = 4
 //
 
-template <typename SizeType>
+template <typename SizeType, SizeType Min_n = 0>
 inline
-SizeType prev_pow2(SizeType N)
+typename jstd::size_type_t<SizeType>::type
+prev_pow2(SizeType N)
 {
     static_assert(std::is_integral<SizeType>::value,
                   "Error: pow2::prev_pow2(SizeType n) -- n must be a integral type.");
     typedef typename std::make_unsigned<SizeType>::type unsigned_type;
+    typedef typename jstd::size_type_t<SizeType>::type  return_type;
     unsigned_type n = static_cast<unsigned_type>(N);
-    if (n > 1) {
+    if ((n > 1) || (Min_n > 1)) {
         assert(n > 1);
         std::uint32_t trailingZeros = countTrailingZeros(n);
         assert(trailingZeros >= 1);
-        return (SizeType)(unsigned_type(1) << (trailingZeros - 1));
+        return (return_type(1) << (trailingZeros - 1));
     } else {
-        return (SizeType)0;
+        return return_type(0);
     }
 }
 
@@ -139,21 +150,23 @@ SizeType prev_pow2(SizeType N)
 //   round_down(7) = 4, round_down(8) = 4
 //
 
-template <typename SizeType>
+template <typename SizeType, SizeType Min_n = 0>
 inline
-SizeType round_down(SizeType N)
+typename jstd::size_type_t<SizeType>::type
+round_down(SizeType N)
 {
     static_assert(std::is_integral<SizeType>::value,
                   "Error: pow2::round_down(SizeType n) -- n must be a integral type.");
     typedef typename std::make_unsigned<SizeType>::type unsigned_type;
     typedef typename std::make_signed<SizeType>::type   signed_type;
+    typedef typename jstd::size_type_t<SizeType>::type  return_type;
     unsigned_type n = static_cast<unsigned_type>(N);
-    if (n > 1) {
+    if ((n > 1) || (Min_n > 1)) {
         assert(signed_type(n - 1) > 0);
         std::uint32_t trailingZeros = countTrailingZeros(n - 1);
-        return (SizeType)(std::size_t(1) << trailingZeros);
+        return (return_type(1) << trailingZeros);
     } else {
-        return (SizeType)0;
+        return return_type(0);
     }
 }
 
@@ -168,20 +181,22 @@ SizeType round_down(SizeType N)
 //   round_to(7) = 4, round_to(8) = 8
 //
 
-template <typename SizeType>
+template <typename SizeType, SizeType Min_n = 0>
 inline
-SizeType round_to(SizeType N)
+typename jstd::size_type_t<SizeType>::type
+round_to(SizeType N)
 {
     static_assert(std::is_integral<SizeType>::value,
                   "Error: pow2::round_to(SizeType n) -- n must be a integral type.");
     typedef typename std::make_unsigned<SizeType>::type unsigned_type;
+    typedef typename jstd::size_type_t<SizeType>::type  return_type;
     unsigned_type n = static_cast<unsigned_type>(N);
-    if (n > 0) {
+    if ((n > 0) || (Min_n > 0)) {
         assert(n > 0);
         std::uint32_t trailingZeros = countTrailingZeros(n);
-        return (SizeType)(unsigned_type(1) << trailingZeros);
+        return (return_type(1) << trailingZeros);
     } else {
-        return (SizeType)0;
+        return return_type(0);
     }
 }
 
@@ -196,26 +211,28 @@ SizeType round_to(SizeType N)
 //   round_up(7) = 8, round_up(8) = 8
 //
 
-template <typename SizeType>
+template <typename SizeType, SizeType Min_n = 0>
 inline
-SizeType round_up(SizeType N)
+typename jstd::size_type_t<SizeType>::type
+round_up(SizeType N)
 {
     static_assert(std::is_integral<SizeType>::value,
                   "Error: pow2::round_up(SizeType n) -- n must be a integral type.");
     typedef typename std::make_unsigned<SizeType>::type unsigned_type;
     typedef typename std::make_signed<SizeType>::type   signed_type;
+    typedef typename jstd::size_type_t<SizeType>::type  return_type;
     unsigned_type n = static_cast<unsigned_type>(N);
-    if (n <= ((std::numeric_limits<unsigned_type>::max)() / 2 + 1)) {
-        if (n > 1) {
+    if ((n <= ((std::numeric_limits<unsigned_type>::max)() / 2 + 1)) || (sizeof(SizeType) != 4)) {
+        if ((n > 1) || (Min_n > 1)) {
             assert(signed_type(n - 1) > 0);
             std::uint32_t trailingZeros = countTrailingZeros(n - 1);
-            return (SizeType)(unsigned_type(1) << (trailingZeros + 1));
+            return (return_type(1) << (trailingZeros + 1));
         } else {
-            return (SizeType)n;
+            return return_type(n);
         }
     }
     else {
-        return (SizeType)(std::numeric_limits<unsigned_type>::max)();
+        return (return_type)(std::numeric_limits<unsigned_type>::max)();
     }
 }
 
@@ -230,27 +247,31 @@ SizeType round_up(SizeType N)
 //   next_pow2(7) = 8, next_pow2(8) = 16
 //
 
-template <typename SizeType>
+template <typename SizeType, SizeType Min_n = 0>
 inline
-SizeType next_pow2(SizeType N)
+typename jstd::size_type_t<SizeType>::type
+next_pow2(SizeType N)
 {
     static_assert(std::is_integral<SizeType>::value,
                   "Error: pow2::next_pow2(SizeType n) -- n must be a integral type.");
     typedef typename std::make_unsigned<SizeType>::type unsigned_type;
+    typedef typename jstd::size_type_t<SizeType>::type  return_type;
     unsigned_type n = static_cast<unsigned_type>(N);
-    if (n < ((std::numeric_limits<unsigned_type>::max)() / 2 + 1)) {
-        if (n > 0) {
+    if ((n < ((std::numeric_limits<unsigned_type>::max)() / 2 + 1)) || (sizeof(SizeType) != 4)) {
+        if ((n > 0) || (Min_n > 0)) {
             assert(n > 0);
             std::uint32_t trailingZeros = countTrailingZeros(n);
-            return (SizeType)(unsigned_type(1) << (trailingZeros + 1));
+            return (return_type(1) << (trailingZeros + 1));
         } else {
-            return (SizeType)1;
+            return return_type(1);
         }
     }
     else {
-        return (SizeType)(std::numeric_limits<unsigned_type>::max)();
+        return (return_type)(std::numeric_limits<unsigned_type>::max)();
     }
 }
+
+} // namespace pow2
 
 #if defined(_MSC_VER)
 #pragma warning(pop)
