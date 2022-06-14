@@ -7,7 +7,6 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <stddef.h>
-#include <inttypes.h>
 #include <time.h>
 #include <string.h>
 
@@ -28,7 +27,9 @@
 
 #endif // __SSE4_2__
 
+#include <jstd/basic/inttypes.h>
 #include <jstd/support/Power2.h>
+#include <jstd/test/test.h>
 
 //
 // About marco # and ##
