@@ -70,28 +70,10 @@ SizeType clear_low_bit(SizeType N)
 
 template <typename SizeType>
 inline
-std::uint32_t countTrailingZeros(SizeType N)
+std::uint32_t bitScanForward(SizeType N)
 {
     static_assert(std::is_integral<SizeType>::value,
-                  "Error: pow2::countTrailingZeros(SizeType n) -- n must be a integral type.");
-    typedef typename std::make_unsigned<SizeType>::type unsigned_type;
-    unsigned_type n = static_cast<unsigned_type>(N);
-    assert(n != 0);
-    if (sizeof(SizeType) <= 4) {
-        return BitUtils::bsr32((std::uint32_t)n);
-    } if (sizeof(SizeType) == 8) {
-        return BitUtils::bsr64(n);
-    } else {
-        return BitUtils::bsr64((std::uint64_t)n);
-    }
-}
-
-template <typename SizeType>
-inline
-std::uint32_t countLeadingZeros(SizeType N)
-{
-    static_assert(std::is_integral<SizeType>::value,
-                  "Error: pow2::countLeadingZeros(SizeType n) -- n must be a integral type.");
+                  "Error: pow2::bitScanForward(SizeType n) -- n must be a integral type.");
     typedef typename std::make_unsigned<SizeType>::type unsigned_type;
     unsigned_type n = static_cast<unsigned_type>(N);
     assert(n != 0);
@@ -101,6 +83,24 @@ std::uint32_t countLeadingZeros(SizeType N)
         return BitUtils::bsf64(n);
     } else {
         return BitUtils::bsf64((std::uint64_t)n);
+    }
+}
+
+template <typename SizeType>
+inline
+std::uint32_t bitScanReverse(SizeType N)
+{
+    static_assert(std::is_integral<SizeType>::value,
+                  "Error: pow2::bitScanReverse(SizeType n) -- n must be a integral type.");
+    typedef typename std::make_unsigned<SizeType>::type unsigned_type;
+    unsigned_type n = static_cast<unsigned_type>(N);
+    assert(n != 0);
+    if (sizeof(SizeType) <= 4) {
+        return BitUtils::bsr32((std::uint32_t)n);
+    } if (sizeof(SizeType) == 8) {
+        return BitUtils::bsr64(n);
+    } else {
+        return BitUtils::bsr64((std::uint64_t)n);
     }
 }
 
@@ -131,7 +131,7 @@ prev_pow2(SizeType N)
     unsigned_type n = static_cast<unsigned_type>(N);
     if ((n > 1) || (Min_n > 1)) {
         assert(n > 1);
-        std::uint32_t trailingZeros = countTrailingZeros(n);
+        std::uint32_t trailingZeros = bitScanReverse(n);
         assert(trailingZeros >= 1);
         return (return_type(1) << (trailingZeros - 1));
     } else {
@@ -165,7 +165,7 @@ round_down(SizeType N)
     unsigned_type n = static_cast<unsigned_type>(N);
     if ((n > 1) || (Min_n > 1)) {
         assert(signed_type(n - 1) > 0);
-        std::uint32_t trailingZeros = countTrailingZeros(n - 1);
+        std::uint32_t trailingZeros = bitScanReverse(n - 1);
         return (return_type(1) << trailingZeros);
     } else {
         return return_type(0);
@@ -195,7 +195,7 @@ round_to(SizeType N)
     unsigned_type n = static_cast<unsigned_type>(N);
     if ((n > 0) || (Min_n > 0)) {
         assert(n > 0);
-        std::uint32_t trailingZeros = countTrailingZeros(n);
+        std::uint32_t trailingZeros = bitScanReverse(n);
         return (return_type(1) << trailingZeros);
     } else {
         return return_type(0);
@@ -229,7 +229,7 @@ round_up(SizeType N)
     if ((n <= ((std::numeric_limits<unsigned_type>::max)() / 2 + 1)) || (sizeof(SizeType) != 4)) {
         if ((n > 1) || (Min_n > 1)) {
             assert(signed_type(n - 1) > 0);
-            std::uint32_t trailingZeros = countTrailingZeros(n - 1);
+            std::uint32_t trailingZeros = bitScanReverse(n - 1);
             return (return_type(1) << (trailingZeros + 1));
         } else {
             return return_type(n);
@@ -264,7 +264,7 @@ next_pow2(SizeType N)
     if ((n < ((std::numeric_limits<unsigned_type>::max)() / 2 + 1)) || (sizeof(SizeType) != 4)) {
         if ((n > 0) || (Min_n > 0)) {
             assert(n > 0);
-            std::uint32_t trailingZeros = countTrailingZeros(n);
+            std::uint32_t trailingZeros = bitScanReverse(n);
             return (return_type(1) << (trailingZeros + 1));
         } else {
             return return_type(1);
