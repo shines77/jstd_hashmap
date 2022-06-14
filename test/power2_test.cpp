@@ -88,17 +88,17 @@ void round_down_pow2_test()
     // 0x80000001
     ROUND_TO_POW2_TEST(round_down_pow2, pow2::round_down, 2147483649);
     // 0x7FFFFFFFFFFFFFFEFULL
-    ROUND_TO_POW2_TEST(round_down_pow2, pow2::round_down, 9223372036854775806);
+    ROUND_TO_POW2_TEST(round_down_pow2, pow2::round_down, 9223372036854775806ull);
     // 0x7FFFFFFFFFFFFFFFULL
-    ROUND_TO_POW2_TEST(round_down_pow2, pow2::round_down, 9223372036854775807);
+    ROUND_TO_POW2_TEST(round_down_pow2, pow2::round_down, 9223372036854775807ull);
     // 0x8000000000000000ULL
-    ROUND_TO_POW2_TEST(round_down_pow2, pow2::round_down, 9223372036854775808);
+    ROUND_TO_POW2_TEST(round_down_pow2, pow2::round_down, 9223372036854775808ull);
     // 0x8000000000000001ULL
-    ROUND_TO_POW2_TEST(round_down_pow2, pow2::round_down, 9223372036854775809);
+    ROUND_TO_POW2_TEST(round_down_pow2, pow2::round_down, 9223372036854775809ull);
     // 0xFFFFFFFFFFFFFFFEULL
-    ROUND_TO_POW2_TEST(round_down_pow2, pow2::round_down, 18446744073709551614);
+    ROUND_TO_POW2_TEST(round_down_pow2, pow2::round_down, 18446744073709551614ull);
     // 0xFFFFFFFFFFFFFFFFULL
-    ROUND_TO_POW2_TEST(round_down_pow2, pow2::round_down, 18446744073709551615);
+    ROUND_TO_POW2_TEST(round_down_pow2, pow2::round_down, 18446744073709551615ull);
 
     printf("\n");
 }
@@ -146,17 +146,17 @@ void round_down_power2_test()
     // 0x80000001
     ROUND_TO_POW2_TEST(round_down_power2, pow2::round_down, 2147483649);
     // 0x7FFFFFFFFFFFFFFEFULL
-    ROUND_TO_POW2_TEST(round_down_power2, pow2::round_down, 9223372036854775806);
+    ROUND_TO_POW2_TEST(round_down_power2, pow2::round_down, 9223372036854775806ull);
     // 0x7FFFFFFFFFFFFFFFULL
-    ROUND_TO_POW2_TEST(round_down_power2, pow2::round_down, 9223372036854775807);
+    ROUND_TO_POW2_TEST(round_down_power2, pow2::round_down, 9223372036854775807ull);
     // 0x8000000000000000ULL
-    ROUND_TO_POW2_TEST(round_down_power2, pow2::round_down, 9223372036854775808);
+    ROUND_TO_POW2_TEST(round_down_power2, pow2::round_down, 9223372036854775808ull);
     // 0x8000000000000001ULL
-    ROUND_TO_POW2_TEST(round_down_power2, pow2::round_down, 9223372036854775809);
+    ROUND_TO_POW2_TEST(round_down_power2, pow2::round_down, 9223372036854775809ull);
     // 0xFFFFFFFFFFFFFFFEULL
-    ROUND_TO_POW2_TEST(round_down_power2, pow2::round_down, 18446744073709551614);
+    ROUND_TO_POW2_TEST(round_down_power2, pow2::round_down, 18446744073709551614ull);
     // 0xFFFFFFFFFFFFFFFFULL
-    ROUND_TO_POW2_TEST(round_down_power2, pow2::round_down, 18446744073709551615);
+    ROUND_TO_POW2_TEST(round_down_power2, pow2::round_down, 18446744073709551615ull);
 
     printf("\n");
 }
@@ -204,17 +204,17 @@ void round_to_pow2_test()
     // 0x80000001
     ROUND_TO_POW2_TEST(round_to_pow2, pow2::round_to, 2147483649);
     // 0x7FFFFFFFFFFFFFFEFULL
-    ROUND_TO_POW2_TEST(round_to_pow2, pow2::round_to, 9223372036854775806);
+    ROUND_TO_POW2_TEST(round_to_pow2, pow2::round_to, 9223372036854775806ull);
     // 0x7FFFFFFFFFFFFFFFULL
-    ROUND_TO_POW2_TEST(round_to_pow2, pow2::round_to, 9223372036854775807);
+    ROUND_TO_POW2_TEST(round_to_pow2, pow2::round_to, 9223372036854775807ull);
     // 0x8000000000000000ULL
-    ROUND_TO_POW2_TEST(round_to_pow2, pow2::round_to, 9223372036854775808);
+    ROUND_TO_POW2_TEST(round_to_pow2, pow2::round_to, 9223372036854775808ull);
     // 0x8000000000000001ULL
-    ROUND_TO_POW2_TEST(round_to_pow2, pow2::round_to, 9223372036854775809);
+    ROUND_TO_POW2_TEST(round_to_pow2, pow2::round_to, 9223372036854775809ull);
     // 0xFFFFFFFFFFFFFFFEULL
-    ROUND_TO_POW2_TEST(round_to_pow2, pow2::round_to, 18446744073709551614);
+    ROUND_TO_POW2_TEST(round_to_pow2, pow2::round_to, 18446744073709551614ull);
     // 0xFFFFFFFFFFFFFFFFULL
-    ROUND_TO_POW2_TEST(round_to_pow2, pow2::round_to, 18446744073709551615);
+    ROUND_TO_POW2_TEST(round_to_pow2, pow2::round_to, 18446744073709551615ull);
 
     printf("\n");
 }
@@ -262,17 +262,17 @@ void round_to_power2_test()
     // 0x80000001
     ROUND_TO_POW2_TEST(round_to_power2, pow2::round_to, 2147483649);
     // 0x7FFFFFFFFFFFFFFEFULL
-    ROUND_TO_POW2_TEST(round_to_power2, pow2::round_to, 9223372036854775806);
+    ROUND_TO_POW2_TEST(round_to_power2, pow2::round_to, 9223372036854775806ull);
     // 0x7FFFFFFFFFFFFFFFULL
-    ROUND_TO_POW2_TEST(round_to_power2, pow2::round_to, 9223372036854775807);
+    ROUND_TO_POW2_TEST(round_to_power2, pow2::round_to, 9223372036854775807ull);
     // 0x8000000000000000ULL
-    ROUND_TO_POW2_TEST(round_to_power2, pow2::round_to, 9223372036854775808);
+    ROUND_TO_POW2_TEST(round_to_power2, pow2::round_to, 9223372036854775808ull);
     // 0x8000000000000001ULL
-    ROUND_TO_POW2_TEST(round_to_power2, pow2::round_to, 9223372036854775809);
+    ROUND_TO_POW2_TEST(round_to_power2, pow2::round_to, 9223372036854775809ull);
     // 0xFFFFFFFFFFFFFFFEULL
-    ROUND_TO_POW2_TEST(round_to_power2, pow2::round_to, 18446744073709551614);
+    ROUND_TO_POW2_TEST(round_to_power2, pow2::round_to, 18446744073709551614ull);
     // 0xFFFFFFFFFFFFFFFFULL
-    ROUND_TO_POW2_TEST(round_to_power2, pow2::round_to, 18446744073709551615);
+    ROUND_TO_POW2_TEST(round_to_power2, pow2::round_to, 18446744073709551615ull);
 
     printf("\n");
 }
@@ -320,17 +320,17 @@ void round_up_pow2_test()
     // 0x80000001
     ROUND_TO_POW2_TEST(round_up_pow2, pow2::round_up, 2147483649);
     // 0x7FFFFFFFFFFFFFFEFULL
-    ROUND_TO_POW2_TEST(round_up_pow2, pow2::round_up, 9223372036854775806);
+    ROUND_TO_POW2_TEST(round_up_pow2, pow2::round_up, 9223372036854775806ull);
     // 0x7FFFFFFFFFFFFFFFULL
-    ROUND_TO_POW2_TEST(round_up_pow2, pow2::round_up, 9223372036854775807);
+    ROUND_TO_POW2_TEST(round_up_pow2, pow2::round_up, 9223372036854775807ull);
     // 0x8000000000000000ULL
-    ROUND_TO_POW2_TEST(round_up_pow2, pow2::round_up, 9223372036854775808);
+    ROUND_TO_POW2_TEST(round_up_pow2, pow2::round_up, 9223372036854775808ull);
     // 0x8000000000000001ULL
-    ROUND_TO_POW2_TEST(round_up_pow2, pow2::round_up, 9223372036854775809);
+    ROUND_TO_POW2_TEST(round_up_pow2, pow2::round_up, 9223372036854775809ull);
     // 0xFFFFFFFFFFFFFFFEULL
-    ROUND_TO_POW2_TEST(round_up_pow2, pow2::round_up, 18446744073709551614);
+    ROUND_TO_POW2_TEST(round_up_pow2, pow2::round_up, 18446744073709551614ull);
     // 0xFFFFFFFFFFFFFFFFULL
-    ROUND_TO_POW2_TEST(round_up_pow2, pow2::round_up, 18446744073709551615);
+    ROUND_TO_POW2_TEST(round_up_pow2, pow2::round_up, 18446744073709551615ull);
 
     printf("\n");
 }
@@ -378,17 +378,17 @@ void round_up_power2_test()
     // 0x80000001
     ROUND_TO_POW2_TEST(round_up_power2, pow2::round_up, 2147483649);
     // 0x7FFFFFFFFFFFFFFEFULL
-    ROUND_TO_POW2_TEST(round_up_power2, pow2::round_up, 9223372036854775806);
+    ROUND_TO_POW2_TEST(round_up_power2, pow2::round_up, 9223372036854775806ull);
     // 0x7FFFFFFFFFFFFFFFULL
-    ROUND_TO_POW2_TEST(round_up_power2, pow2::round_up, 9223372036854775807);
+    ROUND_TO_POW2_TEST(round_up_power2, pow2::round_up, 9223372036854775807ull);
     // 0x8000000000000000ULL
-    ROUND_TO_POW2_TEST(round_up_power2, pow2::round_up, 9223372036854775808);
+    ROUND_TO_POW2_TEST(round_up_power2, pow2::round_up, 9223372036854775808ull);
     // 0x8000000000000001ULL
-    ROUND_TO_POW2_TEST(round_up_power2, pow2::round_up, 9223372036854775809);
+    ROUND_TO_POW2_TEST(round_up_power2, pow2::round_up, 9223372036854775809ull);
     // 0xFFFFFFFFFFFFFFFEULL
-    ROUND_TO_POW2_TEST(round_up_power2, pow2::round_up, 18446744073709551614);
+    ROUND_TO_POW2_TEST(round_up_power2, pow2::round_up, 18446744073709551614ull);
     // 0xFFFFFFFFFFFFFFFFULL
-    ROUND_TO_POW2_TEST(round_up_power2, pow2::round_up, 18446744073709551615);
+    ROUND_TO_POW2_TEST(round_up_power2, pow2::round_up, 18446744073709551615ull);
 
     printf("\n");
 }
@@ -436,17 +436,17 @@ void next_pow2_test()
     // 0x80000001
     ROUND_TO_POW2_TEST(next_pow2, pow2::next_pow2, 2147483649);
     // 0x7FFFFFFFFFFFFFFEFULL
-    ROUND_TO_POW2_TEST(next_pow2, pow2::next_pow2, 9223372036854775806);
+    ROUND_TO_POW2_TEST(next_pow2, pow2::next_pow2, 9223372036854775806ull);
     // 0x7FFFFFFFFFFFFFFFULL
-    ROUND_TO_POW2_TEST(next_pow2, pow2::next_pow2, 9223372036854775807);
+    ROUND_TO_POW2_TEST(next_pow2, pow2::next_pow2, 9223372036854775807ull);
     // 0x8000000000000000ULL
-    ROUND_TO_POW2_TEST(next_pow2, pow2::next_pow2, 9223372036854775808);
+    ROUND_TO_POW2_TEST(next_pow2, pow2::next_pow2, 9223372036854775808ull);
     // 0x8000000000000001ULL
-    ROUND_TO_POW2_TEST(next_pow2, pow2::next_pow2, 9223372036854775809);
+    ROUND_TO_POW2_TEST(next_pow2, pow2::next_pow2, 9223372036854775809ull);
     // 0xFFFFFFFFFFFFFFFEULL
-    ROUND_TO_POW2_TEST(next_pow2, pow2::next_pow2, 18446744073709551614);
+    ROUND_TO_POW2_TEST(next_pow2, pow2::next_pow2, 18446744073709551614ull);
     // 0xFFFFFFFFFFFFFFFFULL
-    ROUND_TO_POW2_TEST(next_pow2, pow2::next_pow2, 18446744073709551615);
+    ROUND_TO_POW2_TEST(next_pow2, pow2::next_pow2, 18446744073709551615ull);
 
     printf("\n");
 }
@@ -494,17 +494,17 @@ void next_power2_test()
     // 0x80000001
     ROUND_TO_POW2_TEST(next_power2, pow2::next_pow2, 2147483649);
     // 0x7FFFFFFFFFFFFFFEFULL
-    ROUND_TO_POW2_TEST(next_power2, pow2::next_pow2, 9223372036854775806);
+    ROUND_TO_POW2_TEST(next_power2, pow2::next_pow2, 9223372036854775806ull);
     // 0x7FFFFFFFFFFFFFFFULL
-    ROUND_TO_POW2_TEST(next_power2, pow2::next_pow2, 9223372036854775807);
+    ROUND_TO_POW2_TEST(next_power2, pow2::next_pow2, 9223372036854775807ull);
     // 0x8000000000000000ULL
-    ROUND_TO_POW2_TEST(next_power2, pow2::next_pow2, 9223372036854775808);
+    ROUND_TO_POW2_TEST(next_power2, pow2::next_pow2, 9223372036854775808ull);
     // 0x8000000000000001ULL
-    ROUND_TO_POW2_TEST(next_power2, pow2::next_pow2, 9223372036854775809);
+    ROUND_TO_POW2_TEST(next_power2, pow2::next_pow2, 9223372036854775809ull);
     // 0xFFFFFFFFFFFFFFFEULL
-    ROUND_TO_POW2_TEST(next_power2, pow2::next_pow2, 18446744073709551614);
+    ROUND_TO_POW2_TEST(next_power2, pow2::next_pow2, 18446744073709551614ull);
     // 0xFFFFFFFFFFFFFFFFULL
-    ROUND_TO_POW2_TEST(next_power2, pow2::next_pow2, 18446744073709551615);
+    ROUND_TO_POW2_TEST(next_power2, pow2::next_pow2, 18446744073709551615ull);
 
     printf("\n");
 }
