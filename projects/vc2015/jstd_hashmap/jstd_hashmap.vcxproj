@@ -33,7 +33,7 @@
     <ClInclude Include="..\..\..\src\jstd\hashmap\flat32_hash_map.h" />
     <ClInclude Include="..\..\..\src\jstd\hashmap\key_extractor.h" />
     <ClInclude Include="..\..\..\src\jstd\hashmap\unordered_map.h" />
-    <ClInclude Include="..\..\..\src\jstd\lib.h" />
+    <ClInclude Include="..\..\..\src\jstd\dll.h" />
     <ClInclude Include="..\..\..\src\jstd\support\BitUtils.h" />
     <ClInclude Include="..\..\..\src\jstd\support\Power2.h" />
     <ClInclude Include="..\..\..\src\jstd\traits\has_member.h" />
@@ -42,7 +42,7 @@
     <ClInclude Include="..\..\..\src\jstd\utility\integer_sequence.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\..\src\jstd\lib.cpp" />
+    <ClCompile Include="..\..\..\src\jstd\dll_main.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{C9282A5D-9424-4753-B9A4-9EFB2615A3F8}</ProjectGuid>

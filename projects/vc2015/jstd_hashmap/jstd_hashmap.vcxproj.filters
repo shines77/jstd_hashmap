@@ -25,9 +25,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\..\src\jstd\lib.h">
-      <Filter>src</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\..\src\jstd\basic\msvc\inttypes.h">
       <Filter>src\basic\msvc</Filter>
     </ClInclude>
@@ -88,9 +85,12 @@
     <ClInclude Include="..\..\..\src\jstd\support\Power2.h">
       <Filter>src\support</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\dll.h">
+      <Filter>src</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\..\src\jstd\lib.cpp">
+    <ClCompile Include="..\..\..\src\jstd\dll_main.cpp">
       <Filter>src</Filter>
     </ClCompile>
   </ItemGroup>

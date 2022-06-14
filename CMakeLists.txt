@@ -187,7 +187,7 @@ include_directories(perf/benchmark)
 include_directories(perf/time_hash_map)
 
 set(JSTD_SOURCE_FILES
-    src/jstd/lib.cpp
+    src/jstd/dll.cpp
 )
 
 set(BENCHMARK_SOURCE_FILES
