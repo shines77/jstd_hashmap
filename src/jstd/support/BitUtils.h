@@ -307,7 +307,7 @@ struct BitUtils {
         // gcc: __bsrd(x)
         return (unsigned int)(31 - __builtin_clz(x));
 #else
-        return (unsigned int)BitUtils::__internal_clz(x);
+        return (unsigned int)(31 - BitUtils::__internal_clz(x));
 #endif
     }
 
@@ -319,7 +319,7 @@ struct BitUtils {
         // gcc: __bsrq(x)
         return (unsigned int)(63 - __builtin_clzll((unsigned long long)x));
 #else
-        return (unsigned int)BitUtils::__internal_clzll(x);
+        return (unsigned int)(63 - BitUtils::__internal_clzll(x));
 #endif
     }
 #else

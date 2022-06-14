@@ -44,12 +44,14 @@ struct size_type_t {
     typedef typename std::make_signed<type>::type   signed_type;
 };
 
+namespace pow2 {
+
 template <typename SizeType>
 inline
 bool is_pow2(SizeType N)
 {
     static_assert(std::is_integral<SizeType>::value,
-                  "Error: is_pow2(SizeType n) -- n must be a integral type.");
+                  "Error: pow2::is_pow2(SizeType n) -- n must be a integral type.");
     typedef typename std::make_unsigned<SizeType>::type unsigned_type;
     unsigned_type n = static_cast<unsigned_type>(N);
     return ((n & (n - 1)) == 0);
@@ -60,13 +62,11 @@ inline
 SizeType clear_low_bit(SizeType N)
 {
     static_assert(std::is_integral<SizeType>::value,
-                  "Error: clear_low_bit(SizeType n) -- n must be a integral type.");
+                  "Error: pow2::clear_low_bit(SizeType n) -- n must be a integral type.");
     typedef typename std::make_unsigned<SizeType>::type unsigned_type;
     unsigned_type n = static_cast<unsigned_type>(N);
     return static_cast<SizeType>(n & (n - 1));
 }
-
-namespace pow2 {
 
 template <typename SizeType>
 inline
@@ -326,7 +326,7 @@ struct round_to_pow2_impl {
 
 template <std::size_t N>
 struct round_to_pow2_impl<N, 0> {
-    static const std::size_t value = jstd::integral_traits<size_t>::max_power2;
+    static const std::size_t value = (std::numeric_limits<std::size_t>::max)() / 2 + 1;
 };
 
 template <std::size_t N>
@@ -363,7 +363,7 @@ struct round_up_pow2_impl {
 
 template <std::size_t N>
 struct round_up_pow2_impl<N, 0> {
-    static const std::size_t value = jstd::integral_traits<std::size_t>::max_num;
+    static const std::size_t value = (std::numeric_limits<std::size_t>::max)();
 };
 
 template <std::size_t N>
@@ -391,7 +391,7 @@ struct next_pow2_impl {
 
 template <std::size_t N>
 struct next_pow2_impl<N, 0> {
-    static const std::size_t value = jstd::integral_traits<size_t>::max_num;
+    static const std::size_t value = (std::numeric_limits<std::size_t>::max)();
 };
 
 template <std::size_t N>
