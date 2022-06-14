@@ -28,6 +28,7 @@
 #endif // __SSE4_2__
 
 #include <jstd/basic/inttypes.h>
+#include <jstd/type_traits.h>
 #include <jstd/support/Power2.h>
 #include <jstd/test/test.h>
 
