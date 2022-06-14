@@ -14,7 +14,7 @@
 
 __declspec(dllimport) int __stdcall SwitchToThread(void);
 
-#endif // _MSC_VER
+#endif /* _MSC_VER */
 
 #ifdef __cplusplus
 extern "C" {

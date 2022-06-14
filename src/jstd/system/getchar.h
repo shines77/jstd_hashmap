@@ -6,13 +6,13 @@
 #pragma once
 #endif
 
-/// <comment>
-///
-/// What is equivalent to getch() & getche() in Linux?
-///
-/// See: http://stackoverflow.com/questions/7469139/what-is-equivalent-to-getch-getche-in-linux
-///
-/// </comment>
+// <comment>
+//
+// What is equivalent to getch() & getche() in Linux?
+//
+// See: http://stackoverflow.com/questions/7469139/what-is-equivalent-to-getch-getche-in-linux
+//
+// </comment>
 
 #ifdef __cplusplus
 extern "C" {

@@ -28,19 +28,19 @@ int jstd_getche(void)
 
 #include <termios.h>
 
-/// <comment>
-///
-/// What is equivalent to getch() & getche() in Linux?
-///
-/// See: http://stackoverflow.com/questions/7469139/what-is-equivalent-to-getch-getche-in-linux
-///
-/// See: http://blog.sina.com.cn/s/blog_49f9ea930100nyqc.html
-///
-/// </comment>
-
-///
-/// clear terminator screen: "clear" command or "reset" command or printf("%s",   "\033[1H\033[2J");
-///
+// <comment>
+//
+// What is equivalent to getch() & getche() in Linux?
+//
+// See: http://stackoverflow.com/questions/7469139/what-is-equivalent-to-getch-getche-in-linux
+//
+// See: http://blog.sina.com.cn/s/blog_49f9ea930100nyqc.html
+//
+// </comment>
+//
+//
+// clear terminator screen: "clear" command or "reset" command or printf("%s",   "\033[1H\033[2J");
+//
 
 static struct termios s_term_old;
 
@@ -104,4 +104,4 @@ int jstd_getche(void)
     return (int)-1;
 }
 
-#endif // __GNUC__
+#endif /* __GNUC__ */
