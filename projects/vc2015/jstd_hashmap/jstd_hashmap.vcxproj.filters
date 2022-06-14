@@ -23,6 +23,12 @@
     <Filter Include="src\utility">
       <UniqueIdentifier>{3a7a023b-4210-4d25-b7c9-9b6b30079540}</UniqueIdentifier>
     </Filter>
+    <Filter Include="src\system">
+      <UniqueIdentifier>{ecd95c27-180c-413b-a0b8-c797c80d28b7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\test">
+      <UniqueIdentifier>{196ab926-564f-45e3-85bd-8452f06969d4}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\src\jstd\basic\msvc\inttypes.h">
@@ -88,10 +94,85 @@
     <ClInclude Include="..\..\..\src\jstd\dll.h">
       <Filter>src</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\basic\assert.h">
+      <Filter>src\basic</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\basic\export.h">
+      <Filter>src\basic</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\basic\platform.h">
+      <Filter>src\basic</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\basic\compiler.h">
+      <Filter>src\basic</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\system\Console.h">
+      <Filter>src\system</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\system\crtdbg_env.h">
+      <Filter>src\system</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\system\getchar.h">
+      <Filter>src\system</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\system\LibcRand.h">
+      <Filter>src\system</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\system\LibcRandom.h">
+      <Filter>src\system</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\system\MT19937.h">
+      <Filter>src\system</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\system\MT19937_64.h">
+      <Filter>src\system</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\system\RandomGen.h">
+      <Filter>src\system</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\system\sleep.h">
+      <Filter>src\system</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\system\time.h">
+      <Filter>src\system</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\test\Assert.h">
+      <Filter>src\test</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\test\Expert.h">
+      <Filter>src\test</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\test\FloatEpsinon.h">
+      <Filter>src\test</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\test\ProcessMemInfo.h">
+      <Filter>src\test</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\test\Test.h">
+      <Filter>src\test</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\test\CPUWarmUp.h">
+      <Filter>src\test</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\test\StopWatch.h">
+      <Filter>src\test</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\src\jstd\dll_main.cpp">
       <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\jstd\basic\assert-c.c">
+      <Filter>src\basic</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\jstd\system\crtdbg_env.c">
+      <Filter>src\system</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\jstd\system\getchar.c">
+      <Filter>src\system</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\jstd\system\sleep.c">
+      <Filter>src\system</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

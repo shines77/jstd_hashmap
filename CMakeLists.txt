@@ -185,9 +185,13 @@ include_directories(include)
 include_directories(src)
 include_directories(perf/benchmark)
 include_directories(perf/time_hash_map)
+include_directories(test)
 
 set(JSTD_SOURCE_FILES
     src/jstd/dll_main.cpp
+    src/jstd/system/sleep.c
+    src/jstd/system/getchar.c
+    src/jstd/system/crtdbg_env.c
 )
 
 set(BENCHMARK_SOURCE_FILES
@@ -297,3 +301,5 @@ PUBLIC
     "${PROJECT_BINARY_DIR}"
     ${EXTRA_INCLUDES}
 )
+
+add_subdirectory(./test)

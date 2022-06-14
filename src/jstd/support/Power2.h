@@ -491,6 +491,202 @@ struct next_power2 {
 #pragma warning(pop)
 #endif
 
+//////////////////////////////////////////////////////////////////////////////////
+// struct countLeadingZeros<N>
+//////////////////////////////////////////////////////////////////////////////////
+
+template <std::size_t Bits, std::size_t N>
+struct countLeadingZeros_impl {
+    static const std::size_t value = (N == 0) ? Bits : countLeadingZeros_impl<Bits + 1, N * 2>::value;
+};
+
+#if 1
+//
+// countLeadingZeros_impl<0, 0> = 0
+//
+template <std::size_t Bits>
+struct countLeadingZeros_impl<Bits, std::size_t(0)> {
+    static const std::size_t value = (Bits > 0) ? (Bits - 1) : 0;
+};
+
+#else
+#define COUNT_LEADING_ZEROS_IMPL(bits) \
+    template <> \
+    struct countLeadingZeros_impl<std::size_t(bits), std::size_t(0)> { \
+        static const std::size_t value = (bits > 0) ? (bits - 1) : 0; \
+    }
+COUNT_LEADING_ZEROS_IMPL(64);
+COUNT_LEADING_ZEROS_IMPL(63);
+COUNT_LEADING_ZEROS_IMPL(62);
+COUNT_LEADING_ZEROS_IMPL(61);
+COUNT_LEADING_ZEROS_IMPL(60);
+COUNT_LEADING_ZEROS_IMPL(59);
+COUNT_LEADING_ZEROS_IMPL(58);
+COUNT_LEADING_ZEROS_IMPL(57);
+COUNT_LEADING_ZEROS_IMPL(56);
+COUNT_LEADING_ZEROS_IMPL(55);
+COUNT_LEADING_ZEROS_IMPL(54);
+COUNT_LEADING_ZEROS_IMPL(53);
+COUNT_LEADING_ZEROS_IMPL(52);
+COUNT_LEADING_ZEROS_IMPL(51);
+COUNT_LEADING_ZEROS_IMPL(50);
+COUNT_LEADING_ZEROS_IMPL(49);
+COUNT_LEADING_ZEROS_IMPL(48);
+COUNT_LEADING_ZEROS_IMPL(47);
+COUNT_LEADING_ZEROS_IMPL(46);
+COUNT_LEADING_ZEROS_IMPL(45);
+COUNT_LEADING_ZEROS_IMPL(44);
+COUNT_LEADING_ZEROS_IMPL(43);
+COUNT_LEADING_ZEROS_IMPL(42);
+COUNT_LEADING_ZEROS_IMPL(41);
+COUNT_LEADING_ZEROS_IMPL(40);
+COUNT_LEADING_ZEROS_IMPL(39);
+COUNT_LEADING_ZEROS_IMPL(38);
+COUNT_LEADING_ZEROS_IMPL(37);
+COUNT_LEADING_ZEROS_IMPL(36);
+COUNT_LEADING_ZEROS_IMPL(35);
+COUNT_LEADING_ZEROS_IMPL(34);
+COUNT_LEADING_ZEROS_IMPL(33);
+COUNT_LEADING_ZEROS_IMPL(32);
+COUNT_LEADING_ZEROS_IMPL(31);
+COUNT_LEADING_ZEROS_IMPL(30);
+COUNT_LEADING_ZEROS_IMPL(29);
+COUNT_LEADING_ZEROS_IMPL(28);
+COUNT_LEADING_ZEROS_IMPL(27);
+COUNT_LEADING_ZEROS_IMPL(26);
+COUNT_LEADING_ZEROS_IMPL(25);
+COUNT_LEADING_ZEROS_IMPL(24);
+COUNT_LEADING_ZEROS_IMPL(23);
+COUNT_LEADING_ZEROS_IMPL(22);
+COUNT_LEADING_ZEROS_IMPL(21);
+COUNT_LEADING_ZEROS_IMPL(20);
+COUNT_LEADING_ZEROS_IMPL(19);
+COUNT_LEADING_ZEROS_IMPL(18);
+COUNT_LEADING_ZEROS_IMPL(17);
+COUNT_LEADING_ZEROS_IMPL(16);
+COUNT_LEADING_ZEROS_IMPL(15);
+COUNT_LEADING_ZEROS_IMPL(14);
+COUNT_LEADING_ZEROS_IMPL(13);
+COUNT_LEADING_ZEROS_IMPL(12);
+COUNT_LEADING_ZEROS_IMPL(11);
+COUNT_LEADING_ZEROS_IMPL(10);
+COUNT_LEADING_ZEROS_IMPL(9);
+COUNT_LEADING_ZEROS_IMPL(8);
+COUNT_LEADING_ZEROS_IMPL(7);
+COUNT_LEADING_ZEROS_IMPL(6);
+COUNT_LEADING_ZEROS_IMPL(5);
+COUNT_LEADING_ZEROS_IMPL(4);
+COUNT_LEADING_ZEROS_IMPL(3);
+COUNT_LEADING_ZEROS_IMPL(2);
+COUNT_LEADING_ZEROS_IMPL(1);
+COUNT_LEADING_ZEROS_IMPL(0);
+#endif
+
+template <std::size_t N>
+struct countLeadingZeros {
+    static const std::size_t round_down_2 = is_pow2<N>::value ? N : round_down_pow2<N>::value;
+    static const std::size_t value = countLeadingZeros_impl<0, round_down_2>::value;
+};
+
+//////////////////////////////////////////////////////////////////////////////////
+// struct countTrailingZeros<N>
+//////////////////////////////////////////////////////////////////////////////////
+
+template <std::size_t Bits, std::size_t N>
+struct countTrailingZeros_impl {
+    static const std::size_t value = (N == 0) ? Bits : countTrailingZeros_impl<Bits + 1, N / 2>::value;
+};
+
+#if 1
+//
+// countTrailingZeros<0, 0> = 64
+//
+template <std::size_t Bits>
+struct countTrailingZeros_impl<Bits, std::size_t(0)> {
+    static const std::size_t value = (Bits > 0) ? (Bits - 1) : (sizeof(std::size_t) * 8);
+};
+
+#else
+#define COUNT_TRAILING_ZEROS_IMPL(bits) \
+    template <> \
+    struct countTrailingZeros_impl<std::size_t(bits), std::size_t(0)> { \
+        static const std::size_t value = (bits > 0) ? (bits - 1) : (sizeof(std::size_t) * 8); \
+    }
+COUNT_TRAILING_ZEROS_IMPL(64);
+COUNT_TRAILING_ZEROS_IMPL(63);
+COUNT_TRAILING_ZEROS_IMPL(62);
+COUNT_TRAILING_ZEROS_IMPL(61);
+COUNT_TRAILING_ZEROS_IMPL(60);
+COUNT_TRAILING_ZEROS_IMPL(59);
+COUNT_TRAILING_ZEROS_IMPL(58);
+COUNT_TRAILING_ZEROS_IMPL(57);
+COUNT_TRAILING_ZEROS_IMPL(56);
+COUNT_TRAILING_ZEROS_IMPL(55);
+COUNT_TRAILING_ZEROS_IMPL(54);
+COUNT_TRAILING_ZEROS_IMPL(53);
+COUNT_TRAILING_ZEROS_IMPL(52);
+COUNT_TRAILING_ZEROS_IMPL(51);
+COUNT_TRAILING_ZEROS_IMPL(50);
+COUNT_TRAILING_ZEROS_IMPL(49);
+COUNT_TRAILING_ZEROS_IMPL(48);
+COUNT_TRAILING_ZEROS_IMPL(47);
+COUNT_TRAILING_ZEROS_IMPL(46);
+COUNT_TRAILING_ZEROS_IMPL(45);
+COUNT_TRAILING_ZEROS_IMPL(44);
+COUNT_TRAILING_ZEROS_IMPL(43);
+COUNT_TRAILING_ZEROS_IMPL(42);
+COUNT_TRAILING_ZEROS_IMPL(41);
+COUNT_TRAILING_ZEROS_IMPL(40);
+COUNT_TRAILING_ZEROS_IMPL(39);
+COUNT_TRAILING_ZEROS_IMPL(38);
+COUNT_TRAILING_ZEROS_IMPL(37);
+COUNT_TRAILING_ZEROS_IMPL(36);
+COUNT_TRAILING_ZEROS_IMPL(35);
+COUNT_TRAILING_ZEROS_IMPL(34);
+COUNT_TRAILING_ZEROS_IMPL(33);
+COUNT_TRAILING_ZEROS_IMPL(32);
+COUNT_TRAILING_ZEROS_IMPL(31);
+COUNT_TRAILING_ZEROS_IMPL(30);
+COUNT_TRAILING_ZEROS_IMPL(29);
+COUNT_TRAILING_ZEROS_IMPL(28);
+COUNT_TRAILING_ZEROS_IMPL(27);
+COUNT_TRAILING_ZEROS_IMPL(26);
+COUNT_TRAILING_ZEROS_IMPL(25);
+COUNT_TRAILING_ZEROS_IMPL(24);
+COUNT_TRAILING_ZEROS_IMPL(23);
+COUNT_TRAILING_ZEROS_IMPL(22);
+COUNT_TRAILING_ZEROS_IMPL(21);
+COUNT_TRAILING_ZEROS_IMPL(20);
+COUNT_TRAILING_ZEROS_IMPL(19);
+COUNT_TRAILING_ZEROS_IMPL(18);
+COUNT_TRAILING_ZEROS_IMPL(17);
+COUNT_TRAILING_ZEROS_IMPL(16);
+COUNT_TRAILING_ZEROS_IMPL(15);
+COUNT_TRAILING_ZEROS_IMPL(14);
+COUNT_TRAILING_ZEROS_IMPL(13);
+COUNT_TRAILING_ZEROS_IMPL(12);
+COUNT_TRAILING_ZEROS_IMPL(11);
+COUNT_TRAILING_ZEROS_IMPL(10);
+COUNT_TRAILING_ZEROS_IMPL(9);
+COUNT_TRAILING_ZEROS_IMPL(8);
+COUNT_TRAILING_ZEROS_IMPL(7);
+COUNT_TRAILING_ZEROS_IMPL(6);
+COUNT_TRAILING_ZEROS_IMPL(5);
+COUNT_TRAILING_ZEROS_IMPL(4);
+COUNT_TRAILING_ZEROS_IMPL(3);
+COUNT_TRAILING_ZEROS_IMPL(2);
+COUNT_TRAILING_ZEROS_IMPL(1);
+COUNT_TRAILING_ZEROS_IMPL(0);
+#endif
+
+template <std::size_t N>
+struct countTrailingZeros {
+    static const std::size_t round_up_2 = is_pow2<N>::value ? N : round_up_pow2<N>::value;
+    static const std::size_t value = countTrailingZeros_impl<0, round_up_2>::value;
+};
+
+//////////////////////////////////////////////////////////////////////////////////
+
 } // namespace compile_time
 } // namespace jstd
 

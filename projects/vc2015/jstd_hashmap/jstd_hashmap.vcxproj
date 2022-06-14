@@ -19,10 +19,14 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\..\src\jstd\basic\assert.h" />
+    <ClInclude Include="..\..\..\src\jstd\basic\compiler.h" />
+    <ClInclude Include="..\..\..\src\jstd\basic\export.h" />
     <ClInclude Include="..\..\..\src\jstd\basic\inttypes.h" />
     <ClInclude Include="..\..\..\src\jstd\basic\msvc\inttypes.h" />
     <ClInclude Include="..\..\..\src\jstd\basic\msvc\stdbool.h" />
     <ClInclude Include="..\..\..\src\jstd\basic\msvc\stdint.h" />
+    <ClInclude Include="..\..\..\src\jstd\basic\platform.h" />
     <ClInclude Include="..\..\..\src\jstd\basic\stddef.h" />
     <ClInclude Include="..\..\..\src\jstd\basic\stdint.h" />
     <ClInclude Include="..\..\..\src\jstd\basic\stdsize.h" />
@@ -36,13 +40,34 @@
     <ClInclude Include="..\..\..\src\jstd\dll.h" />
     <ClInclude Include="..\..\..\src\jstd\support\BitUtils.h" />
     <ClInclude Include="..\..\..\src\jstd\support\Power2.h" />
+    <ClInclude Include="..\..\..\src\jstd\system\Console.h" />
+    <ClInclude Include="..\..\..\src\jstd\system\crtdbg_env.h" />
+    <ClInclude Include="..\..\..\src\jstd\system\getchar.h" />
+    <ClInclude Include="..\..\..\src\jstd\system\LibcRand.h" />
+    <ClInclude Include="..\..\..\src\jstd\system\LibcRandom.h" />
+    <ClInclude Include="..\..\..\src\jstd\system\MT19937.h" />
+    <ClInclude Include="..\..\..\src\jstd\system\MT19937_64.h" />
+    <ClInclude Include="..\..\..\src\jstd\system\RandomGen.h" />
+    <ClInclude Include="..\..\..\src\jstd\system\sleep.h" />
+    <ClInclude Include="..\..\..\src\jstd\system\time.h" />
+    <ClInclude Include="..\..\..\src\jstd\test\Assert.h" />
+    <ClInclude Include="..\..\..\src\jstd\test\CPUWarmUp.h" />
+    <ClInclude Include="..\..\..\src\jstd\test\Expert.h" />
+    <ClInclude Include="..\..\..\src\jstd\test\FloatEpsinon.h" />
+    <ClInclude Include="..\..\..\src\jstd\test\ProcessMemInfo.h" />
+    <ClInclude Include="..\..\..\src\jstd\test\StopWatch.h" />
+    <ClInclude Include="..\..\..\src\jstd\test\Test.h" />
     <ClInclude Include="..\..\..\src\jstd\traits\has_member.h" />
     <ClInclude Include="..\..\..\src\jstd\type_traits.h" />
     <ClInclude Include="..\..\..\src\jstd\utility.h" />
     <ClInclude Include="..\..\..\src\jstd\utility\integer_sequence.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\..\src\jstd\basic\assert-c.c" />
     <ClCompile Include="..\..\..\src\jstd\dll_main.cpp" />
+    <ClCompile Include="..\..\..\src\jstd\system\crtdbg_env.c" />
+    <ClCompile Include="..\..\..\src\jstd\system\getchar.c" />
+    <ClCompile Include="..\..\..\src\jstd\system\sleep.c" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{C9282A5D-9424-4753-B9A4-9EFB2615A3F8}</ProjectGuid>
