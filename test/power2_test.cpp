@@ -509,18 +509,18 @@ void next_power2_test()
     printf("\n");
 }
 
-void integral_utils_test()
+void integral_traits_test()
 {
-    printf("integral_utils<size_t>::bits       = %" PRIuSIZE "\n", jstd::integral_utils<size_t>::bits);
-    printf("integral_utils<size_t>::max_shift  = %" PRIuSIZE "\n", jstd::integral_utils<size_t>::max_shift);
-    printf("integral_utils<size_t>::max_power2 = %" PRIuSIZE "\n", jstd::integral_utils<size_t>::max_power2);
-    printf("integral_utils<size_t>::max_num    = %" PRIuSIZE "\n", jstd::integral_utils<size_t>::max_num);
+    printf("jstd::integral_traits<size_t>::bits       = %" PRIuSIZE "\n", jstd::integral_traits<size_t>::bits);
+    printf("jstd::integral_traits<size_t>::max_shift  = %" PRIuSIZE "\n", jstd::integral_traits<size_t>::max_shift);
+    printf("jstd::integral_traits<size_t>::max_power2 = %" PRIuSIZE "\n", jstd::integral_traits<size_t>::max_power2);
+    printf("jstd::integral_traits<size_t>::max_num    = %" PRIuSIZE "\n", jstd::integral_traits<size_t>::max_num);
     printf("\n");
 }
 
 int main(int argc, char * argv[])
 {
-    integral_utils_test();
+    integral_traits_test();
 
     round_down_pow2_test();
     round_down_power2_test();
