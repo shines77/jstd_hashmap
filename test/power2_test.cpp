@@ -30,7 +30,7 @@
 #include <jstd/basic/inttypes.h>
 #include <jstd/type_traits.h>
 #include <jstd/support/Power2.h>
-#include <jstd/test/test.h>
+#include <jstd/test/Test.h>
 
 //
 // About marco # and ##
