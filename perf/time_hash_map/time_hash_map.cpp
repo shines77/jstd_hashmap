@@ -194,11 +194,14 @@ public:
     typedef Key                             key_type;
     typedef HashObject<Key, Size, HashSize> this_type;
 
-    static const std::size_t kMinSize = jstd::cmax(sizeof(key_type), sizeof(int));
-    static const std::size_t kSize = jstd::cmax(Size, kMinSize);
-    static const std::size_t kHashSize = jstd::cmin(jstd::cmax(HashSize, kMinSize), kSize);
-    static const std::size_t kBufLen = (kSize > sizeof(key_type)) ? (kSize - sizeof(key_type)) : 0;
-    static const std::size_t kHashLen = (kHashSize > sizeof(key_type)) ? (kHashSize - sizeof(key_type)) : 0;
+    static constexpr std::size_t cSize = Size;
+    static constexpr std::size_t cHashSize = HashSize;
+
+    static constexpr std::size_t kMinSize = jstd::cmax(sizeof(key_type), sizeof(int));
+    static constexpr std::size_t kSize = jstd::cmax(Size, kMinSize);
+    static constexpr std::size_t kHashSize = jstd::cmin(jstd::cmax(HashSize, kMinSize), kSize);
+    static constexpr std::size_t kBufLen = (kSize > sizeof(key_type)) ? (kSize - sizeof(key_type)) : 0;
+    static constexpr std::size_t kHashLen = (kHashSize > sizeof(key_type)) ? (kHashSize - sizeof(key_type)) : 0;
 
 private:
     key_type key_;   // the key used for hashing
@@ -272,6 +275,10 @@ public:
     typedef std::uint32_t   key_type;
     typedef HashObject<std::uint32_t, sizeof(std::uint32_t), sizeof(std::uint32_t)>
                             this_type;
+
+    static constexpr std::size_t cSize = sizeof(std::uint32_t);
+    static constexpr std::size_t cHashSize = sizeof(std::uint32_t);
+
 private:
     std::uint32_t key_;   // the key used for hashing
 
@@ -335,6 +342,10 @@ public:
     typedef std::size_t     key_type;
     typedef HashObject<std::size_t, sizeof(std::size_t), sizeof(std::size_t)>
                             this_type;
+
+    static constexpr std::size_t cSize = sizeof(std::size_t);
+    static constexpr std::size_t cHashSize = sizeof(std::size_t);
+
 private:
     std::size_t key_;   // the key used for hashing
 
@@ -399,6 +410,138 @@ std::ostream & operator << (std::ostream & out, const HashObject<Key, Size, Hash
 
 } // namespace std
 
+template <typename Key, std::size_t Size = sizeof(Key),
+                        std::size_t HashSize = sizeof(Key)>
+class HashFn {
+public:
+    typedef Key                             key_type;
+    typedef HashObject<Key, Size, HashSize> argument_type;
+    typedef std::size_t                     result_type;
+
+    // These two public members are required by msvc.  4 and 8 are defaults.
+    static const std::size_t bucket_size = 4;
+    static const std::size_t min_buckets = 8;
+
+    //result_type operator () (const hash_object_t & obj) const {
+    //    return static_cast<result_type>(obj.Hash());
+    //}
+
+    //// Do the identity hash for pointers.
+    //result_type operator () (const hash_object_t * obj) const {
+    //    return reinterpret_cast<result_type>(obj);
+    //}
+
+    //// Less operator for MSVC's hash containers.
+    //bool operator () (const hash_object_t & a,
+    //                  const hash_object_t & b) const {
+    //    return (a < b);
+    //}
+
+    //bool operator () (const hash_object_t * a,
+    //                  const hash_object_t * b) const {
+    //    return (a < b);
+    //}
+
+    result_type operator () (const argument_type & obj) const {
+        return static_cast<result_type>(obj.Hash());
+    }
+
+    // Do the identity hash for pointers.
+    result_type operator () (const argument_type * obj) const {
+        return reinterpret_cast<result_type>(obj);
+    }
+
+    // Less operator for MSVC's hash containers.
+    bool operator () (const argument_type & a, argument_type & b) const {
+        return (a < b);
+    }
+
+    bool operator () (const argument_type * a, const argument_type * b) const {
+        return (a < b);
+    }
+
+    template <std::size_t nSize, std::size_t nHashSize>
+    result_type operator () (const HashObject<key_type, nSize, nHashSize> & obj) const {
+        return static_cast<result_type>(obj.Hash());
+    }
+
+    // Do the identity hash for pointers.
+    template <std::size_t nSize, std::size_t nHashSize>
+    result_type operator () (const HashObject<key_type, nSize, nHashSize> * obj) const {
+        return reinterpret_cast<result_type>(obj);
+    }
+
+    // Less operator for MSVC's hash containers.
+    template <std::size_t nSize, std::size_t nHashSize>
+    bool operator () (const HashObject<key_type, nSize, nHashSize> & a,
+                      const HashObject<key_type, nSize, nHashSize> & b) const {
+        return (a < b);
+    }
+
+    template <std::size_t nSize, std::size_t nHashSize>
+    bool operator () (const HashObject<key_type, nSize, nHashSize> * a,
+                      const HashObject<key_type, nSize, nHashSize> * b) const {
+        return (a < b);
+    }
+};
+
+namespace std {
+
+template <typename Key, std::size_t Size, std::size_t HashSize>
+struct hash<HashObject<Key, Size, HashSize>> {
+    typedef Key                             key_type;
+    typedef HashObject<Key, Size, HashSize> argument_type;
+    typedef std::size_t                     result_type;
+
+    // These two public members are required by msvc.  4 and 8 are defaults.
+    static const std::size_t bucket_size = 4;
+    static const std::size_t min_buckets = 8;
+
+    result_type operator () (const argument_type & obj) const {
+        return static_cast<result_type>(obj.Hash());
+    }
+
+    // Do the identity hash for pointers.
+    result_type operator () (const argument_type * obj) const {
+        return reinterpret_cast<result_type>(obj);
+    }
+
+    // Less operator for MSVC's hash containers.
+    bool operator () (const argument_type & a, argument_type & b) const {
+        return (a < b);
+    }
+
+    bool operator () (const argument_type * a, const argument_type * b) const {
+        return (a < b);
+    }
+
+    template <std::size_t nSize, std::size_t nHashSize>
+    result_type operator () (const HashObject<key_type, nSize, nHashSize> & obj) const {
+        return static_cast<result_type>(obj.Hash());
+    }
+
+    // Do the identity hash for pointers.
+    template <std::size_t nSize, std::size_t nHashSize>
+    result_type operator () (const HashObject<key_type, nSize, nHashSize> * obj) const {
+        return reinterpret_cast<result_type>(obj);
+    }
+
+    // Less operator for MSVC's hash containers.
+    template <std::size_t nSize, std::size_t nHashSize>
+    bool operator () (const HashObject<key_type, nSize, nHashSize> & a,
+                      const HashObject<key_type, nSize, nHashSize> & b) const {
+        return (a < b);
+    }
+
+    template <std::size_t nSize, std::size_t nHashSize>
+    bool operator () (const HashObject<key_type, nSize, nHashSize> * a,
+                      const HashObject<key_type, nSize, nHashSize> * b) const {
+        return (a < b);
+    }
+};
+
+} // namespace std
+
 namespace std {
 
 // Let the hashtable implementations know it can use an optimized memcpy,
@@ -460,62 +603,6 @@ struct has_trivial_destructor< HashObject<std::size_t, Size, HashSize> > : true_
 } // namespace google
 
 #endif
-
-template <typename Key>
-class HashFn {
-public:
-    //typedef HashObj   hash_object_t;
-    typedef Key         key_type;
-    typedef std::size_t result_type;
-
-    // These two public members are required by msvc.  4 and 8 are defaults.
-    static const std::size_t bucket_size = 4;
-    static const std::size_t min_buckets = 8;
-
-    //result_type operator () (const hash_object_t & obj) const {
-    //    return static_cast<result_type>(obj.Hash());
-    //}
-
-    //// Do the identity hash for pointers.
-    //result_type operator () (const hash_object_t * obj) const {
-    //    return reinterpret_cast<result_type>(obj);
-    //}
-
-    //// Less operator for MSVC's hash containers.
-    //bool operator () (const hash_object_t & a,
-    //                  const hash_object_t & b) const {
-    //    return (a < b);
-    //}
-
-    //bool operator () (const hash_object_t * a,
-    //                  const hash_object_t * b) const {
-    //    return (a < b);
-    //}
-
-    template <std::size_t Size, std::size_t HashSize>
-    std::size_t operator () (const HashObject<key_type, Size, HashSize> & obj) const {
-        return static_cast<std::size_t>(obj.Hash());
-    }
-
-    // Do the identity hash for pointers.
-    template <std::size_t Size, std::size_t HashSize>
-    std::size_t operator () (const HashObject<key_type, Size, HashSize> * obj) const {
-        return reinterpret_cast<std::size_t>(obj);
-    }
-
-    // Less operator for MSVC's hash containers.
-    template <std::size_t Size, std::size_t HashSize>
-    bool operator () (const HashObject<key_type, Size, HashSize> & a,
-                      const HashObject<key_type, Size, HashSize> & b) const {
-        return (a < b);
-    }
-
-    template <std::size_t Size, std::size_t HashSize>
-    bool operator () (const HashObject<key_type, Size, HashSize> * a,
-                      const HashObject<key_type, Size, HashSize> * b) const {
-        return (a < b);
-    }
-};
 
 #if defined(_MSC_VER)
 
@@ -1066,23 +1153,23 @@ static void test_all_hashmaps(std::size_t obj_size, std::size_t iters) {
     const bool is_stress_hash_function = (obj_size <= 8);
 
     if (FLAGS_test_std_hash_map) {
-        measure_hashmap<StdHashMap<HashObj,   Value, HashFn<typename HashObj::key_type>>,
-                        StdHashMap<HashObj *, Value, HashFn<typename HashObj::key_type>>
+        measure_hashmap<StdHashMap<HashObj,   Value, HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>,
+                        StdHashMap<HashObj *, Value, HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>
                         >(
             "stdext::hash_map<K, V>", obj_size, 0, iters, is_stress_hash_function);
     }
 
     if (FLAGS_test_std_unordered_map) {
-        measure_hashmap<StdUnorderedMap<HashObj,   Value, HashFn<typename HashObj::key_type>>,
-                        StdUnorderedMap<HashObj *, Value, HashFn<typename HashObj::key_type>>
+        measure_hashmap<StdUnorderedMap<HashObj,   Value, HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>,
+                        StdUnorderedMap<HashObj *, Value, HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>
                         >(
             "std::unordered_map<K, V>", obj_size, 0, iters, is_stress_hash_function);
     }
 
     if (FLAGS_test_jstd_flat16_hash_map) {
-        typedef jstd::flat16_hash_map<HashObj, Value, HashFn<typename HashObj::key_type>> flat16_hash_map;
-        measure_hashmap<jstd::flat16_hash_map<HashObj,   Value, HashFn<typename HashObj::key_type>>,
-                        jstd::flat16_hash_map<HashObj *, Value, HashFn<typename HashObj::key_type>>
+        typedef jstd::flat16_hash_map<HashObj, Value, HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>> flat16_hash_map;
+        measure_hashmap<jstd::flat16_hash_map<HashObj,   Value, HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>,
+                        jstd::flat16_hash_map<HashObj *, Value, HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>
                         >(
             "jstd::flat16_hash_map<K, V>", obj_size,
             sizeof(typename flat16_hash_map::node_type), iters, is_stress_hash_function);
@@ -1573,23 +1660,23 @@ static void test_all_hashmaps(std::size_t obj_size, std::size_t iters) {
     const bool has_stress_hash_function = (obj_size <= 8);
 
     if (FLAGS_test_std_hash_map) {
-        measure_hashmap<StdHashMap<HashObj,   Value, HashFn<typename HashObj::key_type>>,
-                        StdHashMap<HashObj *, Value, HashFn<typename HashObj::key_type>>
+        measure_hashmap<StdHashMap<HashObj,   Value, HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>,
+                        StdHashMap<HashObj *, Value, HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>
                         >(
             "stdext::hash_map<K, V>", obj_size, 0, iters, has_stress_hash_function);
     }
 
     if (FLAGS_test_std_unordered_map) {
-        measure_hashmap<StdUnorderedMap<HashObj,   Value, HashFn<typename HashObj::key_type>>,
-                        StdUnorderedMap<HashObj *, Value, HashFn<typename HashObj::key_type>>
+        measure_hashmap<StdUnorderedMap<HashObj,   Value, HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>,
+                        StdUnorderedMap<HashObj *, Value, HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>
                         >(
             "std::unordered_map<K, V>", obj_size, 0, iters, has_stress_hash_function);
     }
 
     if (FLAGS_test_jstd_flat16_hash_map) {
-        typedef jstd::flat16_hash_map<HashObj, Value, HashFn<typename HashObj::key_type>> flat16_hash_map;
-        measure_hashmap<jstd::flat16_hash_map<HashObj,   Value, HashFn<typename HashObj::key_type>>,
-                        jstd::flat16_hash_map<HashObj *, Value, HashFn<typename HashObj::key_type>>
+        typedef jstd::flat16_hash_map<HashObj, Value, HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>> flat16_hash_map;
+        measure_hashmap<jstd::flat16_hash_map<HashObj,   Value, HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>,
+                        jstd::flat16_hash_map<HashObj *, Value, HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>
                         >(
             "jstd::flat16_hash_map<K, V>", obj_size,
             sizeof(typename flat16_hash_map::node_type), iters, has_stress_hash_function);

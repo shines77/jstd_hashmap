@@ -179,11 +179,12 @@ namespace std {
 
 template <>
 struct hash<jstd::StringRef> {
+    typedef jstd::StringRef argument_type;
     typedef std::uint32_t   result_type;
 
     jstd::string_hash_helper<jstd::StringRef, std::uint32_t, jstd::HashFunc_CRC32C> hash_helper_;
 
-    result_type operator()(const jstd::StringRef & key) const {
+    result_type operator()(const argument_type & key) const {
         return hash_helper_.getHashCode(key);
     }
 };
@@ -194,11 +195,12 @@ namespace jstd {
 
 template <>
 struct hash<jstd::StringRef> {
+    typedef jstd::StringRef argument_type;
     typedef std::uint32_t   result_type;
 
     jstd::string_hash_helper<jstd::StringRef, std::uint32_t, jstd::HashFunc_CRC32C> hash_helper_;
 
-    result_type operator()(const jstd::StringRef & key) const {
+    result_type operator()(const argument_type & key) const {
         return hash_helper_.getHashCode(key);
     }
 };
@@ -1353,11 +1355,12 @@ uint64_t get_range_u32(uint64_t num)
 
 void IntegalHash_test()
 {
-    jstd::hash_test::IntegalHash integalHasher;
+    jstd::hash_test::IntegalHash<std::uint32_t> integalHasher32;
+    jstd::hash_test::IntegalHash<std::uint64_t> integalHasher64;
 
     printf("hash::IntegalHash(uint32_t) sequential\n\n");
     for (std::uint32_t i = 0; i < 16; i++) {
-        std::uint32_t hash32 = integalHasher(i);
+        std::uint32_t hash32 = integalHasher32(i);
         printf("value = %-10u, hash_code = %-10u (0x%08X), \n",
                i, hash32, hash32);
     }
@@ -1366,7 +1369,7 @@ void IntegalHash_test()
     printf("hash::IntegalHash(uint32_t) random\n\n");
     for (std::uint32_t i = 0; i < 16; i++) {
         std::uint32_t value = next_random_u32();
-        std::uint32_t hash32 = integalHasher(value);
+        std::uint32_t hash32 = integalHasher32(value);
         printf("value = %-10u, hash_code = %-10u (0x%08X), \n",
                value, hash32, hash32);
     }
@@ -1374,7 +1377,7 @@ void IntegalHash_test()
 
     printf("hash::IntegalHash(uint64_t) sequential\n\n");
     for (std::uint64_t i = 0; i < 16; i++) {
-        std::uint64_t hash64 = integalHasher(i);
+        std::uint64_t hash64 = integalHasher64(i);
         printf("value = %-20" PRIu64 ", hash_code = %-20" PRIu64 " (0x%08X%08X)\n",
                i, hash64,
                (std::uint32_t)(hash64 >> 32),
@@ -1385,7 +1388,7 @@ void IntegalHash_test()
     printf("hash::IntegalHash(uint64_t) random\n\n");
     for (std::uint64_t i = 0; i < 16; i++) {
         std::uint64_t value = next_random_u64();
-        std::uint64_t hash64 = integalHasher(value);
+        std::uint64_t hash64 = integalHasher64(value);
         printf("value = %-20" PRIu64 ", hash_code = %-20" PRIu64 " (0x%08X%08X)\n",
                value, hash64,
                (std::uint32_t)(hash64 >> 32),

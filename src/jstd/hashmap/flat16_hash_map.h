@@ -99,7 +99,7 @@ std::size_t align_to(std::size_t size, std::size_t alignment)
     return size;
 }
 
-namespace hash_test {
+namespace hasher {
 
 static inline
 std::uint32_t Integal_hash1_u32(std::uint32_t value)
@@ -115,18 +115,33 @@ std::uint32_t Integal_hash2_u32(std::uint32_t value)
     return hash;
 }
 
+template <typename T>
 struct IntegalHash
 {
-    std::uint32_t operator () (std::uint32_t value) const {
+    typedef T               argument_type;
+    typedef std::size_t     result_type;
+
+    template <typename UInt32, typename std::enable_if<(std::is_same<UInt32, std::uint32_t>::value &&
+                               !std::is_same<UInt32, std::uint64_t>::value)>::type * = nullptr>    
+    result_type operator () (UInt32 value) const {
         //std::uint32_t hash = value * 16777619ul ^ 2166136261ul;
-        std::uint32_t hash = value * 2654435761ul + 16777619ul;
+        result_type hash = (result_type)value * 2654435761ul + 16777619ul;
         return hash;
     }
 
-    std::uint64_t operator () (std::uint64_t value) const {
+    template <typename UInt64, typename std::enable_if<(!std::is_same<UInt64, std::uint32_t>::value &&
+                               std::is_same<UInt64, std::uint64_t>::value)>::type * = nullptr>   
+    result_type operator () (UInt64 value) const {
         //std::uint64_t hash = value * 1099511628211ull ^ 14695981039346656037ull;
-        std::uint64_t hash = value * 14695981039346656037ull + 1099511628211ull;
+        result_type hash = (result_type)(value * 14695981039346656037ull + 1099511628211ull);
         return hash;
+    }
+
+    template <typename Argument, typename std::enable_if<(!std::is_same<Argument, std::uint32_t>::value &&
+                                 !std::is_same<Argument, std::uint64_t>::value)>::type * = nullptr>  
+    result_type operator () (const Argument & value) const {
+        std::hash<Argument> hasher;
+        return static_cast<result_type>(hasher(value));
     }
 };
 
@@ -658,6 +673,8 @@ private:
     hasher_type     hasher_;
     key_equal       key_equal_;
 
+    hasher::IntegalHash<key_type> integalHasher_;
+
     allocator_type          value_allocator_;
     entry_allocator_type    entry_allocator_;
 
@@ -1014,16 +1031,21 @@ private:
         return hash_code;
     }
 
+    inline hash_code_t get_second_hash(const key_type & key) const noexcept {
+        hash_code_t hash_code = static_cast<hash_code_t>(integalHasher_(key));
+        return hash_code;
+    }
+
     inline std::uint8_t get_control_hash(hash_code_t hash_code) const noexcept {
         return static_cast<std::uint8_t>(hash_code & kControlHashMask);
     }
 
     inline index_type index_for(hash_code_t hash_code) const noexcept {
-        return (index_type)(((size_type)hash_code >> kControlShift) & this->cluster_mask());
+        return (index_type)((size_type)hash_code & this->cluster_mask());
     }
 
     inline index_type index_for(hash_code_t hash_code, size_type cluster_mask) const noexcept {
-        return (index_type)(((size_type)hash_code >> kControlShift) & cluster_mask);
+        return (index_type)((size_type)hash_code & cluster_mask);
     }
 
     inline index_type prev_cluster(index_type cluster_index) const noexcept {
@@ -1247,7 +1269,8 @@ private:
     JSTD_FORCED_INLINE
     size_type find_impl(const key_type & key) const {
         hash_code_t hash_code = this->get_hash(key);
-        std::uint8_t control_hash = this->get_control_hash(hash_code);
+        hash_code_t hash_code_2nd = this->get_second_hash(key);
+        std::uint8_t control_hash = this->get_control_hash(hash_code_2nd);
         index_type cluster_index = this->index_for(hash_code);
         index_type start_cluster = cluster_index;
         do {
@@ -1276,7 +1299,8 @@ private:
     size_type find_impl(const key_type & key, index_type & first_cluster,
                         index_type & last_cluster, std::uint8_t & ctrl_hash) const {
         hash_code_t hash_code = this->get_hash(key);
-        std::uint8_t control_hash = this->get_control_hash(hash_code);
+        hash_code_t hash_code_2nd = this->get_second_hash(key);
+        std::uint8_t control_hash = this->get_control_hash(hash_code_2nd);
         index_type cluster_index = this->index_for(hash_code);
         index_type start_cluster = cluster_index;
         first_cluster = start_cluster;
@@ -1310,7 +1334,8 @@ private:
     std::pair<size_type, bool>
     find_and_prepare_insert(const key_type & key, std::uint8_t & ctrl_hash) {
         hash_code_t hash_code = this->get_hash(key);
-        std::uint8_t control_hash = this->get_control_hash(hash_code);
+        hash_code_t hash_code_2nd = this->get_second_hash(key);
+        std::uint8_t control_hash = this->get_control_hash(hash_code_2nd);
         index_type cluster_index = this->index_for(hash_code);
         index_type first_cluster = cluster_index;
         index_type last_cluster = npos;
@@ -1558,7 +1583,8 @@ private:
     JSTD_FORCED_INLINE
     size_type find_and_erase(const key_type & key) {
         hash_code_t hash_code = this->get_hash(key);
-        std::uint8_t control_hash = this->get_control_hash(hash_code);
+        hash_code_t hash_code_2nd = this->get_second_hash(key);
+        std::uint8_t control_hash = this->get_control_hash(hash_code_2nd);
         index_type cluster_index = this->index_for(hash_code);
         index_type start_cluster = cluster_index;
         do {
