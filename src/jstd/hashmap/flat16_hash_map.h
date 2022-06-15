@@ -73,8 +73,6 @@
 #include "jstd/support/BitUtils.h"
 #include "jstd/support/Power2.h"
 
-#define FLAT16_DEFAULT_LOAD_FACTOR  (0.5)
-
 #ifndef __SSE2__
 #define __SSE2__
 #endif
@@ -99,15 +97,6 @@ std::size_t align_to(std::size_t size, std::size_t alignment)
     size = (size + alignment - 1) & ~(alignment - 1);
     assert((size / alignment * alignment) == size);
     return size;
-}
-
-static inline
-std::size_t round_up_pow2(std::size_t n)
-{
-    assert(n > 1);
-    if ((n & (n - 1)) == 0)
-        return n;
-    return n;
 }
 
 namespace hash_test {
@@ -153,6 +142,35 @@ struct repeat_u8x8 {
     static constexpr std::uint64_t value = (std::uint64_t)Value * 0x0101010101010101ull;
 };
 
+//
+// https://github.com/abseil/abseil-cpp/issues/209
+// https://gcc.gnu.org/bugzilla/show_bug.cgi?id=87853
+// _mm_cmpgt_epi8 is broken under GCC with -funsigned-char
+// Work around this by using the portable implementation of Group
+// when using -funsigned-char under GCC.
+//
+inline __m128i _mm_cmpgt_epi8_fixed(__m128i A, __m128i B) {
+#if defined(__GNUC__) && !defined(__clang__)
+    if (std::is_unsigned<char>::value) {
+        const __m128i mask = _mm_set1_epi8(0x80);
+        const __m128i diff = _mm_subs_epi8(B, A);
+        return _mm_cmpeq_epi8(_mm_and_si128(diff, mask), mask);
+    }
+#endif
+    return _mm_cmpgt_epi8(A, B);
+}
+
+inline __m128i _mm_cmplt_epi8_fixed(__m128i A, __m128i B) {
+#if defined(__GNUC__) && !defined(__clang__)
+    if (std::is_unsigned<char>::value) {
+        const __m128i mask = _mm_set1_epi8(0x80);
+        const __m128i diff = _mm_subs_epi8(A, B);
+        return _mm_cmpeq_epi8(_mm_and_si128(diff, mask), mask);
+    }
+#endif
+    return _mm_cmplt_epi8(A, B);
+}
+
 template < typename Key, typename Value,
            typename Hasher = std::hash<Key>,
            typename KeyEqual = std::equal_to<Key>,
@@ -179,9 +197,10 @@ public:
 
     static constexpr size_type npos = size_type(-1);
 
-    static constexpr std::uint8_t kEmptyEntry   = 0b11111111;
+    static constexpr std::uint8_t kEmptyEntry   = 0b11111110;
     static constexpr std::uint8_t kDeletedEntry = 0b10000000;
     static constexpr std::uint8_t kUnusedMask   = 0b10000000;
+    static constexpr std::uint8_t kEndOfMark    = 0b11111111;
     static constexpr std::uint8_t kHash2Mask    = 0b01111111;
 
     static constexpr std::uint64_t kEmptyEntry64   = 0xFFFFFFFFFFFFFFFFull;
@@ -226,16 +245,20 @@ public:
             return (this->value == kDeletedEntry);
         }
 
+        bool isEndOf() const {
+            return return (this->value == kEndOfMark);
+        }
+
         bool isUsed() const {
-            return ((std::int8_t)this->value >= 0);
+            return ((std::int8_t)this->value >= (std::int8_t)0);
         }
 
         bool isEmptyOrDeleted() const {
-            return ((std::int8_t)this->value < 0);
+            return ((std::int8_t)this->value < (std::int8_t)kEndOfMark);
         }
 
-        std::uint8_t getValue() const {
-            return this->value;
+        bool isUnused() const {
+            return ((std::int8_t)this->value < (std::int8_t)0);
         }
 
         void setEmpty() {
@@ -246,11 +269,179 @@ public:
             this->value = kDeletedEntry;
         }
 
-        void setUsed(std::int8_t control_hash) {
+        void setEndOf() {
+            this->value = kEndOfMark;
+        }
+
+        void setUsed(std::uint8_t control_hash) {
             assert((control_hash & kUnusedMask) == 0);
             this->value = control_hash;
         }
     };
+
+    struct alignas(16) hash_cluster {
+        union {
+            control_byte controls[kClusterEntries];
+            bitmask128_t u128;
+        };
+
+        hash_cluster() noexcept {
+            this->clear();
+        }
+
+        ~hash_cluster() {
+        }
+
+        void clear() {
+            this->fillAll<kEmptyEntry>();
+        }
+
+        template <std::uint8_t ControlTag>
+        void fillAll() {
+#if defined(__SSE2__)
+            __m128i empty_bits = _mm_set1_epi8(ControlTag);
+            _mm_store_si128((__m128i *)&controls[0], empty_bits);
+#else
+            std::memset((void *)&controls[0], ControlTag, sizeof(control_byte) * kClusterEntries);
+#endif // __SSE2__
+        }
+
+        std::uint32_t getMatchMask(std::uint8_t control_tag) const {
+#if defined(__SSE2__)
+            __m128i tag_bits = _mm_set1_epi8(control_tag);
+            __m128i control_bits = _mm_load_si128((const __m128i *)&this->controls[0]);
+            __m128i match_mask = _mm_cmpeq_epi8(control_bits, tag_bits);
+            std::uint32_t mask = (std::uint32_t)_mm_movemask_epi8(match_mask);
+            return mask;
+#else
+            std::uint32_t mask = 0, bit = 1;
+            for (size_type i = 0; i < kClusterEntries; i++) {
+                if (this->controls[i].value == control_tag) {
+                    mask |= bit;
+                }
+                bit <<= 1;
+            }
+            return mask;
+#endif // __SSE2__
+        }
+
+#if defined(__SSE2__)
+        __m128i getMatchMask128(std::uint8_t control_tag) const {
+            __m128i tag_bits = _mm_set1_epi8(control_tag);
+            __m128i control_bits = _mm_load_si128((const __m128i *)&this->controls[0]);
+            __m128i match_mask = _mm_cmpeq_epi8(control_bits, tag_bits);
+            return match_mask;
+        }
+#else
+        bitmask128_t getMatchMask128(std::uint8_t control_tag) const {
+            std::uint64_t control_tag64;
+            control_tag64 = (std::uint64_t)control_tag | ((std::uint64_t)control_tag << 8);
+            control_tag64 = control_tag64 | (control_tag64 << 16);
+            control_tag64 = control_tag64 | (control_tag64 << 32);
+
+            bitmask128_t mask128;
+            mask128.low  = this->u128.low  ^ control_tag64;
+            mask128.high = this->u128.high ^ control_tag64;
+            return mask128;
+        }
+#endif // __SSE2__
+
+        std::uint32_t matchHash(std::uint8_t control_hash) const {
+            return this->getMatchMask(control_hash);
+        }
+
+        std::uint32_t matchEmpty() const {
+            return this->getMatchMask(kEmptyEntry);
+        }
+
+        std::uint32_t matchDeleted() const {
+            return this->getMatchMask(kDeletedEntry);
+        }
+
+        std::uint32_t matchEmptyOrDeleted() const {
+#if defined(__SSE2__)
+            __m128i tag_bits = _mm_set1_epi8(kEndOfMark);
+            __m128i control_bits = _mm_load_si128((const __m128i *)&this->controls[0]);
+            __m128i match_mask = _mm_cmplt_epi8_fixed(control_bits, tag_bits);
+            std::uint32_t mask = (std::uint32_t)_mm_movemask_epi8(control_bits);
+            return mask;
+#else
+            std::uint32_t mask = 0, bit = 1;
+            for (size_type i = 0; i < kClusterEntries; i++) {
+                if ((this->controls[i].isEmptyOrDeleted()) {
+                    mask |= bit;
+                }
+                bit <<= 1;
+            }
+            return mask;
+#endif // __SSE2__
+        }
+
+        std::uint32_t matchUnused() const {
+#if defined(__SSE2__)
+            __m128i control_bits = _mm_load_si128((const __m128i *)&this->controls[0]);
+            std::uint32_t mask = (std::uint32_t)_mm_movemask_epi8(control_bits);
+            return mask;
+#else
+            std::uint32_t mask = 0, bit = 1;
+            for (size_type i = 0; i < kClusterEntries; i++) {
+                if ((this->controls[i].isUnused()) {
+                    mask |= bit;
+                }
+                bit <<= 1;
+            }
+            return mask;
+#endif // __SSE2__
+        }
+
+        std::uint32_t matchUsed() const {
+            std::uint32_t maskUnused = this->matchUnused();
+            std::uint32_t maskUsed = (maskUnused ^ kFullMask16);
+            return maskUsed;
+        }
+
+        bool hasAnyMatch(std::uint8_t control_hash) const {
+            return (this->matchHash(control_hash) != 0);
+        }
+
+        bool hasAnyEmpty() const {
+            return (this->matchEmpty() != 0);
+        }
+
+        bool hasAnyDeleted() const {
+            return (this->matchDeleted() != 0);
+        }
+
+        bool hasAnyEmptyOrDeleted() const {
+            return (this->matchEmptyOrDeleted() != 0);
+        }
+
+        bool hasAnyUsed() const {
+            return (this->matchUsed() != 0);
+        }
+
+        bool isAllUsed() const {
+            return (this->matchUnused() == 0);
+        }
+
+        bool isAllEmpty() const {
+            return (this->matchEmpty() == kFullMask16);
+        }
+
+        bool isAllDeleted() const {
+            return (this->matchDeleted() == kFullMask16);
+        }
+
+        bool isAllEmptyOrDeleted() const {
+            return (this->matchEmptyOrDeleted() == kFullMask16);
+        }
+
+        bool isAllUnused() const {
+            return (this->matchUnused() == kFullMask16);
+        }
+    };
+
+    typedef hash_cluster cluster_type;
 
 #if 1
     struct hash_entry : public value_type {
@@ -265,6 +456,11 @@ public:
         hash_entry(const value_type & val) : value_type(val) {
         }
         hash_entry(value_type && val) noexcept : value_type(std::move(val)) {
+        }
+
+        hash_entry(const nc_value_type & val) : value_type(val) {
+        }
+        hash_entry(nc_value_type && val) noexcept : value_type(std::move(val)) {
         }
 
         hash_entry(const key_type & key, const mapped_type & value) : value_type(key, value) {
@@ -364,144 +560,9 @@ public:
         lhs.swap(rhs);
     }
 
-    typedef value_type entry_type;
-    typedef std::allocator<entry_type> entry_allocator_type;
-
-    struct alignas(16) hash_cluster {
-        union {
-            control_byte controls[kClusterEntries];
-            bitmask128_t u128;
-        };
-
-        hash_cluster() noexcept {
-            this->clear();
-        }
-
-        ~hash_cluster() {
-        }
-
-        void clear() {
-#if defined(__SSE2__)
-            __m128i empty_bits = _mm_set1_epi8(kEmptyEntry);
-            _mm_store_si128((__m128i *)&controls[0], empty_bits);
-#else
-            std::memset((void *)&controls[0], kEmptyEntry, kClusterEntries * sizeof(std::uint8_t));
-#endif // __SSE2__
-        }
-
-        std::uint32_t getMatchMask(std::uint8_t control_tag) const {
-#if defined(__SSE2__)
-            __m128i tag_bits = _mm_set1_epi8(control_tag);
-            __m128i control_bits = _mm_load_si128((const __m128i *)&this->controls[0]);
-            __m128i match_mask = _mm_cmpeq_epi8(control_bits, tag_bits);
-            std::uint32_t mask = (std::uint32_t)_mm_movemask_epi8(match_mask);
-            return mask;
-#else
-            std::uint32_t mask = 0, bit = 1;
-            for (size_type i = 0; i < kClusterEntries; i++) {
-                if (this->controls[i].value == control_tag) {
-                    mask |= bit;
-                }
-                bit <<= 1;
-            }
-            return mask;
-#endif // __SSE2__
-        }
-
-#if defined(__SSE2__)
-        __m128i getMatchMask128(std::uint8_t control_tag) const {
-            __m128i tag_bits = _mm_set1_epi8(control_tag);
-            __m128i control_bits = _mm_load_si128((const __m128i *)&this->controls[0]);
-            __m128i match_mask = _mm_cmpeq_epi8(control_bits, tag_bits);
-            return match_mask;
-        }
-#else
-        bitmask128_t getMatchMask128(std::uint8_t control_tag) const {
-            std::uint64_t control_tag64;
-            control_tag64 = (std::uint64_t)control_tag | ((std::uint64_t)control_tag << 8);
-            control_tag64 = control_tag64 | (control_tag64 << 16);
-            control_tag64 = control_tag64 | (control_tag64 << 32);
-
-            bitmask128_t mask128;
-            mask128.low  = this->u128.low  ^ control_tag64;
-            mask128.high = this->u128.high ^ control_tag64;
-            return mask128;
-        }
-#endif // __SSE2__
-
-        std::uint32_t matchHash(std::uint8_t control_hash) const {
-            return this->getMatchMask(control_hash);
-        }
-
-        std::uint32_t matchEmpty() const {
-            return this->getMatchMask(kEmptyEntry);
-        }
-
-        std::uint32_t matchDeleted() const {
-            return this->getMatchMask(kDeletedEntry);
-        }
-
-        std::uint32_t matchEmptyOrDeleted() const {
-#if defined(__SSE2__)
-            __m128i control_bits = _mm_load_si128((const __m128i *)&this->controls[0]);
-            std::uint32_t mask = (std::uint32_t)_mm_movemask_epi8(control_bits);
-            return mask;
-#else
-            std::uint32_t mask = 0, bit = 1;
-            for (size_type i = 0; i < kClusterEntries; i++) {
-                if ((this->controls[i].value & kUnusedMask) != 0) {
-                    mask |= bit;
-                }
-                bit <<= 1;
-            }
-            return mask;
-#endif // __SSE2__
-        }
-
-        std::uint32_t matchUsed() const {
-            std::uint32_t maskUnused = this->matchEmptyOrDeleted();
-            std::uint32_t maskUsed = (maskUnused ^ kFullMask16);
-            return maskUsed;
-        }
-
-        bool hasAnyMatch(std::uint8_t control_hash) const {
-            return (this->matchHash(control_hash) != 0);
-        }
-
-        bool hasAnyEmpty() const {
-            return (this->matchEmpty() != 0);
-        }
-
-        bool hasAnyDeleted() const {
-            return (this->matchDeleted() != 0);
-        }
-
-        bool hasAnyEmptyOrDeleted() const {
-            return (this->matchEmptyOrDeleted() != 0);
-        }
-
-        bool hasAnyUsed() const {
-            return (this->matchUsed() != 0);
-        }
-
-        bool isAllUsed() const {
-            return (this->matchEmptyOrDeleted() == 0);
-        }
-
-        bool isAllEmpty() const {
-            return (this->matchEmpty() == kFullMask16);
-        }
-
-        bool isAllDeleted() const {
-            return (this->matchDeleted() == kFullMask16);
-        }
-
-        bool isAllEmptyOrDeleted() const {
-            return (this->matchEmptyOrDeleted() == kFullMask16);
-        }
-    };
-
-    typedef hash_cluster cluster_type;
+    typedef value_type                  entry_type;
+    typedef value_type                  node_type;
+    typedef std::allocator<entry_type>  entry_allocator_type;
 
     template <typename ValueType>
     class basic_iterator {
@@ -768,6 +829,32 @@ public:
 
     void shrink_to_fit() {
         this->rehash_impl<true, false>(this->entry_size());
+    }
+
+    mapped_type & operator [] (const key_type & key) {
+        size_type index = this->find_impl(key);
+        if (index != npos) {
+            entry_type * entry = this->entry_at(index);
+            return entry->second;
+        } else {
+            auto result = this->emplace(std::piecewise_construct,
+                                        std::forward_as_tuple(key), std::tuple<>());
+            assert(result.second == true);
+            return result.first->second;
+        }
+    }
+
+    mapped_type & operator [] (key_type && key) {
+        size_type index = this->find_impl(key);
+        if (index != npos) {
+            entry_type * entry = this->entry_at(index);
+            return entry->second;
+        } else {
+            auto result = this->emplace(std::piecewise_construct,
+                                        std::forward_as_tuple(std::forward<key_type>(key)), std::tuple<>());
+            assert(result.second == true);
+            return result.first->second;
+        }
     }
 
     iterator find(const key_type & key) {
@@ -1090,9 +1177,11 @@ private:
 
         size_type cluster_count = (new_capacity + (kClusterEntries - 1)) / kClusterEntries;
         assert(cluster_count > 0);
-        cluster_type * clusters = new cluster_type[cluster_count];
+        cluster_type * clusters = new cluster_type[cluster_count + 1];
         clusters_ = clusters;
         cluster_mask_ = cluster_count - 1;
+
+        clusters[cluster_count].fillAll<kEndOfMark>();
 
         entry_type * entries = entry_allocator_.allocate(new_capacity);
         entries_ = entries;
@@ -1388,8 +1477,8 @@ private:
                                            std::tuple<Ts2...> && second) {
         std::uint8_t ctrl_hash;
         tuple_wrapper2<key_type> key_wrapper(first);
-        break_from_tuple(first);
-        break_from_tuple(second);
+        //break_from_tuple(first);
+        //break_from_tuple(second);
         auto find_info = this->find_and_prepare_insert(key_wrapper.value(), ctrl_hash);
         size_type target = find_info.first;
         bool is_exists = find_info.second;

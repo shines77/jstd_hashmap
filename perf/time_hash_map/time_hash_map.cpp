@@ -24,6 +24,7 @@
 #include <iomanip>
 #include <sstream>
 #include <string>
+#include <cstring>
 #include <atomic>
 #include <memory>
 #include <utility>
@@ -67,9 +68,6 @@
 
 #define STRING_UTILS_MODE       STRING_UTILS_SSE42
 
-// Use in <jstd/support/PowerOf2.h>
-#define JSTD_SUPPORT_X86_BITSCAN_INSTRUCTION    1
-
 #define USE_JSTD_HASH_TABLE     0
 #define USE_JSTD_DICTIONARY     0
 
@@ -77,9 +75,9 @@
 #include <jstd/basic/stdint.h>
 #include <jstd/basic/inttypes.h>
 
-#if 0
-#include <jstd/hash/dictionary.h>
-#include <jstd/hash/hashmap_analyzer.h>
+#include <jstd/hashmap/flat16_hash_map.h>
+#include <jstd/hashmap/hashmap_analyzer.h>
+#include <jstd/hasher/hash_helper.h>
 #include <jstd/string/string_view.h>
 #include <jstd/string/string_view_array.h>
 #include <jstd/system/Console.h>
@@ -87,9 +85,6 @@
 #include <jstd/test/StopWatch.h>
 #include <jstd/test/CPUWarmUp.h>
 #include <jstd/test/ProcessMemInfo.h>
-#endif
-
-//#include <jstd/all.h>
 
 #include "BenchmarkResult.h"
 
@@ -119,11 +114,6 @@
 
 #pragma message(PRINT_MACRO_VAR(HASH_MAP_FUNCTION))
 
-#if 0
-
-using namespace jstd;
-using namespace jtest;
-
 static const bool FLAGS_test_sparse_hash_map = true;
 static const bool FLAGS_test_dense_hash_map = true;
 
@@ -133,7 +123,7 @@ static const bool FLAGS_test_std_hash_map = false;
 static const bool FLAGS_test_std_hash_map = false;
 #endif
 static const bool FLAGS_test_std_unordered_map = true;
-static const bool FLAGS_test_jstd_dictionary = true;
+static const bool FLAGS_test_jstd_flat16_hash_map = true;
 static const bool FLAGS_test_map = true;
 
 static const bool FLAGS_test_4_bytes = true;
@@ -216,13 +206,13 @@ private:
 
 public:
     HashObject() : key_(0) {
-        ::memset(this->buffer_, 0, sizeof(this->buffer_));
+        std::memset(this->buffer_, 0, kBufLen * sizeof(char));
 #if USE_CTOR_COUNTER
         g_num_constructor++;
 #endif
     }
     HashObject(key_type key) : key_(key) {
-        ::memset(this->buffer_, (int)(key & 0xFFUL), sizeof(this->buffer_));   // a "random" char
+        std::memset(this->buffer_, (int)(key & 0xFFUL), kBufLen * sizeof(char));   // a "random" char
 #if USE_CTOR_COUNTER
         g_num_constructor++;
 #endif
@@ -234,7 +224,7 @@ public:
     void operator = (const this_type & that) {
         g_num_copies++;
         this->key_ = that.key_;
-        ::memcpy(this->buffer_, that.buffer_, sizeof(this->buffer_));
+        std::memcpy(this->buffer_, that.buffer_, kBufLen * sizeof(char));
     }
 
     std::size_t Hash() const {
@@ -261,6 +251,18 @@ public:
     bool operator <= (const this_type & that) const {
         return this->key_ <= that.key_;
     }
+
+#if 1
+    std::ostream & display(std::ostream & out) const {
+        out << "HashObject(" << this->key_ << ", \"" << this->buffer_ << "\")";
+        return out;
+    }
+#else
+    std::ostream & operator << (std::ostream & out) const {
+        out << "HashObject(" << this->key_ << ", \"" << this->buffer_ << "\")";
+        return out;
+    }
+#endif
 };
 
 // A specialization for the case sizeof(buffer_) == 0
@@ -309,6 +311,18 @@ public:
     bool operator <= (const this_type & that) const {
         return this->key_ <= that.key_;
     }
+
+#if 1
+    std::ostream & display(std::ostream & out) const {
+        out << "HashObject(" << this->key_ << ")";
+        return out;
+    }
+#else
+    std::ostream & operator << (std::ostream & out) const {
+        out << "HashObject(" << this->key_ << ")";
+        return out;
+    }
+#endif
 };
 
 #if defined(WIN64) || defined(_WIN64) || defined(_M_X64) || defined(_M_AMD64) \
@@ -360,9 +374,30 @@ public:
     bool operator <= (const this_type & that) const {
         return this->key_ <= that.key_;
     }
+
+#if 1
+    std::ostream & display(std::ostream & out) const {
+        out << "HashObject(" << this->key_ << ")";
+        return out;
+    }
+#else
+    std::ostream & operator << (std::ostream & out) const {
+        out << "HashObject(" << this->key_ << ")";
+        return out;
+    }
+#endif
 };
 
 #endif // _WIN64 || __amd64__
+
+namespace std {
+
+template <typename Key, std::size_t Size, std::size_t HashSize>
+std::ostream & operator << (std::ostream & out, const HashObject<Key, Size, HashSize> & object) {
+    return object.display(out);
+}
+
+} // namespace std
 
 namespace std {
 
@@ -430,7 +465,8 @@ template <typename Key>
 class HashFn {
 public:
     //typedef HashObj   hash_object_t;
-    typedef Key key_type;
+    typedef Key         key_type;
+    typedef std::size_t result_type;
 
     // These two public members are required by msvc.  4 and 8 are defaults.
     static const std::size_t bucket_size = 4;
@@ -607,7 +643,7 @@ template <class MapType, class Vector>
 static void time_map_find(char const * title, std::size_t iters,
                           const Vector & indices) {
     MapType hashmap(kInitCapacity);
-    StopWatch sw;
+    jtest::StopWatch sw;
     std::uint32_t r;
     std::uint32_t i;
     std::uint32_t max_iters = static_cast<std::uint32_t>(iters);
@@ -656,7 +692,7 @@ static void time_map_find_random(std::size_t iters) {
 template <class MapType>
 static void time_map_find_failed(std::size_t iters) {
     MapType hashmap(kInitCapacity);
-    StopWatch sw;
+    jtest::StopWatch sw;
     std::uint32_t r;
     std::uint32_t i;
     std::uint32_t max_iters = static_cast<std::uint32_t>(iters);
@@ -681,7 +717,7 @@ static void time_map_find_failed(std::size_t iters) {
 template <class MapType>
 static void time_map_find_empty(std::size_t iters) {
     MapType hashmap(kInitCapacity);
-    StopWatch sw;
+    jtest::StopWatch sw;
     std::uint32_t r;
     std::uint32_t i;
     std::uint32_t max_iters = static_cast<std::uint32_t>(iters);
@@ -702,7 +738,7 @@ static void time_map_find_empty(std::size_t iters) {
 template <class MapType>
 static void time_map_insert(std::size_t iters) {
     MapType hashmap(kInitCapacity);
-    StopWatch sw;
+    jtest::StopWatch sw;
 
     std::uint32_t max_iters = static_cast<std::uint32_t>(iters);
     const std::size_t start = CurrentMemoryUsage();
@@ -722,7 +758,7 @@ static void time_map_insert(std::size_t iters) {
 template <class MapType>
 static void time_map_insert_predicted(std::size_t iters) {
     MapType hashmap(kInitCapacity);
-    StopWatch sw;
+    jtest::StopWatch sw;
 
     std::uint32_t max_iters = static_cast<std::uint32_t>(iters);
     const std::size_t start = CurrentMemoryUsage();
@@ -744,7 +780,7 @@ static void time_map_insert_predicted(std::size_t iters) {
 template <class MapType>
 static void time_map_insert_replace(std::size_t iters) {
     MapType hashmap(kInitCapacity);
-    StopWatch sw;
+    jtest::StopWatch sw;
 
     std::uint32_t max_iters = static_cast<std::uint32_t>(iters);
     for (std::uint32_t i = 0; i < max_iters; i++) {
@@ -768,7 +804,7 @@ static void time_map_insert_replace(std::size_t iters) {
 template <class MapType>
 static void time_map_emplace(std::size_t iters) {
     MapType hashmap(kInitCapacity);
-    StopWatch sw;
+    jtest::StopWatch sw;
 
     std::uint32_t max_iters = static_cast<std::uint32_t>(iters);
     const std::size_t start = CurrentMemoryUsage();
@@ -788,7 +824,7 @@ static void time_map_emplace(std::size_t iters) {
 template <class MapType>
 static void time_map_emplace_predicted(std::size_t iters) {
     MapType hashmap(kInitCapacity);
-    StopWatch sw;
+    jtest::StopWatch sw;
 
     std::uint32_t max_iters = static_cast<std::uint32_t>(iters);
     const std::size_t start = CurrentMemoryUsage();
@@ -810,7 +846,7 @@ static void time_map_emplace_predicted(std::size_t iters) {
 template <class MapType>
 static void time_map_emplace_replace(std::size_t iters) {
     MapType hashmap(kInitCapacity);
-    StopWatch sw;
+    jtest::StopWatch sw;
 
     std::uint32_t max_iters = static_cast<std::uint32_t>(iters);
     for (std::uint32_t i = 0; i < max_iters; i++) {
@@ -834,7 +870,7 @@ static void time_map_emplace_replace(std::size_t iters) {
 template <class MapType>
 static void time_map_erase(std::size_t iters) {
     MapType hashmap(kInitCapacity);
-    StopWatch sw;
+    jtest::StopWatch sw;
 
     std::uint32_t max_iters = static_cast<std::uint32_t>(iters);
     for (std::uint32_t i = 0; i < max_iters; i++) {
@@ -858,7 +894,7 @@ static void time_map_erase(std::size_t iters) {
 template <class MapType>
 static void time_map_erase_failed(std::size_t iters) {
     MapType hashmap(kInitCapacity);
-    StopWatch sw;
+    jtest::StopWatch sw;
 
     std::uint32_t max_iters = static_cast<std::uint32_t>(iters);
     for (std::uint32_t i = 0; i < max_iters; i++) {
@@ -882,7 +918,7 @@ static void time_map_erase_failed(std::size_t iters) {
 template <class MapType>
 static void time_map_toggle(std::size_t iters) {
     MapType hashmap(kInitCapacity);
-    StopWatch sw;
+    jtest::StopWatch sw;
 
     std::uint32_t max_iters = static_cast<std::uint32_t>(iters);
     const std::size_t start = CurrentMemoryUsage();
@@ -905,7 +941,7 @@ static void time_map_iterate(std::size_t iters) {
     typedef typename MapType::const_iterator const_iterator;
 
     MapType hashmap(kInitCapacity);
-    StopWatch sw;
+    jtest::StopWatch sw;
     std::uint32_t r;
 
     std::uint32_t max_iters = static_cast<std::uint32_t>(iters);
@@ -918,7 +954,7 @@ static void time_map_iterate(std::size_t iters) {
     r = 1;
     reset_counter();
     sw.start();
-    for (const_iterator it = hashmap.begin(), it_end = hashmap.end(); it != it_end; ++it) {
+    for (const_iterator it = hashmap.begin(); it != hashmap.end(); ++it) {
         r ^= static_cast<uint32_t>(it->second);
     }
     sw.stop();
@@ -933,7 +969,7 @@ template <class MapType>
 static void stress_hash_function(std::size_t desired_insertions,
                                  std::size_t map_size,
                                  std::size_t stride) {
-    StopWatch sw;
+    jtest::StopWatch sw;
     uint32_t num_insertions = 0;
     // One measurement of user time (in seconds) is done for each iteration of
     // the outer loop.  The times are summed.
@@ -1043,13 +1079,13 @@ static void test_all_hashmaps(std::size_t obj_size, std::size_t iters) {
             "std::unordered_map<K, V>", obj_size, 0, iters, is_stress_hash_function);
     }
 
-    if (FLAGS_test_jstd_dictionary) {
-        typedef jstd::Dictionary<HashObj, Value, HashFn<typename HashObj::key_type>> JDictionary;
-        measure_hashmap<jstd::Dictionary<HashObj,   Value, HashFn<typename HashObj::key_type>>,
-                        jstd::Dictionary<HashObj *, Value, HashFn<typename HashObj::key_type>>
+    if (FLAGS_test_jstd_flat16_hash_map) {
+        typedef jstd::flat16_hash_map<HashObj, Value, HashFn<typename HashObj::key_type>> flat16_hash_map;
+        measure_hashmap<jstd::flat16_hash_map<HashObj,   Value, HashFn<typename HashObj::key_type>>,
+                        jstd::flat16_hash_map<HashObj *, Value, HashFn<typename HashObj::key_type>>
                         >(
-            "jstd::Dectionary<K, V>", obj_size,
-            sizeof(typename JDictionary::node_type), iters, is_stress_hash_function);
+            "jstd::flat16_hash_map<K, V>", obj_size,
+            sizeof(typename flat16_hash_map::node_type), iters, is_stress_hash_function);
     }
 }
 
@@ -1087,7 +1123,7 @@ static void time_map_find(char const * title, std::size_t iters,
     typedef typename MapType::mapped_type mapped_type;
 
     MapType hashmap(kInitCapacity);
-    StopWatch sw;
+    jtest::StopWatch sw;
     std::size_t r;
     mapped_type i;
     mapped_type max_iters = static_cast<mapped_type>(iters);
@@ -1142,7 +1178,7 @@ static void time_map_find_failed(std::size_t iters) {
     typedef typename MapType::mapped_type mapped_type;
 
     MapType hashmap(kInitCapacity);
-    StopWatch sw;
+    jtest::StopWatch sw;
     std::size_t r;
     mapped_type i;
     mapped_type max_iters = static_cast<mapped_type>(iters);
@@ -1169,7 +1205,7 @@ static void time_map_find_empty(std::size_t iters) {
     typedef typename MapType::mapped_type mapped_type;
 
     MapType hashmap(kInitCapacity);
-    StopWatch sw;
+    jtest::StopWatch sw;
     std::size_t r;
     mapped_type i;
     mapped_type max_iters = static_cast<mapped_type>(iters);
@@ -1192,7 +1228,7 @@ static void time_map_insert(std::size_t iters) {
     typedef typename MapType::mapped_type mapped_type;
 
     MapType hashmap(kInitCapacity);
-    StopWatch sw;
+    jtest::StopWatch sw;
 
     mapped_type max_iters = static_cast<mapped_type>(iters);
     const std::size_t start = CurrentMemoryUsage();
@@ -1214,7 +1250,7 @@ static void time_map_insert_predicted(std::size_t iters) {
     typedef typename MapType::mapped_type mapped_type;
 
     MapType hashmap(kInitCapacity);
-    StopWatch sw;
+    jtest::StopWatch sw;
 
     mapped_type max_iters = static_cast<mapped_type>(iters);
     const std::size_t start = CurrentMemoryUsage();
@@ -1238,7 +1274,7 @@ static void time_map_insert_replace(std::size_t iters) {
     typedef typename MapType::mapped_type mapped_type;
 
     MapType hashmap(kInitCapacity);
-    StopWatch sw;
+    jtest::StopWatch sw;
 
     mapped_type max_iters = static_cast<mapped_type>(iters);
     for (mapped_type i = 0; i < max_iters; i++) {
@@ -1264,7 +1300,7 @@ static void time_map_emplace(std::size_t iters) {
     typedef typename MapType::mapped_type mapped_type;
 
     MapType hashmap(kInitCapacity);
-    StopWatch sw;
+    jtest::StopWatch sw;
 
     mapped_type max_iters = static_cast<mapped_type>(iters);
     const std::size_t start = CurrentMemoryUsage();
@@ -1286,7 +1322,7 @@ static void time_map_emplace_predicted(std::size_t iters) {
     typedef typename MapType::mapped_type mapped_type;
 
     MapType hashmap(kInitCapacity);
-    StopWatch sw;
+    jtest::StopWatch sw;
 
     mapped_type max_iters = static_cast<mapped_type>(iters);
     const std::size_t start = CurrentMemoryUsage();
@@ -1310,7 +1346,7 @@ static void time_map_emplace_replace(std::size_t iters) {
     typedef typename MapType::mapped_type mapped_type;
 
     MapType hashmap(kInitCapacity);
-    StopWatch sw;
+    jtest::StopWatch sw;
 
     mapped_type max_iters = static_cast<mapped_type>(iters);
     for (mapped_type i = 0; i < max_iters; i++) {
@@ -1336,7 +1372,7 @@ static void time_map_erase(std::size_t iters) {
     typedef typename MapType::mapped_type mapped_type;
 
     MapType hashmap(kInitCapacity);
-    StopWatch sw;
+    jtest::StopWatch sw;
 
     mapped_type max_iters = static_cast<mapped_type>(iters);
     for (mapped_type i = 0; i < max_iters; i++) {
@@ -1362,7 +1398,7 @@ static void time_map_erase_failed(std::size_t iters) {
     typedef typename MapType::mapped_type mapped_type;
 
     MapType hashmap(kInitCapacity);
-    StopWatch sw;
+    jtest::StopWatch sw;
 
     mapped_type max_iters = static_cast<mapped_type>(iters);
     for (mapped_type i = 0; i < max_iters; i++) {
@@ -1388,7 +1424,7 @@ static void time_map_toggle(std::size_t iters) {
     typedef typename MapType::mapped_type mapped_type;
 
     MapType hashmap(kInitCapacity);
-    StopWatch sw;
+    jtest::StopWatch sw;
 
     mapped_type max_iters = static_cast<mapped_type>(iters);
     const std::size_t start = CurrentMemoryUsage();
@@ -1412,7 +1448,7 @@ static void time_map_iterate(std::size_t iters) {
     typedef typename MapType::const_iterator    const_iterator;
 
     MapType hashmap(kInitCapacity);
-    StopWatch sw;
+    jtest::StopWatch sw;
     mapped_type r;
 
     mapped_type max_iters = static_cast<mapped_type>(iters);
@@ -1440,7 +1476,7 @@ template <class MapType>
 static void stress_hash_function(std::size_t desired_insertions,
                                  std::size_t map_size,
                                  std::size_t stride) {
-    StopWatch sw;
+    jtest::StopWatch sw;
     std::uint32_t num_insertions = 0;
     // One measurement of user time (in seconds) is done for each iteration of
     // the outer loop.  The times are summed.
@@ -1550,13 +1586,13 @@ static void test_all_hashmaps(std::size_t obj_size, std::size_t iters) {
             "std::unordered_map<K, V>", obj_size, 0, iters, has_stress_hash_function);
     }
 
-    if (FLAGS_test_jstd_dictionary) {
-        typedef jstd::Dictionary<HashObj, Value, HashFn<typename HashObj::key_type>> JDictionary;
-        measure_hashmap<jstd::Dictionary<HashObj,   Value, HashFn<typename HashObj::key_type>>,
-                        jstd::Dictionary<HashObj *, Value, HashFn<typename HashObj::key_type>>
+    if (FLAGS_test_jstd_flat16_hash_map) {
+        typedef jstd::flat16_hash_map<HashObj, Value, HashFn<typename HashObj::key_type>> flat16_hash_map;
+        measure_hashmap<jstd::flat16_hash_map<HashObj,   Value, HashFn<typename HashObj::key_type>>,
+                        jstd::flat16_hash_map<HashObj *, Value, HashFn<typename HashObj::key_type>>
                         >(
-            "jstd::Dectionary<K, V>", obj_size,
-            sizeof(typename JDictionary::node_type), iters, has_stress_hash_function);
+            "jstd::flat16_hash_map<K, V>", obj_size,
+            sizeof(typename flat16_hash_map::node_type), iters, has_stress_hash_function);
     }
 }
 
@@ -1596,7 +1632,7 @@ int main(int argc, char * argv[])
         iters = ::atoi(argv[1]);
     }
 
-    jtest::CPU::warmup(1000);
+    jtest::CPU::warm_up(1000);
 
     printf("#define HASH_MAP_FUNCTION = %s\n\n", PRINT_MACRO(HASH_MAP_FUNCTION));
 
@@ -1615,12 +1651,3 @@ int main(int argc, char * argv[])
     jstd::Console::ReadKey();
     return 0;
 }
-
-#else
-
-int main(int argc, char * argv[])
-{
-    return 0;
-}
-
-#endif

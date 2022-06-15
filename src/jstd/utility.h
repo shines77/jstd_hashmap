@@ -64,7 +64,7 @@ namespace jstd {
 // tuple_wrapper<T, DecayT, bool IsIntegral>
 //
 template <typename T, typename DecayT = typename std::remove_reference<T>::type,
-                      bool IsIntegral = std::is_integral<DecayT>::value>
+          bool IsIntegralOrPointer = (std::is_integral<DecayT>::value || std::is_pointer<DecayT>::value)>
 struct tuple_wrapper : public DecayT {
     using value_type = typename std::remove_reference<T>::type;
 
@@ -167,8 +167,8 @@ struct tuple_wrapper<T, typename std::remove_reference<T>::type, true> {
 // tuple_wrapper2<T, DecayT, IsIntegral>
 //
 template <typename T, typename DecayT = typename std::remove_reference<T>::type,
-                      bool IsIntegral = std::is_integral<DecayT>::value>
-struct tuple_wrapper2 : public DecayT {
+          bool IsIntegralOrPointer = (std::is_integral<DecayT>::value || std::is_pointer<DecayT>::value)>
+struct tuple_wrapper2 : DecayT {
     using value_type = typename std::remove_reference<T>::type;
 
     tuple_wrapper2() : value_type() {

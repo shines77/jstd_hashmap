@@ -56,9 +56,6 @@
 
 #define STRING_UTILS_MODE       STRING_UTILS_SSE42
 
-// Use in <jstd/support/PowerOf2.h>
-#define JSTD_SUPPORT_X86_BITSCAN_INSTRUCTION    1
-
 #define USE_JSTD_HASH_TABLE     0
 #define USE_JSTD_DICTIONARY     0
 
@@ -78,9 +75,6 @@
 #include <jstd/test/ProcessMemInfo.h>
 
 #include "BenchmarkResult.h"
-
-//using namespace jstd;
-using namespace jtest;
 
 static std::vector<std::string> dict_words;
 
@@ -963,7 +957,7 @@ template <typename Container1, typename Container2, typename Vector>
 void hashmap_benchmark_simple(const std::string & cat_name,
                               Container1 & container1, Container2 & container2,
                               const Vector & test_data, const Vector & reverse_data,
-                              BenchmarkResult & result)
+                              jtest::BenchmarkResult & result)
 {
     std::size_t cat_id = result.addCategory(cat_name);
 
@@ -1104,7 +1098,7 @@ void hashmap_benchmark_simple(const std::string & cat_name,
 
 void hashmap_benchmark_all()
 {
-    BenchmarkResult test_result;
+    jtest::BenchmarkResult test_result;
     test_result.setName("std::unordered_map", "jstd::flat16_hash_map");
 
     jtest::StopWatch sw;
