@@ -1031,8 +1031,8 @@ private:
         return hash_code;
     }
 
-    inline hash_code_t get_second_hash(const key_type & key) const noexcept {
-        hash_code_t hash_code = static_cast<hash_code_t>(integalHasher_(key));
+    inline hash_code_t get_second_hash(hash_code_t value) const noexcept {
+        hash_code_t hash_code = (hash_code_t)((size_type)value * 14695981039346656037ull + 1099511628211ull);
         return hash_code;
     }
 
@@ -1269,7 +1269,7 @@ private:
     JSTD_FORCED_INLINE
     size_type find_impl(const key_type & key) const {
         hash_code_t hash_code = this->get_hash(key);
-        hash_code_t hash_code_2nd = this->get_second_hash(key);
+        hash_code_t hash_code_2nd = this->get_second_hash(hash_code);
         std::uint8_t control_hash = this->get_control_hash(hash_code_2nd);
         index_type cluster_index = this->index_for(hash_code);
         index_type start_cluster = cluster_index;
@@ -1299,7 +1299,7 @@ private:
     size_type find_impl(const key_type & key, index_type & first_cluster,
                         index_type & last_cluster, std::uint8_t & ctrl_hash) const {
         hash_code_t hash_code = this->get_hash(key);
-        hash_code_t hash_code_2nd = this->get_second_hash(key);
+        hash_code_t hash_code_2nd = this->get_second_hash(hash_code);
         std::uint8_t control_hash = this->get_control_hash(hash_code_2nd);
         index_type cluster_index = this->index_for(hash_code);
         index_type start_cluster = cluster_index;
@@ -1334,7 +1334,7 @@ private:
     std::pair<size_type, bool>
     find_and_prepare_insert(const key_type & key, std::uint8_t & ctrl_hash) {
         hash_code_t hash_code = this->get_hash(key);
-        hash_code_t hash_code_2nd = this->get_second_hash(key);
+        hash_code_t hash_code_2nd = this->get_second_hash(hash_code);
         std::uint8_t control_hash = this->get_control_hash(hash_code_2nd);
         index_type cluster_index = this->index_for(hash_code);
         index_type first_cluster = cluster_index;
@@ -1583,7 +1583,7 @@ private:
     JSTD_FORCED_INLINE
     size_type find_and_erase(const key_type & key) {
         hash_code_t hash_code = this->get_hash(key);
-        hash_code_t hash_code_2nd = this->get_second_hash(key);
+        hash_code_t hash_code_2nd = this->get_second_hash(hash_code);
         std::uint8_t control_hash = this->get_control_hash(hash_code_2nd);
         index_type cluster_index = this->index_for(hash_code);
         index_type start_cluster = cluster_index;
