@@ -156,13 +156,13 @@ struct repeat_u8x8 {
 template < typename Key, typename Value,
            typename Hasher = std::hash<Key>,
            typename KeyEqual = std::equal_to<Key>,
-           typename Allocator = std::allocator<std::pair<Key, Value>> >
+           typename Allocator = std::allocator<std::pair<const Key, Value>> >
 class flat16_hash_map {
 public:
     typedef Key                             key_type;
     typedef Value                           mapped_type;
-    typedef std::pair<const Key, Value>     nc_value_type;
-    typedef std::pair<Key, Value>           value_type;
+    typedef std::pair<const Key, Value>     value_type;
+    typedef std::pair<Key, Value>           nc_value_type;
 
     typedef Hasher                          hasher_type;
     typedef KeyEqual                        key_equal;
