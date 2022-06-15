@@ -156,13 +156,13 @@ struct repeat_u8x8 {
 template < typename Key, typename Value,
            typename Hasher = std::hash<Key>,
            typename KeyEqual = std::equal_to<Key>,
-           typename Allocator = std::allocator<std::pair<const Key, Value>> >
+           typename Allocator = std::allocator<std::pair<Key, Value>> >
 class flat16_hash_map {
 public:
     typedef Key                             key_type;
     typedef Value                           mapped_type;
-    typedef std::pair<const Key, Value>     value_type;
-    typedef std::pair<Key, Value>           nc_value_type;
+    typedef std::pair<const Key, Value>     nc_value_type;
+    typedef std::pair<Key, Value>           value_type;
 
     typedef Hasher                          hasher_type;
     typedef KeyEqual                        key_equal;
@@ -202,7 +202,7 @@ public:
     // kDefaultCapacity must be >= kMinimumCapacity
     static constexpr size_type kDefaultCapacity = 4;
 
-    static constexpr float kDefaultLoadFactor = 0.5;
+    static constexpr float kDefaultLoadFactor = 0.75;
     static constexpr float kMaxLoadFactor = 1.0;
 
     struct bitmask128_t {
@@ -647,7 +647,7 @@ public:
     }
 
     double load_factor() const {
-        return this->load_factor_;
+        return (double)this->entry_size() / this->entry_capacity();
     }
 
     void set_load_factor(double _load_factor) {
@@ -657,11 +657,35 @@ public:
         this->entry_threshold_ = (size_type)(this->entry_capacity() * _load_factor);
     }
 
+    double current_load_factor() const {
+        return static_cast<double>(this->load_factor_);
+    }
+
+    double default_load_factor() const {
+        return static_cast<double>(kDefaultLoadFactor);
+    }
+
     double max_load_factor() const {
         return static_cast<double>(kMaxLoadFactor);
     }
 
     iterator begin() {
+#if 1
+        cluster_type * cluster = this->clusters();
+        cluster_type * last_cluster = this->clusters() + this->cluster_count();
+        size_type start_index = 0;
+        for (; cluster != last_cluster; cluster++) {
+            std::uint32_t maskUsed = cluster->matchUsed();
+            if (maskUsed != 0) {
+                size_type pos = BitUtils::bsf32(maskUsed);
+                size_type index = start_index + pos;
+                return this->iterator_at(index);
+            }
+            start_index += kClusterEntries;
+        }
+
+        return this->iterator_at(this->entry_capacity());
+#else
         control_byte * control = this->controls();
         size_type index;
         for (index = 0; index <= this->entry_mask(); index++) {
@@ -671,18 +695,24 @@ public:
             control++;
         }
         return { control, this->entry_at(index) };
+#endif
     }
 
     const_iterator begin() const {
-        control_byte * control = this->controls();
-        size_type index;
-        for (index = 0; index <= this->entry_mask(); index++) {
-            if (control->isUsed()) {
-                return { control, this->entry_at(index) };
+        cluster_type * cluster = this->clusters();
+        cluster_type * last_cluster = this->clusters() + this->cluster_count();
+        size_type start_index = 0;
+        for (; cluster != last_cluster; cluster++) {
+            std::uint32_t maskUsed = cluster->matchUsed();
+            if (maskUsed != 0) {
+                size_type pos = BitUtils::bsf32(maskUsed);
+                size_type index = start_index + pos;
+                return this->iterator_at(index);
             }
-            control++;
+            start_index += kClusterEntries;
         }
-        return { control, this->entry_at(index) };
+
+        return this->iterator_at(this->entry_capacity());
     }
 
     const_iterator cbegin() const {
@@ -720,7 +750,7 @@ public:
 
     void grow_if_necessary() {
         size_type new_capacity = (this->entry_mask_ + 1) * 2;
-        this->rehash_impl<false>(new_capacity);
+        this->rehash_impl<false, true>(new_capacity);
     }
 
     void reserve(size_type new_capacity) {
@@ -733,11 +763,11 @@ public:
 
     void rehash(size_type new_capacity) {
         new_capacity = (std::max)(new_capacity, this->entry_size());
-        this->rehash_impl<false>(new_capacity);
+        this->rehash_impl<true, false>(new_capacity);
     }
 
     void shrink_to_fit() {
-        this->rehash_impl<true>(this->entry_size());
+        this->rehash_impl<true, false>(this->entry_size());
     }
 
     iterator find(const key_type & key) {
@@ -871,7 +901,8 @@ private:
         return (this->entry_size_ >= this->entry_threshold_);
     }
 
-    inline size_type calc_capacity(size_type init_capacity) const noexcept {
+    JSTD_FORCED_INLINE
+    size_type calc_capacity(size_type init_capacity) const noexcept {
         size_type new_capacity = (std::max)(init_capacity, kMinimumCapacity);
         if (!pow2::is_pow2(new_capacity)) {
             new_capacity = pow2::round_up<size_type, kMinimumCapacity>(new_capacity);
@@ -1071,16 +1102,18 @@ private:
             entry_size_ = 0;
         }
         entry_mask_ = new_capacity - 1;
-        entry_threshold_ = (size_type)(new_capacity * this->load_factor());
+        entry_threshold_ = (size_type)(new_capacity * this->current_load_factor());
     }
 
-    template <bool NeedShrink>
+    template <bool AllowShrink, bool AlwaysResize>
     void rehash_impl(size_type new_capacity) {
         new_capacity = this->calc_capacity(new_capacity);
         assert(new_capacity > 0);
         assert(new_capacity >= kMinimumCapacity);
-        if ((new_capacity > this->entry_capacity()) || NeedShrink) {
-            if (NeedShrink) {
+        if (AlwaysResize ||
+            (!AllowShrink && (new_capacity > this->entry_capacity())) ||
+            (AllowShrink && (new_capacity != this->entry_capacity()))) {
+            if (!AlwaysResize && !AllowShrink) {
                 assert(new_capacity >= this->entry_size());
             }
 
@@ -1100,7 +1133,6 @@ private:
             {
                 cluster_type * last_cluster = old_clusters + old_cluster_count;
                 entry_type * entry_start = old_entries;
-                size_type cluster_index = 0;
                 for (cluster_type * cluster = old_clusters; cluster != last_cluster; cluster++) {
                     std::uint32_t maskUsed = cluster->matchUsed();
                     while (maskUsed != 0) {
