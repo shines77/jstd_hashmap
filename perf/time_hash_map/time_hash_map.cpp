@@ -209,13 +209,13 @@ private:
 
 public:
     HashObject() : key_(0) {
-        std::memset(this->buffer_, 0, kBufLen * sizeof(char));
+        std::memset(this->buffer_, 0, sizeof(char) * kBufLen);
 #if USE_CTOR_COUNTER
         g_num_constructor++;
 #endif
     }
     HashObject(key_type key) : key_(key) {
-        std::memset(this->buffer_, (int)(key & 0xFFUL), kBufLen * sizeof(char));   // a "random" char
+        std::memset(this->buffer_, (int)(key & 0xFFUL), sizeof(char) * kBufLen);   // a "random" char
 #if USE_CTOR_COUNTER
         g_num_constructor++;
 #endif
@@ -227,7 +227,11 @@ public:
     void operator = (const this_type & that) {
         g_num_copies++;
         this->key_ = that.key_;
-        std::memcpy(this->buffer_, that.buffer_, kBufLen * sizeof(char));
+        std::memcpy(this->buffer_, that.buffer_, sizeof(char) * kBufLen);
+    }
+
+    key_type key() const {
+        return this->key_;
     }
 
     std::size_t Hash() const {
@@ -302,6 +306,10 @@ public:
         this->key_ = that.key_;
     }
 
+    key_type key() const {
+        return this->key_;
+    }
+
     std::size_t Hash() const {
         g_num_hashes++;
         return static_cast<std::size_t>(
@@ -367,6 +375,10 @@ public:
     void operator = (const this_type & that) {
         g_num_copies++;
         this->key_ = that.key_;
+    }
+
+    key_type key() const {
+        return this->key_;
     }
 
     std::size_t Hash() const {
@@ -485,6 +497,8 @@ public:
     }
 };
 
+#if 0
+
 namespace std {
 
 template <typename Key, std::size_t Size, std::size_t HashSize>
@@ -541,6 +555,8 @@ struct hash<HashObject<Key, Size, HashSize>> {
 };
 
 } // namespace std
+
+#endif
 
 namespace std {
 
