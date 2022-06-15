@@ -217,6 +217,9 @@
     <ClInclude Include="..\..\..\src\jstd\support\msvc_x86intrin.h">
       <Filter>src\support</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\hashmap\hashmap_analyzer.h">
+      <Filter>src\hashmap</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\src\jstd\dll_main.cpp">

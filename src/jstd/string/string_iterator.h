@@ -200,7 +200,7 @@ public:
     // make an unchecked iterator
     _Unchecked_type _Unchecked() const {
 #if !defined(_MSC_VER) || (_MSC_VER >= 1900)
-        return (detail::const_cast_(this->ptr_));
+        return (detail::const_castor(this->ptr_));
 #else
         return _Unchecked_type(this->ptr_);
 #endif

@@ -40,6 +40,7 @@
     <ClInclude Include="..\..\..\src\jstd\hasher\sha1.h" />
     <ClInclude Include="..\..\..\src\jstd\hashmap\flat16_hash_map.h" />
     <ClInclude Include="..\..\..\src\jstd\hashmap\flat32_hash_map.h" />
+    <ClInclude Include="..\..\..\src\jstd\hashmap\hashmap_analyzer.h" />
     <ClInclude Include="..\..\..\src\jstd\hashmap\key_extractor.h" />
     <ClInclude Include="..\..\..\src\jstd\hashmap\unordered_map.h" />
     <ClInclude Include="..\..\..\src\jstd\dll.h" />
