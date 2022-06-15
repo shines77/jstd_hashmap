@@ -26,7 +26,7 @@
 
 namespace jstd {
 
-#if defined(_MSC_VER) || !defined(__clang)
+#if defined(_MSC_VER) && !defined(__clang)
 
 /********************************************************
 
