@@ -293,7 +293,7 @@ public:
         }
 
         void clear() {
-            this->fillAll<kEmptyEntry>();
+            this->template fillAll<kEmptyEntry>();
         }
 
         template <std::uint8_t ControlTag>
@@ -1181,7 +1181,7 @@ private:
         clusters_ = clusters;
         cluster_mask_ = cluster_count - 1;
 
-        clusters[cluster_count].fillAll<kEndOfMark>();
+        clusters[cluster_count].template fillAll<kEndOfMark>();
 
         entry_type * entries = entry_allocator_.allocate(new_capacity);
         entries_ = entries;
