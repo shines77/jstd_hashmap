@@ -246,7 +246,7 @@ public:
         }
 
         bool isEndOf() const {
-            return return (this->value == kEndOfMark);
+            return (this->value == kEndOfMark);
         }
 
         bool isUsed() const {
