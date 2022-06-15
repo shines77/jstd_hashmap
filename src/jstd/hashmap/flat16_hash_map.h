@@ -1451,8 +1451,7 @@ private:
               (!jstd::is_same_ex<KeyT, nc_value_type>::value) &&
               (!jstd::is_same_ex<KeyT, std::piecewise_construct_t>::value) &&
               (jstd::is_same_ex<KeyT, key_type>::value ||
-               std::is_constructible<key_type, KeyT &&>::value) &&
-              !std::is_constructible<value_type, KeyT &&>::value>::type * = nullptr,
+               std::is_constructible<key_type, KeyT &&>::value)>::type * = nullptr,
               typename ... Args>
     std::pair<iterator, bool> emplace_impl(KeyT && key, Args && ... args) {
         std::uint8_t ctrl_hash;
@@ -1494,8 +1493,7 @@ private:
               (!jstd::is_same_ex<PieceWise, nc_value_type>::value) &&
               jstd::is_same_ex<PieceWise, std::piecewise_construct_t>::value &&
               (!jstd::is_same_ex<PieceWise, key_type>::value &&
-               !std::is_constructible<key_type, PieceWise &&>::value) &&
-              !std::is_constructible<value_type, PieceWise &&>::value>::type * = nullptr,
+               !std::is_constructible<key_type, PieceWise &&>::value)>::type * = nullptr,
               typename ... Ts1, typename ... Ts2>
     std::pair<iterator, bool> emplace_impl(PieceWise && hint,
                                            std::tuple<Ts1...> && first,
@@ -1544,8 +1542,7 @@ private:
               (!jstd::is_same_ex<First, nc_value_type>::value) &&
               (!jstd::is_same_ex<First, std::piecewise_construct_t>::value) &&
               (!jstd::is_same_ex<First, key_type>::value &&
-               !std::is_constructible<key_type, First &&>::value) &&
-              !std::is_constructible<value_type, First &&>::value>::type * = nullptr,
+               !std::is_constructible<key_type, First &&>::value)>::type * = nullptr,
               typename ... Args>
     std::pair<iterator, bool> emplace_impl(First && first, Args && ... args) {
         std::uint8_t ctrl_hash;
