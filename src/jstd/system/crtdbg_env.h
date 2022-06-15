@@ -83,13 +83,10 @@
 extern "C" {
 #endif
 
-/* Set the environment of CRTDBG (check memory overrun and memory leak in debug mode) */
-void jstd_set_crtdbg_env(int display_memory_leak, int always_check_bounds);
-
 /***********************************************************************************
 
-    Set the environment of CRTDBG (in debug mode, check for memory out-of-bounds
-    and memory leak problems):
+    Set the environment of CRTDBG (check for memory out-of-bounds and
+    memory leak problems in debug mode):
 
     Always_check_bounds non-zero means that every time memory is allocated/released,
     the system will automatically call _CrtCheckMemory() to check the memory
