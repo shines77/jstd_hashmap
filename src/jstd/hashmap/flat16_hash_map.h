@@ -441,18 +441,6 @@ public:
             return this->getMatchMask(kDeletedEntry);
         }
 
-        bool hasAnyMatch(std::uint8_t control_hash) const {
-            return (this->matchHash(control_hash) != 0);
-        }
-
-        bool hasAnyEmpty() const {
-            return (this->matchEmpty() != 0);
-        }
-
-        bool hasAnyDeleted() const {
-            return (this->matchDeleted() != 0);
-        }
-
         std::uint32_t matchEmptyOrDeleted() const {
 #if defined(__SSE2__)
             __m128i control_bits = _mm_load_si128((const __m128i *)&this->controls[0]);
@@ -470,16 +458,46 @@ public:
 #endif // __SSE2__
         }
 
+        std::uint32_t matchUsed() const {
+            std::uint32_t maskUnused = this->matchEmptyOrDeleted();
+            std::uint32_t maskUsed = (maskUnused ^ kFullMask16);
+            return maskUsed;
+        }
+
+        bool hasAnyMatch(std::uint8_t control_hash) const {
+            return (this->matchHash(control_hash) != 0);
+        }
+
+        bool hasAnyEmpty() const {
+            return (this->matchEmpty() != 0);
+        }
+
+        bool hasAnyDeleted() const {
+            return (this->matchDeleted() != 0);
+        }
+
         bool hasAnyEmptyOrDeleted() const {
             return (this->matchEmptyOrDeleted() != 0);
         }
 
-        bool isFull() const {
+        bool hasAnyUsed() const {
+            return (this->matchUsed() != 0);
+        }
+
+        bool isAllUsed() const {
             return (this->matchEmptyOrDeleted() == 0);
         }
 
         bool isAllEmpty() const {
             return (this->matchEmpty() == kFullMask16);
+        }
+
+        bool isAllDeleted() const {
+            return (this->matchDeleted() == kFullMask16);
+        }
+
+        bool isAllEmptyOrDeleted() const {
+            return (this->matchEmptyOrDeleted() == kFullMask16);
         }
     };
 
@@ -1078,14 +1096,22 @@ private:
 
             this->create_cluster<false>(new_capacity);
 
-            control_byte * last_control = old_controls + old_entry_capacity;
-            entry_type * entry = old_entries;
-            for (control_byte * control = old_controls; control != last_control; control++) {
-                if (control->isUsed()) {
-                    this->emplace(std::move(static_cast<value_type>(*entry)));
-                    this->entry_allocator_.destroy(entry);
+            //if (old_entry_capacity >= kClusterEntries)
+            {
+                cluster_type * last_cluster = old_clusters + old_cluster_count;
+                entry_type * entry_start = old_entries;
+                size_type cluster_index = 0;
+                for (cluster_type * cluster = old_clusters; cluster != last_cluster; cluster++) {
+                    std::uint32_t maskUsed = cluster->matchUsed();
+                    while (maskUsed != 0) {
+                        size_type pos = BitUtils::bsf32(maskUsed);
+                        maskUsed = BitUtils::clearLowBit32(maskUsed);
+                        entry_type * entry = entry_start + pos;
+                        this->emplace(std::move(*static_cast<value_type *>(entry)));
+                        this->entry_allocator_.destroy(entry);
+                    }
+                    entry_start += kClusterEntries;
                 }
-                entry++;
             }
             assert(this->entry_size() == old_entry_size);
 
