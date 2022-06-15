@@ -455,17 +455,9 @@ public:
 
         std::uint32_t matchEmptyOrDeleted() const {
 #if defined(__SSE2__)
-  #if 1
             __m128i control_bits = _mm_load_si128((const __m128i *)&this->controls[0]);
             std::uint32_t mask = (std::uint32_t)_mm_movemask_epi8(control_bits);
             return mask;
-  #else
-            __m128i zero_bits = _mm_set1_epi8(0);
-            __m128i control_bits = _mm_load_si128((const __m128i *)&this->controls[0]);
-            __m128i compare_mask = _mm_cmplt_epi8(control_bits, zero_bits);
-            std::uint32_t mask = (std::uint32_t)_mm_movemask_epi8(compare_mask);
-            return mask;
-  #endif
 #else
             std::uint32_t mask = 0, bit = 1;
             for (size_type i = 0; i < kClusterEntries; i++) {
@@ -628,7 +620,14 @@ public:
     size_type entry_capacity() const { return (entry_mask_ + 1); }
 
     double load_factor() const {
-        return load_factor_;
+        return this->load_factor_;
+    }
+
+    void set_load_factor(double _load_factor) {
+        if (_load_factor > this->max_load_factor())
+            _load_factor = this->max_load_factor();
+        this->load_factor_ = static_cast<float>(_load_factor);
+        this->entry_threshold_ = (size_type)(this->entry_capacity() * _load_factor);
     }
 
     double max_load_factor() const {
@@ -686,6 +685,27 @@ public:
         }
         this->destroy<false>();
         assert(this->entry_size() == 0);
+    }
+
+    void grow_if_necessary() {
+        size_type new_capacity = (this->entry_mask_ + 1) * 2;
+        this->rehash(new_capacity);
+    }
+
+    void reserve(size_type new_capacity) {
+        this->rehash(new_capacity);
+    }
+
+    void resize(size_type new_capacity) {
+        this->rehash(new_capacity);
+    }
+
+    void rehash(size_type new_capacity) {
+        this->rehash_impl<false>(new_capacity);
+    }
+
+    void shrink_to_fit() {
+        this->rehash_impl<true>(this->entry_size());
     }
 
     iterator find(const key_type & key) {
@@ -814,19 +834,16 @@ public:
         return { first };
     }
 
-    inline void grow() {
-        size_type new_capacity = (this->entry_mask_ + 1) * 2;
-        this->rehash(new_capacity);
-    }
-
-    void rehash(size_type new_capacity) {
-        //
-    }
-
 private:
+    inline bool need_grow() const {
+        return (this->entry_size_ >= this->entry_threshold_);
+    }
+
     inline size_type calc_capacity(size_type capacity) const noexcept {
         size_type new_capacity = (std::max)(capacity, kMinimumCapacity);
-        new_capacity = pow2::round_up<size_type, kMinimumCapacity>(new_capacity);
+        if (!pow2::is_pow2(new_capacity)) {
+            new_capacity = pow2::round_up<size_type, kMinimumCapacity>(new_capacity);
+        }
         return new_capacity;
     }
 
@@ -1016,12 +1033,54 @@ private:
 
         entry_type * entries = entry_allocator_.allocate(new_capacity);
         entries_ = entries;
-        if (initialize)
+        if (initialize) {
             assert(entry_size_ == 0);
-        else
+        } else {
             entry_size_ = 0;
+        }
         entry_mask_ = new_capacity - 1;
-        entry_threshold_ = (size_type)(new_capacity * FLAT16_DEFAULT_LOAD_FACTOR);
+        entry_threshold_ = (size_type)(new_capacity * this->load_factor());
+    }
+
+    template <bool NeedShrink>
+    void rehash_impl(size_type new_capacity) {
+        new_capacity = this->calc_capacity(new_capacity);
+        assert(new_capacity > 0);
+        assert(new_capacity >= kMinimumCapacity);
+        if ((new_capacity > this->entry_capacity()) || NeedShrink) {
+            if (NeedShrink) {
+                assert(new_capacity >= this->entry_size());
+            }
+
+            cluster_type * old_clusters = this->clusters();
+            control_byte * old_controls = this->controls();
+            size_type old_cluster_mask = this->cluster_mask();
+            size_type old_cluster_count = this->cluster_count();
+            
+            entry_type * old_entries = this->entries();
+            size_type old_entry_size = this->entry_size();
+            size_type old_entry_mask = this->entry_mask();
+            size_type old_entry_capacity = this->entry_capacity();
+
+            this->create_cluster<false>(new_capacity);
+
+            control_byte * last_control = old_controls + old_entry_capacity;
+            entry_type * entry = old_entries;
+            for (control_byte * control = old_controls; control != last_control; control++) {
+                if (control->isUsed()) {
+                    this->emplace(std::move(static_cast<value_type>(*entry)));
+                    this->entry_allocator_.destroy(entry);
+                }
+                entry++;
+            }
+            assert(this->entry_size() == old_entry_size);
+
+            this->entry_allocator_.deallocate(old_entries, old_entry_capacity);
+
+            if (old_clusters != nullptr) {
+                delete[] old_clusters;
+            }
+        }
     }
 
     JSTD_FORCED_INLINE
@@ -1093,6 +1152,8 @@ private:
         std::uint8_t control_hash = this->get_control_hash(hash_code);
         index_type cluster_index = this->index_for(hash_code);
         index_type first_cluster = cluster_index;
+        index_type last_cluster = npos;
+        std::uint32_t maskEmpty;
         ctrl_hash = control_hash;
 
         do {
@@ -1108,48 +1169,58 @@ private:
                     return { index, true };
                 }
             }
-            std::uint32_t maskEmpty = cluster.matchEmpty();
+            maskEmpty = cluster.matchEmpty();
             if (maskEmpty != 0) {
-                index_type last_cluster = cluster_index;
-                if (cluster_index != first_cluster) {
-                    // Find the first DeletedEntry from first_cluster to last_cluster.
-                    cluster_index = first_cluster;
-                    do {
-                        const cluster_type & cluster = this->get_cluster(cluster_index);
-                        std::uint32_t maskDeleted = cluster.matchDeleted();
-                        if (maskDeleted != 0) {
-                            // Found a [DeletedEntry] to insert
-                            size_type pos = BitUtils::bsf32(maskDeleted);
-                            size_type start_index = cluster_index * kClusterEntries;
-                            return { (start_index + pos), false };
-                        }
-                        if (cluster_index == last_cluster)
-                            break;
-                        cluster_index = this->next_cluster(cluster_index);
-                    } while (cluster_index != first_cluster);
-
-                    // Found a [EmptyEntry] to insert
-                    // Skip to final processing
-                } else {
-                    std::uint32_t maskDeleted = cluster.matchDeleted();
-                    if (maskDeleted != 0) {
-                        // Found a [DeletedEntry] to insert
-                        maskEmpty = maskDeleted;
-                    } else {
-                        // Found a [EmptyEntry] to insert
-                        assert(maskEmpty != 0);
-                    }
-                }
-
-                // Get [EmptyEntry] or [DeletedEntry] to insert
-                size_type pos = BitUtils::bsf32(maskEmpty);
-                size_type start_index = last_cluster * kClusterEntries;
-                return { (start_index + pos), false };
+                last_cluster = cluster_index;
+                break;
             }
             cluster_index = this->next_cluster(cluster_index);
         } while (cluster_index != first_cluster);
 
-        return { npos, false };
+        if (this->need_grow() || (last_cluster == npos)) {
+            // The size of entry reach the entry threshold or hashmap is full.
+            this->grow_if_necessary();
+
+            return find_and_prepare_insert(key, ctrl_hash);
+        }
+
+        // Find the first non-used entry and insert
+        if (cluster_index != first_cluster) {
+            // Find the first DeletedEntry from first_cluster to last_cluster.
+            cluster_index = first_cluster;
+            do {
+                const cluster_type & cluster = this->get_cluster(cluster_index);
+                std::uint32_t maskDeleted = cluster.matchDeleted();
+                if (maskDeleted != 0) {
+                    // Found a [DeletedEntry] to insert
+                    size_type pos = BitUtils::bsf32(maskDeleted);
+                    size_type start_index = cluster_index * kClusterEntries;
+                    return { (start_index + pos), false };
+                }
+                if (cluster_index == last_cluster)
+                    break;
+                cluster_index = this->next_cluster(cluster_index);
+            } while (cluster_index != first_cluster);
+
+            // Found a [EmptyEntry] to insert
+            // Skip to final processing
+        } else {
+            assert(last_cluster != npos);
+            const cluster_type & cluster = this->get_cluster(last_cluster);
+            std::uint32_t maskDeleted = cluster.matchDeleted();
+            if (maskDeleted != 0) {
+                // Found a [DeletedEntry] to insert
+                maskEmpty = maskDeleted;
+            } else {
+                // Found a [EmptyEntry] to insert
+                assert(maskEmpty != 0);
+            }
+        }
+
+        // Get [EmptyEntry] or [DeletedEntry] to insert
+        size_type pos = BitUtils::bsf32(maskEmpty);
+        size_type start_index = last_cluster * kClusterEntries;
+        return { (start_index + pos), false };
     }
 
     template <bool update_always>
@@ -1171,7 +1242,7 @@ private:
                 return { this->iterator_at(target), true };
             } else {
                 // Container is full and there is no anyone empty entry.
-                this->grow();
+                this->grow_if_necessary();
 
                 return this->emplace(std::forward<value_type>(value));
             }
@@ -1217,7 +1288,7 @@ private:
                 return { this->iterator_at(target), true };
             } else {
                 // Container is full and there is no anyone empty entry.
-                this->grow();
+                this->grow_if_necessary();
 
                 return this->emplace(std::forward<KeyT>(key), std::forward<Args>(args)...);
             }
@@ -1265,7 +1336,7 @@ private:
                 return { this->iterator_at(target), true };
             } else {
                 // Container is full and there is no anyone empty entry.
-                this->grow();
+                this->grow_if_necessary();
 
                 return this->emplace(std::forward<PieceWise>(hint),
                                      std::forward<std::tuple<Ts1...>>(first),
@@ -1309,7 +1380,7 @@ private:
                 return { this->iterator_at(target), true };
             } else {
                 // Container is full and there is no anyone empty entry.
-                this->grow();
+                this->grow_if_necessary();
 
                 return this->emplace(std::forward<First>(first), std::forward<Args>(args)...);
             }
