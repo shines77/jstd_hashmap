@@ -30,6 +30,7 @@
 #include <jstd/basic/inttypes.h>
 #include <jstd/type_traits.h>
 #include <jstd/support/Power2.h>
+#include <jstd/system/Console.h>
 #include <jstd/test/Test.h>
 
 //
@@ -534,8 +535,6 @@ int main(int argc, char * argv[])
     next_pow2_test();
     next_power2_test();
 
-#ifdef _WIN32
-    ::system("pause");
-#endif
+    jstd::Console::ReadKey();
     return 0;
 }
