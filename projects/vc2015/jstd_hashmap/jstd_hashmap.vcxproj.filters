@@ -29,6 +29,12 @@
     <Filter Include="src\test">
       <UniqueIdentifier>{196ab926-564f-45e3-85bd-8452f06969d4}</UniqueIdentifier>
     </Filter>
+    <Filter Include="src\string">
+      <UniqueIdentifier>{d115267b-41da-41ed-ac65-81d2986b026c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\hasher">
+      <UniqueIdentifier>{baef719b-01be-4edb-9d0c-2befeb109560}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\src\jstd\basic\msvc\inttypes.h">
@@ -156,6 +162,60 @@
     </ClInclude>
     <ClInclude Include="..\..\..\src\jstd\test\StopWatch.h">
       <Filter>src\test</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\string\string_def.h">
+      <Filter>src\string</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\string\string_helper.h">
+      <Filter>src\string</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\string\string_iterator.h">
+      <Filter>src\string</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\string\string_libc.h">
+      <Filter>src\string</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\string\string_stl.h">
+      <Filter>src\string</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\string\string_traits.h">
+      <Filter>src\string</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\string\string_utils.h">
+      <Filter>src\string</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\string\string_view.h">
+      <Filter>src\string</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\string\string_view_array.h">
+      <Filter>src\string</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\hasher\fnv1a.h">
+      <Filter>src\hasher</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\hasher\hash.h">
+      <Filter>src\hasher</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\hasher\hash_crc32c.h">
+      <Filter>src\hasher</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\hasher\hash_helper.h">
+      <Filter>src\hasher</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\hasher\sha1.h">
+      <Filter>src\hasher</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\string\char_traits.h">
+      <Filter>src\string</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\support\SSEHelper.h">
+      <Filter>src\support</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\iterator.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\support\msvc_x86intrin.h">
+      <Filter>src\support</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

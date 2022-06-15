@@ -110,7 +110,7 @@ std::size_t round_up_pow2(std::size_t n)
     return n;
 }
 
-namespace hash {
+namespace hash_test {
 
 static inline
 std::uint32_t Integal_hash1_u32(std::uint32_t value)
@@ -550,7 +550,7 @@ public:
         }
 
         operator basic_iterator<const non_const_value_type>() const {
-            return { this->entry_ };
+            return { this->control_, this->entry_ };
         }
 
         entry_type * value() {
@@ -619,6 +619,15 @@ public:
     size_type entry_mask() const { return entry_mask_; }
     size_type entry_capacity() const { return (entry_mask_ + 1); }
 
+    constexpr size_type bucket_count() const {
+        return kClusterEntries;
+    }
+
+    constexpr size_type bucket(const key_type & key) const {
+        size_type index = this->find_impl(key);
+        return ((index != npos) ? (index / kClusterEntries) : npos);
+    }
+
     double load_factor() const {
         return this->load_factor_;
     }
@@ -674,6 +683,10 @@ public:
         return this->end();
     }
 
+    static const char * name() {
+        return "jstd::flat16_hash_map<K, V>";
+    }
+
     void clear(bool need_destory = true) noexcept {
         if (this->entry_capacity() > kDefaultCapacity) {
             if (need_destory) {
@@ -689,7 +702,7 @@ public:
 
     void grow_if_necessary() {
         size_type new_capacity = (this->entry_mask_ + 1) * 2;
-        this->rehash(new_capacity);
+        this->rehash_impl<false>(new_capacity);
     }
 
     void reserve(size_type new_capacity) {
@@ -701,6 +714,7 @@ public:
     }
 
     void rehash(size_type new_capacity) {
+        new_capacity = (std::max)(new_capacity, this->entry_size());
         this->rehash_impl<false>(new_capacity);
     }
 
@@ -839,8 +853,8 @@ private:
         return (this->entry_size_ >= this->entry_threshold_);
     }
 
-    inline size_type calc_capacity(size_type capacity) const noexcept {
-        size_type new_capacity = (std::max)(capacity, kMinimumCapacity);
+    inline size_type calc_capacity(size_type init_capacity) const noexcept {
+        size_type new_capacity = (std::max)(init_capacity, kMinimumCapacity);
         if (!pow2::is_pow2(new_capacity)) {
             new_capacity = pow2::round_up<size_type, kMinimumCapacity>(new_capacity);
         }

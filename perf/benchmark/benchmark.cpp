@@ -67,11 +67,8 @@
 #include <jstd/basic/inttypes.h>
 
 #include <jstd/hashmap/flat16_hash_map.h>
-#include <jstd/system/Console.h>
-
-#if 0
-#include <jstd/hash/dictionary.h>
-#include <jstd/hash/hashmap_analyzer.h>
+#include <jstd/hashmap/hashmap_analyzer.h>
+#include <jstd/hasher/hash_helper.h>
 #include <jstd/string/string_view.h>
 #include <jstd/string/string_view_array.h>
 #include <jstd/system/Console.h>
@@ -79,7 +76,6 @@
 #include <jstd/test/StopWatch.h>
 #include <jstd/test/CPUWarmUp.h>
 #include <jstd/test/ProcessMemInfo.h>
-#endif
 
 #include "BenchmarkResult.h"
 
@@ -93,7 +89,7 @@ static bool dict_words_is_ready = false;
 
 static const std::size_t kInitCapacity = 16;
 
-#ifdef NDEBUG
+#ifndef _DEBUG
 static const std::size_t kIterations = 3000000;
 #else
 static const std::size_t kIterations = 1000;
@@ -181,7 +177,7 @@ static const char * header_fields[] = {
     "Last"
 };
 
-#if 0
+#if 1
 
 static const size_t kHeaderFieldSize = sizeof(header_fields) / sizeof(char *);
 
@@ -191,7 +187,7 @@ template <>
 struct hash<jstd::StringRef> {
     typedef std::uint32_t   result_type;
 
-    jstd::string_hash_helper<jstd::StringRef, std::uint32_t, HashFunc_CRC32C> hash_helper_;
+    jstd::string_hash_helper<jstd::StringRef, std::uint32_t, jstd::HashFunc_CRC32C> hash_helper_;
 
     result_type operator()(const jstd::StringRef & key) const {
         return hash_helper_.getHashCode(key);
@@ -206,7 +202,7 @@ template <>
 struct hash<jstd::StringRef> {
     typedef std::uint32_t   result_type;
 
-    jstd::string_hash_helper<jstd::StringRef, std::uint32_t, HashFunc_CRC32C> hash_helper_;
+    jstd::string_hash_helper<jstd::StringRef, std::uint32_t, jstd::HashFunc_CRC32C> hash_helper_;
 
     result_type operator()(const jstd::StringRef & key) const {
         return hash_helper_.getHashCode(key);
@@ -270,10 +266,10 @@ void copy_and_shuffle_vector(Vector & dest_list, const Vector & src_list) {
 }
 
 template <>
-void copy_and_shuffle_vector(string_view_array<string_view, string_view> & dest_list,
-                             const string_view_array<string_view, string_view> & src_list) {
-    typedef typename string_view_array<string_view, string_view>::value_type    value_type;
-    typedef typename std::remove_pointer<value_type>::type                      element_type;
+void copy_and_shuffle_vector(jstd::string_view_array<jstd::string_view, jstd::string_view> & dest_list,
+                             const jstd::string_view_array<jstd::string_view, jstd::string_view> & src_list) {
+    typedef typename jstd::string_view_array<jstd::string_view, jstd::string_view>::value_type value_type;
+    typedef typename std::remove_pointer<value_type>::type element_type;
 
     // copy
     dest_list.clear();
@@ -363,7 +359,7 @@ void test_hashmap_find_sequential(const Vector & test_data,
             if (iter != container.end()) {
                 checksum++;
             }
-#ifndef NDEBUG
+#ifdef _DEBUG
             else {
                 static int err_count = 0;
                 err_count++;
@@ -734,7 +730,7 @@ void test_hashmap_erase_sequential(const Vector & test_data,
         sw.stop();
 
         assert(container.size() == 0);
-#ifndef NDEBUG
+#ifdef _DEBUG
         if (container.size() != 0) {
             static int err_count = 0;
             err_count++;
@@ -859,7 +855,7 @@ void test_hashmap_rehash(const Vector & test_data,
         bucket_counts = 128;
         container.rehash(bucket_counts);
         checksum += container.bucket_count();
-#ifndef NDEBUG
+#ifdef _DEBUG
         static size_t rehash_cnt1 = 0;
         if (rehash_cnt1 < 20) {
             if (container.bucket_count() != bucket_counts) {
@@ -874,7 +870,7 @@ void test_hashmap_rehash(const Vector & test_data,
             bucket_counts *= 2;
             container.rehash(bucket_counts);
             checksum += container.bucket_count();
-#ifndef NDEBUG
+#ifdef _DEBUG
             static size_t rehash_cnt2 = 0;
             if (rehash_cnt2 < 20) {
                 if (container.bucket_count() != bucket_counts) {
@@ -925,7 +921,7 @@ void test_hashmap_rehash2(const Vector & test_data,
         bucket_counts = 128;
         container.rehash(bucket_counts);
         checksum += container.bucket_count();
-#ifndef NDEBUG
+#ifdef _DEBUG
         static size_t rehash_cnt1 = 0;
         if (rehash_cnt1 < 20) {
             if (container.bucket_count() != bucket_counts) {
@@ -940,7 +936,7 @@ void test_hashmap_rehash2(const Vector & test_data,
             bucket_counts *= 2;
             container.rehash(bucket_counts);
             checksum += container.bucket_count();
-#ifndef NDEBUG
+#ifdef _DEBUG
             static size_t rehash_cnt2 = 0;
             if (rehash_cnt2 < 20) {
                 if (container.bucket_count() != bucket_counts) {
@@ -1109,7 +1105,7 @@ void hashmap_benchmark_simple(const std::string & cat_name,
 void hashmap_benchmark_all()
 {
     BenchmarkResult test_result;
-    test_result.setName("std::unordered_map", "jstd::Dictionary");
+    test_result.setName("std::unordered_map", "jstd::flat16_hash_map");
 
     jtest::StopWatch sw;
     sw.start();
@@ -1145,8 +1141,8 @@ void hashmap_benchmark_all()
 
         copy_vector_and_reverse_item(reverse_data_ii, test_data_ii);
 
-        std::unordered_map<int, int> std_map_ii;
-        jstd::Dictionary<int, int>   jstd_dict_ii;
+        std::unordered_map<int, int>    std_map_ii;
+        jstd::flat16_hash_map<int, int> jstd_dict_ii;
 
         printf(" hash_map<int, int>\n\n");
 
@@ -1171,7 +1167,7 @@ void hashmap_benchmark_all()
         copy_vector_and_reverse_item(reverse_data_uu, test_data_uu);
 
         std::unordered_map<std::size_t, std::size_t> std_map_uu;
-        jstd::Dictionary<std::size_t, std::size_t>   jstd_dict_uu;
+        jstd::flat16_hash_map<std::size_t, std::size_t>   jstd_dict_uu;
 
         printf(" hash_map<std::size_t, std::size_t>\n\n");
 
@@ -1184,7 +1180,7 @@ void hashmap_benchmark_all()
 
     {
         std::unordered_map<std::string, std::string> std_map_ss;
-        jstd::Dictionary<std::string, std::string>   jstd_dict_ss;
+        jstd::flat16_hash_map<std::string, std::string>   jstd_dict_ss;
 
         std::vector<std::pair<std::string, std::string>> reverse_data_ss;
         copy_vector_and_reverse_item(reverse_data_ss, test_data_ss);
@@ -1205,8 +1201,8 @@ void hashmap_benchmark_all()
             //
             // std::unordered_map<jstd::string_view, jstd::string_view>
             //
-            typedef string_view_array<jstd::string_view, jstd::string_view> string_view_array_t;
-            typedef typename string_view_array_t::element_type              element_type;
+            typedef jstd::string_view_array<jstd::string_view, jstd::string_view> string_view_array_t;
+            typedef typename string_view_array_t::element_type                    element_type;
 
             string_view_array_t test_data_svsv;
             string_view_array_t reverse_data_svsv;
@@ -1218,8 +1214,8 @@ void hashmap_benchmark_all()
                 reverse_data_svsv.push_back(new element_type(reverse_data_ss[i].first, reverse_data_ss[i].second));
             }
 
-            std::unordered_map<jstd::string_view, jstd::string_view> std_map_svsv;
-            jstd::Dictionary<jstd::string_view, jstd::string_view>   jstd_dict_svsv;
+            std::unordered_map<jstd::string_view, jstd::string_view>    std_map_svsv;
+            jstd::flat16_hash_map<jstd::string_view, jstd::string_view> jstd_dict_svsv;
 
             printf(" hash_map<jstd::string_view, jstd::string_view>\n\n");
 
@@ -1295,7 +1291,7 @@ int main(int argc, char * argv[])
         dict_filename = filename;
     }
 
-    jtest::CPU::warmup(1000);
+    jtest::CPU::warm_up(1000);
 
     hashmap_benchmark_all();
 
@@ -1363,7 +1359,7 @@ uint64_t get_range_u32(uint64_t num)
 
 void IntegalHash_test()
 {
-    jstd::hash::IntegalHash integalHasher;
+    jstd::hash_test::IntegalHash integalHasher;
 
     printf("hash::IntegalHash(uint32_t) sequential\n\n");
     for (std::uint32_t i = 0; i < 16; i++) {
@@ -1552,6 +1548,8 @@ int main(int argc, char * argv[])
     if (1) { flat16_hash_map_int_int_test(); }
     if (1) { flat16_hash_map_int64_string_test(); }
     if (1) { flat16_hash_map_string_string_test(); }
+
+    printf("sizeof(jstd::flat_hash_map<K, V>) = %u\n\n", (uint32_t)sizeof(jstd::flat16_hash_map<int, int>));
 
     return 0;
 }
