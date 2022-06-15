@@ -189,9 +189,9 @@ include_directories(test)
 
 set(JSTD_SOURCE_FILES
     src/jstd/dll_main.cpp
-    src/jstd/system/sleep.c
-    src/jstd/system/getchar.c
-    src/jstd/system/crtdbg_env.c
+    src/jstd/system/sleep.cpp
+    src/jstd/system/getchar.cpp
+    src/jstd/system/crtdbg_env.cpp
 )
 
 set(BENCHMARK_SOURCE_FILES

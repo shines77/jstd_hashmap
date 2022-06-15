@@ -54,14 +54,14 @@ struct integral_traits {
         "Error: jstd::integral_traits<T> -- T must be a integral type.");
 
     // Bits
-    static const size_t bytes = sizeof(T);
-    static const size_t bits = bytes * 8;
-    static const size_t max_shift = bits - 1;
+    static constexpr size_t bytes = sizeof(T);
+    static constexpr size_t bits = bytes * 8;
+    static constexpr size_t max_shift = bits - 1;
 
     // 0xFFFFFFFFUL;
-    static const unsigned_type max_num = static_cast<unsigned_type>(-1);
+    static constexpr unsigned_type max_num = static_cast<unsigned_type>(-1);
     // 0x80000000UL;
-    static const unsigned_type max_power2 = static_cast<unsigned_type>(1) << max_shift;
+    static constexpr unsigned_type max_power2 = static_cast<unsigned_type>(1) << max_shift;
 };
 
 template <typename T>
@@ -80,8 +80,8 @@ constexpr T cmin(const T & a, const T & b) {
 // Trait which can be added to user types to enable use of memcpy.
 //
 // Example:
-// template <>
-// struct is_relocatable<MyType> : std::true_type {};
+//   template <>
+//   struct is_relocatable<MyType> : std::true_type {};
 //
 
 template <typename T>
@@ -121,14 +121,14 @@ using void_t = typename make_void<Ts...>::type;
 // std::remove_xxxx<T> enhance
 //
 template <typename T>
-struct remove_cvr {
+struct remove_cvref {
     typedef typename std::remove_cv<
                 typename std::remove_reference<T>::type
             >::type type;
 };
 
 template <typename T>
-struct remove_cvrp {
+struct remove_cvp_ref {
     typedef typename std::remove_cv<
                 typename std::remove_reference<
                     typename std::remove_pointer<T>::type
@@ -159,7 +159,8 @@ struct remove_all {
 };
 
 template <typename T1, typename T2>
-struct is_same_ex : public std::is_same<typename remove_cvr<T1>::type, T2> {
+struct is_same_ex : public std::is_same<typename remove_cvref<T1>::type,
+                                        typename remove_cvref<T2>::type> {
 };
 
 template <typename T>

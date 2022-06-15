@@ -65,9 +65,9 @@
   <ItemGroup>
     <ClCompile Include="..\..\..\src\jstd\basic\assert-c.c" />
     <ClCompile Include="..\..\..\src\jstd\dll_main.cpp" />
-    <ClCompile Include="..\..\..\src\jstd\system\crtdbg_env.c" />
-    <ClCompile Include="..\..\..\src\jstd\system\getchar.c" />
-    <ClCompile Include="..\..\..\src\jstd\system\sleep.c" />
+    <ClCompile Include="..\..\..\src\jstd\system\crtdbg_env.cpp" />
+    <ClCompile Include="..\..\..\src\jstd\system\getchar.cpp" />
+    <ClCompile Include="..\..\..\src\jstd\system\sleep.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{C9282A5D-9424-4753-B9A4-9EFB2615A3F8}</ProjectGuid>

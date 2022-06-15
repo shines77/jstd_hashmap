@@ -604,7 +604,7 @@ public:
 
     bool is_valid() const { return (this->clusters() != nullptr); }
     bool is_empty() const { return (this->size() == 0); }
-    bool is_full() const  { return (this->size() == this->entry_capacity()); }
+    bool is_full() const  { return (this->size() > this->entry_mask()); }
 
     bool empty() const { return this->is_empty(); }
 

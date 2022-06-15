@@ -26,7 +26,7 @@
 
 namespace jstd {
 
-#if defined(_WIN32) || defined(__cygwin__)
+#if defined(_MSC_VER) || !defined(__clang)
 
 /********************************************************
 
@@ -102,11 +102,20 @@ struct BgColor {
     };
 };
 
-static WORD s_wConsoleAttributes = 0;
+struct StaticConsoleAttr {
+    static WORD getOrSetAttr(bool isSet, WORD newValue = 0) {
+        static WORD s_wConsoleAttributes = 0;
+        if (isSet) {
+            s_wConsoleAttributes = newValue;
+        }
+        return s_wConsoleAttributes;
+    }
+};
 
 //
 // Set windows console text foreground color
 //
+static inline
 BOOL SetConsoleTextFgColor(DWORD fgColor)
 {
     BOOL result = FALSE;
@@ -121,7 +130,8 @@ BOOL SetConsoleTextFgColor(DWORD fgColor)
             WORD wColor = (csbi.wAttributes & 0xF0) | (fgColor & 0x0F);
             result = ::SetConsoleTextAttribute(hStdOut, wColor);
             if (result) {
-                s_wConsoleAttributes = csbi.wAttributes;
+                //s_wConsoleAttributes = csbi.wAttributes;
+                StaticConsoleAttr::getOrSetAttr(true, csbi.wAttributes);
             }
         }
     }
@@ -132,6 +142,7 @@ BOOL SetConsoleTextFgColor(DWORD fgColor)
 //
 // Set windows console text foreground color
 //
+static inline
 BOOL SetConsoleTextBgColor(DWORD bgColor)
 {
     BOOL result = FALSE;
@@ -146,7 +157,8 @@ BOOL SetConsoleTextBgColor(DWORD bgColor)
             WORD wColor = (bgColor & 0xF0) | (csbi.wAttributes & 0x0F);
             result = ::SetConsoleTextAttribute(hStdOut, wColor);
             if (result) {
-                s_wConsoleAttributes = csbi.wAttributes;
+                //s_wConsoleAttributes = csbi.wAttributes;
+                StaticConsoleAttr::getOrSetAttr(true, csbi.wAttributes);
             }
         }
     }
@@ -157,6 +169,7 @@ BOOL SetConsoleTextBgColor(DWORD bgColor)
 //
 // Set windows console text foreground and background color
 //
+static inline
 BOOL SetConsoleTextColor(DWORD fgColor, DWORD bgColor)
 {
     BOOL result = FALSE;
@@ -171,7 +184,8 @@ BOOL SetConsoleTextColor(DWORD fgColor, DWORD bgColor)
             WORD wColor = (bgColor & 0xF0) | (fgColor & 0x0F);
             result = ::SetConsoleTextAttribute(hStdOut, wColor);
             if (result) {
-                s_wConsoleAttributes = csbi.wAttributes;
+                //s_wConsoleAttributes = csbi.wAttributes;
+                StaticConsoleAttr::getOrSetAttr(true, csbi.wAttributes);
             }
         }
     }
@@ -179,6 +193,7 @@ BOOL SetConsoleTextColor(DWORD fgColor, DWORD bgColor)
     return result;
 }
 
+static inline
 BOOL RecoverConsoleTextColor()
 {
     BOOL result = FALSE;
@@ -186,13 +201,14 @@ BOOL RecoverConsoleTextColor()
     // We will need this handle to get the current background attribute
     HANDLE hStdOut = ::GetStdHandle(STD_OUTPUT_HANDLE);
     if (hStdOut != INVALID_HANDLE_VALUE) {
-        result = ::SetConsoleTextAttribute(hStdOut, s_wConsoleAttributes);
+        WORD wConsoleAttributes = StaticConsoleAttr::getOrSetAttr(false);
+        result = ::SetConsoleTextAttribute(hStdOut, wConsoleAttributes);
     }
 
     return result;
 }
 
-#endif // _WIN32
+#endif // _MSC_VER && !__clang__
 
 class Console
 {
@@ -223,11 +239,11 @@ public:
         if (displayTips) {
             printf("Press any key to continue ...");
 
-            keyCode = jstd_getch();
+            keyCode = jstd::getch();
             printf("\n");
         }
         else {
-            keyCode = jstd_getch();
+            keyCode = jstd::getch();
             if (echoInput) {
                 if (keyCode != EOF)
                     printf("%c", (char)keyCode);

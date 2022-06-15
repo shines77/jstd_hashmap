@@ -67,6 +67,7 @@
 #include <jstd/basic/inttypes.h>
 
 #include <jstd/hashmap/flat16_hash_map.h>
+#include <jstd/system/Console.h>
 
 #if 0
 #include <jstd/hash/dictionary.h>
