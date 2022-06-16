@@ -149,7 +149,7 @@
 #define MODE_FAST_SIMPLE_HASH       0   // test::hash<T>
 #define MODE_STD_HASH_FUNCTION      1   // std::hash<T>
 #define MODE_STDEXT_HASH_FUNCTION   2   // stdext::hash_compare<T> or __gnu_cxx::hash<T>
-#define MODE_INTEGAL_HASH_FUNCTION  3   // jstd::hasher::IntegalHash<T>
+#define MODE_INTEGAL_HASH_FUNCTION  3   // test::IntegalHash<T>
 
 #ifdef _MSC_VER
 #define HASH_FUNCTION_MODE          MODE_STD_HASH_FUNCTION
@@ -166,7 +166,7 @@
     #define HASH_MAP_FUNCTION   STDEXT_HASH_NAMESPACE::hash
   #endif
 #elif (HASH_FUNCTION_MODE == MODE_INTEGAL_HASH_FUNCTION)
-  #define HASH_MAP_FUNCTION     jstd::hasher::IntegalHash   // Define in flat16_hash_map.h
+  #define HASH_MAP_FUNCTION     test::IntegalHash
 #else
   #define HASH_MAP_FUNCTION     test::hash
 #endif // HASH_FUNCTION_MODE
@@ -300,6 +300,37 @@ struct hash {
 
     inline result_type operator () (const argument_type & key) const noexcept {
         return static_cast<result_type>(key);
+    }
+};
+
+template <typename T>
+struct IntegalHash
+{
+    typedef T           argument_type;
+    typedef std::size_t result_type;
+
+    template <typename UInt32, typename std::enable_if<
+                                (std::is_integral<UInt32>::value &&
+                                (sizeof(UInt32) <= 4))>::type * = nullptr>
+    result_type operator () (UInt32 value) const noexcept {
+        result_type hash = (result_type)((std::uint32_t)value * 2654435761ul + 16777619ul);
+        return hash;
+    }
+
+    template <typename UInt64, typename std::enable_if<
+                                (std::is_integral<UInt64>::value &&
+                                (sizeof(UInt64) > 4 && sizeof(UInt64) <= 8))>::type * = nullptr>  
+    result_type operator () (UInt64 value) const noexcept {
+        result_type hash = (result_type)((std::uint64_t)value * 14695981039346656037ull + 1099511628211ull);
+        return hash;
+    }
+
+    template <typename Argument, typename std::enable_if<
+                                  (!std::is_integral<Argument>::value ||
+                                  sizeof(Argument) > 8)>::type * = nullptr>  
+    result_type operator () (const Argument & value) const noexcept {
+        std::hash<Argument> hasher;
+        return static_cast<result_type>(hasher(value));
     }
 };
 
@@ -823,9 +854,10 @@ public:
 template <typename Vector>
 void shuffle_vector(Vector & vector) {
     // shuffle
-    ::srand(9);
+    //::srand(9);
+    jstd::RandomGen RandomGen(20200831);
     for (std::size_t n = vector.size(); n >= 2; n--) {
-        std::size_t rnd_idx = std::size_t(next_random_u32()) % n;
+        std::size_t rnd_idx = std::size_t(RandomGen.nextUInt32()) % n;
         std::swap(vector[n - 1], vector[rnd_idx]);
     }
 }
@@ -1489,6 +1521,7 @@ void std_hash_test()
 
 int main(int argc, char * argv[])
 {
+    jstd::RandomGen   RandomGen(20200831);
     jstd::MtRandomGen mtRandomGen(20200831);
 
     std::size_t iters = kDefaultIters;
