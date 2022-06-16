@@ -864,7 +864,7 @@ static void report_result(char const * title, double ut, std::size_t iters,
     }
 
 #if (USE_STAT_COUNTER == 0)
-    printf("%-25s %8.2f ns  %s\n", heap);
+    printf("%-25s %8.2f ns  %s\n", title, (ut * 1000000000.0 / iters), heap);
 #else
   #if USE_CTOR_COUNTER
     printf("%-25s %8.2f ns  (%8" PRIuPTR " hashes, %8" PRIuPTR " copies, %8" PRIuPTR " ctor) %s\n",
