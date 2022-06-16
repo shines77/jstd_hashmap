@@ -737,7 +737,13 @@ public:
     StdHashMap(std::size_t initCapacity) : this_type() {
     }
 
-    void resize(size_t r) { /* Not support */ }
+    void resize(size_t newSize) {
+        /* Not support */
+    }
+
+    void rehash(std::size_t newSize) {
+        this->resize(newSize);
+    }
 };
 
 #else
@@ -765,6 +771,10 @@ public:
 
     void emplace(const ident_type & id, mapped_type && value) {
         this->operator [](id) = std::forward<mapped_type>(value);
+    }
+
+    void rehash(std::size_t newSize) {
+        this->resize(newSize);
     }
 
     // Don't need to do anything: hash_map is already easy to use!
