@@ -1,4 +1,7 @@
 
+#ifndef TIME_HASH_MAP_HPP
+#define TIME_HASH_MAP_HPP
+
 #pragma once
 
 namespace v1 {
@@ -481,3 +484,5 @@ void benchmark_all_hashmaps(std::size_t iters)
 }
 
 } // namespace v1
+
+#endif // TIME_HASH_MAP_HPP

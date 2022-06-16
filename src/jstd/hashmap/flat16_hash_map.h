@@ -119,34 +119,37 @@ std::uint32_t Integal_hash2_u32(std::uint32_t value)
 template <typename T>
 struct IntegalHash
 {
-    typedef T               argument_type;
-    typedef std::size_t     result_type;
+    typedef T           argument_type;
+    typedef std::size_t result_type;
 
-    template <typename UInt32, typename std::enable_if<(std::is_same<UInt32, std::uint32_t>::value &&
-                               !std::is_same<UInt32, std::uint64_t>::value)>::type * = nullptr>    
+    template <typename UInt32, typename std::enable_if<
+                                (std::is_integral<UInt32>::value &&
+                                (sizeof(UInt32) <= 4))>::type * = nullptr>
     result_type operator () (UInt32 value) const noexcept {
         //std::uint32_t hash = value * 16777619ul ^ 2166136261ul;
-        result_type hash = (result_type)value * 2654435761ul + 16777619ul;
+        result_type hash = (result_type)((std::uint32_t)value * 2654435761ul + 16777619ul);
         return hash;
     }
 
-    template <typename UInt64, typename std::enable_if<(!std::is_same<UInt64, std::uint32_t>::value &&
-                               std::is_same<UInt64, std::uint64_t>::value)>::type * = nullptr>   
+    template <typename UInt64, typename std::enable_if<
+                                (std::is_integral<UInt64>::value &&
+                                (sizeof(UInt64) > 4 && sizeof(UInt64) <= 8))>::type * = nullptr>  
     result_type operator () (UInt64 value) const noexcept {
         //std::uint64_t hash = value * 1099511628211ull ^ 14695981039346656037ull;
-        result_type hash = (result_type)(value * 14695981039346656037ull + 1099511628211ull);
+        result_type hash = (result_type)((std::uint64_t)value * 14695981039346656037ull + 1099511628211ull);
         return hash;
     }
 
-    template <typename Argument, typename std::enable_if<(!std::is_same<Argument, std::uint32_t>::value &&
-                                 !std::is_same<Argument, std::uint64_t>::value)>::type * = nullptr>  
+    template <typename Argument, typename std::enable_if<
+                                  (!std::is_integral<Argument>::value ||
+                                  sizeof(Argument) > 8)>::type * = nullptr>  
     result_type operator () (const Argument & value) const noexcept {
         std::hash<Argument> hasher;
         return static_cast<result_type>(hasher(value));
     }
 };
 
-} // namespace hash
+} // namespace hasher
 
 template <std::uint8_t Value>
 struct repeat_u8x4 {
