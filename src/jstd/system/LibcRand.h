@@ -20,6 +20,9 @@
 namespace jstd {
 
 struct LibcRand {
+    typedef std::uint32_t value_type;
+    typedef std::size_t   size_type;
+
     static std::uint32_t rand_max() {
 #if defined(RAND_MAX)
         return static_cast<std::uint32_t>(RAND_MAX);

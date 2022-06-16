@@ -137,16 +137,17 @@ namespace jstd {
 class MT19937
 {
 public:
-    typedef std::size_t value_type;
+    typedef std::uint32_t value_type;
+    typedef std::size_t   size_type;
 
-    static const value_type kMTDefaultSeed = 19650218UL;
-    static const value_type kMTRandMax = 0xFFFFFFFFUL;
+    static const value_type kMTDefaultSeed = 19650218ul;
+    static const value_type kMTRandMax = 0xFFFFFFFFul;
 
-    static const std::size_t N = 624, M = 397;
+    static const size_type N = 624, M = 397;
 
 private:
     value_type * next;
-    std::size_t  left;
+    value_type   left;
     value_type   state[N];
 
 public:
@@ -154,7 +155,7 @@ public:
         this->init(initSeed);
     }
 
-    MT19937(const value_type * init_key, std::size_t key_len, value_type initSeed = kMTDefaultSeed)
+    MT19937(const value_type * init_key, size_type key_len, value_type initSeed = kMTDefaultSeed)
         : next(nullptr), left(1) {
         this->init(init_key, key_len, initSeed);
     }
@@ -177,18 +178,18 @@ private:
             ::time(&timer);
             initSeed = static_cast<value_type>(timer);
         }
-        this->state[0] = initSeed & 0xFFFFFFFFUL;
-        for (std::size_t j = 1; j < N; ++j) {
-            this->state[j] = (1812433253UL * (this->state[j - 1] ^ (this->state[j - 1] >> 30)) + j);
+        this->state[0] = initSeed & 0xFFFFFFFFul;
+        for (size_type j = 1; j < N; ++j) {
+            this->state[j] = (1812433253ul * (this->state[j - 1] ^ (this->state[j - 1] >> 30)) + (value_type)j);
             // See Knuth TAOCP Vol2. 3rd Ed. P.106 for multiplier.
             // In the previous versions, MSBs of the seed affect
             // only MSBs of the array state[].
             // 2002/01/09 modified by Makoto Matsumoto
-            this->state[j] &= 0xFFFFFFFFUL;  // For WORDSIZE > 32 bit machines
+            this->state[j] &= 0xFFFFFFFFul;  // For WORDSIZE > 32 bit machines
         }
     }
 
-    void init(const value_type * init_key, std::size_t key_len, value_type initSeed = kMTDefaultSeed) {
+    void init(const value_type * init_key, size_type key_len, value_type initSeed = kMTDefaultSeed) {
         this->init(initSeed);
         this->init_keys(init_key, key_len);
     }
@@ -203,14 +204,14 @@ private:
     }
 
     template <typename ValueList>
-    void init_keys(const ValueList & init_key, std::size_t key_len) {
-        std::size_t i = 1, j = 0;
-        std::size_t k = (N > key_len) ? N : key_len;
+    void init_keys(const ValueList & init_key, size_type key_len) {
+        size_type i = 1, j = 0;
+        size_type k = (N > key_len) ? N : key_len;
         for (; k > 0; --k) {
             // non linear
             this->state[i] = (this->state[i] ^ ((this->state[i - 1] ^ (this->state[i - 1] >> 30))
-                                                * 1664525UL)) + init_key[j] + j;
-            this->state[i] &= 0xFFFFFFFFUL;   // For WORDSIZE > 32 bit machines
+                                                * 1664525ul)) + init_key[j] + (value_type)j;
+            this->state[i] &= 0xFFFFFFFFul;   // For WORDSIZE > 32 bit machines
             ++i;
             ++j;
             if (i >= N) {
@@ -224,8 +225,8 @@ private:
         for (k = N - 1; k > 0; --k) {
             // non linear
             this->state[i] = (this->state[i] ^ ((this->state[i - 1] ^ (this->state[i - 1] >> 30))
-                                                * 1566083941UL)) - i;
-            this->state[i] &= 0xFFFFFFFFUL;   // For WORDSIZE > 32 bit machines
+                                                * 1566083941ul)) - (value_type)i;
+            this->state[i] &= 0xFFFFFFFFul;   // For WORDSIZE > 32 bit machines
             ++i;
             if (i >= N) {
                 this->state[0] = this->state[N - 1];
@@ -233,31 +234,31 @@ private:
             }
         }
 
-        this->state[0] = 0x80000000UL;    // MSB is 1; assuring non-zero initial array
+        this->state[0] = 0x80000000ul;    // MSB is 1; assuring non-zero initial array
     };
 
     void next_state() {
         value_type * p = &this->state[0];
 
-        for (std::size_t i = N - M + 1; --i; ++p) {
+        for (size_type i = N - M + 1; --i; ++p) {
             *p = (p[M] ^ this->twist(p[0], p[1]));
         }
 
-        for (std::size_t i = M; --i; ++p) {
+        for (size_type i = M; --i; ++p) {
             *p = (p[M - N] ^ this->twist(p[0], p[1]));
         }
 
         *p = p[M - N] ^ this->twist(p[0], this->state[0]);
-        this->left = N;
+        this->left = (value_type)N;
         this->next = &this->state[0];
     }
 
     value_type mixbits(value_type u, value_type v) const {
-        return (u & 0x80000000UL) | (v & 0x7FFFFFFFUL);
+        return (u & 0x80000000ul) | (v & 0x7FFFFFFFul);
     }
 
     value_type twist(value_type u, value_type v) const {
-        return ((this->mixbits(u, v) >> 1) ^ ((v & 1UL) ? 2567483615UL : 0UL));
+        return ((this->mixbits(u, v) >> 1) ^ ((v & 1ul) ? 2567483615ul : 0ul));
     }
 
 public:
@@ -266,7 +267,7 @@ public:
         this->next_state();
     }
 
-    void srand(const value_type * init_key, std::size_t key_len, value_type initSeed = kMTDefaultSeed) {
+    void srand(const value_type * init_key, size_type key_len, value_type initSeed = kMTDefaultSeed) {
         this->init(init_key, key_len, initSeed);
         this->next_state();
     }
@@ -282,15 +283,15 @@ public:
             this->next_state();
         }
 
-        if (next != nullptr)
+        if (this->next != nullptr)
             y = *(this->next++);
         else
             y = static_cast<value_type>(LibcRand::rand32());
 
         // Tempering
         y ^= (y >> 11);
-        y ^= (y <<  7) & 0x9d2c5680UL;
-        y ^= (y << 15) & 0xefc60000UL;
+        y ^= (y <<  7) & 0x9d2c5680ul;
+        y ^= (y << 15) & 0xefc60000ul;
         y ^= (y >> 18);
         return y;
     }
@@ -305,12 +306,12 @@ public:
 
     std::int64_t nextInt64() {
         return static_cast<std::int64_t>(((std::uint64_t)this->nextUInt32() << 32) |
-                                          (this->nextUInt32() & 0xFFFFFFFFUL));
+                                          (this->nextUInt32() & 0xFFFFFFFFul));
     }
 
     std::uint64_t nextUInt64() {
         return static_cast<std::uint64_t>(((std::uint64_t)this->nextUInt32() << 32) |
-                                           (this->nextUInt32() & 0xFFFFFFFFUL));
+                                           (this->nextUInt32() & 0xFFFFFFFFul));
     }
 };
 

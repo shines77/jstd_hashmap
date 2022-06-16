@@ -736,7 +736,7 @@ template <typename Vector>
 void shuffle_vector(Vector & vector) {
     // shuffle
     ::srand(9);
-    for (std::size_t n = vector->size(); n >= 2; n--) {
+    for (std::size_t n = vector.size(); n >= 2; n--) {
         std::size_t rnd_idx = std::size_t(next_random_u32()) % n;
         std::swap(vector[n - 1], vector[rnd_idx]);
     }
@@ -747,7 +747,7 @@ void shuffle_vector(Vector & vector) {
 template <typename Vector>
 void shuffle_vector(Vector & vector) {
     // shuffle
-    for (std::size_t n = vector->size() - 1; n > 0; n--) {
+    for (std::size_t n = vector.size() - 1; n > 0; n--) {
         std::size_t rnd_idx = jstd::MtRandomGen::nextUInt32(static_cast<std::uint32_t>(n));
         std::swap(vector[n], vector[rnd_idx]);
     }
