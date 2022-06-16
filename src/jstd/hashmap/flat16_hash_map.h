@@ -240,7 +240,7 @@ public:
     // kDefaultCapacity must be >= kMinimumCapacity
     static constexpr size_type kDefaultCapacity = 4;
 
-    static constexpr float kDefaultLoadFactor = 0.75;
+    static constexpr float kDefaultLoadFactor = 0.5;
     static constexpr float kMaxLoadFactor = 1.0;
 
     struct bitmask128_t {
