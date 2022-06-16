@@ -1,3 +1,4 @@
+
 /************************************************************************************
 
   CC BY-SA 4.0 License
@@ -123,7 +124,7 @@ struct IntegalHash
 
     template <typename UInt32, typename std::enable_if<(std::is_same<UInt32, std::uint32_t>::value &&
                                !std::is_same<UInt32, std::uint64_t>::value)>::type * = nullptr>    
-    result_type operator () (UInt32 value) const {
+    result_type operator () (UInt32 value) const noexcept {
         //std::uint32_t hash = value * 16777619ul ^ 2166136261ul;
         result_type hash = (result_type)value * 2654435761ul + 16777619ul;
         return hash;
@@ -131,7 +132,7 @@ struct IntegalHash
 
     template <typename UInt64, typename std::enable_if<(!std::is_same<UInt64, std::uint32_t>::value &&
                                std::is_same<UInt64, std::uint64_t>::value)>::type * = nullptr>   
-    result_type operator () (UInt64 value) const {
+    result_type operator () (UInt64 value) const noexcept {
         //std::uint64_t hash = value * 1099511628211ull ^ 14695981039346656037ull;
         result_type hash = (result_type)(value * 14695981039346656037ull + 1099511628211ull);
         return hash;
@@ -139,7 +140,7 @@ struct IntegalHash
 
     template <typename Argument, typename std::enable_if<(!std::is_same<Argument, std::uint32_t>::value &&
                                  !std::is_same<Argument, std::uint64_t>::value)>::type * = nullptr>  
-    result_type operator () (const Argument & value) const {
+    result_type operator () (const Argument & value) const noexcept {
         std::hash<Argument> hasher;
         return static_cast<result_type>(hasher(value));
     }
@@ -618,7 +619,7 @@ public:
         }
 
         friend bool operator != (const basic_iterator & lhs, const basic_iterator & rhs) {
-            return !(lhs == rhs);
+            return (lhs.entry_ != rhs.entry_);
         }
 
         basic_iterator & operator ++ () {
@@ -672,8 +673,6 @@ private:
 
     hasher_type     hasher_;
     key_equal       key_equal_;
-
-    hasher::IntegalHash<key_type> integalHasher_;
 
     allocator_type          value_allocator_;
     entry_allocator_type    entry_allocator_;
@@ -1266,7 +1265,6 @@ private:
         }
     }
 
-    JSTD_FORCED_INLINE
     size_type find_impl(const key_type & key) const {
         hash_code_t hash_code = this->get_hash(key);
         hash_code_t hash_code_2nd = this->get_second_hash(hash_code);
@@ -1295,7 +1293,6 @@ private:
         return npos;
     }
 
-    JSTD_FORCED_INLINE
     size_type find_impl(const key_type & key, index_type & first_cluster,
                         index_type & last_cluster, std::uint8_t & ctrl_hash) const {
         hash_code_t hash_code = this->get_hash(key);
@@ -1330,7 +1327,6 @@ private:
         return npos;
     }
 
-    JSTD_FORCED_INLINE
     std::pair<size_type, bool>
     find_and_prepare_insert(const key_type & key, std::uint8_t & ctrl_hash) {
         hash_code_t hash_code = this->get_hash(key);
@@ -1367,7 +1363,7 @@ private:
             // The size of entry reach the entry threshold or hashmap is full.
             this->grow_if_necessary();
 
-            return find_and_prepare_insert(key, ctrl_hash);
+            return this->find_and_prepare_insert(key, ctrl_hash);
         }
 
         // Find the first non-used entry and insert

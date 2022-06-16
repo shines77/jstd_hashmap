@@ -1,4 +1,52 @@
 
+/************************************************************************************
+
+  CC BY-SA 4.0 License
+
+  Copyright (c) 2020-2022 XiongHui Guo (gz_shines@msn.com)
+
+  https://github.com/shines77/jstd_hash_map
+  https://gitee.com/shines77/jstd_hash_map
+
+*************************************************************************************
+
+  CC Attribution-ShareAlike 4.0 International
+
+  https://creativecommons.org/licenses/by-sa/4.0/deed.en
+
+  You are free to:
+
+    1. Share -- copy and redistribute the material in any medium or format.
+
+    2. Adapt -- remix, transforn, and build upon the material for any purpose,
+    even commerically.
+
+    The licensor cannot revoke these freedoms as long as you follow the license terms.
+
+  Under the following terms:
+
+    * Attribution -- You must give appropriate credit, provide a link to the license,
+    and indicate if changes were made. You may do so in any reasonable manner,
+    but not in any way that suggests the licensor endorses you or your use.
+
+    * ShareAlike -- If you remix, transform, or build upon the material, you must
+    distribute your contributions under the same license as the original.
+
+    * No additional restrictions -- You may not apply legal terms or technological
+    measures that legally restrict others from doing anything the license permits.
+
+  Notices:
+
+    * You do not have to comply with the license for elements of the material
+    in the public domain or where your use is permitted by an applicable exception
+    or limitation.
+
+    * No warranties are given. The license may not give you all of the permissions
+    necessary for your intended use. For example, other rights such as publicity,
+    privacy, or moral rights may limit how you use the material.
+
+************************************************************************************/
+
 #ifdef _MSC_VER
 #include <jstd/basic/vld.h>
 #endif
@@ -94,11 +142,16 @@
 
 #define USE_CTOR_COUNTER            0
 
-#define MODE_FAST_SIMPLE_HASH       0   // test::hash<T>()
-#define MODE_STD_HASH_FUNCTION      1   // std::hash<T>()
-#define MODE_STDEXT_HASH_FUNCTION   2   // stdext::hash_compare<T>() or __gnu_cxx::hash<T>()
+#define MODE_FAST_SIMPLE_HASH       0   // test::hash<T>
+#define MODE_STD_HASH_FUNCTION      1   // std::hash<T>
+#define MODE_STDEXT_HASH_FUNCTION   2   // stdext::hash_compare<T> or __gnu_cxx::hash<T>
+#define MODE_INTEGAL_HASH_FUNCTION  3   // jstd::hasher::IntegalHash<T>
 
+#ifdef _MSC_VER
 #define HASH_FUNCTION_MODE          MODE_STD_HASH_FUNCTION
+#else
+#define HASH_FUNCTION_MODE          MODE_INTEGAL_HASH_FUNCTION
+#endif
 
 #if (HASH_FUNCTION_MODE == MODE_STD_HASH_FUNCTION)
   #define HASH_MAP_FUNCTION     std::hash
@@ -108,6 +161,8 @@
   #else
     #define HASH_MAP_FUNCTION   STDEXT_HASH_NAMESPACE::hash
   #endif
+#elif (HASH_FUNCTION_MODE == MODE_INTEGAL_HASH_FUNCTION)
+  #define HASH_MAP_FUNCTION     jstd::hasher::IntegalHash   // Define in flat16_hash_map.h
 #else
   #define HASH_MAP_FUNCTION     test::hash
 #endif // HASH_FUNCTION_MODE
@@ -131,7 +186,7 @@ static const bool FLAGS_test_8_bytes = true;
 static const bool FLAGS_test_16_bytes = true;
 static const bool FLAGS_test_256_bytes = true;
 
-#ifdef NDEBUG
+#ifndef _DEBUG
 static const std::size_t kDefaultIters = 10000000;
 #else
 static const std::size_t kDefaultIters = 10000;
@@ -232,8 +287,11 @@ namespace test {
 
 template <typename Key>
 struct hash {
-    std::size_t operator () (const Key & key) const {
-        return static_cast<std::size_t>(key);
+    typedef Key         argument_type;
+    typedef std::size_t result_type;
+
+    inline result_type operator () (const argument_type & key) const noexcept {
+        return static_cast<result_type>(key);
     }
 };
 
