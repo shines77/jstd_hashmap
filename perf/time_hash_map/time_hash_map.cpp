@@ -140,7 +140,11 @@
 #define PRINT_MACRO(x)          PRINT_MACRO_HELPER(x)
 #define PRINT_MACRO_VAR(x)      #x " = " PRINT_MACRO_HELPER(x)
 
-#define USE_CTOR_COUNTER            0
+#define USE_STAT_COUNTER            0
+
+#if USE_STAT_COUNTER
+#define USE_CTOR_COUNTER            1
+#endif
 
 #define MODE_FAST_SIMPLE_HASH       0   // test::hash<T>
 #define MODE_STD_HASH_FUNCTION      1   // std::hash<T>
@@ -200,18 +204,22 @@ static const std::size_t kInitCapacity = 8;
 // (1) making HashObject bigger than it ought to be (this is very
 // important for our testing), and (2) having to pass around
 // HashObject objects everywhere, which is annoying.
+#if USE_STAT_COUNTER
 static std::size_t g_num_hashes = 0;
 static std::size_t g_num_copies = 0;
 #if USE_CTOR_COUNTER
 static std::size_t g_num_constructor = 0;
 #endif
+#endif
 
 static void reset_counter()
 {
+#if USE_STAT_COUNTER
     g_num_hashes = 0;
     g_num_copies = 0;
 #if USE_CTOR_COUNTER
     g_num_constructor = 0;
+#endif
 #endif
 }
 
@@ -324,13 +332,13 @@ private:
 public:
     HashObject() : key_(0) {
         std::memset(this->buffer_, 0, sizeof(char) * kBufLen);
-#if USE_CTOR_COUNTER
+#if (USE_STAT_COUNTER != 0) && (USE_CTOR_COUNTER != 0)
         g_num_constructor++;
 #endif
     }
     HashObject(key_type key) : key_(key) {
         std::memset(this->buffer_, (int)(key & 0xFFUL), sizeof(char) * kBufLen);   // a "random" char
-#if USE_CTOR_COUNTER
+#if (USE_STAT_COUNTER != 0) && (USE_CTOR_COUNTER != 0)
         g_num_constructor++;
 #endif
     }
@@ -339,7 +347,9 @@ public:
     }
 
     void operator = (const this_type & that) {
+#if USE_STAT_COUNTER
         g_num_copies++;
+#endif
         this->key_ = that.key_;
         std::memcpy(this->buffer_, that.buffer_, sizeof(char) * kBufLen);
     }
@@ -349,7 +359,9 @@ public:
     }
 
     std::size_t Hash() const {
+#if USE_STAT_COUNTER
         g_num_hashes++;
+#endif
         std::size_t hash_val = static_cast<std::size_t>(this->key_);
 #if 1
         for (std::size_t i = 0; i < kHashLen; ++i) {
@@ -402,12 +414,12 @@ private:
 
 public:
     HashObject() : key_(0) {
-#if USE_CTOR_COUNTER
+#if (USE_STAT_COUNTER != 0) && (USE_CTOR_COUNTER != 0)
         g_num_constructor++;
 #endif
     }
     HashObject(std::uint32_t key) : key_(key) {
-#if USE_CTOR_COUNTER
+#if (USE_STAT_COUNTER != 0) && (USE_CTOR_COUNTER != 0)
         g_num_constructor++;
 #endif
     }
@@ -416,7 +428,9 @@ public:
     }
 
     void operator = (const this_type & that) {
+#if USE_STAT_COUNTER
         g_num_copies++;
+#endif
         this->key_ = that.key_;
     }
 
@@ -425,7 +439,9 @@ public:
     }
 
     std::size_t Hash() const {
+#if USE_STAT_COUNTER
         g_num_hashes++;
+#endif
         return static_cast<std::size_t>(
             HASH_MAP_FUNCTION<std::uint32_t>()(this->key_)
         );
@@ -473,12 +489,12 @@ private:
 
 public:
     HashObject() : key_(0) {
-#if USE_CTOR_COUNTER
+#if (USE_STAT_COUNTER != 0) && (USE_CTOR_COUNTER != 0)
         g_num_constructor++;
 #endif
     }
     HashObject(std::size_t key) : key_(key) {
-#if USE_CTOR_COUNTER
+#if (USE_STAT_COUNTER != 0) && (USE_CTOR_COUNTER != 0)
         g_num_constructor++;
 #endif
     }
@@ -487,7 +503,9 @@ public:
     }
 
     void operator = (const this_type & that) {
+#if USE_COPIES_COUNTER
         g_num_copies++;
+#endif
         this->key_ = that.key_;
     }
 
@@ -496,7 +514,9 @@ public:
     }
 
     std::size_t Hash() const {
+#if USE_HASHER_COUNTER
         g_num_hashes++;
+#endif
         return static_cast<std::size_t>(
             HASH_MAP_FUNCTION<std::size_t>()(this->key_)
         );
@@ -843,16 +863,20 @@ static void report_result(char const * title, double ut, std::size_t iters,
                  (end_memory - start_memory) / 1048576.0);
     }
 
-#if USE_CTOR_COUNTER
+#if (USE_STAT_COUNTER == 0)
+    printf("%-25s %8.2f ns  %s\n", heap);
+#else
+  #if USE_CTOR_COUNTER
     printf("%-25s %8.2f ns  (%8" PRIuPTR " hashes, %8" PRIuPTR " copies, %8" PRIuPTR " ctor) %s\n",
            title, (ut * 1000000000.0 / iters),
            g_num_hashes, g_num_copies, g_num_constructor,
            heap);
-#else
+  #else
     printf("%-25s %8.2f ns  (%8" PRIuPTR " hashes, %8" PRIuPTR " copies) %s\n",
            title, (ut * 1000000000.0 / iters),
            g_num_hashes, g_num_copies,
            heap);
+  #endif
 #endif
     ::fflush(stdout);
 }
