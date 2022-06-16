@@ -172,6 +172,62 @@ static size_t CurrentMemoryUsage()
 }
 #endif
 
+static inline
+uint32_t next_random_u32()
+{
+#if (RAND_MAX == 0x7FFF)
+    uint32_t rnd32 = (((uint32_t)rand() & 0x03) << 30) |
+                      ((uint32_t)rand() << 15) |
+                       (uint32_t)rand();
+#else
+    uint32_t rnd32 = ((uint32_t)rand() << 16) | (uint32_t)rand();
+#endif
+    return rnd32;
+}
+
+static inline
+uint64_t next_random_u64()
+{
+#if (RAND_MAX == 0x7FFF)
+    uint64_t rnd64 = (((uint64_t)rand() & 0x0F) << 60) |
+                      ((uint64_t)rand() << 45) |
+                      ((uint64_t)rand() << 30) |
+                      ((uint64_t)rand() << 15) |
+                       (uint64_t)rand();
+#else
+    uint64_t rnd64 = ((uint64_t)rand() << 32) | (uint64_t)rand();
+#endif
+    return rnd64;
+}
+
+// Returns a number in the range [min, max) - uint32
+template <uint32_t min_val, uint32_t max_val>
+static inline
+uint32_t get_range_u32(uint32_t num)
+{
+    if (min_val < max_val) {
+        return (min_val + (num % (uint32_t)(max_val - min_val)));
+    } else if (min_val > max_val) {
+        return (max_val + (num % (uint32_t)(min_val - max_val)));
+    } else {
+        return num;
+    }
+}
+
+// Returns a number in the range [min, max) - uint64
+template <uint64_t min_val, uint64_t max_val>
+static inline
+uint64_t get_range_u32(uint64_t num)
+{
+    if (min_val < max_val) {
+        return (min_val + (num % (uint64_t)(max_val - min_val)));
+    } else if (min_val > max_val) {
+        return (max_val + (num % (uint64_t)(min_val - max_val)));
+    } else {
+        return num;
+    }
+}
+
 namespace test {
 
 template <typename Key>
@@ -313,7 +369,7 @@ public:
     std::size_t Hash() const {
         g_num_hashes++;
         return static_cast<std::size_t>(
-            HASH_MAP_FUNCTION<std::size_t>()(this->key_)
+            HASH_MAP_FUNCTION<std::uint32_t>()(this->key_)
         );
     }
 
@@ -434,26 +490,6 @@ public:
     static const std::size_t bucket_size = 4;
     static const std::size_t min_buckets = 8;
 
-    //result_type operator () (const hash_object_t & obj) const {
-    //    return static_cast<result_type>(obj.Hash());
-    //}
-
-    //// Do the identity hash for pointers.
-    //result_type operator () (const hash_object_t * obj) const {
-    //    return reinterpret_cast<result_type>(obj);
-    //}
-
-    //// Less operator for MSVC's hash containers.
-    //bool operator () (const hash_object_t & a,
-    //                  const hash_object_t & b) const {
-    //    return (a < b);
-    //}
-
-    //bool operator () (const hash_object_t * a,
-    //                  const hash_object_t * b) const {
-    //    return (a < b);
-    //}
-
     result_type operator () (const argument_type & obj) const {
         return static_cast<result_type>(obj.Hash());
     }
@@ -565,6 +601,12 @@ namespace std {
 
 // is_trivially_copyable
 
+template <std::size_t Size, std::size_t HashSize>
+struct is_trivially_copyable< HashObject<std::uint32_t, Size, HashSize> > : true_type { };
+
+template <std::size_t Size, std::size_t HashSize>
+struct is_trivially_copyable< HashObject<std::size_t, Size, HashSize> > : true_type { };
+
 template <>
 struct is_trivially_copyable< HashObject<std::uint32_t, 4, 4> > : true_type { };
 
@@ -578,6 +620,12 @@ template <>
 struct is_trivially_copyable< HashObject<std::size_t, 256, 32> > : true_type { };
 
 // is_trivially_destructible
+
+template <std::size_t Size, std::size_t HashSize>
+struct is_trivially_destructible< HashObject<std::uint32_t, Size, HashSize> > : true_type { };
+
+template <std::size_t Size, std::size_t HashSize>
+struct is_trivially_destructible< HashObject<std::size_t, Size, HashSize> > : true_type { };
 
 template <>
 struct is_trivially_destructible< HashObject<std::uint32_t, 4, 4> > : true_type { };
@@ -638,12 +686,12 @@ public:
 
 template <typename T>
 struct get_ident_type {
-    typedef typename T::key_type  ident_type;
+    typedef typename T::key_type ident_type;
 };
 
 template <typename T>
 struct get_ident_type<T *> {
-    typedef T *  ident_type;
+    typedef T * ident_type;
 };
 
 template <typename Key, typename Value, typename Hasher>
@@ -683,24 +731,25 @@ public:
 
 #if 1
 
+// Apply a pseudorandom permutation to the given vector.
 template <typename Vector>
-void shuffle_vector(Vector * vector) {
+void shuffle_vector(Vector & vector) {
     // shuffle
     ::srand(9);
     for (std::size_t n = vector->size(); n >= 2; n--) {
-        std::size_t rnd_idx = std::size_t(::rand()) % n;
-        std::swap((*vector)[n - 1], (*vector)[rnd_idx]);
+        std::size_t rnd_idx = std::size_t(next_random_u32()) % n;
+        std::swap(vector[n - 1], vector[rnd_idx]);
     }
 }
 
 #else
 
 template <typename Vector>
-void shuffle_vector(Vector * vector) {
+void shuffle_vector(Vector & vector) {
     // shuffle
     for (std::size_t n = vector->size() - 1; n > 0; n--) {
         std::size_t rnd_idx = jstd::MtRandomGen::nextUInt32(static_cast<std::uint32_t>(n));
-        std::swap((*vector)[n], (*vector)[rnd_idx]);
+        std::swap(vector[n], vector[rnd_idx]);
     }
 }
 
@@ -787,7 +836,7 @@ static void time_map_find_random(std::size_t iters) {
         v[i] = i + 1;
     }
 
-    shuffle_vector(&v);
+    shuffle_vector(v);
 
     time_map_find<MapType>("map_find_random", iters, v);
 }
@@ -1274,7 +1323,7 @@ static void time_map_find_random(std::size_t iters) {
         v[i] = i + 1;
     }
 
-    shuffle_vector(&v);
+    shuffle_vector(v);
 
     time_map_find<MapType>("map_find_random", iters, v);
 }
@@ -1731,6 +1780,23 @@ void benchmark_all_hashmaps(std::size_t iters)
 
 } // namespace v2
 
+void std_hash_test()
+{
+    printf("std::hash<std::uint32_t>\n\n");
+    for(std::uint32_t i = 0; i < 8; i++) {
+        std::size_t hash_code = HASH_MAP_FUNCTION<std::uint32_t>()(i);
+        printf("key = %3u, hash_code = %" PRIu64 "\n", i, hash_code);
+    }
+    printf("\n");
+
+    printf("std::hash<std::size_t>\n\n");
+    for(std::size_t i = 0; i < 8; i++) {
+        std::size_t hash_code = HASH_MAP_FUNCTION<std::size_t>()(i);
+        printf("key = %3" PRIu64 ", hash_code = %" PRIu64 "\n", i, hash_code);
+    }
+    printf("\n");
+}
+
 int main(int argc, char * argv[])
 {
     jstd::MtRandomGen mtRandomGen(20200831);
@@ -1744,6 +1810,8 @@ int main(int argc, char * argv[])
     jtest::CPU::warm_up(1000);
 
     printf("#define HASH_MAP_FUNCTION = %s\n\n", PRINT_MACRO(HASH_MAP_FUNCTION));
+
+    if (1) std_hash_test();
 
     if (1) {
         printf("------------------------ v1::benchmark_all_hashmaps(iters) -------------------------\n\n");

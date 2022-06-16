@@ -850,27 +850,27 @@ public:
 
     mapped_type & operator [] (const key_type & key) {
         size_type index = this->find_impl(key);
-        if (index != npos) {
-            entry_type * entry = this->entry_at(index);
-            return entry->second;
-        } else {
+        if (index == npos) {
             auto result = this->emplace(std::piecewise_construct,
                                         std::forward_as_tuple(key), std::tuple<>());
             assert(result.second == true);
             return result.first->second;
+        } else {
+            entry_type * entry = this->entry_at(index);
+            return entry->second;
         }
     }
 
     mapped_type & operator [] (key_type && key) {
         size_type index = this->find_impl(key);
-        if (index != npos) {
-            entry_type * entry = this->entry_at(index);
-            return entry->second;
-        } else {
+        if (index == npos) {
             auto result = this->emplace(std::piecewise_construct,
                                         std::forward_as_tuple(std::forward<key_type>(key)), std::tuple<>());
             assert(result.second == true);
             return result.first->second;
+        } else {
+            entry_type * entry = this->entry_at(index);
+            return entry->second;
         }
     }
 
