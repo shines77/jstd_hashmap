@@ -844,12 +844,12 @@ static void report_result(char const * title, double ut, std::size_t iters,
     }
 
 #if USE_CTOR_COUNTER
-    printf("%-24s %8.2f ns  (%8" PRIuPTR " hashes, %8" PRIuPTR " copies, %8" PRIuPTR " ctor) %s\n",
+    printf("%-25s %8.2f ns  (%8" PRIuPTR " hashes, %8" PRIuPTR " copies, %8" PRIuPTR " ctor) %s\n",
            title, (ut * 1000000000.0 / iters),
            g_num_hashes, g_num_copies, g_num_constructor,
            heap);
 #else
-    printf("%-24s %8.2f ns  (%8" PRIuPTR " hashes, %8" PRIuPTR " copies) %s\n",
+    printf("%-25s %8.2f ns  (%8" PRIuPTR " hashes, %8" PRIuPTR " copies) %s\n",
            title, (ut * 1000000000.0 / iters),
            g_num_hashes, g_num_copies,
            heap);
