@@ -140,7 +140,7 @@
 #define PRINT_MACRO(x)          PRINT_MACRO_HELPER(x)
 #define PRINT_MACRO_VAR(x)      #x " = " PRINT_MACRO_HELPER(x)
 
-#define USE_STAT_COUNTER            0
+#define USE_STAT_COUNTER            1
 
 #if USE_STAT_COUNTER
 #define USE_CTOR_COUNTER            1
