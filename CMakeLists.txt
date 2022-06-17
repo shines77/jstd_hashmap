@@ -259,7 +259,7 @@ if (NOT MSVC)
     # For gcc or clang warning setting
     target_compile_options(benchmark
         PUBLIC
-            -O3 -DNDEBUG -march=native -mtune=native -Wall -Wno-unused-function -Wno-deprecated-declarations -Wno-unused-variable -Wno-deprecated -faligned-new
+            -Wall -Wno-unused-function -Wno-deprecated-declarations -Wno-unused-variable -Wno-deprecated -faligned-new
     )
 else()
     # Warning level 3 and all warnings as errors
@@ -284,7 +284,7 @@ if (NOT MSVC)
     # For gcc or clang warning setting
     target_compile_options(time_hash_map
         PUBLIC
-            -O3 -DNDEBUG -march=native -mtune=native -Wall -Wno-unused-function -Wno-deprecated-declarations -Wno-unused-variable -Wno-deprecated -faligned-new
+            -Wall -Wno-unused-function -Wno-deprecated-declarations -Wno-unused-variable -Wno-deprecated -faligned-new
     )
 else()
     # Warning level 3 and all warnings as errors
