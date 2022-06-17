@@ -1,6 +1,6 @@
 
-#ifndef TIME_HASH_MAP_HPP
-#define TIME_HASH_MAP_HPP
+#ifndef TIME_HASH_MAP_V1_HPP
+#define TIME_HASH_MAP_V1_HPP
 
 #pragma once
 
@@ -130,7 +130,7 @@ static void time_map_insert_predicted(std::size_t iters) {
     std::uint32_t max_iters = static_cast<std::uint32_t>(iters);
     const std::size_t start = CurrentMemoryUsage();
 
-    hashmap.resize(iters);
+    hashmap.rehash(iters);
 
     reset_counter();
     sw.start();
@@ -196,7 +196,7 @@ static void time_map_emplace_predicted(std::size_t iters) {
     std::uint32_t max_iters = static_cast<std::uint32_t>(iters);
     const std::size_t start = CurrentMemoryUsage();
 
-    hashmap.resize(iters);
+    hashmap.rehash(iters);
 
     reset_counter();
     sw.start();
@@ -346,7 +346,7 @@ static void stress_hash_function(std::size_t desired_insertions,
     MapType hashmap(kInitCapacity);
     for (uint32_t o = 0; o < k; o++) {
         hashmap.clear();
-        hashmap.resize(map_size);
+        hashmap.rehash(map_size);
         sw.start();
         const uint32_t maxint = (1ull << (sizeof(uint32_t) * 8 - 1)) - 1;
         // Use n arithmetic sequences.  Using just one may lead to overflow
@@ -443,8 +443,8 @@ static void test_all_hashmaps(std::size_t obj_size, std::size_t iters) {
     }
 
     if (FLAGS_test_std_unordered_map) {
-        measure_hashmap<StdUnorderedMap<HashObj,   Value, HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>,
-                        StdUnorderedMap<HashObj *, Value, HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>
+        measure_hashmap<std::unordered_map<HashObj,   Value, HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>,
+                        std::unordered_map<HashObj *, Value, HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>
                         >(
             "std::unordered_map<K, V>", obj_size, 0, iters, is_stress_hash_function);
     }
@@ -485,4 +485,4 @@ void benchmark_all_hashmaps(std::size_t iters)
 
 } // namespace v1
 
-#endif // TIME_HASH_MAP_HPP
+#endif // TIME_HASH_MAP_V1_HPP

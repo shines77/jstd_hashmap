@@ -235,62 +235,6 @@ static size_t CurrentMemoryUsage()
 }
 #endif
 
-static inline
-uint32_t next_random_u32()
-{
-#if (RAND_MAX == 0x7FFF)
-    uint32_t rnd32 = (((uint32_t)rand() & 0x03) << 30) |
-                      ((uint32_t)rand() << 15) |
-                       (uint32_t)rand();
-#else
-    uint32_t rnd32 = ((uint32_t)rand() << 16) | (uint32_t)rand();
-#endif
-    return rnd32;
-}
-
-static inline
-uint64_t next_random_u64()
-{
-#if (RAND_MAX == 0x7FFF)
-    uint64_t rnd64 = (((uint64_t)rand() & 0x0F) << 60) |
-                      ((uint64_t)rand() << 45) |
-                      ((uint64_t)rand() << 30) |
-                      ((uint64_t)rand() << 15) |
-                       (uint64_t)rand();
-#else
-    uint64_t rnd64 = ((uint64_t)rand() << 32) | (uint64_t)rand();
-#endif
-    return rnd64;
-}
-
-// Returns a number in the range [min, max) - uint32
-template <uint32_t min_val, uint32_t max_val>
-static inline
-uint32_t get_range_u32(uint32_t num)
-{
-    if (min_val < max_val) {
-        return (min_val + (num % (uint32_t)(max_val - min_val)));
-    } else if (min_val > max_val) {
-        return (max_val + (num % (uint32_t)(min_val - max_val)));
-    } else {
-        return num;
-    }
-}
-
-// Returns a number in the range [min, max) - uint64
-template <uint64_t min_val, uint64_t max_val>
-static inline
-uint64_t get_range_u32(uint64_t num)
-{
-    if (min_val < max_val) {
-        return (min_val + (num % (uint64_t)(max_val - min_val)));
-    } else if (min_val > max_val) {
-        return (max_val + (num % (uint64_t)(min_val - max_val)));
-    } else {
-        return num;
-    }
-}
-
 namespace test {
 
 template <typename Key>
@@ -534,7 +478,7 @@ public:
     }
 
     void operator = (const this_type & that) {
-#if USE_COPIES_COUNTER
+#if USE_STAT_COUNTER
         g_num_copies++;
 #endif
         this->key_ = that.key_;
@@ -545,7 +489,7 @@ public:
     }
 
     std::size_t Hash() const {
-#if USE_HASHER_COUNTER
+#if USE_STAT_COUNTER
         g_num_hashes++;
 #endif
         return static_cast<std::size_t>(
@@ -912,10 +856,6 @@ static void report_result(char const * title, double ut, std::size_t iters,
 #endif
     ::fflush(stdout);
 }
-
-#include "time_hash_map_v1.hpp"
-
-namespace v2 {
 
 template <class MapType, class Vector>
 static void time_map_find(char const * title, std::size_t iters,
@@ -1500,8 +1440,6 @@ void benchmark_all_hashmaps(std::size_t iters)
     }
 }
 
-} // namespace v2
-
 void std_hash_test()
 {
     printf("std::hash<std::uint32_t>\n\n");
@@ -1511,9 +1449,9 @@ void std_hash_test()
     }
     printf("\n");
 
-    printf("std::hash<std::size_t>\n\n");
+    printf("std::hash<std::uint64_t>\n\n");
     for(std::size_t i = 0; i < 8; i++) {
-        std::size_t hash_code = HASH_MAP_FUNCTION<std::size_t>()(i);
+        std::size_t hash_code = HASH_MAP_FUNCTION<std::uint64_t>()(i);
         printf("key = %3" PRIu64 ", hash_code = %" PRIu64 "\n", i, hash_code);
     }
     printf("\n");
@@ -1536,14 +1474,9 @@ int main(int argc, char * argv[])
 
     if (1) std_hash_test();
 
-    if (0) {
-        printf("------------------------ v1::benchmark_all_hashmaps(iters) -------------------------\n\n");
-        v1::benchmark_all_hashmaps(iters);
-    }
-
     if (1) {
-        printf("------------------------ v2::benchmark_all_hashmaps(iters) -------------------------\n\n");
-        v2::benchmark_all_hashmaps(iters);
+        printf("-------------------------- benchmark_all_hashmaps(iters) ---------------------------\n\n");
+        benchmark_all_hashmaps(iters);
     }
 
     printf("------------------------------------------------------------------------------------\n\n");
