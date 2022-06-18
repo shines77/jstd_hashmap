@@ -240,8 +240,9 @@ public:
     // kDefaultCapacity must be >= kMinimumCapacity
     static constexpr size_type kDefaultCapacity = 4;
 
-    static constexpr float kDefaultLoadFactor = 0.5;
-    static constexpr float kMaxLoadFactor = 1.0;
+    static constexpr float kMinLoadFactor = 0.2f;
+    static constexpr float kMaxLoadFactor = 0.8f;
+    static constexpr float kDefaultLoadFactor = 0.5f;
 
     struct bitmask128_t {
         std::uint64_t low;
@@ -312,11 +313,11 @@ public:
         }
 
         void clear() {
-            this->template fillAll<kEmptyEntry>();
+            this->template fillAll8<kEmptyEntry>();
         }
 
         template <std::uint8_t ControlTag>
-        void fillAll() {
+        void fillAll8() {
 #if defined(__SSE2__)
             __m128i empty_bits = _mm_set1_epi8(ControlTag);
             _mm_store_si128((__m128i *)&controls[0], empty_bits);
@@ -731,22 +732,28 @@ public:
     }
 
     void set_load_factor(double _load_factor) {
+        if (_load_factor < this->min_load_factor())
+            _load_factor = this->min_load_factor();
         if (_load_factor > this->max_load_factor())
             _load_factor = this->max_load_factor();
         this->load_factor_ = static_cast<float>(_load_factor);
         this->entry_threshold_ = (size_type)(this->entry_capacity() * _load_factor);
     }
 
-    double current_load_factor() const {
-        return static_cast<double>(this->load_factor_);
+    double min_load_factor() const {
+        return static_cast<double>(kMinLoadFactor);
+    }
+
+    double max_load_factor() const {
+        return static_cast<double>(kMaxLoadFactor);
     }
 
     double default_load_factor() const {
         return static_cast<double>(kDefaultLoadFactor);
     }
 
-    double max_load_factor() const {
-        return static_cast<double>(kMaxLoadFactor);
+    double current_load_factor() const {
+        return static_cast<double>(this->load_factor_);
     }
 
     iterator begin() {
@@ -1195,7 +1202,11 @@ private:
 
     template <bool initialize = false>
     void create_cluster(size_type init_capacity) {
-        size_type new_capacity = calc_capacity(init_capacity);
+        size_type new_capacity;
+        if (initialize)
+            new_capacity = calc_capacity(init_capacity);
+        else
+            new_capacity = init_capacity;
         assert(new_capacity > 0);
         assert(new_capacity >= kMinimumCapacity);
 
@@ -1205,7 +1216,7 @@ private:
         clusters_ = clusters;
         cluster_mask_ = cluster_count - 1;
 
-        clusters[cluster_count].template fillAll<kEndOfMark>();
+        clusters[cluster_count].template fillAll8<kEndOfMark>();
 
         entry_type * entries = entry_allocator_.allocate(new_capacity);
         entries_ = entries;
@@ -1215,7 +1226,7 @@ private:
             entry_size_ = 0;
         }
         entry_mask_ = new_capacity - 1;
-        entry_threshold_ = (size_type)(new_capacity * this->current_load_factor());
+        entry_threshold_ = (size_type)((float)new_capacity * this->load_factor_);
     }
 
     template <bool AllowShrink, bool AlwaysResize>
@@ -1252,7 +1263,7 @@ private:
                         size_type pos = BitUtils::bsf32(maskUsed);
                         maskUsed = BitUtils::clearLowBit32(maskUsed);
                         entry_type * entry = entry_start + pos;
-                        this->emplace(std::move(*static_cast<value_type *>(entry)));
+                        this->directly_insert(std::move(*static_cast<value_type *>(entry)));
                         this->entry_allocator_.destroy(entry);
                     }
                     entry_start += kClusterEntries;
@@ -1330,6 +1341,47 @@ private:
         return npos;
     }
 
+    JSTD_FORCED_INLINE
+    size_type find_first_unused_entry(const key_type & key, std::uint8_t & ctrl_hash) {
+        hash_code_t hash_code = this->get_hash(key);
+        hash_code_t hash_code_2nd = this->get_second_hash(hash_code);
+        std::uint8_t control_hash = this->get_control_hash(hash_code_2nd);
+        index_type cluster_index = this->index_for(hash_code);
+        index_type first_cluster = cluster_index;
+        ctrl_hash = control_hash;
+
+        // Find the first unused entry and insert
+        do {
+            const cluster_type & cluster = this->get_cluster(cluster_index);
+            std::uint32_t maskUnsed = cluster.matchEmptyOrDeleted();
+            if (maskUnsed != 0) {
+                // Found a [EmptyEntry] or [DeletedEntry] to insert
+                size_type pos = BitUtils::bsf32(maskUnsed);
+                size_type start_index = cluster_index * kClusterEntries;
+                return (start_index + pos);
+            }
+            cluster_index = this->next_cluster(cluster_index);
+            assert(cluster_index != first_cluster);
+        } while (1);
+
+        return npos;
+    }
+
+    // Use in rehash_impl()
+    void directly_insert(value_type && value) {
+        std::uint8_t ctrl_hash;
+        size_type target = this->find_first_unused_entry(value.first, ctrl_hash);
+        assert(target != npos);
+
+        // Found a [DeletedEntry] or [EmptyEntry] to insert
+        control_byte * control = this->control_at(target);
+        assert(control->isEmptyOrDeleted());
+        control->setUsed(ctrl_hash);
+        entry_type * entry = this->entry_at(target);
+        this->entry_allocator_.construct(entry, std::forward<value_type>(value));
+        this->entry_size_++;
+    }
+
     std::pair<size_type, bool>
     find_and_prepare_insert(const key_type & key, std::uint8_t & ctrl_hash) {
         hash_code_t hash_code = this->get_hash(key);
@@ -1369,9 +1421,9 @@ private:
             return this->find_and_prepare_insert(key, ctrl_hash);
         }
 
-        // Find the first non-used entry and insert
+        // Find the first unused entry and insert
         if (cluster_index != first_cluster) {
-            // Find the first DeletedEntry from first_cluster to last_cluster.
+            // Find the first [DeletedEntry] from first_cluster to last_cluster.
             cluster_index = first_cluster;
             do {
                 const cluster_type & cluster = this->get_cluster(cluster_index);
@@ -1387,7 +1439,7 @@ private:
                 cluster_index = this->next_cluster(cluster_index);
             } while (cluster_index != first_cluster);
 
-            // Found a [EmptyEntry] to insert
+            // Not found any [DeletedEntry], and use [EmptyEntry] to insert
             // Skip to final processing
         } else {
             assert(last_cluster != npos);
@@ -1402,7 +1454,7 @@ private:
             }
         }
 
-        // Get [EmptyEntry] or [DeletedEntry] to insert
+        // It's a [EmptyEntry] or [DeletedEntry] to insert
         size_type pos = BitUtils::bsf32(maskEmpty);
         size_type start_index = last_cluster * kClusterEntries;
         return { (start_index + pos), false };
@@ -1416,21 +1468,16 @@ private:
         bool is_exists = find_info.second;
         if (!is_exists) {
             // The key to be inserted is not exists.
-            if (target != npos) {
-                // Found a [DeletedEntry] or [EmptyEntry] to insert
-                control_byte * control = this->control_at(target);
-                assert(control->isEmptyOrDeleted());
-                control->setUsed(ctrl_hash);
-                entry_type * entry = this->entry_at(target);
-                this->entry_allocator_.construct(entry, std::forward<value_type>(value));
-                this->entry_size_++;
-                return { this->iterator_at(target), true };
-            } else {
-                // Container is full and there is no anyone empty entry.
-                this->grow_if_necessary();
+            assert(target != npos);
 
-                return this->emplace(std::forward<value_type>(value));
-            }
+            // Found a [DeletedEntry] or [EmptyEntry] to insert
+            control_byte * control = this->control_at(target);
+            assert(control->isEmptyOrDeleted());
+            control->setUsed(ctrl_hash);
+            entry_type * entry = this->entry_at(target);
+            this->entry_allocator_.construct(entry, std::forward<value_type>(value));
+            this->entry_size_++;
+            return { this->iterator_at(target), true };
         } else {
             // The key to be inserted already exists.
             if (update_always) {
@@ -1459,23 +1506,18 @@ private:
         bool is_exists = find_info.second;
         if (!is_exists) {
             // The key to be inserted is not exists.
-            if (target != npos) {
-                // Found a [DeletedEntry] or [EmptyEntry] to insert
-                control_byte * control = this->control_at(target);
-                assert(control->isEmptyOrDeleted());
-                control->setUsed(ctrl_hash);
-                entry_type * entry = this->entry_at(target);
-                this->entry_allocator_.construct(entry, std::piecewise_construct,
-                                                        std::forward_as_tuple(std::forward<KeyT>(key)),
-                                                        std::forward_as_tuple(std::forward<Args>(args)...));
-                this->entry_size_++;
-                return { this->iterator_at(target), true };
-            } else {
-                // Container is full and there is no anyone empty entry.
-                this->grow_if_necessary();
+            assert(target != npos);
 
-                return this->emplace(std::forward<KeyT>(key), std::forward<Args>(args)...);
-            }
+            // Found a [DeletedEntry] or [EmptyEntry] to insert
+            control_byte * control = this->control_at(target);
+            assert(control->isEmptyOrDeleted());
+            control->setUsed(ctrl_hash);
+            entry_type * entry = this->entry_at(target);
+            this->entry_allocator_.construct(entry, std::piecewise_construct,
+                                                    std::forward_as_tuple(std::forward<KeyT>(key)),
+                                                    std::forward_as_tuple(std::forward<Args>(args)...));
+            this->entry_size_++;
+            return { this->iterator_at(target), true };
         } else {
             // The key to be inserted already exists.
             if (update_always) {
@@ -1506,25 +1548,18 @@ private:
         bool is_exists = find_info.second;
         if (!is_exists) {
             // The key to be inserted is not exists.
-            if (target != npos) {
-                // Found a [DeletedEntry] or [EmptyEntry] to insert
-                control_byte * control = this->control_at(target);
-                assert(control->isEmptyOrDeleted());
-                control->setUsed(ctrl_hash);
-                entry_type * entry = this->entry_at(target);
-                this->entry_allocator_.construct(entry, std::piecewise_construct,
-                                                        std::forward<std::tuple<Ts1...>>(first),
-                                                        std::forward<std::tuple<Ts2...>>(second));
-                this->entry_size_++;
-                return { this->iterator_at(target), true };
-            } else {
-                // Container is full and there is no anyone empty entry.
-                this->grow_if_necessary();
+            assert(target != npos);
 
-                return this->emplace(std::forward<PieceWise>(hint),
-                                     std::forward<std::tuple<Ts1...>>(first),
-                                     std::forward<std::tuple<Ts2...>>(second));
-            }
+            // Found a [DeletedEntry] or [EmptyEntry] to insert
+            control_byte * control = this->control_at(target);
+            assert(control->isEmptyOrDeleted());
+            control->setUsed(ctrl_hash);
+            entry_type * entry = this->entry_at(target);
+            this->entry_allocator_.construct(entry, std::piecewise_construct,
+                                                    std::forward<std::tuple<Ts1...>>(first),
+                                                    std::forward<std::tuple<Ts2...>>(second));
+            this->entry_size_++;
+            return { this->iterator_at(target), true };
         } else {
             // The key to be inserted already exists.
             if (update_always) {
@@ -1551,21 +1586,16 @@ private:
         bool is_exists = find_info.second;
         if (!is_exists) {
             // The key to be inserted is not exists.
-            if (target != npos) {
-                // Found a [DeletedEntry] or [EmptyEntry] to insert
-                control_byte * control = this->control_at(target);
-                assert(control->isEmptyOrDeleted());
-                control->setUsed(ctrl_hash);
-                entry_type * entry = this->entry_at(target);
-                this->entry_allocator_.construct(entry, std::move(value));
-                this->entry_size_++;
-                return { this->iterator_at(target), true };
-            } else {
-                // Container is full and there is no anyone empty entry.
-                this->grow_if_necessary();
+            assert(target != npos);
 
-                return this->emplace(std::forward<First>(first), std::forward<Args>(args)...);
-            }
+            // Found a [DeletedEntry] or [EmptyEntry] to insert
+            control_byte * control = this->control_at(target);
+            assert(control->isEmptyOrDeleted());
+            control->setUsed(ctrl_hash);
+            entry_type * entry = this->entry_at(target);
+            this->entry_allocator_.construct(entry, std::move(value));
+            this->entry_size_++;
+            return { this->iterator_at(target), true };
         } else {
             // The key to be inserted already exists.
             if (update_always) {
