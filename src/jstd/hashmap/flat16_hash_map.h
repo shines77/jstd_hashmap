@@ -1353,10 +1353,36 @@ private:
         // Find the first unused entry and insert
         do {
             const cluster_type & cluster = this->get_cluster(cluster_index);
-            std::uint32_t maskUnsed = cluster.matchEmptyOrDeleted();
-            if (maskUnsed != 0) {
+            std::uint32_t maskUnused = cluster.matchEmptyOrDeleted();
+            if (maskUnused != 0) {
                 // Found a [EmptyEntry] or [DeletedEntry] to insert
-                size_type pos = BitUtils::bsf32(maskUnsed);
+                size_type pos = BitUtils::bsf32(maskUnused);
+                size_type start_index = cluster_index * kClusterEntries;
+                return (start_index + pos);
+            }
+            cluster_index = this->next_cluster(cluster_index);
+            assert(cluster_index != first_cluster);
+        } while (1);
+
+        return npos;
+    }
+
+    JSTD_FORCED_INLINE
+    size_type find_first_empty_entry(const key_type & key, std::uint8_t & ctrl_hash) {
+        hash_code_t hash_code = this->get_hash(key);
+        hash_code_t hash_code_2nd = this->get_second_hash(hash_code);
+        std::uint8_t control_hash = this->get_control_hash(hash_code_2nd);
+        index_type cluster_index = this->index_for(hash_code);
+        index_type first_cluster = cluster_index;
+        ctrl_hash = control_hash;
+
+        // Find the first empty entry and insert
+        do {
+            const cluster_type & cluster = this->get_cluster(cluster_index);
+            std::uint32_t maskEmpty = cluster.matchEmpty();
+            if (maskEmpty != 0) {
+                // Found a [EmptyEntry] to insert
+                size_type pos = BitUtils::bsf32(maskEmpty);
                 size_type start_index = cluster_index * kClusterEntries;
                 return (start_index + pos);
             }
@@ -1370,7 +1396,7 @@ private:
     // Use in rehash_impl()
     void directly_insert(entry_type * value) {
         std::uint8_t ctrl_hash;
-        size_type target = this->find_first_unused_entry(value->first, ctrl_hash);
+        size_type target = this->find_first_empty_entry(value->first, ctrl_hash);
         assert(target != npos);
 
         // Found a [DeletedEntry] or [EmptyEntry] to insert
