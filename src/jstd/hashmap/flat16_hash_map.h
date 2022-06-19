@@ -101,7 +101,7 @@ std::size_t align_to(std::size_t size, std::size_t alignment)
     return size;
 }
 
-namespace hasher {
+namespace hashers {
 
 static inline
 std::uint32_t Integal_hash1_u32(std::uint32_t value)
@@ -202,7 +202,7 @@ public:
     typedef std::pair<const Key, Value>     value_type;
     typedef std::pair<Key, Value>           nc_value_type;
 
-    typedef Hasher                          hasher_type;
+    typedef Hasher                          hasher;
     typedef KeyEqual                        key_equal;
     typedef Allocator                       allocator_type;
     typedef typename Hasher::result_type    hash_result_t;
@@ -677,7 +677,7 @@ private:
     size_type       entry_threshold_;
     double          load_factor_;
 
-    hasher_type     hasher_;
+    hasher          hasher_;
     key_equal       key_equal_;
 
     allocator_type          value_allocator_;
@@ -812,6 +812,14 @@ public:
         return this->end();
     }
 
+    hasher hasherstion() const {
+        return this->hasher_;
+    }
+
+    key_equal key_eq() const {
+        return this->key_equal_;
+    }
+
     static const char * name() {
         return "jstd::flat16_hash_map<K, V>";
     }
@@ -882,6 +890,16 @@ public:
             throw std::out_of_range("std::out_of_range exception: flat16_hash_map<K,V>::at(key) const, "
                                     "the specified key is not exists.");
         }
+    }
+
+    size_type count(const key_type & key) const {
+        size_type index = this->find_impl(key);
+        return (index != npos) ? size_type(1) : size_type(0);
+    }
+
+    bool contains(const key_type & key) const {
+        size_type index = this->find_impl(key);
+        return (index != npos);
     }
 
     iterator find(const key_type & key) {

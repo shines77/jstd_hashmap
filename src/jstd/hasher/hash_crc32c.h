@@ -48,7 +48,7 @@
 //
 
 namespace jstd {
-namespace hasher {
+namespace hashers {
 
 static const uint32_t kInitPrime32 = 0x165667C5UL;
 
@@ -200,7 +200,7 @@ static uint32_t hash_crc32c(const char * data, size_t length)
     return intel_hash_crc32c_x86(data, length);
   #endif
 #else
-    return hashes::Times31(data, length);
+    return hashers::Times31(data, length);
 #endif
 }
 

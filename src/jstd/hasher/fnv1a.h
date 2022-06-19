@@ -50,7 +50,7 @@
 //
 
 namespace jstd {
-namespace hasher {
+namespace hashers {
 
 //
 // [North Star One-Sword School]
