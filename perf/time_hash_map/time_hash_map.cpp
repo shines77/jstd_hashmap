@@ -143,7 +143,7 @@
 #define USE_STAT_COUNTER            1
 
 #if USE_STAT_COUNTER
-#define USE_CTOR_COUNTER            1
+#define USE_CTOR_COUNTER            0
 #endif
 
 #define MODE_FAST_SIMPLE_HASH       0   // test::hash<T>
