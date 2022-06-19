@@ -916,11 +916,11 @@ public:
     }
 
     std::pair<iterator, bool> insert(const value_type & value) {
-        return this->emplace(value);
+        return this->emplace_impl<false>(value);
     }
 
     std::pair<iterator, bool> insert(value_type && value) {
-        return this->emplace(std::move(value));
+        return this->emplace_impl<false>(std::move(value));
     }
 
     template <typename P, typename std::enable_if<
@@ -928,15 +928,15 @@ public:
               (!jstd::is_same_ex<P, nc_value_type>::value) &&
               std::is_constructible<value_type, P &&>::value>::type * = nullptr>
     std::pair<iterator, bool> insert(P && value) {
-        return this->emplace(std::forward<P>(value));
+        return this->emplace_impl<false>(std::forward<P>(value));
     }
 
     iterator insert(const_iterator hint, const value_type & value) {
-        return this->emplace(value).first;
+        return this->emplace_impl<false>(value).first;
     }
 
     iterator insert(const_iterator hint, value_type && value) {
-        return this->emplace(std::move(value)).first;
+        return this->emplace_impl<false>(std::move(value)).first;
     }
 
     template <typename P, typename std::enable_if<
@@ -944,13 +944,13 @@ public:
               (!jstd::is_same_ex<P, nc_value_type>::value) &&
               std::is_constructible<value_type, P &&>::value>::type * = nullptr>
     std::pair<iterator, bool> insert(const_iterator hint, P && value) {
-        return this->emplace(std::forward<P>(value));
+        return this->emplace_impl<false>(std::forward<P>(value));
     }
 
     template <typename InputIter>
     void insert(InputIter first, InputIter last) {
         for (; first != last; ++first) {
-            this->emplace(*first);
+            this->emplace_impl<false>(*first);
         }
     }
 
@@ -981,7 +981,7 @@ public:
 
     template <typename ... Args>
     iterator emplace_hint(const_iterator hint, Args && ... args) {
-        return this->emplace(std::forward<Args>(args)...).first;
+        return this->emplace_impl<false>(std::forward<Args>(args)...).first;
     }
 
     size_type erase(const key_type & key) {
@@ -1263,7 +1263,7 @@ private:
                         size_type pos = BitUtils::bsf32(maskUsed);
                         maskUsed = BitUtils::clearLowBit32(maskUsed);
                         entry_type * entry = entry_start + pos;
-                        this->directly_insert(std::move(*static_cast<value_type *>(entry)));
+                        this->directly_insert(static_cast<value_type &>(*entry));
                         this->entry_allocator_.destroy(entry);
                     }
                     entry_start += kClusterEntries;
@@ -1368,7 +1368,7 @@ private:
     }
 
     // Use in rehash_impl()
-    void directly_insert(value_type && value) {
+    void directly_insert(value_type & value) {
         std::uint8_t ctrl_hash;
         size_type target = this->find_first_unused_entry(value.first, ctrl_hash);
         assert(target != npos);
@@ -1378,7 +1378,7 @@ private:
         assert(control->isEmptyOrDeleted());
         control->setUsed(ctrl_hash);
         entry_type * entry = this->entry_at(target);
-        this->entry_allocator_.construct(entry, std::forward<value_type>(value));
+        this->entry_allocator_.construct(entry, std::move(value));
         this->entry_size_++;
     }
 
