@@ -845,7 +845,7 @@ public:
 
     void rehash(size_type new_capacity, bool read_only = false) {
         if (!read_only)
-            new_capacity = (std::max)(new_capacity, (size_type)((float)this->entry_size() / this->load_factor_));
+            new_capacity = (std::max)((size_type)((float)new_capacity / this->load_factor_), this->entry_size());
         else
             new_capacity = (std::max)(new_capacity, this->entry_size());
         this->rehash_impl<true, false>(new_capacity);
