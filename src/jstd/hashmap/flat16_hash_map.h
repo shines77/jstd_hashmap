@@ -840,21 +840,29 @@ public:
         this->rehash_impl<false, true>(new_capacity);
     }
 
-    void reserve(size_type new_capacity) {
-        this->rehash(new_capacity);
+    void reserve(size_type new_capacity, bool read_only = false) {
+        this->rehash(new_capacity, read_only);
     }
 
-    void resize(size_type new_capacity) {
-        this->rehash(new_capacity);
+    void resize(size_type new_capacity, bool read_only = false) {
+        this->rehash(new_capacity, read_only);
     }
 
-    void rehash(size_type new_capacity) {
-        new_capacity = (std::max)(new_capacity, this->entry_size());
+    void rehash(size_type new_capacity, bool read_only = false) {
+        if (!read_only)
+            new_capacity = (std::max)(new_capacity, (size_type)((float)this->entry_size() / this->load_factor_));
+        else
+            new_capacity = (std::max)(new_capacity, this->entry_size());
         this->rehash_impl<true, false>(new_capacity);
     }
 
-    void shrink_to_fit() {
-        this->rehash_impl<true, false>(this->entry_size());
+    void shrink_to_fit(bool read_only = false) {
+        size_type new_capacity;
+        if (!read_only)
+            new_capacity = (size_type)((float)this->entry_size() / this->load_factor_);
+        else
+            new_capacity = this->entry_size();
+        this->rehash_impl<true, false>(new_capacity);
     }
 
     mapped_type & operator [] (const key_type & key) {
@@ -1011,7 +1019,7 @@ public:
 
 private:
     inline bool need_grow() const {
-        return (this->entry_size_ >= this->entry_threshold_);
+        return (this->entry_size_ > this->entry_threshold_);
     }
 
     JSTD_FORCED_INLINE
