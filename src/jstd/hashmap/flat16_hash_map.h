@@ -243,6 +243,7 @@ public:
 
     static constexpr float kMinLoadFactor = 0.2f;
     static constexpr float kMaxLoadFactor = 0.8f;
+    // Must be kMinLoadFactor <= loadFactor <= kMaxLoadFactor
     static constexpr float kDefaultLoadFactor = 0.5f;
 
     struct bitmask128_t {
@@ -729,32 +730,24 @@ public:
     }
 
     double load_factor() const {
-        return (double)this->entry_size() / this->entry_capacity();
+        return ((double)this->entry_size() / this->entry_capacity());
     }
 
-    void set_load_factor(double _load_factor) {
-        if (_load_factor < this->min_load_factor())
-            _load_factor = this->min_load_factor();
-        if (_load_factor > this->max_load_factor())
-            _load_factor = this->max_load_factor();
-        this->load_factor_ = static_cast<float>(_load_factor);
-        this->entry_threshold_ = (size_type)(this->entry_capacity() * _load_factor);
-    }
-
-    double min_load_factor() const {
-        return static_cast<double>(kMinLoadFactor);
+    void max_load_factor(double load_factor) {
+        if (load_factor < (double)kMinLoadFactor)
+            load_factor = (double)kMinLoadFactor;
+        if (load_factor > (double)kMaxLoadFactor)
+            load_factor = (double)kMaxLoadFactor;
+        this->load_factor_ = load_factor;
+        this->entry_threshold_ = (size_type)((double)this->entry_capacity() * load_factor);
     }
 
     double max_load_factor() const {
-        return static_cast<double>(kMaxLoadFactor);
+        return static_cast<double>(this->load_factor_);
     }
 
     double default_load_factor() const {
         return static_cast<double>(kDefaultLoadFactor);
-    }
-
-    double current_load_factor() const {
-        return static_cast<double>(this->load_factor_);
     }
 
     iterator begin() {
@@ -1270,7 +1263,7 @@ private:
             entry_size_ = 0;
         }
         entry_mask_ = new_capacity - 1;
-        entry_threshold_ = (size_type)((float)new_capacity * this->load_factor_);
+        entry_threshold_ = (size_type)((float)new_capacity * this->max_load_factor());
     }
 
     inline bool need_grow() const {
