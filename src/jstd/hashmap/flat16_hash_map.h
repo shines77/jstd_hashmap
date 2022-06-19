@@ -835,11 +835,6 @@ public:
         assert(this->entry_size() == 0);
     }
 
-    void grow_if_necessary() {
-        size_type new_capacity = (this->entry_mask_ + 1) * 2;
-        this->rehash_impl<false, true>(new_capacity);
-    }
-
     void reserve(size_type new_capacity, bool read_only = false) {
         this->rehash(new_capacity, read_only);
     }
@@ -1018,10 +1013,6 @@ public:
     }
 
 private:
-    inline bool need_grow() const {
-        return (this->entry_size_ > this->entry_threshold_);
-    }
-
     JSTD_FORCED_INLINE
     size_type calc_capacity(size_type init_capacity) const noexcept {
         size_type new_capacity = (std::max)(init_capacity, kMinimumCapacity);
@@ -1235,6 +1226,15 @@ private:
         }
         entry_mask_ = new_capacity - 1;
         entry_threshold_ = (size_type)((float)new_capacity * this->load_factor_);
+    }
+
+    inline bool need_grow() const {
+        return (this->entry_size_ > this->entry_threshold_);
+    }
+
+    void grow_if_necessary() {
+        size_type new_capacity = (this->entry_mask_ + 1) * 2;
+        this->rehash_impl<false, true>(new_capacity);
     }
 
     template <bool AllowShrink, bool AlwaysResize>
