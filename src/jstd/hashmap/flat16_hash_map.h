@@ -1263,7 +1263,7 @@ private:
                         size_type pos = BitUtils::bsf32(maskUsed);
                         maskUsed = BitUtils::clearLowBit32(maskUsed);
                         entry_type * entry = entry_start + pos;
-                        this->directly_insert(static_cast<value_type &>(*entry));
+                        this->directly_insert(entry);
                         this->entry_allocator_.destroy(entry);
                     }
                     entry_start += kClusterEntries;
@@ -1368,9 +1368,9 @@ private:
     }
 
     // Use in rehash_impl()
-    void directly_insert(value_type & value) {
+    void directly_insert(entry_type * value) {
         std::uint8_t ctrl_hash;
-        size_type target = this->find_first_unused_entry(value.first, ctrl_hash);
+        size_type target = this->find_first_unused_entry(value->first, ctrl_hash);
         assert(target != npos);
 
         // Found a [DeletedEntry] or [EmptyEntry] to insert
@@ -1378,7 +1378,8 @@ private:
         assert(control->isEmptyOrDeleted());
         control->setUsed(ctrl_hash);
         entry_type * entry = this->entry_at(target);
-        this->entry_allocator_.construct(entry, std::move(value));
+        this->entry_allocator_.construct(entry,
+              std::move(*static_cast<value_type *>(value)));
         this->entry_size_++;
     }
 

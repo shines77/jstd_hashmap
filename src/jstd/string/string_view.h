@@ -57,7 +57,7 @@ protected:
 
 public:
     basic_string_view() noexcept : data_(nullptr), length_(0) {}
-    basic_string_view(const char_type * data) noexcept
+    explicit basic_string_view(const char_type * data) noexcept
         : data_(data), length_((data != nullptr) ? libc::StrLen(data) : 0) {}
     basic_string_view(const char_type * data, size_type length) noexcept
         : data_(data), length_(length) {}
@@ -105,12 +105,6 @@ public:
     const_reference front() const { return this->data_[0]; }
     const_reference back() const { return this->data_[this->size() - 1]; }
 
-    basic_string_view & operator = (const char_type * data) noexcept {
-        this->data_ = data;
-        this->length_ = (data != nullptr) ? libc::StrLen(data) : 0;
-        return *this;
-    }
-
     basic_string_view & operator = (const this_type & rhs) noexcept {
         this->data_ = rhs.data();
         this->length_ = rhs.length();
@@ -130,6 +124,12 @@ public:
             rhs.clear();
         }
 #endif
+        return *this;
+    }
+
+    basic_string_view & operator = (const char_type * data) noexcept {
+        this->data_ = data;
+        this->length_ = (data != nullptr) ? libc::StrLen(data) : 0;
         return *this;
     }
 
@@ -176,10 +176,10 @@ public:
         this->length_ = 0;
     }
 
-    void swap(this_type & right) noexcept {
-        if (&right != this) {
-            std::swap(this->data_, right.data_);
-            std::swap(this->length_, right.length_);
+    void swap(this_type & other) noexcept {
+        if (&other != this) {
+            std::swap(this->data_, other.data_);
+            std::swap(this->length_, other.length_);
         }
     }
 
@@ -242,11 +242,12 @@ public:
         return *this;
     }
 
-    inline
-    void push_back(char_type ch) {
+    // Only push for temporary, no grow().
+    inline void push_back(char_type ch) {
         char_type * data = const_cast<char_type *>(this->data_);
         *data = ch;
         ++(this->data_);
+        *data = char_type('\0');
     }
 
     void commit(size_type count) {
@@ -280,7 +281,6 @@ public:
     }
 
     // copy(dest, count, pos)
-
     size_type copy(char_type * dest, size_type count, size_type pos = 0) const {
         if (pos > this->size()) {
             throw std::out_of_range("basic_string_view<T>: "
@@ -291,7 +291,6 @@ public:
     }
 
     // substr(pos, count)
-
     this_type substr(size_type pos = 0, size_type count = npos) const {
         if (pos > this->size()) {
             throw std::out_of_range("basic_string_view<T>: "
@@ -305,8 +304,9 @@ public:
         return this_type(this->data() + pos, rcount);
     }
 
+    //
     // is_equal(rhs)
-
+    //
     bool is_equal(const char_type * str) const {
         return Traits::is_equal(this->data(), str);
     }
@@ -380,8 +380,9 @@ public:
         return this->is_equal(s1, rcount1, s2, rcount2);
     }
 
+    //
     // compare(rhs)
-
+    //
     int compare(const char_type * str) const noexcept {
         return Traits::compare(this->data(), str);
     }
@@ -457,7 +458,7 @@ public:
         return this->compare(s1, rcount1, s2, rcount2);
     }
 
-    string_type to_string() const noexcept {
+    string_type to_string() const {
         // Use RVO (return value optimization)
         return string_type(this->data_, this->length_);
     }
