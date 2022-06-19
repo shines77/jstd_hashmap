@@ -1408,7 +1408,7 @@ void IntegalHash_test()
 
     printf("hash::IntegalHash(uint32_t) sequential\n\n");
     for (std::uint32_t i = 0; i < 16; i++) {
-        std::uint32_t hash32 = integalHasher32(i);
+        std::uint32_t hash32 = (std::uint32_t)integalHasher32(i);
         printf("value = %-10u, hash_code = %-10u (0x%08X), \n",
                i, hash32, hash32);
     }
@@ -1417,7 +1417,7 @@ void IntegalHash_test()
     printf("hash::IntegalHash(uint32_t) random\n\n");
     for (std::uint32_t i = 0; i < 16; i++) {
         std::uint32_t value = next_random_u32();
-        std::uint32_t hash32 = integalHasher32(value);
+        std::uint32_t hash32 = (std::uint32_t)integalHasher32(value);
         printf("value = %-10u, hash_code = %-10u (0x%08X), \n",
                value, hash32, hash32);
     }
@@ -1565,6 +1565,9 @@ void flat16_hash_map_string_string_test()
     print_result( flat_hash_map.emplace(std::piecewise_construct,
                                         std::forward_as_tuple("e0"),
                                         std::forward_as_tuple(10, 'd')) );
+    printf("\n");
+
+    print_result( flat_hash_map.insert_or_assign("f0", "in-place") );
     printf("\n");
 
     auto iter = flat_hash_map.find("b0");

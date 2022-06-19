@@ -65,6 +65,7 @@
 #include <tuple>        // For std::tuple<Ts...>
 #include <algorithm>    // For std::max(), std::min()
 #include <type_traits>
+#include <stdexcept>
 
 #include <nmmintrin.h>
 #include <immintrin.h>
@@ -861,28 +862,32 @@ public:
     }
 
     mapped_type & operator [] (const key_type & key) {
-        size_type index = this->find_impl(key);
-        if (index == npos) {
-            auto result = this->emplace(std::piecewise_construct,
-                                        std::forward_as_tuple(key), std::tuple<>());
-            assert(result.second == true);
-            return result.first->second;
-        } else {
-            entry_type * entry = this->entry_at(index);
-            return entry->second;
-        }
+        return this->try_emplace(key).first->second;
     }
 
     mapped_type & operator [] (key_type && key) {
+        return this->try_emplace(std::move(key)).first->second;
+    }
+
+    mapped_type & at(const key_type & key) {
         size_type index = this->find_impl(key);
-        if (index == npos) {
-            auto result = this->emplace(std::piecewise_construct,
-                                        std::forward_as_tuple(std::forward<key_type>(key)), std::tuple<>());
-            assert(result.second == true);
-            return result.first->second;
-        } else {
+        if (index != npos) {
             entry_type * entry = this->entry_at(index);
             return entry->second;
+        } else {
+            throw std::out_of_range("std::out_of_range exception: flat16_hash_map<K,V>::at(key), "
+                                    "the specified key is not exists.");
+        }
+    }
+
+    const mapped_type & at(const key_type & key) const {
+        size_type index = this->find_impl(key);
+        if (index != npos) {
+            entry_type * entry = this->entry_at(index);
+            return entry->second;
+        } else {
+            throw std::out_of_range("std::out_of_range exception: flat16_hash_map<K,V>::at(key) const, "
+                                    "the specified key is not exists.");
         }
     }
 
@@ -961,6 +966,26 @@ public:
         this->insert(ilist.begin(), ilist.end());
     }
 
+    template <typename KeyType, typename MappedType>
+    std::pair<iterator, bool> insert_or_assign(const KeyType & key, MappedType && value) {
+        return this->emplace_impl<true>(key, std::forward<MappedType>(value));
+    }
+
+    template <typename KeyType, typename MappedType>
+    std::pair<iterator, bool> insert_or_assign(KeyType && key, MappedType && value) {
+        return this->emplace_impl<true>(std::move(key), std::forward<MappedType>(value));
+    }
+
+    template <typename KeyType, typename MappedType>
+    iterator insert_or_assign(const_iterator hint, const KeyType & key, MappedType && value) {
+        return this->emplace_impl<true>(key, std::forward<MappedType>(value))->first;
+    }
+
+    template <typename KeyType, typename MappedType>
+    iterator insert_or_assign(const_iterator hint, KeyType && key, MappedType && value) {
+        return this->emplace_impl<true>(std::move(key), std::forward<MappedType>(value))->first;
+    }
+
     std::pair<iterator, bool> insert_always(const value_type & value) {
         return this->emplace_impl<true>(value);
     }
@@ -985,6 +1010,26 @@ public:
     template <typename ... Args>
     iterator emplace_hint(const_iterator hint, Args && ... args) {
         return this->emplace_impl<false>(std::forward<Args>(args)...).first;
+    }
+
+    template <typename ... Args>
+    std::pair<iterator, bool> try_emplace(const key_type & key, Args && ... args) {
+        return this->emplace_impl<false>(key, std::forward<Args>(args)...);
+    }
+
+    template <typename ... Args>
+    std::pair<iterator, bool> try_emplace(key_type && key, Args && ... args) {
+        return this->emplace_impl<false>(std::forward<key_type>(key), std::forward<Args>(args)...);
+    }
+
+    template <typename ... Args>
+    std::pair<iterator, bool> try_emplace(const_iterator hint, const key_type & key, Args && ... args) {
+        return this->emplace_impl<false>(key, std::forward<Args>(args)...);
+    }
+
+    template <typename ... Args>
+    std::pair<iterator, bool> try_emplace(const_iterator hint, key_type && key, Args && ... args) {
+        return this->emplace_impl<false>(std::forward<key_type>(key), std::forward<Args>(args)...);
     }
 
     size_type erase(const key_type & key) {
@@ -1522,6 +1567,49 @@ private:
                     entry->second = std::move(value.second);
                 else
                     entry->second = value.second;
+            }
+            return { this->iterator_at(target), false };
+        }
+    }
+
+    template <bool update_always, typename KeyT, typename MappedT, typename std::enable_if<
+              (!jstd::is_same_ex<KeyT, value_type>::value) &&
+              (!jstd::is_same_ex<KeyT, nc_value_type>::value) &&
+              (!jstd::is_same_ex<KeyT, std::piecewise_construct_t>::value) &&
+              (jstd::is_same_ex<KeyT, key_type>::value ||
+               std::is_constructible<key_type, KeyT &&>::value) &&
+              (jstd::is_same_ex<MappedT, mapped_type>::value ||
+               std::is_constructible<mapped_type, MappedT &&>::value)>::type * = nullptr>
+    std::pair<iterator, bool> emplace_impl(KeyT && key, MappedT && value) {
+        std::uint8_t ctrl_hash;
+        auto find_info = this->find_and_prepare_insert(key, ctrl_hash);
+        size_type target = find_info.first;
+        bool is_exists = find_info.second;
+        if (!is_exists) {
+            // The key to be inserted is not exists.
+            assert(target != npos);
+
+            // Found a [DeletedEntry] or [EmptyEntry] to insert
+            control_byte * control = this->control_at(target);
+            assert(control->isEmptyOrDeleted());
+            control->setUsed(ctrl_hash);
+            entry_type * entry = this->entry_at(target);
+            this->entry_allocator_.construct(entry, std::forward<KeyT>(key),
+                                                    std::forward<MappedT>(value));
+            this->entry_size_++;
+            return { this->iterator_at(target), true };
+        } else {
+            // The key to be inserted already exists.
+            static constexpr bool isMappedType = jstd::is_same_ex<MappedT, mapped_type>::value;
+            if (update_always) {
+                if (isMappedType) {
+                    entry_type * entry = this->entry_at(target);
+                    entry->second = std::forward<MappedT>(value);
+                } else {
+                    mapped_type mapped_value(std::forward<MappedT>(value));
+                    entry_type * entry = this->entry_at(target);
+                    entry->second = std::move(mapped_value);
+                }
             }
             return { this->iterator_at(target), false };
         }
