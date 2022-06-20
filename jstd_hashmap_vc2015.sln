@@ -16,6 +16,20 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "jstd_hashmap", "projects\vc2015\jstd_hashmap\jstd_hashmap.vcxproj", "{C9282A5D-9424-4753-B9A4-9EFB2615A3F8}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "power2_test", "projects\vc2015\power2_test\power2_test.vcxproj", "{21DD460B-F1D0-4722-9FCD-318CE67ADB7E}"
+	ProjectSection(ProjectDependencies) = postProject
+		{C9282A5D-9424-4753-B9A4-9EFB2615A3F8} = {C9282A5D-9424-4753-B9A4-9EFB2615A3F8}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "cardinal_bench", "projects\vc2015\cardinal_bench\cardinal_bench.vcxproj", "{3268952F-E463-476D-B72D-3633D8A45CAA}"
+	ProjectSection(ProjectDependencies) = postProject
+		{C9282A5D-9424-4753-B9A4-9EFB2615A3F8} = {C9282A5D-9424-4753-B9A4-9EFB2615A3F8}
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "main", "main", "{9CAB423F-8C20-4649-AD1F-EF86D4619D51}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "bench", "bench", "{19D739B3-BD5A-47A7-B097-42B82FF88664}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{66C4BDD7-5886-4885-8B05-D6658822B3D4}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -57,8 +71,23 @@ Global
 		{21DD460B-F1D0-4722-9FCD-318CE67ADB7E}.Release|x64.Build.0 = Release|x64
 		{21DD460B-F1D0-4722-9FCD-318CE67ADB7E}.Release|x86.ActiveCfg = Release|Win32
 		{21DD460B-F1D0-4722-9FCD-318CE67ADB7E}.Release|x86.Build.0 = Release|Win32
+		{3268952F-E463-476D-B72D-3633D8A45CAA}.Debug|x64.ActiveCfg = Debug|x64
+		{3268952F-E463-476D-B72D-3633D8A45CAA}.Debug|x64.Build.0 = Debug|x64
+		{3268952F-E463-476D-B72D-3633D8A45CAA}.Debug|x86.ActiveCfg = Debug|Win32
+		{3268952F-E463-476D-B72D-3633D8A45CAA}.Debug|x86.Build.0 = Debug|Win32
+		{3268952F-E463-476D-B72D-3633D8A45CAA}.Release|x64.ActiveCfg = Release|x64
+		{3268952F-E463-476D-B72D-3633D8A45CAA}.Release|x64.Build.0 = Release|x64
+		{3268952F-E463-476D-B72D-3633D8A45CAA}.Release|x86.ActiveCfg = Release|Win32
+		{3268952F-E463-476D-B72D-3633D8A45CAA}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{42EC228F-E2BB-4836-B10D-3DD58525E0EB} = {19D739B3-BD5A-47A7-B097-42B82FF88664}
+		{07852945-77D6-4564-8DF4-0192ADC33C1A} = {19D739B3-BD5A-47A7-B097-42B82FF88664}
+		{C9282A5D-9424-4753-B9A4-9EFB2615A3F8} = {9CAB423F-8C20-4649-AD1F-EF86D4619D51}
+		{21DD460B-F1D0-4722-9FCD-318CE67ADB7E} = {66C4BDD7-5886-4885-8B05-D6658822B3D4}
+		{3268952F-E463-476D-B72D-3633D8A45CAA} = {19D739B3-BD5A-47A7-B097-42B82FF88664}
 	EndGlobalSection
 EndGlobal

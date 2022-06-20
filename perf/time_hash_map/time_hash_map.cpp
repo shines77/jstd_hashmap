@@ -140,35 +140,35 @@
 #define PRINT_MACRO(x)          PRINT_MACRO_HELPER(x)
 #define PRINT_MACRO_VAR(x)      #x " = " PRINT_MACRO_HELPER(x)
 
-#define USE_STAT_COUNTER            1
+#define USE_STAT_COUNTER        1
 
 #if USE_STAT_COUNTER
-#define USE_CTOR_COUNTER            0
+#define USE_CTOR_COUNTER        0
 #endif
 
-#define MODE_FAST_SIMPLE_HASH       0   // test::hash<T>
-#define MODE_STD_HASH_FUNCTION      1   // std::hash<T>
-#define MODE_STDEXT_HASH_FUNCTION   2   // stdext::hash_compare<T> or __gnu_cxx::hash<T>
-#define MODE_INTEGAL_HASH_FUNCTION  3   // test::IntegalHash<T>
+#define ID_STD_HASH             0   // std::hash<T>
+#define ID_STDEXT_HASH          1   // stdext::hash_compare<T> or __gnu_cxx::hash<T>
+#define ID_SIMPLE_HASH          2   // test::SimpleHash<T>
+#define ID_INTEGAL_HASH         3   // test::IntegalHash<T>
 
 #ifdef _MSC_VER
-#define HASH_FUNCTION_MODE          MODE_STD_HASH_FUNCTION
+#define HASH_FUNCTION_ID        ID_SIMPLE_HASH
 #else
-#define HASH_FUNCTION_MODE          MODE_INTEGAL_HASH_FUNCTION
+#define HASH_FUNCTION_ID        ID_STD_HASH
 #endif
 
-#if (HASH_FUNCTION_MODE == MODE_STD_HASH_FUNCTION)
-  #define HASH_MAP_FUNCTION     std::hash
-#elif (HASH_FUNCTION_MODE == MODE_STDEXT_HASH_FUNCTION)
+#if (HASH_FUNCTION_ID == ID_STDEXT_HASH)
   #if defined(_MSC_VER)
-    #define HASH_MAP_FUNCTION   STDEXT_HASH_NAMESPACE::hash_compare
+    #define HASH_FUNCTION_ID    STDEXT_HASH_NAMESPACE::hash_compare
   #else
-    #define HASH_MAP_FUNCTION   STDEXT_HASH_NAMESPACE::hash
+    #define HASH_FUNCTION_ID    STDEXT_HASH_NAMESPACE::hash
   #endif
-#elif (HASH_FUNCTION_MODE == MODE_INTEGAL_HASH_FUNCTION)
+#elif (HASH_FUNCTION_ID == ID_SIMPLE_HASH)
+  #define HASH_MAP_FUNCTION     test::SimpleHash
+#elif (HASH_FUNCTION_ID == ID_INTEGAL_HASH)
   #define HASH_MAP_FUNCTION     test::IntegalHash
 #else
-  #define HASH_MAP_FUNCTION     test::hash
+  #define HASH_MAP_FUNCTION     std::hash
 #endif // HASH_FUNCTION_MODE
 
 #pragma message(PRINT_MACRO_VAR(HASH_MAP_FUNCTION))
@@ -212,7 +212,8 @@ static std::size_t g_num_constructor = 0;
 #endif
 #endif
 
-static void reset_counter()
+static inline
+void reset_counter()
 {
 #if USE_STAT_COUNTER
     g_num_hashes = 0;
@@ -223,27 +224,33 @@ static void reset_counter()
 #endif
 }
 
-#if 0
-static size_t CurrentMemoryUsage()
+static inline
+std::size_t CurrentMemoryUsage()
 {
-    return GetCurrentMemoryUsage();
+    return jtest::GetCurrentMemoryUsage();
 }
-#else
-static size_t CurrentMemoryUsage()
-{
-    return 0;
-}
-#endif
 
 namespace test {
 
-template <typename Key>
-struct hash {
-    typedef Key         argument_type;
+template <typename T>
+struct SimpleHash {
+    typedef T           argument_type;
     typedef std::size_t result_type;
 
-    inline result_type operator () (const argument_type & key) const noexcept {
-        return static_cast<result_type>(key);
+    template <typename Integer, typename std::enable_if<
+                                (std::is_integral<Integer>::value &&
+                                (sizeof(Integer) <= 8))>::type * = nullptr>  
+    result_type operator () (Integer value) const noexcept {
+        result_type hash = static_cast<result_type>(value);
+        return hash;
+    }
+
+    template <typename Argument, typename std::enable_if<
+                                  (!std::is_integral<Argument>::value ||
+                                  sizeof(Argument) > 8)>::type * = nullptr>  
+    result_type operator () (const Argument & value) const {
+        std::hash<Argument> hasher;
+        return static_cast<result_type>(hasher(value));
     }
 };
 
@@ -272,7 +279,7 @@ struct IntegalHash
     template <typename Argument, typename std::enable_if<
                                   (!std::is_integral<Argument>::value ||
                                   sizeof(Argument) > 8)>::type * = nullptr>  
-    result_type operator () (const Argument & value) const noexcept {
+    result_type operator () (const Argument & value) const {
         std::hash<Argument> hasher;
         return static_cast<result_type>(hasher(value));
     }

@@ -59,7 +59,6 @@
 #include "jstd/basic/stdsize.h"
 
 #include <stdlib.h>     // For ::srand(), ::rand()
-#include <time.h>
 
 #include <cstdint>
 #include <cstddef>
@@ -92,20 +91,34 @@ public:
         return static_cast<value_type>(LibcRand::rand());
     }
 
+    std::int32_t nextInt32() {
+        return static_cast<std::int32_t>(this->nextUInt32());
+    }
+
     std::uint32_t nextUInt32() {
         return static_cast<std::uint32_t>(LibcRand::rand32());
     }
 
-    std::int32_t nextInt32() {
-        return static_cast<std::int32_t>(this->nextUInt32());
+    std::int64_t nextInt64() {
+        return static_cast<std::int64_t>(this->nextUInt64());
     }
 
     std::uint64_t nextUInt64() {
         return static_cast<std::uint64_t>(LibcRand::rand64());
     }
 
-    std::int64_t nextInt64() {
-        return static_cast<std::int64_t>(this->nextUInt64());
+    std::intptr_t nextInt() {
+        if (sizeof(std::intptr_t) == 4)
+            return static_cast<std::intptr_t>(this->nextInt32());
+        else
+            return static_cast<std::intptr_t>(this->nextInt64());
+    }
+
+    std::size_t nextUInt() {
+        if (sizeof(std::size_t) == 4)
+            return static_cast<std::size_t>(this->nextUInt32());
+        else
+            return static_cast<std::size_t>(this->nextUInt64());
     }
 };
 

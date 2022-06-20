@@ -127,9 +127,6 @@
     <ClInclude Include="..\..\..\src\jstd\system\LibcRandom.h">
       <Filter>src\system</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\src\jstd\system\MT19937.h">
-      <Filter>src\system</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\..\src\jstd\system\MT19937_64.h">
       <Filter>src\system</Filter>
     </ClInclude>
@@ -219,6 +216,9 @@
     </ClInclude>
     <ClInclude Include="..\..\..\src\jstd\hashmap\hashmap_analyzer.h">
       <Filter>src\hashmap</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\system\MT19937_32.h">
+      <Filter>src\system</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

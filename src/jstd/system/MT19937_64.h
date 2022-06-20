@@ -311,6 +311,14 @@ public:
     std::uint64_t nextUInt64() {
         return static_cast<std::uint64_t>(this->rand());
     }
+
+    std::intptr_t nextInt() {
+        return static_cast<std::intptr_t>(this->rand());
+    }
+
+    std::size_t nextUInt() {
+        return static_cast<std::size_t>(this->rand());
+    }
 };
 
 } // namespace jstd

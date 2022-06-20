@@ -64,7 +64,7 @@
     <ClInclude Include="..\..\..\src\jstd\system\getchar.h" />
     <ClInclude Include="..\..\..\src\jstd\system\LibcRand.h" />
     <ClInclude Include="..\..\..\src\jstd\system\LibcRandom.h" />
-    <ClInclude Include="..\..\..\src\jstd\system\MT19937.h" />
+    <ClInclude Include="..\..\..\src\jstd\system\MT19937_32.h" />
     <ClInclude Include="..\..\..\src\jstd\system\MT19937_64.h" />
     <ClInclude Include="..\..\..\src\jstd\system\RandomGen.h" />
     <ClInclude Include="..\..\..\src\jstd\system\sleep.h" />

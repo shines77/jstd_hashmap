@@ -112,8 +112,8 @@
 //
 //////////////////////////////////////////////////////////////////////////
 
-#ifndef JSTD_SYSTEM_MT19937_H
-#define JSTD_SYSTEM_MT19937_H
+#ifndef JSTD_SYSTEM_MT19937_32_H
+#define JSTD_SYSTEM_MT19937_32_H
 
 #if defined(_MSC_VER) && (_MSC_VER >= 1020)
 #pragma once
@@ -134,7 +134,7 @@
 
 namespace jstd {
 
-class MT19937
+class MT19937_32
 {
 public:
     typedef std::uint32_t value_type;
@@ -151,21 +151,21 @@ private:
     value_type   state[N];
 
 public:
-    explicit MT19937(value_type initSeed = kMTDefaultSeed) : next(nullptr), left(1) {
+    explicit MT19937_32(value_type initSeed = kMTDefaultSeed) : next(nullptr), left(1) {
         this->init(initSeed);
     }
 
-    MT19937(const value_type * init_key, size_type key_len, value_type initSeed = kMTDefaultSeed)
+    MT19937_32(const value_type * init_key, size_type key_len, value_type initSeed = kMTDefaultSeed)
         : next(nullptr), left(1) {
         this->init(init_key, key_len, initSeed);
     }
 
-    MT19937(const std::vector<value_type> & init_key, value_type initSeed = kMTDefaultSeed)
+    MT19937_32(const std::vector<value_type> & init_key, value_type initSeed = kMTDefaultSeed)
         : next(nullptr), left(1) {
         this->init(init_key, initSeed);
     }
 
-    ~MT19937() {}
+    ~MT19937_32() {}
 
     value_type rand_max() const {
         return static_cast<value_type>(kMTRandMax);
@@ -313,8 +313,22 @@ public:
         return static_cast<std::uint64_t>(((std::uint64_t)this->nextUInt32() << 32) |
                                            (this->nextUInt32() & 0xFFFFFFFFul));
     }
+
+    std::intptr_t nextInt() {
+        if (sizeof(std::intptr_t) == 4)
+            return static_cast<std::intptr_t>(this->nextInt32());
+        else
+            return static_cast<std::intptr_t>(this->nextInt64());
+    }
+
+    std::size_t nextUInt() {
+        if (sizeof(std::size_t) == 4)
+            return static_cast<std::size_t>(this->nextUInt32());
+        else
+            return static_cast<std::size_t>(this->nextUInt64());
+    }
 };
 
 } // namespace jstd
 
-#endif // JSTD_SYSTEM_MT19937_H
+#endif // JSTD_SYSTEM_MT19937_32_H

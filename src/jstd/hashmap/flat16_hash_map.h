@@ -465,6 +465,7 @@ public:
 
     typedef hash_cluster cluster_type;
 
+#if 0
 #if 1
     struct hash_entry : public value_type {
         hash_entry() : value_type() {
@@ -581,6 +582,7 @@ public:
     inline void swap(hash_entry & lhs, hash_entry & rhs) noexcept {
         lhs.swap(rhs);
     }
+#endif
 
     typedef value_type                  entry_type;
     typedef value_type                  node_type;
