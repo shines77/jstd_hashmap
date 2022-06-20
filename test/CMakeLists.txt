@@ -1,9 +1,11 @@
 
+##
+## power2_test
+##
 set(POWER2_TEST_SOURCE_FILES
     ../test/power2_test.cpp
 )
 
-## power2_test
 add_executable(power2_test ${POWER2_TEST_SOURCE_FILES})
 
 if (NOT MSVC)
