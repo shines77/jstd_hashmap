@@ -352,36 +352,35 @@ void benchmark_insert_random(std::size_t iters)
 
     static_assert((DataSize % Block) == 0, "");
 
-    std::string std_name, jstd_flat_name;
-    std_name       = get_hashmap_name<Key, Value>("std::unordered_map<%s, %s>");
-    jstd_flat_name = get_hashmap_name<Key, Value>("jstd::flat16_hash_map<%s, %s>");
+    std::string name0, name1;
+    name0 = get_hashmap_name<Key, Value>("std::unordered_map<%s, %s>");
+    name1 = get_hashmap_name<Key, Value>("jstd::flat16_hash_map<%s, %s>");
 
     std::vector<Key> keys;
 
     keys = generate_random_keys<Key>(DataSize, Cardinal0);
-    run_insert_random<std::unordered_map<Key, Value>>   (std_name, keys, Cardinal0);
-    run_insert_random<jstd::flat16_hash_map<Key, Value>>(jstd_flat_name, keys, Cardinal0);
-    s_log.println();
+    run_insert_random<std::unordered_map<Key, Value>>   (name0, keys, Cardinal0);
+    run_insert_random<jstd::flat16_hash_map<Key, Value>>(name1, keys, Cardinal0);
 
     keys = generate_random_keys<Key>(DataSize, Cardinal1);
-    run_insert_random<std::unordered_map<Key, Value>>   (std_name, keys, Cardinal1);
-    run_insert_random<jstd::flat16_hash_map<Key, Value>>(jstd_flat_name, keys, Cardinal1);
-    s_log.println();
+    run_insert_random<std::unordered_map<Key, Value>>   (name0, keys, Cardinal1);
+    run_insert_random<jstd::flat16_hash_map<Key, Value>>(name1, keys, Cardinal1);
 
     keys = generate_random_keys<Key>(DataSize, Cardinal2);
-    run_insert_random<std::unordered_map<Key, Value>>   (std_name, keys, Cardinal2);
-    run_insert_random<jstd::flat16_hash_map<Key, Value>>(jstd_flat_name, keys, Cardinal2);
-    s_log.println();
+    run_insert_random<std::unordered_map<Key, Value>>   (name0, keys, Cardinal2);
+    run_insert_random<jstd::flat16_hash_map<Key, Value>>(name1, keys, Cardinal2);
 
     keys = generate_random_keys<Key>(DataSize, Cardinal3);
-    run_insert_random<std::unordered_map<Key, Value>>   (std_name, keys, Cardinal3);
-    run_insert_random<jstd::flat16_hash_map<Key, Value>>(jstd_flat_name, keys, Cardinal3);
-    s_log.println();
+    run_insert_random<std::unordered_map<Key, Value>>   (name0, keys, Cardinal3);
+    run_insert_random<jstd::flat16_hash_map<Key, Value>>(name1, keys, Cardinal3);
 }
 
 void benchmark_all_hashmaps(std::size_t iters)
 {
     benchmark_insert_random<int, int>(iters);
+
+    printf("------------------------------------------------------------------------------------\n\n");
+
     benchmark_insert_random<std::size_t, std::size_t>(iters);
 }
 
