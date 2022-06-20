@@ -24,6 +24,7 @@ PUBLIC
 
 target_include_directories(power2_test
 PUBLIC
+    "${PROJECT_BINARY_DIR}/test"
     "${PROJECT_BINARY_DIR}"
     ${EXTRA_INCLUDES}
 )
