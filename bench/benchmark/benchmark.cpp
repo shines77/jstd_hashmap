@@ -1339,7 +1339,7 @@ int main(int argc, char * argv[])
 
     hashmap_benchmark_all();
 
-    jstd::Console::ReadKey();
+    //jstd::Console::ReadKey();
     return 0;
 }
 

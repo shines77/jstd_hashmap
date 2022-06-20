@@ -125,6 +125,12 @@
 #include <jstd/test/CPUWarmUp.h>
 #include <jstd/test/ProcessMemInfo.h>
 
+//
+// HashTable performance benchmark (CK/phmap/ska)
+//
+// From: https://dirtysalt.github.io/html/hashtable-perf-comparison.html
+//
+
 #define PRINT_MACRO_HELPER(x)   #x
 #define PRINT_MACRO(x)          PRINT_MACRO_HELPER(x)
 #define PRINT_MACRO_VAR(x)      #x " = " PRINT_MACRO_HELPER(x)
@@ -219,7 +225,9 @@ struct IntegalHash
 } // namespace test
 
 //
-// https://dirtysalt.github.io/html/hashtable-perf-comparison.html
+// HashTable performance benchmark (CK/phmap/ska)
+//
+// From: https://dirtysalt.github.io/html/hashtable-perf-comparison.html
 //
 
 class LogBuffer {
@@ -320,7 +328,6 @@ void run_insert_random(const std::string & name, std::vector<Key> & keys, std::s
     typedef typename HashMap::mapped_type mapped_type;
 
     jtest::StopWatch sw;
-
     HashMap hashmap;
 
     sw.start();
@@ -402,11 +409,10 @@ int main(int argc, char * argv[])
     if (1) {
         printf("------------------------------ benchmark_all_hashmaps ------------------------------\n\n");
         benchmark_all_hashmaps(iters);
-        //s_log.flush();
     }
 
     printf("------------------------------------------------------------------------------------\n\n");
 
-    jstd::Console::ReadKey();
+    //jstd::Console::ReadKey();
     return 0;
 }

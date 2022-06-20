@@ -1488,6 +1488,6 @@ int main(int argc, char * argv[])
 
     printf("------------------------------------------------------------------------------------\n\n");
 
-    jstd::Console::ReadKey();
+    //jstd::Console::ReadKey();
     return 0;
 }
