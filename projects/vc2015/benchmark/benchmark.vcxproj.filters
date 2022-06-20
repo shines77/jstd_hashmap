@@ -7,12 +7,12 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\..\perf\benchmark\benchmark.cpp">
+    <ClCompile Include="..\..\..\bench\benchmark\benchmark.cpp">
       <Filter>src</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\..\perf\benchmark\BenchmarkResult.h">
+    <ClInclude Include="..\..\..\bench\benchmark\BenchmarkResult.h">
       <Filter>src</Filter>
     </ClInclude>
   </ItemGroup>

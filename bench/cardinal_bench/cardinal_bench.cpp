@@ -76,6 +76,7 @@
 #include <vector>
 #include <unordered_map>
 #include <algorithm>
+#include <cassert>
 
 /* SIMD support features */
 #define JSTD_HAVE_MMX           1
@@ -146,6 +147,14 @@
   #define HASH_MAP_FUNCTION     std::hash
 #endif // HASH_FUNCTION_MODE
 
+#ifndef _DEBUG
+static const std::size_t kDefaultIters = 10000000;
+#else
+static const std::size_t kDefaultIters = 10000;
+#endif
+
+static const std::size_t kInitCapacity = 8;
+
 static inline
 std::size_t CurrentMemoryUsage()
 {
@@ -209,20 +218,171 @@ struct IntegalHash
 
 } // namespace test
 
-template <typename Key>
-void ConstructRandomKeys(std::vector<Key> & keys,
-                           std::size_t data_size, std::size_t value_range)
-{
-    keys.resize(data_size);
-    jstd::MtRandomGen mtRandomGen(20200831);
-    for (std::size_t i = 0; i < data_size; i++) {
-        keys[i] = mtRandomGen.nextUInt() % value_range;
+//
+// https://dirtysalt.github.io/html/hashtable-perf-comparison.html
+//
+
+class LogBuffer {
+public:
+    std::ostringstream & buf() {
+        return oss_;
     }
+
+    const std::ostringstream & buf() const {
+        return oss_;
+    }
+
+    void flush() {
+        std::cerr << oss_.str();
+    }
+
+    template <typename Container>
+    void info(const std::string & name, const Container & hashmap) {
+        oss_ << name << ": hashmap size = " << hashmap.size()
+             << ", load factor = " << hashmap.load_factor() << '\n';
+    }
+
+    void info(const std::string & text) {
+        oss_ << text << '\n';
+    }
+
+    void println() {
+        oss_ << '\n';
+    }
+
+private:
+    std::ostringstream oss_;
+};
+
+LogBuffer s_log;
+
+template <typename T>
+struct type_name {
+    static const char * name() {
+        return typeid(T).name();
+    }
+};
+
+template <>
+struct type_name<int> {
+    static const char * name() {
+        return "int";
+    }
+};
+
+template <>
+struct type_name<unsigned int> {
+    static const char * name() {
+        return "uint";
+    }
+};
+
+template <>
+struct type_name<std::int64_t> {
+    static const char * name() {
+        return "ssize_t";
+    }
+};
+
+template <>
+struct type_name<std::uint64_t> {
+    static const char * name() {
+        return "size_t";
+    }
+};
+
+template <typename Key, typename Value>
+std::string get_hashmap_name(const char * fmt)
+{
+    char name[1024];
+    snprintf(name, sizeof(name), fmt,
+             type_name<Key>::name(), type_name<Value>::name());
+    return std::string(name);
+}
+
+template <typename Key>
+std::vector<Key> generate_random_keys(std::size_t data_size, std::size_t key_range)
+{
+    jstd::MtRandomGen mtRandomGen(20200831);
+
+    std::vector<Key> keys;
+    keys.resize(data_size);
+    for (std::size_t i = 0; i < data_size; i++) {
+        keys[i] = static_cast<Key>(mtRandomGen.nextUInt() % key_range);
+    }
+
+    return keys;
+}
+
+template <typename HashMap, typename Key = typename HashMap::key_type>
+void run_insert_random(const std::string & name, std::vector<Key> & keys, std::size_t cardinal)
+{
+    typedef typename HashMap::mapped_type mapped_type;
+
+    jtest::StopWatch sw;
+
+    HashMap hashmap;
+
+    sw.start();
+    for (std::size_t i = 0; i < keys.size(); i++) {
+        hashmap.insert(std::make_pair(keys[i], mapped_type(i)));
+    }
+    sw.stop();
+
+    double elapsed_time = sw.getElapsedMillisec();
+
+    printf("%s: %s\n", __func__, name.c_str());
+    printf("hashmap.size() = %u, cardinal = %u, load_factor = %0.3f, time: %0.2f ms\n\n",
+           (uint32_t)keys.size(), (uint32_t)cardinal,
+           hashmap.load_factor(), elapsed_time);
+
+    //s_log.info(__func__, hashmap);
+}
+
+template <typename Key, typename Value>
+void benchmark_insert_random(std::size_t iters)
+{
+    static constexpr std::size_t Block = 4096;
+    static constexpr std::size_t Factor = 16;
+    static constexpr std::size_t DataSize = 1024 * 1000 * Factor;
+    static constexpr std::size_t Cardinal0 = 60 * Factor;
+    static constexpr std::size_t Cardinal1 = 6000 * Factor;
+    static constexpr std::size_t Cardinal2 = 600000 * Factor;
+    static constexpr std::size_t Cardinal3 = 60000000 * Factor;
+
+    static_assert((DataSize % Block) == 0, "");
+
+    std::string std_name, jstd_flat_name;
+    std_name       = get_hashmap_name<Key, Value>("std::unordered_map<%s, %s>");
+    jstd_flat_name = get_hashmap_name<Key, Value>("jstd::flat16_hash_map<%s, %s>");
+
+    std::vector<Key> keys;
+
+    keys = generate_random_keys<Key>(DataSize, Cardinal0);
+    run_insert_random<std::unordered_map<Key, Value>>   (std_name, keys, Cardinal0);
+    run_insert_random<jstd::flat16_hash_map<Key, Value>>(jstd_flat_name, keys, Cardinal0);
+    s_log.println();
+
+    keys = generate_random_keys<Key>(DataSize, Cardinal1);
+    run_insert_random<std::unordered_map<Key, Value>>   (std_name, keys, Cardinal1);
+    run_insert_random<jstd::flat16_hash_map<Key, Value>>(jstd_flat_name, keys, Cardinal1);
+    s_log.println();
+
+    keys = generate_random_keys<Key>(DataSize, Cardinal2);
+    run_insert_random<std::unordered_map<Key, Value>>   (std_name, keys, Cardinal2);
+    run_insert_random<jstd::flat16_hash_map<Key, Value>>(jstd_flat_name, keys, Cardinal2);
+    s_log.println();
+
+    keys = generate_random_keys<Key>(DataSize, Cardinal3);
+    run_insert_random<std::unordered_map<Key, Value>>   (std_name, keys, Cardinal3);
+    run_insert_random<jstd::flat16_hash_map<Key, Value>>(jstd_flat_name, keys, Cardinal3);
+    s_log.println();
 }
 
 void benchmark_all_hashmaps(std::size_t iters)
 {
-    //
+    benchmark_insert_random<int, int>(iters);
+    benchmark_insert_random<std::size_t, std::size_t>(iters);
 }
 
 int main(int argc, char * argv[])
@@ -241,8 +401,9 @@ int main(int argc, char * argv[])
     printf("#define HASH_MAP_FUNCTION = %s\n\n", PRINT_MACRO(HASH_MAP_FUNCTION));
 
     if (1) {
-        printf("-------------------------- benchmark_all_hashmaps(iters) ---------------------------\n\n");
+        printf("------------------------------ benchmark_all_hashmaps ------------------------------\n\n");
         benchmark_all_hashmaps(iters);
+        //s_log.flush();
     }
 
     printf("------------------------------------------------------------------------------------\n\n");

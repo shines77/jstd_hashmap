@@ -58,8 +58,6 @@
 #include "jstd/basic/stdint.h"
 #include "jstd/basic/stdsize.h"
 
-#include <stdlib.h>     // For ::srand(), ::rand()
-
 #include <cstdint>
 #include <cstddef>
 #include <cstdlib>      // For std::srand(), std::rand()
@@ -71,6 +69,7 @@ namespace jstd {
 class LibcRandom {
 public:
     typedef std::uint32_t   value_type;
+    typedef std::size_t     size_type;
     typedef LibcRandom      this_type;
 
     explicit LibcRandom(std::uint32_t initSeed = 0) {

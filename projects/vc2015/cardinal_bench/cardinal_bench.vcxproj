@@ -155,7 +155,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\..\perf\cardinal_bench\cardinal_bench.cpp" />
+    <ClCompile Include="..\..\..\bench\cardinal_bench\cardinal_bench.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
