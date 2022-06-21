@@ -192,7 +192,7 @@ inline __m128i _mm_cmplt_epi8_fixed(__m128i A, __m128i B) {
 }
 
 template < typename Key, typename Value,
-           typename Hasher = std::hash<Key>,
+           typename Hash = std::hash<Key>,
            typename KeyEqual = std::equal_to<Key>,
            typename Allocator = std::allocator<std::pair<const Key, Value>> >
 class flat16_hash_map {
@@ -202,17 +202,17 @@ public:
     typedef std::pair<const Key, Value>     value_type;
     typedef std::pair<Key, Value>           nc_value_type;
 
-    typedef Hasher                          hasher;
+    typedef Hash                            hasher;
     typedef KeyEqual                        key_equal;
     typedef Allocator                       allocator_type;
-    typedef typename Hasher::result_type    hash_result_t;
+    typedef typename Hash::result_type      hash_result_t;
 
     typedef std::size_t                     size_type;
     typedef typename std::make_signed<size_type>::type
                                             ssize_type;
     typedef std::size_t                     index_type;
     typedef std::size_t                     hash_code_t;
-    typedef flat16_hash_map<Key, Value, Hasher, KeyEqual, Allocator>
+    typedef flat16_hash_map<Key, Value, Hash, KeyEqual, Allocator>
                                             this_type;
 
     static constexpr size_type npos = size_type(-1);
@@ -586,7 +586,9 @@ public:
 
     typedef value_type                  entry_type;
     typedef value_type                  node_type;
-    typedef std::allocator<entry_type>  entry_allocator_type;
+
+    typedef typename std::allocator_traits<allocator_type>::template rebind_alloc<entry_type>
+                                        entry_allocator_type;
 
     template <typename ValueType>
     class basic_iterator {
@@ -682,15 +684,114 @@ private:
     hasher          hasher_;
     key_equal       key_equal_;
 
-    allocator_type          value_allocator_;
+    allocator_type          allocator_;
     entry_allocator_type    entry_allocator_;
 
 public:
-    explicit flat16_hash_map(size_type initialCapacity = kDefaultCapacity) :
+    flat16_hash_map() : flat16_hash_map(kDefaultCapacity) {
+    }
+
+    explicit flat16_hash_map(size_type init_capacity,
+                             const hasher & hash = hasher(),
+                             const key_equal & equal = key_equal(),
+                             const allocator_type & alloc = allocator_type()) :
         clusters_(nullptr), cluster_mask_(0),
         entries_(nullptr), entry_size_(0), entry_mask_(0),
-        entry_threshold_(0), load_factor_((double)kDefaultLoadFactor) {
-        this->create_cluster<true>(initialCapacity);
+        entry_threshold_(0), load_factor_((double)kDefaultLoadFactor),
+        hasher_(hash), key_equal_(equal), allocator_(alloc) {
+        this->create_cluster<true>(init_capacity);
+    }
+
+    explicit flat16_hash_map(const allocator_type & alloc)
+        : flat16_hash_map(kDefaultCapacity, hasher(), key_equal(), alloc) {
+    }
+
+    template <typename InputIter>
+    flat16_hash_map(InputIter first, InputIter last,
+                    size_type init_capacity = kDefaultCapacity,
+                    const hasher & hash = hasher(),
+                    const key_equal & equal = key_equal(),
+                    const allocator_type & alloc = allocator_type()) :
+        clusters_(nullptr), cluster_mask_(0),
+        entries_(nullptr), entry_size_(0), entry_mask_(0),
+        entry_threshold_(0), load_factor_((double)kDefaultLoadFactor),
+        hasher_(hash), key_equal_(equal), allocator_(alloc) {
+        this->create_cluster<true>(init_capacity);
+        this->insert(first, last);
+    }
+
+    template <typename InputIter>
+    flat16_hash_map(InputIter first, InputIter last,
+                    size_type init_capacity,
+                    const allocator_type & alloc)
+        : flat16_hash_map(first, last, init_capacity, hasher(), key_equal(), alloc) {
+    }
+
+    template <typename InputIter>
+    flat16_hash_map(InputIter first, InputIter last,
+                    size_type init_capacity,
+                    const hasher & hash,
+                    const allocator_type & alloc)
+        : flat16_hash_map(first, last, init_capacity, hash, key_equal(), alloc) {
+    }
+
+    flat16_hash_map(const flat16_hash_map & other) :
+        clusters_(nullptr), cluster_mask_(0),
+        entries_(nullptr), entry_size_(0), entry_mask_(0),
+        entry_threshold_(0), load_factor_((double)kDefaultLoadFactor),
+        hasher_(hasher()), key_equal_(key_equal()), allocator_(allocator_type()) {
+        //
+    }
+
+    flat16_hash_map(const flat16_hash_map & other, const Allocator & alloc) :
+        clusters_(nullptr), cluster_mask_(0),
+        entries_(nullptr), entry_size_(0), entry_mask_(0),
+        entry_threshold_(0), load_factor_((double)kDefaultLoadFactor),
+        hasher_(hasher()), key_equal_(key_equal()), allocator_(alloc) {
+        //
+    }
+
+    flat16_hash_map(flat16_hash_map && other) :
+        clusters_(nullptr), cluster_mask_(0),
+        entries_(nullptr), entry_size_(0), entry_mask_(0),
+        entry_threshold_(0), load_factor_((double)kDefaultLoadFactor),
+        hasher_(hasher()), key_equal_(key_equal()), allocator_(allocator_type()) {
+        //
+    }
+
+    flat16_hash_map(flat16_hash_map && other, const Allocator & alloc) :
+        clusters_(nullptr), cluster_mask_(0),
+        entries_(nullptr), entry_size_(0), entry_mask_(0),
+        entry_threshold_(0), load_factor_((double)kDefaultLoadFactor),
+        hasher_(hasher()), key_equal_(key_equal()), allocator_(alloc) {
+        //
+    }
+
+    flat16_hash_map(std::initializer_list<value_type> init_list,
+                    size_type init_capacity = kDefaultCapacity,
+                    const hasher & hash = hasher(),
+                    const key_equal & equal = key_equal(),
+                    const allocator_type & alloc = allocator_type()) :
+        clusters_(nullptr), cluster_mask_(0),
+        entries_(nullptr), entry_size_(0), entry_mask_(0),
+        entry_threshold_(0), load_factor_((double)kDefaultLoadFactor),
+        hasher_(hash), key_equal_(equal), allocator_(alloc) {
+        size_type new_capacity = (init_capacity >= init_list.size()) ? init_capacity : init_list.size();
+        this->reserve_for_insert(new_capacity);
+        this->insert(init_list.begin(), init_list.end());
+    }
+
+    flat16_hash_map(std::initializer_list<value_type> init_list,
+                    size_type init_capacity,
+                    const allocator_type & alloc) :
+        : flat16_hash_map(init_list, init_capacity, hasher(), key_equal(), alloc) {
+    }
+
+    flat16_hash_map(std::initializer_list<value_type> init_list,
+                    size_type init_capacity,
+                    const hasher & hash,
+                    const allocator_type & alloc) :
+        : flat16_hash_map(init_list, init_capacity, hash, key_equal(), alloc) {
     }
 
     ~flat16_hash_map() {
@@ -745,7 +846,7 @@ public:
     }
 
     double max_load_factor() const {
-        return static_cast<double>(this->load_factor_);
+        return this->load_factor_;
     }
 
     double default_load_factor() const {
@@ -849,7 +950,7 @@ public:
 
     void rehash(size_type new_capacity, bool read_only = false) {
         if (!read_only)
-            new_capacity = (std::max)((size_type)((float)new_capacity / this->load_factor_), this->entry_size());
+            new_capacity = (std::max)((size_type)((double)new_capacity / this->load_factor_), this->entry_size());
         else
             new_capacity = (std::max)(new_capacity, this->entry_size());
         this->rehash_impl<true, false>(new_capacity);
@@ -858,7 +959,7 @@ public:
     void shrink_to_fit(bool read_only = false) {
         size_type new_capacity;
         if (!read_only)
-            new_capacity = (size_type)((float)this->entry_size() / this->load_factor_);
+            new_capacity = (size_type)((double)this->entry_size() / this->load_factor_);
         else
             new_capacity = this->entry_size();
         this->rehash_impl<true, false>(new_capacity);
@@ -1293,6 +1394,12 @@ private:
     void grow_if_necessary() {
         size_type new_capacity = (this->entry_mask_ + 1) * 2;
         this->rehash_impl<false, true>(new_capacity);
+    }
+
+    JSTD_FORCED_INLINE
+    void reserve_for_insert(size_type init_capacity) {
+        size_type new_capacity = (size_type)((double)init_capacity / this->max_load_factor());
+        this->create_cluster<true>(new_capacity);
     }
 
     template <bool AllowShrink, bool AlwaysResize>
