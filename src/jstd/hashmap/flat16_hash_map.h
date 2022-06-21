@@ -802,14 +802,14 @@ public:
 
     flat16_hash_map(std::initializer_list<value_type> init_list,
                     size_type init_capacity,
-                    const allocator_type & alloc) :
+                    const allocator_type & alloc)
         : flat16_hash_map(init_list, init_capacity, hasher(), key_equal(), alloc) {
     }
 
     flat16_hash_map(std::initializer_list<value_type> init_list,
                     size_type init_capacity,
                     const hasher & hash,
-                    const allocator_type & alloc) :
+                    const allocator_type & alloc)
         : flat16_hash_map(init_list, init_capacity, hash, key_equal(), alloc) {
     }
 
