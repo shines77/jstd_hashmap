@@ -57,6 +57,7 @@
 #include <cstddef>      // For std::ptrdiff_t, std::size_t
 #include <cstdbool>
 #include <cassert>
+#include <cmath>        // For std::ceil()
 #include <memory>       // For std::swap(), std::pointer_traits<T>
 #include <limits>       // For std::numeric_limits<T>
 #include <cstring>      // For std::memset()
@@ -698,7 +699,8 @@ public:
         clusters_(nullptr), cluster_mask_(0),
         entries_(nullptr), entry_size_(0), entry_mask_(0),
         entry_threshold_(0), load_factor_((double)kDefaultLoadFactor),
-        hasher_(hash), key_equal_(equal), allocator_(alloc) {
+        hasher_(hash), key_equal_(equal),
+        allocator_(alloc), entry_allocator_(alloc) {
         this->create_cluster<true>(init_capacity);
     }
 
@@ -715,7 +717,8 @@ public:
         clusters_(nullptr), cluster_mask_(0),
         entries_(nullptr), entry_size_(0), entry_mask_(0),
         entry_threshold_(0), load_factor_((double)kDefaultLoadFactor),
-        hasher_(hash), key_equal_(equal), allocator_(alloc) {
+        hasher_(hash), key_equal_(equal),
+        allocator_(alloc), entry_allocator_(alloc) {
         this->create_cluster<true>(init_capacity);
         this->insert(first, last);
     }
@@ -735,36 +738,51 @@ public:
         : flat16_hash_map(first, last, init_capacity, hash, key_equal(), alloc) {
     }
 
-    flat16_hash_map(const flat16_hash_map & other) :
-        clusters_(nullptr), cluster_mask_(0),
-        entries_(nullptr), entry_size_(0), entry_mask_(0),
-        entry_threshold_(0), load_factor_((double)kDefaultLoadFactor),
-        hasher_(hasher()), key_equal_(key_equal()), allocator_(allocator_type()) {
-        //
+    flat16_hash_map(const flat16_hash_map & other)
+        : flat16_hash_map(other, std::allocator_traits<allocator_type>::
+                                 select_on_container_copy_construction(other.get_allocator())) {
     }
 
     flat16_hash_map(const flat16_hash_map & other, const Allocator & alloc) :
         clusters_(nullptr), cluster_mask_(0),
         entries_(nullptr), entry_size_(0), entry_mask_(0),
         entry_threshold_(0), load_factor_((double)kDefaultLoadFactor),
-        hasher_(hasher()), key_equal_(key_equal()), allocator_(alloc) {
-        //
+        hasher_(hasher()), key_equal_(key_equal()),
+        allocator_(alloc), entry_allocator_(alloc) {
+        // Prepare enough space to ensure that no expansion is required during the insertion process.
+        size_type other_size = other.entry_size();
+        this->reserve_for_insert(other_size);
+        try {
+            this->insert_unique(other.begin(), other.end());
+        } catch (const std::bad_alloc & ex) {
+            this->destroy();
+            throw std::bad_alloc();
+        } catch (...) {
+            this->destroy();
+            throw;
+        }
     }
 
-    flat16_hash_map(flat16_hash_map && other) :
+    flat16_hash_map(flat16_hash_map && other) noexcept :
         clusters_(nullptr), cluster_mask_(0),
         entries_(nullptr), entry_size_(0), entry_mask_(0),
         entry_threshold_(0), load_factor_((double)kDefaultLoadFactor),
-        hasher_(hasher()), key_equal_(key_equal()), allocator_(allocator_type()) {
-        //
+        hasher_(std::move(other.hash_function())),
+        key_equal_(std::move(other.key_eq())),
+        allocator_(std::move(other.get_allocator())),
+        entry_allocator_(std::move(other.get_entry_allocator())) {
+        this->swap_content(other);
     }
 
-    flat16_hash_map(flat16_hash_map && other, const Allocator & alloc) :
+    flat16_hash_map(flat16_hash_map && other, const Allocator & alloc) noexcept :
         clusters_(nullptr), cluster_mask_(0),
         entries_(nullptr), entry_size_(0), entry_mask_(0),
         entry_threshold_(0), load_factor_((double)kDefaultLoadFactor),
-        hasher_(hasher()), key_equal_(key_equal()), allocator_(alloc) {
-        //
+        hasher_(std::move(other.hash_function())),
+        key_equal_(std::move(other.key_eq())),
+        allocator_(alloc),
+        entry_allocator_(std::move(other.get_entry_allocator())) {
+        this->swap_content(other);
     }
 
     flat16_hash_map(std::initializer_list<value_type> init_list,
@@ -776,6 +794,7 @@ public:
         entries_(nullptr), entry_size_(0), entry_mask_(0),
         entry_threshold_(0), load_factor_((double)kDefaultLoadFactor),
         hasher_(hash), key_equal_(equal), allocator_(alloc) {
+        // Prepare enough space to ensure that no expansion is required during the insertion process.
         size_type new_capacity = (init_capacity >= init_list.size()) ? init_capacity : init_list.size();
         this->reserve_for_insert(new_capacity);
         this->insert(init_list.begin(), init_list.end());
@@ -822,6 +841,7 @@ public:
     size_type entry_size() const { return entry_size_; }
     size_type entry_mask() const { return entry_mask_; }
     size_type entry_capacity() const { return (entry_mask_ + 1); }
+    size_type entry_threshold() const { return entry_threshold_; }
 
     constexpr size_type bucket_count() const {
         return kClusterEntries;
@@ -915,7 +935,15 @@ public:
         return this->end();
     }
 
-    hasher hasherstion() const {
+    allocator_type get_allocator() const noexcept {
+        return this->allocator_;
+    }
+
+    entry_allocator_type get_entry_allocator() const noexcept {
+        return this->entry_allocator_;
+    }
+
+    hasher hash_function() const {
         return this->hasher_;
     }
 
@@ -950,7 +978,7 @@ public:
 
     void rehash(size_type new_capacity, bool read_only = false) {
         if (!read_only)
-            new_capacity = (std::max)((size_type)((double)new_capacity / this->load_factor_), this->entry_size());
+            new_capacity = (std::max)(this->capacity_for_reserve(new_capacity), this->entry_size());
         else
             new_capacity = (std::max)(new_capacity, this->entry_size());
         this->rehash_impl<true, false>(new_capacity);
@@ -959,10 +987,16 @@ public:
     void shrink_to_fit(bool read_only = false) {
         size_type new_capacity;
         if (!read_only)
-            new_capacity = (size_type)((double)this->entry_size() / this->load_factor_);
+            new_capacity = this->capacity_for_reserve(this->entry_size());
         else
             new_capacity = this->entry_size();
         this->rehash_impl<true, false>(new_capacity);
+    }
+
+    void swap(flat16_hash_map & other) {
+        if (&other != this) {
+            this->swap_impl(other);
+        }
     }
 
     mapped_type & operator [] (const key_type & key) {
@@ -1178,6 +1212,12 @@ private:
         if (!pow2::is_pow2(new_capacity)) {
             new_capacity = pow2::round_up<size_type, kMinimumCapacity>(new_capacity);
         }
+        return new_capacity;
+    }
+
+    JSTD_FORCED_INLINE
+    size_type capacity_for_reserve(size_type init_capacity) {
+        size_type new_capacity = (size_type)std::ceil((double)init_capacity / this->max_load_factor());
         return new_capacity;
     }
 
@@ -1398,7 +1438,7 @@ private:
 
     JSTD_FORCED_INLINE
     void reserve_for_insert(size_type init_capacity) {
-        size_type new_capacity = (size_type)((double)init_capacity / this->max_load_factor());
+        size_type new_capacity = this->capacity_for_reserve(init_capacity);
         this->create_cluster<true>(new_capacity);
     }
 
@@ -1436,7 +1476,7 @@ private:
                         size_type pos = BitUtils::bsf32(maskUsed);
                         maskUsed = BitUtils::clearLowBit32(maskUsed);
                         entry_type * entry = entry_start + pos;
-                        this->directly_insert(entry);
+                        this->move_insert_unique(entry);
                         this->entry_allocator_.destroy(entry);
                     }
                     entry_start += kClusterEntries;
@@ -1567,7 +1607,7 @@ private:
     }
 
     // Use in rehash_impl()
-    void directly_insert(entry_type * value) {
+    void move_insert_unique(entry_type * value) {
         std::uint8_t ctrl_hash;
         size_type target = this->find_first_empty_entry(value->first, ctrl_hash);
         assert(target != npos);
@@ -1580,6 +1620,45 @@ private:
         this->entry_allocator_.construct(entry,
               std::move(*static_cast<value_type *>(value)));
         this->entry_size_++;
+        assert(this->entry_size() <= this->entry_capacity());
+    }
+
+    void insert_unique(value_type && value) {
+        std::uint8_t ctrl_hash;
+        size_type target = this->find_first_empty_entry(value.first, ctrl_hash);
+        assert(target != npos);
+
+        // Found a [DeletedEntry] or [EmptyEntry] to insert
+        control_byte * control = this->control_at(target);
+        assert(control->isEmptyOrDeleted());
+        control->setUsed(ctrl_hash);
+        entry_type * entry = this->entry_at(target);
+        this->entry_allocator_.construct(entry, std::move(value));
+        this->entry_size_++;
+        assert(this->entry_size() <= this->entry_capacity());
+    }
+    
+    void insert_unique(const value_type & value) {
+        std::uint8_t ctrl_hash;
+        size_type target = this->find_first_empty_entry(value.first, ctrl_hash);
+        assert(target != npos);
+
+        // Found a [DeletedEntry] or [EmptyEntry] to insert
+        control_byte * control = this->control_at(target);
+        assert(control->isEmptyOrDeleted());
+        control->setUsed(ctrl_hash);
+        entry_type * entry = this->entry_at(target);
+        this->entry_allocator_.construct(entry, value);
+        this->entry_size_++;
+        assert(this->entry_size() <= this->entry_capacity());
+    }
+
+    // Use in constructor
+    template <typename InputIter>
+    void insert_unique(InputIter first, InputIter last) {
+        for (InputIter iter = first; iter != last; ++iter) {
+            this->insert_unique(static_cast<value_type>(*iter));
+        }
     }
 
     std::pair<size_type, bool>
@@ -1992,6 +2071,32 @@ private:
             }
             return { this->iterator_at(index), false };
         }
+    }
+
+    void swap_content(flat16_hash_map & other) {
+        std::swap(this->clusters_, other.clusters());
+        std::swap(this->cluster_mask_, other.cluster_mask());
+        std::swap(this->entries_, other.entries());
+        std::swap(this->entry_size_, other.entry_size());
+        std::swap(this->entry_mask_, other.entry_mask());
+        std::swap(this->entry_threshold_, other.entry_threshold());
+        std::swap(this->load_factor_, other.max_load_factor());
+    }
+
+    void swap_policy(flat16_hash_map & other) {
+        std::swap(this->hasher_, other.hash_function());
+        std::swap(this->key_equal_, other.key_eq());
+        if (std::allocator_traits<allocator_type>::propagate_on_container_swap::value) {
+            std::swap(this->allocator_, other.get_allocator());
+        }
+        if (std::allocator_traits<entry_allocator_type>::propagate_on_container_swap::value) {
+            std::swap(this->entry_allocator_, other.get_entry_allocator());
+        }
+    }
+
+    void swap_impl(flat16_hash_map & other) {
+        this->swap_content(other);
+        this->swap_policy(other);
     }
 };
 
