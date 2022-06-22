@@ -321,6 +321,13 @@ public:
             _mm_store_si128((__m128i *)data, tag_bits);
         }
 
+        __m128i matchControlTag128(const_pointer data, std::uint8_t control_tag) const {
+            __m128i tag_bits = _mm_set1_epi8(control_tag);
+            __m128i control_bits = _mm_load_si128((const __m128i *)data);
+            __m128i match_mask = _mm_cmpeq_epi8(control_bits, tag_bits);
+            return match_mask;
+        }
+
         std::uint32_t matchControlTag(const_pointer data, std::uint8_t control_tag) const {
             __m128i tag_bits = _mm_set1_epi8(control_tag);
             __m128i control_bits = _mm_load_si128((const __m128i *)data);
@@ -329,19 +336,12 @@ public:
             return mask;
         }
 
-        __m128i matchControlTag128(const_pointer data, std::uint8_t control_tag) const {
-            __m128i tag_bits = _mm_set1_epi8(control_tag);
-            __m128i control_bits = _mm_load_si128((const __m128i *)data);
-            __m128i match_mask = _mm_cmpeq_epi8(control_bits, tag_bits);
-            return match_mask;
-        }
-
         std::uint32_t matchHash(const_pointer data, std::uint8_t control_hash) const {
             return this->matchControlTag(data, control_hash);
         }
 
         std::uint32_t matchEmpty(const_pointer data) const {
-#ifdef __SSSE3__
+#if defined(__SSSE3__) && 0
             // This only works when kEmptyEntry is 0b10000000.
             __m128i control_bits = _mm_load_si128((const __m128i *)data);
             __m128i empty_mask = _mm_sign_epi8(control_bits, control_bits);
@@ -697,8 +697,10 @@ public:
         typedef BitMask128<control_byte>                        bitmask128_type;
         typedef typename BitMask128<control_byte>::bitmask_type bitmask_type;
 
-        control_byte controls[kClusterEntries];
-        bitmask128_type bitmask;
+        union {
+            control_byte controls[kClusterEntries];
+            bitmask128_type bitmask;
+        };
 
         hash_cluster() noexcept {
             this->clear();
