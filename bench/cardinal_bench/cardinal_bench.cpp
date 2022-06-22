@@ -305,19 +305,19 @@ std::string formatMsTime(double fMillisec) {
     char time_buf[256];
 
     if (fMillisec >= 1000.0 * 1000.0 * 10.0) {
-        snprintf(time_buf, sizeof(time_buf), "%7.2f Min", fMillisec / (60 * 1000.0));
+        snprintf(time_buf, sizeof(time_buf), "%6.2f Min", fMillisec / (60 * 1000.0));
     }
     else if (fMillisec >= 1000.0 * 10.0) {
-        snprintf(time_buf, sizeof(time_buf), "%7.2f Sec", fMillisec / 1000.0);
+        snprintf(time_buf, sizeof(time_buf), "%6.2f Sec", fMillisec / 1000.0);
     }
     else if (fMillisec >= 1.0 * 10.0) {
-        snprintf(time_buf, sizeof(time_buf), "%7.2f ms ", fMillisec);
+        snprintf(time_buf, sizeof(time_buf), "%6.2f ms", fMillisec);
     }
     else if (fMillisec >= 0.001 * 10.0) {
-        snprintf(time_buf, sizeof(time_buf), "%7.2f us ", fMillisec * 1000.0);
+        snprintf(time_buf, sizeof(time_buf), "%6.2f us", fMillisec * 1000.0);
     }
     else {
-        snprintf(time_buf, sizeof(time_buf), "%7.2f ns ", fMillisec * 1000000.0);
+        snprintf(time_buf, sizeof(time_buf), "%6.2f ns", fMillisec * 1000000.0);
     }
 
     return std::string(time_buf);
@@ -370,17 +370,19 @@ void run_insert_random(const std::string & name, std::vector<Key> & keys, std::s
     }
 
     {
+        std::size_t check_sum = 0;
         sw.start();
         for (std::size_t i = 0; i < keys.size(); i++) {
             auto iter = hashmap.find(keys[i]);
+            check_sum += iter->second;
         }
         sw.stop();
 
         double elapsed_time = sw.getElapsedMillisec();
         double average_time = elapsed_time / keys.size();
 
-        printf("hashmap.find(key), average: %s, time: %0.2f ms\n\n",
-               formatMsTime(average_time).c_str(), elapsed_time);
+        printf("hashmap.find(key), check_sum: %" PRIu64 ", average: %s, time: %0.2f ms\n\n",
+               check_sum, formatMsTime(average_time).c_str(), elapsed_time);
     }
 }
 
