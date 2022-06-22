@@ -399,8 +399,6 @@ void benchmark_insert_random(std::size_t iters)
     static constexpr std::size_t Cardinal5 = 6000000 * Factor;
     static constexpr std::size_t Cardinal6 = 60000000 * Factor;
 
-    static_assert((DataSize % Block) == 0, "");
-
     printf("DataSize = %u\n\n", (uint32_t)DataSize);
 
     std::string name0, name1;
