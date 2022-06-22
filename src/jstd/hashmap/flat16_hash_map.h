@@ -1330,7 +1330,7 @@ public:
             entry_type * entry = this->entry_at(index);
             return entry->second;
         } else {
-            throw std::out_of_range("std::out_of_range exception: flat16_hash_map<K,V>::at(key), "
+            throw std::out_of_range("std::out_of_range exception: jstd::flat16_hash_map<K,V>::at(key), "
                                     "the specified key is not exists.");
         }
     }
@@ -1341,7 +1341,7 @@ public:
             entry_type * entry = this->entry_at(index);
             return entry->second;
         } else {
-            throw std::out_of_range("std::out_of_range exception: flat16_hash_map<K,V>::at(key) const, "
+            throw std::out_of_range("std::out_of_range exception: jstd::flat16_hash_map<K,V>::at(key) const, "
                                     "the specified key is not exists.");
         }
     }
@@ -1556,7 +1556,11 @@ private:
     }
 
     inline hash_code_t get_second_hash(hash_code_t value) const noexcept {
-        hash_code_t hash_code = (hash_code_t)((size_type)value * 14695981039346656037ull + 1099511628211ull);
+        hash_code_t hash_code;
+        if (sizeof(size_type) == 4)
+            hash_code = (hash_code_t)((size_type)value * 2654435761ul);
+        else
+            hash_code = (hash_code_t)((size_type)value * 14695981039346656037ull);
         return hash_code;
     }
 
@@ -1940,21 +1944,6 @@ private:
         assert(this->entry_size() <= this->entry_capacity());
     }
 
-    void insert_unique(value_type && value) {
-        std::uint8_t ctrl_hash;
-        size_type target = this->find_first_empty_entry(value.first, ctrl_hash);
-        assert(target != npos);
-
-        // Found a [DeletedEntry] or [EmptyEntry] to insert
-        control_byte * control = this->control_at(target);
-        assert(control->isEmptyOrDeleted());
-        control->setUsed(ctrl_hash);
-        entry_type * entry = this->entry_at(target);
-        this->entry_allocator_.construct(entry, std::move(value));
-        this->entry_size_++;
-        assert(this->entry_size() <= this->entry_capacity());
-    }
-    
     void insert_unique(const value_type & value) {
         std::uint8_t ctrl_hash;
         size_type target = this->find_first_empty_entry(value.first, ctrl_hash);
@@ -1969,6 +1958,22 @@ private:
         this->entry_size_++;
         assert(this->entry_size() <= this->entry_capacity());
     }
+
+    void insert_unique(value_type && value) {
+        std::uint8_t ctrl_hash;
+        size_type target = this->find_first_empty_entry(value.first, ctrl_hash);
+        assert(target != npos);
+
+        // Found a [DeletedEntry] or [EmptyEntry] to insert
+        control_byte * control = this->control_at(target);
+        assert(control->isEmptyOrDeleted());
+        control->setUsed(ctrl_hash);
+        entry_type * entry = this->entry_at(target);
+        this->entry_allocator_.construct(entry, std::move(value));
+        this->entry_size_++;
+        assert(this->entry_size() <= this->entry_capacity());
+    }
+   
 
     // Use in constructor
     template <typename InputIter>

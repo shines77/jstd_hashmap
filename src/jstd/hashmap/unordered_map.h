@@ -82,7 +82,23 @@
 
 namespace jstd {
 
+template <typename Key, typename Value>
+struct layout_policy {
+    static constexpr bool isAutoDetectPairLayout = true;
+    static constexpr bool keyValueIsIsolated = false;
+
+    static constexpr bool isAutoDetectKeyInlined = true;
+    static constexpr bool keyIsInlined = true;
+
+    static constexpr bool isAutoDetectValueInlined = true;
+    static constexpr bool valueIsInlined = true;
+
+    static constexpr bool isAutoDetectStoreHash = true;
+    static constexpr bool needStoreHash = true;
+};
+
 template < typename Key, typename Value,
+           typename LayoutPolicy = jstd::layout_policy<Key, Value>,
            typename Hash = std::hash<Key>,
            typename KeyEqual = std::equal_to<Key>,
            typename Allocator = std::allocator<std::pair<const Key, Value>> >
@@ -106,6 +122,8 @@ public:
     typedef unordered_map<Key, Value, Hash, KeyEqual, Allocator>
                                             this_type;
 
+    typedef LayoutPolicy                    layout_policy_t;
+
     static constexpr size_type npos = size_type(-1);
 
     // kMinimumCapacity must be >= 2
@@ -117,6 +135,12 @@ public:
     static constexpr float kMaxLoadFactor = 0.8f;
     // Must be kMinLoadFactor <= loadFactor <= kMaxLoadFactor
     static constexpr float kDefaultLoadFactor = 0.5f;
+
+    static constexpr bool kNeedUseHash = true;
+
+    static constexpr bool kNeedStoreHash =
+        (!layout_policy_t::isAutoDetectStoreHash && layout_policy_t::needStoreHash) ||
+         (layout_policy_t::isAutoDetectStoreHash && (kNeedUseHash));
 
     enum entry_type_t {
         kEntryTypeShfit  = 30,
@@ -209,6 +233,16 @@ public:
         void setRedirectEntry() {
             setEntryType(kIsRedirectEntry);
         }
+    };
+
+    template <bool NeedStoreHash>
+    struct bucket_entry {
+        //
+    };
+
+    template <>
+    struct bucket_entry<false> {
+        //
     };
 
 #if 0
@@ -1004,35 +1038,33 @@ public:
     }
 
     mapped_type & at(const key_type & key) {
-        size_type index = this->find_impl(key);
-        if (index != npos) {
-            entry_type * entry = this->entry_at(index);
-            return entry->second;
+        entry_type * entry = this->find_entry(key);
+        if (entry != nullptr) {
+            return entry->value.second;
         } else {
-            throw std::out_of_range("std::out_of_range exception: unordered_map<K,V>::at(key), "
+            throw std::out_of_range("std::out_of_range exception: jstd::unordered_map<K,V>::at(key), "
                                     "the specified key is not exists.");
         }
     }
 
     const mapped_type & at(const key_type & key) const {
-        size_type index = this->find_impl(key);
-        if (index != npos) {
-            entry_type * entry = this->entry_at(index);
-            return entry->second;
+        entry_type * entry = this->find_entry(key);
+        if (entry != nullptr) {
+            return entry->value.second;
         } else {
-            throw std::out_of_range("std::out_of_range exception: unordered_map<K,V>::at(key) const, "
+            throw std::out_of_range("std::out_of_range exception: jstd::unordered_map<K,V>::at(key) const, "
                                     "the specified key is not exists.");
         }
     }
 
     size_type count(const key_type & key) const {
-        size_type index = this->find_impl(key);
-        return (index != npos) ? size_type(1) : size_type(0);
+        entry_type * entry = this->find_entry(key);
+        return (entry != nullptr) ? size_type(1) : size_type(0);
     }
 
     bool contains(const key_type & key) const {
-        size_type index = this->find_impl(key);
-        return (index != npos);
+        entry_type * entry = this->find_entry(key);
+        return (entry != nullptr);
     }
 
     iterator find(const key_type & key) {
@@ -1041,8 +1073,7 @@ public:
     }
 
     const_iterator find(const key_type & key) const {
-        entry_type * entry = this->find_entry(key);
-        return iterator(this, entry);
+        return const_cast<this_type *>(this)->find(key);
     }
 
     std::pair<iterator, iterator> equal_range(const key_type & key) {
@@ -1217,7 +1248,11 @@ private:
     }
 
     inline hash_code_t get_second_hash(hash_code_t value) const noexcept {
-        hash_code_t hash_code = (hash_code_t)((size_type)value * 14695981039346656037ull + 1099511628211ull);
+        hash_code_t hash_code;
+        if (sizeof(size_type) == 4)
+            hash_code = (hash_code_t)((size_type)value * 2654435761ul);
+        else
+            hash_code = (hash_code_t)((size_type)value * 14695981039346656037ull);
         return hash_code;
     }
 
@@ -1548,32 +1583,79 @@ private:
         }
     }
 
-    size_type find_impl(const key_type & key) const {
+    entry_type * find_entry(const key_type & key) const {
         hash_code_t hash_code = this->get_hash(key);
-        hash_code_t hash_code_2nd = this->get_second_hash(hash_code);
-        std::uint8_t control_hash = this->get_control_hash(hash_code_2nd);
-        index_type cluster_index = this->index_for(hash_code);
-        index_type start_cluster = cluster_index;
-        do {
-            const cluster_type & cluster = this->get_cluster(cluster_index);
-            std::uint32_t mask16 = cluster.matchHash(control_hash);
-            size_type start_index = cluster_index * kClusterEntries;
-            while (mask16 != 0) {
-                size_type pos = BitUtils::bsf32(mask16);
-                mask16 = BitUtils::clearLowBit32(mask16);
-                size_type index = start_index + pos;
-                const entry_type & target = this->get_entry(index);
-                if (this->key_equal_(target.first, key)) {
-                    return index;
+        index_type index = this->index_for(hash_code);
+
+        assert(this->buckets() != nullptr);
+        entry_type * entry = this->buckets_[index];
+        while (entry != nullptr) {
+            if (likely(entry->hash_code != hash_code)) {
+                entry = entry->next;
+            } else {
+                if (likely(!this->key_equal_(key, entry->value.first)))
+                    entry = entry->next;
+                else
+                    return entry;
+            }
+        }
+
+        return nullptr;  // Not found
+    }
+
+    entry_type * find_before(const key_type & key, entry_type *& before, size_type & index) {
+        hash_code_t hash_code = this->get_hash(key);
+        index = this->index_for(hash_code);
+
+        assert(this->buckets() != nullptr);
+        entry_type * prev = nullptr;
+        entry_type * entry = buckets_[index];
+        while (entry != nullptr) {
+            if (likely(entry->hash_code != hash_code)) {
+                prev = entry;
+                entry = entry->next;
+            }
+            else {
+                if (likely(!this->key_equal_(key, entry->value.first))) {
+                    entry = entry->next;
+                } else {
+                    before = prev;
+                    return entry;
                 }
             }
-            if (cluster.hasAnyEmpty()) {
-                return npos;
-            }
-            cluster_index = this->next_cluster(cluster_index);
-        } while (cluster_index != start_cluster);
+        }
 
-        return npos;
+        return nullptr;  // Not found
+    }
+
+    entry_type * find_or_insert(const key_type & key) {
+        assert(this->buckets() != nullptr);
+
+        hash_code_t hash_code = this->get_hash(key);
+        index_type index = this->index_for(hash_code);
+
+        entry_type * entry = this->find_entry(key, hash_code, index);
+        if (likely(entry == nullptr)) {
+            entry = this->insert_new_entry(key, mapped_type(),
+                                           hash_code, index);
+        }
+
+        return entry;
+    }
+
+    entry_type * find_or_insert(key_type && key) {
+        assert(this->buckets() != nullptr);
+
+        hash_code_t hash_code = this->get_hash(key);
+        index_type index = this->index_for(hash_code);
+
+        entry_type * entry = this->find_entry(key, hash_code, index);
+        if (likely(entry == nullptr)) {
+            entry = this->insert_new_entry(std::forward<key_type>(key), mapped_type(),
+                                           hash_code, index);
+        }
+
+        return entry;
     }
 
     size_type find_impl(const key_type & key, index_type & first_cluster,
@@ -1679,21 +1761,6 @@ private:
         assert(this->entry_size() <= this->entry_capacity());
     }
 
-    void insert_unique(value_type && value) {
-        std::uint8_t ctrl_hash;
-        size_type target = this->find_first_empty_entry(value.first, ctrl_hash);
-        assert(target != npos);
-
-        // Found a [DeletedEntry] or [EmptyEntry] to insert
-        control_byte * control = this->control_at(target);
-        assert(control->isEmptyOrDeleted());
-        control->setUsed(ctrl_hash);
-        entry_type * entry = this->entry_at(target);
-        this->entry_allocator_.construct(entry, std::move(value));
-        this->entry_size_++;
-        assert(this->entry_size() <= this->entry_capacity());
-    }
-    
     void insert_unique(const value_type & value) {
         std::uint8_t ctrl_hash;
         size_type target = this->find_first_empty_entry(value.first, ctrl_hash);
@@ -1708,6 +1775,22 @@ private:
         this->entry_size_++;
         assert(this->entry_size() <= this->entry_capacity());
     }
+
+    void insert_unique(value_type && value) {
+        std::uint8_t ctrl_hash;
+        size_type target = this->find_first_empty_entry(value.first, ctrl_hash);
+        assert(target != npos);
+
+        // Found a [DeletedEntry] or [EmptyEntry] to insert
+        control_byte * control = this->control_at(target);
+        assert(control->isEmptyOrDeleted());
+        control->setUsed(ctrl_hash);
+        entry_type * entry = this->entry_at(target);
+        this->entry_allocator_.construct(entry, std::move(value));
+        this->entry_size_++;
+        assert(this->entry_size() <= this->entry_capacity());
+    }
+   
 
     // Use in constructor
     template <typename InputIter>

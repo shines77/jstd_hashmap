@@ -92,9 +92,19 @@ private:
     }
 
 public:
-    string_view_array() {}
+    string_view_array() : array_() {
+    }
+
+    string_view_array(const string_view_array & src) : array_() {
+        this->copy(src);
+    }
+
+    string_view_array(string_view_array && src)
+        : array_(std::move(src.array_)) {
+    }
+
     ~string_view_array() {
-        destroy();
+        this->destroy();
     }
 
     size_type size() const       { return array_.size();     }
@@ -133,7 +143,7 @@ public:
     }
 
     void push_back(value_type && value) {
-        array_.push_back(value);
+        array_.push_back(std::move(value));
     }
 
     void pop_back() {
@@ -152,17 +162,57 @@ public:
         if (pos < size())
             return (array_[pos]);
         else
-            throw std::out_of_range("string_view_array<F, S> outof of range.");
+            throw std::out_of_range("jstd::string_view_array<F, S> outof of range.");
     }
 
     const value_type & at(size_type pos) const {
         if (pos < size())
             return *(const_cast<const value_type *>(&array_[pos]));
         else
-            throw std::out_of_range("string_view_array<F, S> outof of range.");
+            throw std::out_of_range("jstd::string_view_array<F, S> outof of range.");
+    }
+
+    void copy(const string_view_array & other) {
+        if (&other != this) {
+            this->copy_impl(other);
+        }
+    }
+
+    void swap(string_view_array & other) noexcept {
+        if (&other != this) {
+            this->swap_impl(other);
+        }
+    }
+
+private:
+    void copy_impl(const string_view_array & other) {
+        for (size_type i = 0; i < other.size(); i++) {
+            element_type * new_element = new element_type(*other[i]);
+            this->array_.push_back(new_element);
+        }
+    }
+
+    void swap_impl(string_view_array & other) noexcept {
+        std::swap(this->array_, other.array_);
     }
 };
 
+template <typename First, typename Second>
+inline
+void swap(jstd::string_view_array<First, Second> & lhs, jstd::string_view_array<First, Second> & rhs) noexcept {
+    lhs.swap(rhs);
+}
+
 } // namespace jstd
+
+namespace std {
+
+template <typename First, typename Second>
+inline
+void swap(jstd::string_view_array<First, Second> & lhs, jstd::string_view_array<First, Second> & rhs) noexcept {
+    lhs.swap(rhs);
+}
+
+} // namespace std
 
 #endif // JSTD_STRING_STRING_VIEW_ARRAY_H
