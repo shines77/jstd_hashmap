@@ -147,17 +147,7 @@ struct IntegalHash
     }
 };
 
-} // namespace hasher
-
-template <std::uint8_t Value>
-struct repeat_u8x4 {
-    static constexpr std::uint32_t value = (std::uint32_t)Value * 0x01010101ul;
-};
-
-template <std::uint8_t Value>
-struct repeat_u8x8 {
-    static constexpr std::uint64_t value = (std::uint64_t)Value * 0x0101010101010101ull;
-};
+} // namespace hashers
 
 //
 // https://github.com/abseil/abseil-cpp/issues/209
@@ -263,12 +253,12 @@ public:
             return (this->value == kEndOfMark);
         }
 
-        bool isUsed() const {
-            return ((std::int8_t)this->value >= (std::int8_t)0);
-        }
-
         bool isEmptyOrDeleted() const {
             return ((std::int8_t)this->value < (std::int8_t)kEndOfMark);
+        }
+
+        bool isUsed() const {
+            return ((std::int8_t)this->value >= (std::int8_t)0);
         }
 
         bool isUnused() const {
@@ -1007,7 +997,7 @@ private:
     size_type       entry_mask_;
 
     size_type       entry_threshold_;
-    double          load_factor_;
+    float           load_factor_;
 
     hasher          hasher_;
     key_equal       key_equal_;
@@ -1025,7 +1015,7 @@ public:
                              const allocator_type & alloc = allocator_type()) :
         clusters_(nullptr), cluster_mask_(0),
         entries_(nullptr), entry_size_(0), entry_mask_(0),
-        entry_threshold_(0), load_factor_((double)kDefaultLoadFactor),
+        entry_threshold_(0), load_factor_(kDefaultLoadFactor),
         hasher_(hash), key_equal_(equal),
         allocator_(alloc), entry_allocator_(alloc) {
         this->create_cluster<true>(init_capacity);
@@ -1043,7 +1033,7 @@ public:
                     const allocator_type & alloc = allocator_type()) :
         clusters_(nullptr), cluster_mask_(0),
         entries_(nullptr), entry_size_(0), entry_mask_(0),
-        entry_threshold_(0), load_factor_((double)kDefaultLoadFactor),
+        entry_threshold_(0), load_factor_(kDefaultLoadFactor),
         hasher_(hash), key_equal_(equal),
         allocator_(alloc), entry_allocator_(alloc) {
         this->create_cluster<true>(init_capacity);
@@ -1073,7 +1063,7 @@ public:
     flat16_hash_map(const flat16_hash_map & other, const Allocator & alloc) :
         clusters_(nullptr), cluster_mask_(0),
         entries_(nullptr), entry_size_(0), entry_mask_(0),
-        entry_threshold_(0), load_factor_((double)kDefaultLoadFactor),
+        entry_threshold_(0), load_factor_(kDefaultLoadFactor),
         hasher_(hasher()), key_equal_(key_equal()),
         allocator_(alloc), entry_allocator_(alloc) {
         // Prepare enough space to ensure that no expansion is required during the insertion process.
@@ -1093,7 +1083,7 @@ public:
     flat16_hash_map(flat16_hash_map && other) noexcept :
         clusters_(nullptr), cluster_mask_(0),
         entries_(nullptr), entry_size_(0), entry_mask_(0),
-        entry_threshold_(0), load_factor_((double)kDefaultLoadFactor),
+        entry_threshold_(0), load_factor_(kDefaultLoadFactor),
         hasher_(std::move(other.hash_function())),
         key_equal_(std::move(other.key_eq())),
         allocator_(std::move(other.get_allocator())),
@@ -1104,7 +1094,7 @@ public:
     flat16_hash_map(flat16_hash_map && other, const Allocator & alloc) noexcept :
         clusters_(nullptr), cluster_mask_(0),
         entries_(nullptr), entry_size_(0), entry_mask_(0),
-        entry_threshold_(0), load_factor_((double)kDefaultLoadFactor),
+        entry_threshold_(0), load_factor_(kDefaultLoadFactor),
         hasher_(std::move(other.hash_function())),
         key_equal_(std::move(other.key_eq())),
         allocator_(alloc),
@@ -1119,7 +1109,7 @@ public:
                     const allocator_type & alloc = allocator_type()) :
         clusters_(nullptr), cluster_mask_(0),
         entries_(nullptr), entry_size_(0), entry_mask_(0),
-        entry_threshold_(0), load_factor_((double)kDefaultLoadFactor),
+        entry_threshold_(0), load_factor_(kDefaultLoadFactor),
         hasher_(hash), key_equal_(equal), allocator_(alloc) {
         // Prepare enough space to ensure that no expansion is required during the insertion process.
         size_type new_capacity = (init_capacity >= init_list.size()) ? init_capacity : init_list.size();
@@ -1179,25 +1169,25 @@ public:
         return ((index != npos) ? (index / kClusterEntries) : npos);
     }
 
-    double load_factor() const {
-        return ((double)this->entry_size() / this->entry_capacity());
+    float load_factor() const {
+        return ((float)this->entry_size() / this->entry_capacity());
     }
 
-    void max_load_factor(double load_factor) {
-        if (load_factor < (double)kMinLoadFactor)
-            load_factor = (double)kMinLoadFactor;
-        if (load_factor > (double)kMaxLoadFactor)
-            load_factor = (double)kMaxLoadFactor;
+    void max_load_factor(float load_factor) {
+        if (load_factor < kMinLoadFactor)
+            load_factor = kMinLoadFactor;
+        if (load_factor > kMaxLoadFactor)
+            load_factor = kMaxLoadFactor;
         this->load_factor_ = load_factor;
-        this->entry_threshold_ = (size_type)((double)this->entry_capacity() * load_factor);
+        this->entry_threshold_ = (size_type)((float)this->entry_capacity() * load_factor);
     }
 
-    double max_load_factor() const {
+    float max_load_factor() const {
         return this->load_factor_;
     }
 
-    double default_load_factor() const {
-        return static_cast<double>(kDefaultLoadFactor);
+    float default_load_factor() const {
+        return kDefaultLoadFactor;
     }
 
     iterator begin() {
@@ -1544,7 +1534,7 @@ private:
 
     JSTD_FORCED_INLINE
     size_type capacity_for_reserve(size_type init_capacity) {
-        size_type new_capacity = (size_type)std::ceil((double)init_capacity / this->max_load_factor());
+        size_type new_capacity = (size_type)std::ceil((float)init_capacity / this->max_load_factor());
         return new_capacity;
     }
 
