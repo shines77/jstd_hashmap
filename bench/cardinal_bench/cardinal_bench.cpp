@@ -107,7 +107,7 @@
 #define STRING_UTILS_U64        1
 #define STRING_UTILS_SSE42      2
 
-#define STRING_UTILS_MODE       STRING_UTILS_SSE42
+#define STRING_UTILS_MODE       STRING_UTILS_STL
 
 #define USE_JSTD_HASH_TABLE     0
 #define USE_JSTD_DICTIONARY     0
@@ -178,7 +178,7 @@ struct SimpleHash {
 
     template <typename Integer, typename std::enable_if<
                                 (std::is_integral<Integer>::value &&
-                                (sizeof(Integer) <= 8))>::type * = nullptr>  
+                                (sizeof(Integer) <= 8))>::type * = nullptr>
     result_type operator () (Integer value) const noexcept {
         result_type hash = static_cast<result_type>(value);
         return hash;
@@ -186,7 +186,7 @@ struct SimpleHash {
 
     template <typename Argument, typename std::enable_if<
                                   (!std::is_integral<Argument>::value ||
-                                  sizeof(Argument) > 8)>::type * = nullptr>  
+                                  sizeof(Argument) > 8)>::type * = nullptr>
     result_type operator () (const Argument & value) const {
         std::hash<Argument> hasher;
         return static_cast<result_type>(hasher(value));
@@ -209,7 +209,7 @@ struct IntegalHash
 
     template <typename UInt64, typename std::enable_if<
                                 (std::is_integral<UInt64>::value &&
-                                (sizeof(UInt64) > 4 && sizeof(UInt64) <= 8))>::type * = nullptr>  
+                                (sizeof(UInt64) > 4 && sizeof(UInt64) <= 8))>::type * = nullptr>
     result_type operator () (UInt64 value) const noexcept {
         result_type hash = (result_type)((std::uint64_t)value * 14695981039346656037ull + 1099511628211ull);
         return hash;
@@ -217,7 +217,7 @@ struct IntegalHash
 
     template <typename Argument, typename std::enable_if<
                                   (!std::is_integral<Argument>::value ||
-                                  sizeof(Argument) > 8)>::type * = nullptr>  
+                                  sizeof(Argument) > 8)>::type * = nullptr>
     result_type operator () (const Argument & value) const {
         std::hash<Argument> hasher;
         return static_cast<result_type>(hasher(value));
