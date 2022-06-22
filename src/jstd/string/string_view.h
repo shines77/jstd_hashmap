@@ -249,7 +249,7 @@ public:
     }
 
     inline void write_null() {
-        *(this->data_) = char_type('\0');
+        *const_cast<char_type *>(this->data_) = char_type('\0');
     }
 
     void commit(size_type count) {
