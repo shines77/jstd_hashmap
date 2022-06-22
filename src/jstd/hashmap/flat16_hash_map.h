@@ -905,9 +905,6 @@ public:
     typedef value_type                  entry_type;
     typedef value_type                  node_type;
 
-    typedef typename std::allocator_traits<allocator_type>::template rebind_alloc<entry_type>
-                                        entry_allocator_type;
-
     template <typename ValueType>
     class basic_iterator {
     public:
@@ -917,7 +914,7 @@ public:
         using pointer = ValueType *;
         using reference = ValueType &;
 
-        using non_const_value_type = typename std::remove_const<ValueType>::type;
+        using remove_const_value_type = typename std::remove_const<ValueType>::type;
 
         using size_type = std::size_t;
         using difference_type = std::ptrdiff_t;
@@ -972,7 +969,7 @@ public:
             return std::addressof(*this->entry_);
         }
 
-        operator basic_iterator<const non_const_value_type>() const {
+        operator basic_iterator<const remove_const_value_type>() const {
             return { this->control_, this->entry_ };
         }
 
@@ -987,6 +984,9 @@ public:
 
     using iterator       = basic_iterator<value_type>;
     using const_iterator = basic_iterator<const value_type>;
+
+    typedef typename std::allocator_traits<allocator_type>::template rebind_alloc<entry_type>
+                                        entry_allocator_type;
 
 private:
     cluster_type *  clusters_;
