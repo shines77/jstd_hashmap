@@ -341,7 +341,7 @@ public:
         }
 
         std::uint32_t matchEmpty(const_pointer data) const {
-#if defined(__SSSE3__) && 0
+#if defined(__SSSE3__)
             // This only works when kEmptyEntry is 0b10000000.
             __m128i control_bits = _mm_load_si128((const __m128i *)data);
             __m128i empty_mask = _mm_sign_epi8(control_bits, control_bits);
