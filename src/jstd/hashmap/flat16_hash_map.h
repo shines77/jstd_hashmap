@@ -83,16 +83,6 @@
 namespace jstd {
 
 static inline
-std::size_t round_size(std::size_t size, std::size_t alignment)
-{
-    assert(alignment > 0);
-    assert((alignment & (alignment - 1)) == 0);
-    size = (size + alignment - 1) / alignment * alignment;
-    assert((size / alignment * alignment) == size);
-    return size;
-}
-
-static inline
 std::size_t align_to(std::size_t size, std::size_t alignment)
 {
     assert(alignment > 0);
@@ -218,17 +208,6 @@ public:
 
     static constexpr size_type npos = size_type(-1);
 
-    static constexpr std::uint8_t kEmptyEntry   = 0b11111110;
-    static constexpr std::uint8_t kDeletedEntry = 0b10000000;
-    static constexpr std::uint8_t kUnusedMask   = 0b10000000;
-    static constexpr std::uint8_t kEndOfMark    = 0b11111111;
-    static constexpr std::uint8_t kHash2Mask    = 0b01111111;
-
-    static constexpr std::uint64_t kEmptyEntry64   = 0xFFFFFFFFFFFFFFFFull;
-    static constexpr std::uint64_t kDeletedEntry64 = 0x8080808080808080ull;
-    static constexpr std::uint64_t kUnusedMask64   = 0x8080808080808080ull;
-
-    static constexpr std::uint32_t kFullMask16  = 0x0000FFFFul;
     static constexpr size_type kControlHashMask = 0x0000007Ful;
     static constexpr size_type kControlShift    = 7;
 
@@ -247,12 +226,18 @@ public:
     // Must be kMinLoadFactor <= loadFactor <= kMaxLoadFactor
     static constexpr float kDefaultLoadFactor = 0.5f;
 
-    struct bitmask128_t {
-        std::uint64_t low;
-        std::uint64_t high;
+    static constexpr std::uint8_t kEmptyEntry   = 0b10000000;
+    static constexpr std::uint8_t kDeletedEntry = 0b11111110;
+    static constexpr std::uint8_t kEndOfMark    = 0b11111111;
+    static constexpr std::uint8_t kUnusedMask   = 0b10000000;    
+    static constexpr std::uint8_t kHash2Mask    = 0b01111111;
 
-        bitmask128_t() noexcept : low(0), high(0) {}
-    };
+    static constexpr std::uint32_t kFullMask16  = 0x0000FFFFul;
+
+    static constexpr std::uint64_t kEmptyEntry64   = 0x8080808080808080ull;
+    static constexpr std::uint64_t kDeletedEntry64 = 0xFEFEFEFEFEFEFEFEull;
+    static constexpr std::uint64_t kEndOfMark64    = 0xFFFFFFFFFFFFFFFFull;
+    static constexpr std::uint64_t kUnusedMask64   = 0x8080808080808080ull;
 
     struct control_byte {
         std::uint8_t value;
@@ -302,11 +287,404 @@ public:
         }
     };
 
+#ifdef __SSE2__
+
+    template <typename T>
+    struct BitMask128_SSE2 {
+        typedef T           value_type;
+        typedef T *         pointer;
+        typedef const T *   const_pointer;
+        typedef T &         reference;
+        typedef const T &   const_reference;
+
+        typedef std::uint32_t bitmask_type;
+
+        void clear(pointer data) {
+            this->template fillAll8<kEmptyEntry>(data);
+        }
+
+        void setAllZeros(pointer data) {
+            __m128i tmp;
+            __m128i zero_bits = _mm_xor_si128(tmp, tmp);
+            _mm_store_si128((__m128i *)data, zero_bits);
+        }
+
+        template <std::uint8_t ControlTag>
+        void fillAll8(pointer data) {
+            __m128i tag_bits = _mm_set1_epi8(ControlTag);
+            _mm_store_si128((__m128i *)data, tag_bits);
+        }
+
+        std::uint32_t matchControlTag(const_pointer data, std::uint8_t control_tag) const {
+            __m128i tag_bits = _mm_set1_epi8(control_tag);
+            __m128i control_bits = _mm_load_si128((const __m128i *)data);
+            __m128i match_mask = _mm_cmpeq_epi8(control_bits, tag_bits);
+            std::uint32_t mask = (std::uint32_t)_mm_movemask_epi8(match_mask);
+            return mask;
+        }
+
+        __m128i matchTag128(const_pointer data, std::uint8_t control_tag) const {
+            __m128i tag_bits = _mm_set1_epi8(control_tag);
+            __m128i control_bits = _mm_load_si128((const __m128i *)data);
+            __m128i match_mask = _mm_cmpeq_epi8(control_bits, tag_bits);
+            return match_mask;
+        }
+
+        std::uint32_t matchHash(const_pointer data, std::uint8_t control_hash) const {
+            return this->matchControlTag(data, control_hash);
+        }
+
+        std::uint32_t matchEmpty(const_pointer data) const {
+            return this->matchControlTag(data, kEmptyEntry);
+        }
+
+        std::uint32_t matchDeleted(const_pointer data) const {
+            return this->matchControlTag(data, kDeletedEntry);
+        }
+
+        std::uint32_t matchEmptyOrDeleted(const_pointer data) const {
+            __m128i tag_bits = _mm_set1_epi8(kEndOfMark);
+            __m128i control_bits = _mm_load_si128((const __m128i *)data);
+            __m128i match_mask = _mm_cmplt_epi8_fixed(control_bits, tag_bits);
+            std::uint32_t mask = (std::uint32_t)_mm_movemask_epi8(control_bits);
+            return mask;
+        }
+
+        std::uint32_t matchUsed(const_pointer data) const {
+            std::uint32_t maskUnused = this->matchUnused(data);
+            std::uint32_t maskUsed = (maskUnused ^ kFullMask16);
+            return maskUsed;
+        }
+
+        std::uint32_t matchUnused(const_pointer data) const {
+            __m128i control_bits = _mm_load_si128((const __m128i *)data);
+            std::uint32_t mask = (std::uint32_t)_mm_movemask_epi8(control_bits);
+            return mask;
+        }
+
+        bool hasAnyMatch(const_pointer data, std::uint8_t control_hash) const {
+            return (this->matchHash(data, control_hash) != 0);
+        }
+
+        bool hasAnyEmpty(const_pointer data) const {
+            return (this->matchEmpty(data) != 0);
+        }
+
+        bool hasAnyDeleted(const_pointer data) const {
+            return (this->matchDeleted(data) != 0);
+        }
+
+        bool hasAnyEmptyOrDeleted(const_pointer data) const {
+            return (this->matchEmptyOrDeleted(data) != 0);
+        }
+
+        bool hasAnyUsed(const_pointer data) const {
+            return (this->matchUsed(data) != 0);
+        }
+
+        bool hasAnyUnused(const_pointer data) const {
+            return (this->matchUnused(data) != 0);
+        }
+
+        bool isAllEmpty(const_pointer data) const {
+            return (this->matchEmpty(data) == kFullMask16);
+        }
+
+        bool isAllDeleted(pointer data) const {
+            return (this->matchDeleted(data) == kFullMask16);
+        }
+
+        bool isAllEmptyOrDeleted(const_pointer data) const {
+            return (this->matchEmptyOrDeleted(data) == kFullMask16);
+        }
+
+        bool isAllUsed(const_pointer data) const {
+            return (this->matchUnused(data) == 0);
+        }
+
+        bool isAllUnused(const_pointer data) const {
+            return (this->matchUnused(data) == kFullMask16);
+        }
+    };
+
+    template <typename T>
+    using BitMask128 = BitMask128_SSE2<T>;
+
+#else // !__SSE2__
+
+    struct bitmask128_t {
+        std::uint64_t low;
+        std::uint64_t high;
+
+        static constexpr std::uint64_t kMask8 = 0x8080808080808080ull;
+
+        bitmask128_t() noexcept : low(0), high(0) {}
+        bitmask128_t(std::uint64_t low, std::uint64_t high) noexcept
+            : low(low), high(high) {}
+
+        std::uint32_t movemask8() const {
+            assert((low  & kMask8) == low);
+            assert((high & kMask8) == high);
+
+            std::uint32_t mask16_l = 0;
+            std::uint64_t _low = low;            
+            while (_low != 0) {
+                std::uint32_t pos = BitUtils::bsf64(_low);
+                _low = BitUtils::clearLowBit64(_low);
+                mask16_l |= 1u << (pos >> 3u);
+            }
+
+            std::uint32_t mask16_h = 0;
+            std::uint64_t _high = high;
+            while (_high != 0) {
+                std::uint32_t pos = BitUtils::bsf64(_high);
+                _high = BitUtils::clearLowBit64(_high);
+                mask16_h |= 1u << (pos >> 3u);
+            }
+
+            std::uint32_t mask16 = (mask16_h << 8u) | mask16_l;
+            return mask16;
+        }
+    };
+
+    //
+    // Google - cwisstable: Google's Swiss Table for C
+    //
+    // See: https://github.com/google/cwisstable/blob/main/cwisstable/internal/control_byte.h
+    //
+    template <typename T>
+    struct BitMask128_u64 {
+        typedef T           value_type;
+        typedef T *         pointer;
+        typedef const T *   const_pointer;
+        typedef T &         reference;
+        typedef const T &   const_reference;
+
+        typedef bitmask128_t bitmask_type;
+
+        static constexpr std::size_t kByteWidth = 16;
+
+        static constexpr std::uint64_t kMSBs = 0x8080808080808080ull;
+        static constexpr std::uint64_t kLSBs = 0x0101010101010101ull;
+        static constexpr std::uint32_t kFullMask64 = 0x8080808080808080ull;
+
+        bitmask128_t * to_bitmask128(pointer data) {
+            return (bitmask128_t *)data;
+        }
+
+        const bitmask128_t * to_bitmask128(const_pointer data) const {
+            return (const bitmask128_t *)data;
+        }
+
+        void clear(pointer data) {
+            this->template fillAll8<kEmptyEntry64>(data);
+        }
+
+        void setAllZeros(pointer data) {
+            bitmask128_t * bm128 = this->to_bitmask128(data);
+            bm128->low  = 0;
+            bm128->high = 0;
+        }
+
+        template <std::uint64_t ControlTag>
+        void fillAll8(pointer data) {
+            bitmask128_t * bm128 = this->to_bitmask128(data);
+            bm128->low  = ControlTag;
+            bm128->high = ControlTag;
+        }
+
+        std::uint32_t matchControlTag16(const_pointer data, std::uint8_t control_tag) const {
+#if 1
+            assert((std::uint8_t)control_tag >= (std::uint8_t)0);
+            return this->matchControlTag16(data, (std::uint64_t)control_tag * kLSBs);
+#else
+            std::uint8_t * control = (std::uint8_t *)data;
+            std::uint32_t mask = 0, bit = 1;
+            for (size_type i = 0; i < kClusterEntries; i++) {
+                if (control[i] == control_tag) {
+                    mask |= bit;
+                }
+                bit <<= 1;
+            }
+            return mask;
+#endif
+        }
+
+        std::uint32_t matchControlTag16(const_pointer data, std::uint64_t control_tag) const {
+#if 1
+            bitmask128_t bitmask128 = this->matchControlTag(data, control_tag);
+            return bitmask128.movemask8();
+#else
+            std::uint8_t * control = (std::uint8_t *)data;
+            std::uint32_t mask = 0, bit = 1;
+            for (size_type i = 0; i < kClusterEntries; i++) {
+                if (control[i] == (std::uint8_t)control_tag) {
+                    mask |= bit;
+                }
+                bit <<= 1;
+            }
+            return mask;
+#endif
+        }
+
+        bitmask128_t matchControlTag(const_pointer data, std::uint8_t control_tag) const {
+            assert((std::uint8_t)control_tag >= (std::uint8_t)0);
+            return this->matchControlTag(data, (std::uint64_t)control_tag * kLSBs);
+        }
+
+        bitmask128_t matchControlTag(const_pointer data, std::uint64_t control_tag) const {
+            //
+            // For the technique, see:
+            // http://graphics.stanford.edu/~seander/bithacks.html##ValueInWord
+            // (Determine if a word has a byte equal to n).
+            //
+            // Caveat: there are false positives but:
+            // - they only occur if there is a real match
+            // - they never occur on kEmptyEntry, kDeletedEntry, kSentinelEntry
+            // - they will be handled gracefully by subsequent checks in code
+            //
+            // Example:
+            //   val = 0x1716151413121110ull
+            //   control_tag = 0x12
+            //   ret_val = (val - kLSBs) & ~val & kMSBs = 0x0000000080800000ull
+            //
+            bitmask128_t * bm128 = this->to_bitmask128(data);
+            std::uint64_t low  = bm128->low  ^ control_tag;
+            std::uint64_t high = bm128->high ^ control_tag;
+            // #define haszero(val) (((val) - 0x01010101ul) & ~(val) & 0x80808080ul)
+            low  = (low  - kLSBs) & ~low  & kMSBs;
+            high = (high - kLSBs) & ~high & kMSBs;
+            return { low, high };
+        }
+
+        bitmask128_t matchHash(const_pointer data, std::uint8_t control_hash) const {
+            return this->matchControlTag(data, control_hash);
+        }
+
+        bitmask128_t matchEmpty(const_pointer data) const {
+            // kEmptyEntry = 0b10000000
+            bitmask128_t * bm128 = this->to_bitmask128(data);
+            std::uint64_t low  = bm128->low;
+            std::uint64_t high = bm128->high;
+            low  = low  & (~low  << 6) & kMSBs;
+            high = high & (~high << 6) & kMSBs;
+            return { low, high };
+        }
+
+        bitmask128_t matchDeleted(const_pointer data) const {
+#if 1
+            // kDeletedEntry = 0b11111110
+            bitmask128_t * bm128 = this->to_bitmask128(data);
+            std::uint64_t low  = bm128->low  - kLSBs;
+            std::uint64_t high = bm128->high - kLSBs;
+            low  = low  & (~low  << 6) & kMSBs;
+            high = high & (~high << 6) & kMSBs;
+            return { low, high };
+#else
+            bitmask128_t * bm128 = this->to_bitmask128(data);
+            std::uint64_t low  = bm128->low;
+            std::uint64_t high = bm128->high;
+            low  = low  & (low  << 6) & (~low  << 7) & kMSBs;
+            high = high & (high << 6) & (~high << 7) & kMSBs;
+            return { low, high };
+#endif
+        }
+
+        bitmask128_t matchEmptyOrDeleted(const_pointer data) const {
+            // kEmptyOrDeleted < kEndOfMark = 0b11111111
+            bitmask128_t * bm128 = this->to_bitmask128(data);
+            std::uint64_t low  = bm128->low;
+            std::uint64_t high = bm128->high;
+            low  = low  & (~low  << 7) & kMSBs;
+            high = high & (~high << 7) & kMSBs;
+            return { low, high };
+        }
+
+        bitmask128_t matchUsed(const_pointer data) const {
+            // kUsedEntry = 0b0xxxxxxx
+            bitmask128_t * bm128 = this->to_bitmask128(data);
+            std::uint64_t low  = bm128->low;
+            std::uint64_t high = bm128->high;
+            low  = ~low  & kUnusedMask64;
+            high = ~high & kUnusedMask64;
+            return { low, high };
+        }
+
+        bitmask128_t matchUnused(const_pointer data) const {
+            // kUnusedEntry = 0b1xxxxxxx
+            bitmask128_t * bm128 = this->to_bitmask128(data);
+            std::uint64_t low  = bm128->low  & kUnusedMask64;
+            std::uint64_t high = bm128->high & kUnusedMask64;
+            return { low, high };
+        }
+
+        bool hasAnyMatch(const_pointer data, std::uint8_t control_hash) const {
+            bitmask128_t bitmask = this->matchHash(data, control_hash);
+            return (bitmask.low != 0 && bitmask.high != 0);
+        }
+
+        bool hasAnyEmpty(const_pointer data) const {
+            bitmask128_t bitmask = this->matchEmpty(data);
+            return (bitmask.low != 0 && bitmask.high != 0);
+        }
+
+        bool hasAnyDeleted(const_pointer data) const {
+            bitmask128_t bitmask = this->matchDeleted(data);
+            return (bitmask.low != 0 && bitmask.high != 0);
+        }
+
+        bool hasAnyEmptyOrDeleted(const_pointer data) const {
+            bitmask128_t bitmask = this->matchEmptyOrDeleted(data);
+            return (bitmask.low != 0 && bitmask.high != 0);
+        }
+
+        bool hasAnyUsed(const_pointer data) const {
+            bitmask128_t bitmask = this->matchUsed(data);
+            return (bitmask.low != 0 && bitmask.high != 0);
+        }
+
+        bool hasAnyUnused(const_pointer data) const {
+            bitmask128_t bitmask = this->matchUnused(data);
+            return (bitmask.low != 0 && bitmask.high != 0);
+        }
+
+        bool isAllEmpty(const_pointer data) const {
+            bitmask128_t bitmask = this->matchEmpty(data);
+            return (bitmask.low == kFullMask64 && bitmask.high == kFullMask64);
+        }
+
+        bool isAllDeleted(pointer data) const {
+            bitmask128_t bitmask = this->matchDeleted(data);
+            return (bitmask.low == kFullMask64 && bitmask.high == kFullMask64);
+        }
+
+        bool isAllEmptyOrDeleted(const_pointer data) const {
+            bitmask128_t bitmask = this->matchEmptyOrDeleted(data);
+            return (bitmask.low == kFullMask64 && bitmask.high == kFullMask64);
+        }
+
+        bool isAllUsed(const_pointer data) const {
+            bitmask128_t bitmask = this->matchUnused(data);
+            return (bitmask.low == kFullMask64 && bitmask.high == kFullMask64);
+        }
+
+        bool isAllUnused(const_pointer data) const {
+            bitmask128_t bitmask = this->matchUnused(data);
+            return (bitmask.low == kFullMask64 && bitmask.high == kFullMask64);
+        }
+    };
+
+    template <typename T>
+    using BitMask128 = BitMask128_u64<T>;
+
+#endif
+
     struct alignas(16) hash_cluster {
-        union {
-            control_byte controls[kClusterEntries];
-            bitmask128_t u128;
-        };
+        typedef BitMask128<control_byte>                        bitmask128_type;
+        typedef typename BitMask128<control_byte>::bitmask_type bitmask_type;
+
+        control_byte controls[kClusterEntries];
+        bitmask128_type bitmask;
 
         hash_cluster() noexcept {
             this->clear();
@@ -316,151 +694,84 @@ public:
         }
 
         void clear() {
-            this->template fillAll8<kEmptyEntry>();
+            bitmask.clear(&this->controls[0]);
         }
 
         template <std::uint8_t ControlTag>
         void fillAll8() {
-#if defined(__SSE2__)
-            __m128i empty_bits = _mm_set1_epi8(ControlTag);
-            _mm_store_si128((__m128i *)&controls[0], empty_bits);
-#else
-            std::memset((void *)&controls[0], ControlTag, sizeof(control_byte) * kClusterEntries);
-#endif // __SSE2__
+            bitmask.fillAll8<ControlTag>(&this->controls[0]);
         }
 
-        std::uint32_t getMatchMask(std::uint8_t control_tag) const {
-#if defined(__SSE2__)
-            __m128i tag_bits = _mm_set1_epi8(control_tag);
-            __m128i control_bits = _mm_load_si128((const __m128i *)&this->controls[0]);
-            __m128i match_mask = _mm_cmpeq_epi8(control_bits, tag_bits);
-            std::uint32_t mask = (std::uint32_t)_mm_movemask_epi8(match_mask);
-            return mask;
-#else
-            std::uint32_t mask = 0, bit = 1;
-            for (size_type i = 0; i < kClusterEntries; i++) {
-                if (this->controls[i].value == control_tag) {
-                    mask |= bit;
-                }
-                bit <<= 1;
-            }
-            return mask;
-#endif // __SSE2__
+        bitmask_type matchControlTag(std::uint8_t control_tag) const {
+            return bitmask.matchControlTag(&this->controls[0], control_tag);
         }
 
-#if defined(__SSE2__)
-        __m128i getMatchMask128(std::uint8_t control_tag) const {
-            __m128i tag_bits = _mm_set1_epi8(control_tag);
-            __m128i control_bits = _mm_load_si128((const __m128i *)&this->controls[0]);
-            __m128i match_mask = _mm_cmpeq_epi8(control_bits, tag_bits);
-            return match_mask;
-        }
-#else
-        bitmask128_t getMatchMask128(std::uint8_t control_tag) const {
-            std::uint64_t control_tag64;
-            control_tag64 = (std::uint64_t)control_tag | ((std::uint64_t)control_tag << 8);
-            control_tag64 = control_tag64 | (control_tag64 << 16);
-            control_tag64 = control_tag64 | (control_tag64 << 32);
-
-            bitmask128_t mask128;
-            mask128.low  = this->u128.low  ^ control_tag64;
-            mask128.high = this->u128.high ^ control_tag64;
-            return mask128;
-        }
-#endif // __SSE2__
-
-        std::uint32_t matchHash(std::uint8_t control_hash) const {
-            return this->getMatchMask(control_hash);
+        bitmask_type matchHash(std::uint8_t control_hash) const {
+            return bitmask.matchHash(&this->controls[0], control_hash);
         }
 
-        std::uint32_t matchEmpty() const {
-            return this->getMatchMask(kEmptyEntry);
+        bitmask_type matchEmpty() const {
+            return bitmask.matchEmpty(&this->controls[0]);
         }
 
-        std::uint32_t matchDeleted() const {
-            return this->getMatchMask(kDeletedEntry);
+        bitmask_type matchDeleted() const {
+            return bitmask.matchDeleted(&this->controls[0]);
         }
 
-        std::uint32_t matchEmptyOrDeleted() const {
-#if defined(__SSE2__)
-            __m128i tag_bits = _mm_set1_epi8(kEndOfMark);
-            __m128i control_bits = _mm_load_si128((const __m128i *)&this->controls[0]);
-            __m128i match_mask = _mm_cmplt_epi8_fixed(control_bits, tag_bits);
-            std::uint32_t mask = (std::uint32_t)_mm_movemask_epi8(control_bits);
-            return mask;
-#else
-            std::uint32_t mask = 0, bit = 1;
-            for (size_type i = 0; i < kClusterEntries; i++) {
-                if ((this->controls[i].isEmptyOrDeleted()) {
-                    mask |= bit;
-                }
-                bit <<= 1;
-            }
-            return mask;
-#endif // __SSE2__
+        bitmask_type matchEmptyOrDeleted() const {
+            return bitmask.matchEmptyOrDeleted(&this->controls[0]);
         }
 
-        std::uint32_t matchUnused() const {
-#if defined(__SSE2__)
-            __m128i control_bits = _mm_load_si128((const __m128i *)&this->controls[0]);
-            std::uint32_t mask = (std::uint32_t)_mm_movemask_epi8(control_bits);
-            return mask;
-#else
-            std::uint32_t mask = 0, bit = 1;
-            for (size_type i = 0; i < kClusterEntries; i++) {
-                if ((this->controls[i].isUnused()) {
-                    mask |= bit;
-                }
-                bit <<= 1;
-            }
-            return mask;
-#endif // __SSE2__
+        bitmask_type matchUsed() const {
+            return bitmask.matchUnused(&this->controls[0]);
         }
 
-        std::uint32_t matchUsed() const {
-            std::uint32_t maskUnused = this->matchUnused();
-            std::uint32_t maskUsed = (maskUnused ^ kFullMask16);
-            return maskUsed;
+        bitmask_type matchUnused() const {
+            return bitmask.matchUnused(&this->controls[0]);
         }
 
         bool hasAnyMatch(std::uint8_t control_hash) const {
-            return (this->matchHash(control_hash) != 0);
+            return bitmask.hasAnyMatch(&this->controls[0], control_hash);
         }
 
         bool hasAnyEmpty() const {
-            return (this->matchEmpty() != 0);
+            return bitmask.hasAnyEmpty(&this->controls[0]);
         }
 
         bool hasAnyDeleted() const {
-            return (this->matchDeleted() != 0);
+            return bitmask.hasAnyDeleted(&this->controls[0]);
         }
 
         bool hasAnyEmptyOrDeleted() const {
-            return (this->matchEmptyOrDeleted() != 0);
+            return bitmask.hasAnyEmptyOrDeleted(&this->controls[0]);
         }
 
         bool hasAnyUsed() const {
-            return (this->matchUsed() != 0);
+            return bitmask.hasAnyUsed(&this->controls[0]);
         }
 
-        bool isAllUsed() const {
-            return (this->matchUnused() == 0);
+        bool hasAnyUnused() const {
+            return bitmask.hasAnyUnused(&this->controls[0]);
         }
 
         bool isAllEmpty() const {
-            return (this->matchEmpty() == kFullMask16);
+            return bitmask.isAllEmpty(&this->controls[0]);
         }
 
         bool isAllDeleted() const {
-            return (this->matchDeleted() == kFullMask16);
+            return bitmask.isAllDeleted(&this->controls[0]);
         }
 
         bool isAllEmptyOrDeleted() const {
-            return (this->matchEmptyOrDeleted() == kFullMask16);
+            return bitmask.isAllEmptyOrDeleted(&this->controls[0]);
+        }
+
+        bool isAllUsed() const {
+            return bitmask.isAllUsed(&this->controls[0]);
         }
 
         bool isAllUnused() const {
-            return (this->matchUnused() == kFullMask16);
+            return bitmask.isAllUnused(&this->controls[0]);
         }
     };
 
@@ -755,10 +1066,10 @@ public:
         try {
             this->insert_unique(other.begin(), other.end());
         } catch (const std::bad_alloc & ex) {
-            this->destroy();
+            this->destroy<true>();
             throw std::bad_alloc();
         } catch (...) {
-            this->destroy();
+            this->destroy<true>();
             throw;
         }
     }
@@ -955,7 +1266,7 @@ public:
         return "jstd::flat16_hash_map<K, V>";
     }
 
-    void clear(bool need_destory = true) noexcept {
+    void clear(bool need_destory = false) noexcept {
         if (this->entry_capacity() > kDefaultCapacity) {
             if (need_destory) {
                 this->destroy<true>();
@@ -2002,75 +2313,6 @@ private:
         this->entry_allocator_.destroy(this->entry_at(index));
         assert(this->entry_size_ > 0);
         this->entry_size_--;
-    }
-
-    template <bool update_always>
-    std::pair<iterator, bool> old_emplace_impl(value_type && value) {
-        index_type first_cluster, last_cluster;
-        std::uint8_t ctrl_hash;
-        size_type index = this->find_impl(value.first, first_cluster, last_cluster, ctrl_hash);
-        if (index == npos) {
-            // The key to be inserted is not exists.
-
-            // Find the first DeletedEntry from first_cluster to last_cluster.
-            index_type cluster_index = first_cluster;
-            do {
-                cluster_type & cluster = this->get_cluster(cluster_index);
-                std::uint32_t mask16 = cluster.matchDeleted();
-                if (mask16 != 0) {
-                    // Found a [DeletedEntry] to insert
-                    size_type pos = BitUtils::bsf32(mask16);
-                    size_type start_index = cluster_index * kClusterEntries;
-                    index = start_index + pos;
-
-                    control_byte * control = this->control_at(index);
-                    assert(control->isDeleted());
-                    control->setUsed(ctrl_hash);
-                    entry_type * entry = this->entry_at(index);
-                    this->entry_allocator_.construct(entry, std::forward<value_type>(value));
-                    this->entry_size_++;
-                    return { this->iterator_at(index), true };
-                }
-                if (cluster_index == last_cluster)
-                    break;
-                cluster_index = this->next_cluster(cluster_index);
-            } while (cluster_index != first_cluster);
-
-            if (last_cluster != npos) {
-                cluster_type & cluster = this->get_cluster(last_cluster);
-                std::uint32_t mask16 = cluster.matchEmpty();
-                assert(mask16 != 0);
-
-                size_type pos = BitUtils::bsf32(mask16);
-                size_type start_index = cluster_index * kClusterEntries;
-                index = start_index + pos;
-
-                // Found a [EmptyEntry] to insert
-                control_byte * control = this->control_at(index);
-                assert(control->isEmpty());
-                control->setUsed(ctrl_hash);
-                entry_type * entry = this->entry_at(index);
-                this->entry_allocator_.construct(entry, std::forward<value_type>(value));
-                this->entry_size_++;
-                return { this->iterator_at(index), true };
-            } else {
-                // Container is full and there is no anyone empty entry.
-                this->grow();
-
-                return this->emplace(std::forward<value_type>(value));
-            }
-        } else {
-            // The key to be inserted already exists.
-            if (update_always) {
-                static constexpr bool is_rvalue_ref = std::is_rvalue_reference<decltype(value)>::value;
-                entry_type * entry = this->entry_at(index);
-                if (is_rvalue_ref)
-                    entry->value.second = std::move(value.second);
-                else
-                    entry->value.second = value.second;
-            }
-            return { this->iterator_at(index), false };
-        }
     }
 
     void swap_content(flat16_hash_map & other) {
