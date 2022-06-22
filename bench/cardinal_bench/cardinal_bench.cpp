@@ -301,6 +301,28 @@ struct type_name<std::uint64_t> {
     }
 };
 
+std::string formatMsTime(double fMillisec) {
+    char time_buf[256];
+
+    if (fMillisec >= 1000.0 * 1000.0 * 10.0) {
+        snprintf(time_buf, sizeof(time_buf), "%7.2f Min", fMillisec / (60 * 1000.0));
+    }
+    else if (fMillisec >= 1000.0 * 10.0) {
+        snprintf(time_buf, sizeof(time_buf), "%7.2f Sec", fMillisec / 1000.0);
+    }
+    else if (fMillisec >= 1.0 * 10.0) {
+        snprintf(time_buf, sizeof(time_buf), "%7.2f ms ", fMillisec);
+    }
+    else if (fMillisec >= 0.001 * 10.0) {
+        snprintf(time_buf, sizeof(time_buf), "%7.2f us ", fMillisec * 1000.0);
+    }
+    else {
+        snprintf(time_buf, sizeof(time_buf), "%7.2f ns ", fMillisec * 1000000.0);
+    }
+
+    return std::string(time_buf);
+}
+
 template <typename Key, typename Value>
 std::string get_hashmap_name(const char * fmt)
 {
@@ -332,20 +354,34 @@ void run_insert_random(const std::string & name, std::vector<Key> & keys, std::s
     jtest::StopWatch sw;
     HashMap hashmap;
 
-    sw.start();
-    for (std::size_t i = 0; i < keys.size(); i++) {
-        hashmap.insert(std::make_pair(keys[i], mapped_type(i)));
+    {
+        sw.start();
+        for (std::size_t i = 0; i < keys.size(); i++) {
+            hashmap.insert(std::make_pair(keys[i], mapped_type(i)));
+        }
+        sw.stop();
+
+        double elapsed_time = sw.getElapsedMillisec();
+
+        printf("%s: %s\n", __func__, name.c_str());
+        printf("hashmap.size() = %u, cardinal = %u, load_factor = %0.3f, time: %0.2f ms\n",
+               (uint32_t)hashmap.size(), (uint32_t)cardinal,
+               hashmap.load_factor(), elapsed_time);
     }
-    sw.stop();
 
-    double elapsed_time = sw.getElapsedMillisec();
+    {
+        sw.start();
+        for (std::size_t i = 0; i < keys.size(); i++) {
+            auto iter = hashmap.find(keys[i]);
+        }
+        sw.stop();
 
-    printf("%s: %s\n", __func__, name.c_str());
-    printf("hashmap.size() = %u, cardinal = %u, load_factor = %0.3f, time: %0.2f ms\n\n",
-           (uint32_t)keys.size(), (uint32_t)cardinal,
-           hashmap.load_factor(), elapsed_time);
+        double elapsed_time = sw.getElapsedMillisec();
+        double average_time = elapsed_time / keys.size();
 
-    //s_log.info(__func__, hashmap);
+        printf("hashmap.find(key), average: %s, time: %0.2f ms\n\n",
+               formatMsTime(average_time).c_str(), elapsed_time);
+    }
 }
 
 template <typename Key, typename Value>
@@ -355,11 +391,16 @@ void benchmark_insert_random(std::size_t iters)
     static constexpr std::size_t Factor = 16;
     static constexpr std::size_t DataSize = 1024 * 1000 * Factor;
     static constexpr std::size_t Cardinal0 = 60 * Factor;
-    static constexpr std::size_t Cardinal1 = 6000 * Factor;
-    static constexpr std::size_t Cardinal2 = 600000 * Factor;
-    static constexpr std::size_t Cardinal3 = 60000000 * Factor;
+    static constexpr std::size_t Cardinal1 = 600 * Factor;
+    static constexpr std::size_t Cardinal2 = 6000 * Factor;
+    static constexpr std::size_t Cardinal3 = 60000 * Factor;
+    static constexpr std::size_t Cardinal4 = 600000 * Factor;
+    static constexpr std::size_t Cardinal5 = 6000000 * Factor;
+    static constexpr std::size_t Cardinal6 = 60000000 * Factor;
 
     static_assert((DataSize % Block) == 0, "");
+
+    printf("DataSize = %u\n\n", (uint32_t)DataSize);
 
     std::string name0, name1;
     name0 = get_hashmap_name<Key, Value>("std::unordered_map<%s, %s>");
@@ -382,6 +423,20 @@ void benchmark_insert_random(std::size_t iters)
     keys = generate_random_keys<Key>(DataSize, Cardinal3);
     run_insert_random<std::unordered_map<Key, Value>>   (name0, keys, Cardinal3);
     run_insert_random<jstd::flat16_hash_map<Key, Value>>(name1, keys, Cardinal3);
+
+    keys = generate_random_keys<Key>(DataSize, Cardinal4);
+    run_insert_random<std::unordered_map<Key, Value>>   (name0, keys, Cardinal4);
+    run_insert_random<jstd::flat16_hash_map<Key, Value>>(name1, keys, Cardinal4);
+
+#if 0
+    keys = generate_random_keys<Key>(DataSize, Cardinal5);
+    run_insert_random<std::unordered_map<Key, Value>>   (name0, keys, Cardinal5);
+    run_insert_random<jstd::flat16_hash_map<Key, Value>>(name1, keys, Cardinal5);
+#endif
+
+    keys = generate_random_keys<Key>(DataSize, Cardinal6);
+    run_insert_random<std::unordered_map<Key, Value>>   (name0, keys, Cardinal6);
+    run_insert_random<jstd::flat16_hash_map<Key, Value>>(name1, keys, Cardinal6);
 }
 
 void benchmark_all_hashmaps(std::size_t iters)
