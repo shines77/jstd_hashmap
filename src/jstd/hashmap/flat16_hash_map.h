@@ -713,7 +713,7 @@ public:
 
         template <std::uint8_t ControlTag>
         void fillAll8() {
-            bitmask.fillAll8<ControlTag>(&this->controls[0]);
+            bitmask.template fillAll8<ControlTag>(&this->controls[0]);
         }
 
         bitmask_type matchControlTag(std::uint8_t control_tag) const {
