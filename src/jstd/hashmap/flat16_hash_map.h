@@ -76,9 +76,15 @@
 #include "jstd/support/BitUtils.h"
 #include "jstd/support/Power2.h"
 
+#ifdef _MSC_VER
 #ifndef __SSE2__
 #define __SSE2__
 #endif
+
+#ifndef __SSSE3__
+#define __SSSE3__
+#endif
+#endif // _MSC_VER
 
 namespace jstd {
 
@@ -323,7 +329,7 @@ public:
             return mask;
         }
 
-        __m128i matchTag128(const_pointer data, std::uint8_t control_tag) const {
+        __m128i matchControlTag128(const_pointer data, std::uint8_t control_tag) const {
             __m128i tag_bits = _mm_set1_epi8(control_tag);
             __m128i control_bits = _mm_load_si128((const __m128i *)data);
             __m128i match_mask = _mm_cmpeq_epi8(control_bits, tag_bits);
@@ -335,7 +341,15 @@ public:
         }
 
         std::uint32_t matchEmpty(const_pointer data) const {
+#ifdef __SSSE3__
+            // This only works when kEmptyEntry is 0b10000000.
+            __m128i control_bits = _mm_load_si128((const __m128i *)data);
+            __m128i empty_mask = _mm_sign_epi8(control_bits, control_bits);
+            std::uint32_t mask = (std::uint32_t)_mm_movemask_epi8(empty_mask);
+            return mask;
+#else
             return this->matchControlTag(data, kEmptyEntry);
+#endif
         }
 
         std::uint32_t matchDeleted(const_pointer data) const {
