@@ -737,7 +737,7 @@ public:
         }
 
         bitmask_type matchUsed() const {
-            return bitmask.matchUnused(&this->controls[0]);
+            return bitmask.matchUsed(&this->controls[0]);
         }
 
         bitmask_type matchUnused() const {
