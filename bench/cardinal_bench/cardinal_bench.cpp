@@ -305,19 +305,19 @@ std::string formatMsTime(double fMillisec) {
     char time_buf[256];
 
     if (fMillisec >= 1000.0 * 1000.0 * 10.0) {
-        snprintf(time_buf, sizeof(time_buf), "%6.2f Min", fMillisec / (60 * 1000.0));
+        snprintf(time_buf, sizeof(time_buf), "%7.2f Min", fMillisec / (60 * 1000.0));
     }
     else if (fMillisec >= 1000.0 * 10.0) {
-        snprintf(time_buf, sizeof(time_buf), "%6.2f Sec", fMillisec / 1000.0);
+        snprintf(time_buf, sizeof(time_buf), "%7.2f Sec", fMillisec / 1000.0);
     }
     else if (fMillisec >= 1.0 * 10.0) {
-        snprintf(time_buf, sizeof(time_buf), "%6.2f ms", fMillisec);
+        snprintf(time_buf, sizeof(time_buf), "%7.2f ms", fMillisec);
     }
     else if (fMillisec >= 0.001 * 10.0) {
-        snprintf(time_buf, sizeof(time_buf), "%6.2f us", fMillisec * 1000.0);
+        snprintf(time_buf, sizeof(time_buf), "%7.2f us", fMillisec * 1000.0);
     }
     else {
-        snprintf(time_buf, sizeof(time_buf), "%6.2f ns", fMillisec * 1000000.0);
+        snprintf(time_buf, sizeof(time_buf), "%7.2f ns", fMillisec * 1000000.0);
     }
 
     return std::string(time_buf);
@@ -389,7 +389,6 @@ void run_insert_random(const std::string & name, std::vector<Key> & keys, std::s
 template <typename Key, typename Value>
 void benchmark_insert_random(std::size_t iters)
 {
-    static constexpr std::size_t Block = 4096;
     static constexpr std::size_t Factor = 16;
     static constexpr std::size_t DataSize = 1024 * 1000 * Factor;
     static constexpr std::size_t Cardinal0 = 60 * Factor;
