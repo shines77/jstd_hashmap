@@ -117,11 +117,15 @@ public:
     const_reference front() const { return this->data_[0]; }
     const_reference back() const { return this->data_[this->size() - 1]; }
 
+#if 1
+    basic_string_view & operator = (const this_type & view) noexcept = default;
+#else
     basic_string_view & operator = (const this_type & rhs) noexcept {
         this->data_ = rhs.data();
         this->size_ = rhs.size();
         return *this;
     }
+#endif
 
     basic_string_view & operator = (const char_type * data) noexcept {
         this->data_ = data;
@@ -497,11 +501,11 @@ void swap(basic_string_view<CharTy> & lhs, basic_string_view<CharTy> & rhs) noex
     lhs.swap(rhs);
 }
 
-typedef basic_string_view<char>                         string_view;
-typedef basic_string_view<wchar_t>                      wstring_view;
+typedef basic_string_view<char>         string_view;
+typedef basic_string_view<wchar_t>      wstring_view;
 
-typedef basic_string_view<char>                         string_ref;
-typedef basic_string_view<wchar_t>                      wstring_ref;
+typedef basic_string_view<char>         string_ref;
+typedef basic_string_view<wchar_t>      wstring_ref;
 
 } // namespace jstd
 
@@ -517,8 +521,8 @@ template <typename CharTy, typename Traits>
 inline
 std::basic_ostream<CharTy, Traits> &
 operator << (std::basic_ostream<CharTy, Traits> & os,
-             jstd::basic_string_view<CharTy, Traits> & str) {
-    os << str.data();
+             jstd::basic_string_view<CharTy, Traits> & view) {
+    os << view.data();
     return os;
 }
 
