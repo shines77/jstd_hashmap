@@ -29,6 +29,8 @@
 namespace jstd {
 namespace libc {
 
+static constexpr bool kAssumeAlwaysNotEqual = true;
+
 ///////////////////////////////////////////////////////////////////////////////
 // libc::StrLen<CharTy>()
 ///////////////////////////////////////////////////////////////////////////////
@@ -74,11 +76,12 @@ bool StrEqual(const CharTy * str1, const CharTy * str2) {
     assert(str1 != nullptr);
     assert(str2 != nullptr);
     while (*str1 == *str2) {
-        if (unlikely(((*str1) & (*str2)) == 0)) {
+        if (likely((*str1) != CharTy(0))) {
+            str1++;
+            str2++;
+        } else {
             return true;
         }
-        str1++;
-        str2++;
     }
 
     return false;
@@ -105,19 +108,17 @@ inline
 bool StrEqual(const CharTy * str1, const CharTy * str2, std::size_t count) {
     assert(str1 != nullptr);
     assert(str2 != nullptr);
-    while (*str1 == *str2) {
-        count--;
-        if (unlikely(count == 0)) {
-            return true;
+    while (count != 0) {
+        if (likely(*str1 != *str2)) {
+            return false;
+        } else {
+            str1++;
+            str2++;
+            count--;
         }
-        if (unlikely(((*str1) & (*str2)) == 0)) {
-            return true;
-        }
-        str1++;
-        str2++;
     }
 
-    return false;
+    return true;
 }
 
 template <>
@@ -146,7 +147,7 @@ bool StrEqual(const CharTy * str1, std::size_t len1, const CharTy * str2, std::s
         return false;
     }
     else {
-        if (likely(str1 != str2)) {
+        if (likely(str1 != str2) || kAssumeAlwaysNotEqual) {
             return StrEqual(str1, str2, len1);
         }
         else {
@@ -167,25 +168,18 @@ bool StrEqualUnsafe(const StringTy & str1, const StringTy & str2) {
 template <typename CharTy>
 inline
 bool StrEqualSafe(const CharTy * str1, const CharTy * str2, std::size_t count) {
-    if (likely(count != 0)) {
-        if (likely(str1 != nullptr)) {
-            if (likely(str2 != nullptr)) {
-                assert(str1 != nullptr && str2 != nullptr);
-                return StrEqual(str1, str2, count);
-            }
-            else {
-                assert(str1 != nullptr && str2 == nullptr);
-                return false;
-            }
+    if (likely(str1 != nullptr)) {
+        if (likely(str2 != nullptr)) {
+            return StrEqual(str1, str2, count);
         }
         else {
-            assert(str1 == nullptr);
-            return (str2 == nullptr);
+            assert(str1 != nullptr && str2 == nullptr);
+            return false;
         }
     }
     else {
-        // All strings of length is 0, see it as a empty string.
-        return true;
+        assert(str1 == nullptr);
+        return (str2 == nullptr);
     }
 }
 
@@ -197,7 +191,7 @@ bool StrEqualSafe(const CharTy * str1, std::size_t len1, const CharTy * str2, st
         return false;
     }
     else {
-        if (likely(str1 != str2)) {
+        if (likely(str1 != str2) || kAssumeAlwaysNotEqual) {
             return StrEqualSafe(str1, str2, len1);
         }
         else {
@@ -220,12 +214,15 @@ bool StrEqualSafe(const StringTy & str1, const StringTy & str2) {
 template <typename CharTy>
 inline
 int StrCmp(const CharTy * str1, const CharTy * str2) {
+    assert(str1 != nullptr);
+    assert(str2 != nullptr);
     while (*str1 == *str2) {
-        if (unlikely(((*str1) & (*str2)) == 0)) {
+        if (likely((*str1) != CharTy(0))) {
+            str1++;
+            str2++;
+        } else {
             return CompareResult::IsEqual;
         }
-        str1++;
-        str2++;
     }
 
     if (*str1 > *str2)
@@ -237,34 +234,38 @@ int StrCmp(const CharTy * str1, const CharTy * str2) {
 template <>
 inline
 int StrCmp(const char * str1, const char * str2) {
+    assert(str1 != nullptr);
+    assert(str2 != nullptr);
     return std::strcmp(str1, str2);
 }
 
 template <>
 inline
 int StrCmp(const wchar_t * str1, const wchar_t * str2) {
+    assert(str1 != nullptr);
+    assert(str2 != nullptr);
     return std::wcscmp(str1, str2);
 }
 
 template <typename CharTy>
 inline
 int StrCmp(const CharTy * str1, const CharTy * str2, std::size_t count) {
-    while (*str1 == *str2) {
-        count--;
-        if (unlikely(count == 0)) {
-            return CompareResult::IsEqual;
+    assert(str1 != nullptr);
+    assert(str2 != nullptr);
+    while (count != 0) {
+        if (likely(*str1 != *str2)) {
+            if (*str1 > *str2)
+                return CompareResult::IsBigger;
+            else
+                return CompareResult::IsSmaller;
+        } else {
+            str1++;
+            str2++;
+            count--;
         }
-        if (unlikely(((*str1) & (*str2)) == 0)) {
-            return CompareResult::IsEqual;
-        }
-        str1++;
-        str2++;
     }
 
-    if (*str1 > *str2)
-        return CompareResult::IsBigger;
-    else
-        return CompareResult::IsSmaller;
+    return CompareResult::IsEqual;
 }
 
 template <>
@@ -311,44 +312,36 @@ int StrCmpUnsafe(const StringTy & str1, const StringTy & str2) {
 template <typename CharTy>
 inline
 int StrCmpSafe(const CharTy * str1, const CharTy * str2, std::size_t count) {
-    if (likely(count != 0)) {
-        if (likely(str1 != nullptr)) {
-            if (likely(str2 != nullptr)) {
-                assert(str1 != nullptr && str2 != nullptr);
-                return StrCmp(str1, str2, count);
-            }
-            else {
-                assert(str1 != nullptr && str2 == nullptr);
-                return CompareResult::IsBigger;
-            }
+    if (likely(str1 != nullptr)) {
+        if (likely(str2 != nullptr)) {
+            return StrCmp(str1, str2, count);
         }
         else {
-            assert(str1 == nullptr);
-            return ((str2 != nullptr) ? CompareResult::IsSmaller : CompareResult::IsEqual);
+            assert(str1 != nullptr && str2 == nullptr);
+            return CompareResult::IsBigger;
         }
     }
     else {
-        // All strings of length is 0, see it as a empty string.
-        return CompareResult::IsEqual;
+        assert(str1 == nullptr);
+        return ((str2 != nullptr) ? CompareResult::IsSmaller : CompareResult::IsEqual);
     }
 }
 
 template <typename CharTy>
 inline
 int StrCmpSafe(const CharTy * str1, std::size_t len1, const CharTy * str2, std::size_t len2) {
-    if (likely(str1 != nullptr)) {
-        if (likely(str2 != nullptr)) {
-            assert(str1 != nullptr && str2 != nullptr);
-            return StrCmp(str1, len1, str2, len2);
-        }
-        else {
-            assert(str1 != nullptr && str2 == nullptr);
-            return ((len1 != 0) ? CompareResult::IsBigger : CompareResult::IsEqual);
-        }
+    std::size_t count = (len1 <= len2) ? len1 : len2;
+    int compare = StrCmpSafe(str1, str2, count);
+    if (likely(compare != CompareResult::IsEqual)) {
+        return compare;
     }
     else {
-        assert(str1 == nullptr);
-        return ((str2 == nullptr || len2 == 0) ? CompareResult::IsEqual : CompareResult::IsSmaller);
+        if (len1 > len2)
+            return CompareResult::IsBigger;
+        else if (len1 < len2)
+            return CompareResult::IsSmaller;
+        else
+            return CompareResult::IsEqual;
     }
 }
 

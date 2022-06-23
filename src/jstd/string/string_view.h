@@ -33,21 +33,21 @@
 
 namespace jstd {
 
-template <typename CharTy, typename Traits = jstd::string_traits<CharTy>>
+template <typename CharT, typename Traits = jstd::string_traits<CharT>>
 class basic_string_view {
 public:
-    typedef CharTy              char_type;
-    typedef CharTy              value_type;
+    typedef CharT               char_type;
+    typedef CharT               value_type;
     typedef std::size_t         size_type;
     typedef std::ptrdiff_t      difference_type;
-    typedef CharTy *            pointer;
-    typedef const CharTy *      const_pointer;
-    typedef CharTy &            reference;
-    typedef const CharTy &      const_reference;
+    typedef CharT *             pointer;
+    typedef const CharT *       const_pointer;
+    typedef CharT &             reference;
+    typedef const CharT &       const_reference;
     typedef Traits              traits_type;
 
-    typedef jstd::string_iterator<basic_string_view<CharTy>>       iterator;
-    typedef jstd::const_string_iterator<basic_string_view<CharTy>> const_iterator;
+    typedef jstd::string_iterator<basic_string_view<CharT>>       iterator;
+    typedef jstd::const_string_iterator<basic_string_view<CharT>> const_iterator;
 
     typedef std::basic_string<char_type>            string_type;
     typedef basic_string_view<char_type, Traits>    this_type;
@@ -93,16 +93,16 @@ public:
 
     ~basic_string_view() = default;
 
-    char_type * data()  { return const_cast<char_type *>(this->data_); }
-    char_type * c_str() { return const_cast<char_type *>(this->data()); }
+    char_type * data()  noexcept { return const_cast<char_type *>(this->data_); }
+    char_type * c_str() noexcept { return const_cast<char_type *>(this->data()); }
 
-    const char_type * data() const  { return this->data_; }
-    const char_type * c_str() const { return this->data(); }
+    const char_type * data() const noexcept  { return this->data_; }
+    const char_type * c_str() const noexcept { return this->data(); }
 
-    constexpr size_t size() const { return this->size_; }
-    constexpr size_t length() const { return this->size(); }
+    constexpr size_t size() const noexcept { return this->size_; }
+    constexpr size_t length() const noexcept { return this->size(); }
 
-    bool empty() const { return (this->size() == 0); }
+    constexpr bool empty() const { return (this->size() == 0); }
 
     constexpr size_type max_size() const noexcept {
         return ((std::numeric_limits<size_type>::max)() / (sizeof(char_type) * 4));
@@ -171,7 +171,7 @@ public:
         this->attach(src.data(), src.size());
     }
 
-    void clear() {
+    void clear() noexcept {
         this->data_ = nullptr;
         this->size_ = 0;
     }
@@ -248,12 +248,29 @@ public:
 
     // Only push for temporary, no grow().
     inline void push_back(char_type ch) {
-        this->push_back_impl(ch);
-        this->write_null();
+        char_type * last_ptr = const_cast<char_type *>(this->data_ + this->size_);
+        *last_ptr++ = ch;
+        *last_ptr = char_type('\0');
+        ++(this->size_);
     }
 
     inline void write_null() {
-        *const_cast<char_type *>(this->data_) = char_type('\0');
+        this->write_last(char_type('\0'));
+    }
+
+    inline char_type read_last() noexcept {
+        char_type * last_ptr = const_cast<char_type *>(this->data_ + this->size_);
+        return (*last_ptr);
+    }
+
+    inline const char_type read_last() const noexcept {
+        const char_type * last_ptr = this->data_ + this->size_;
+        return (*last_ptr);
+    }
+
+    inline void write_last(char_type ch) {
+        char_type * last_ptr = const_cast<char_type *>(this->data_ + this->size_);
+        *last_ptr = ch;
     }
 
     void commit(size_type count) {
@@ -471,33 +488,51 @@ public:
 
 private:
     inline void push_back_impl(char_type ch) {
-        char_type * data = const_cast<char_type *>(this->data_);
-        *data = ch;
-        ++(this->data_);
+        char_type * last_ptr = const_cast<char_type *>(this->data_ + this->size_);
+        *last_ptr = ch;
+        ++(this->size_);
     }
-}; // class basic_string_view<CharTy>
+}; // class basic_string_view<CharT>
 
-template <typename CharTy>
+template <typename CharT, typename Traits>
 inline
-bool operator == (const basic_string_view<CharTy> & lhs, const basic_string_view<CharTy> & rhs) noexcept {
+bool operator == (const basic_string_view<CharT, Traits> & lhs, const basic_string_view<CharT, Traits> & rhs) noexcept {
     return lhs.is_equal(rhs);
 }
 
-template <typename CharTy>
+template <typename CharT, typename Traits>
 inline
-bool operator < (const basic_string_view<CharTy> & lhs, const basic_string_view<CharTy> & rhs) noexcept {
+bool operator != (const basic_string_view<CharT, Traits> & lhs, const basic_string_view<CharT, Traits> & rhs) noexcept {
+    return !lhs.is_equal(rhs);
+}
+
+template <typename CharT, typename Traits>
+inline
+bool operator < (const basic_string_view<CharT, Traits> & lhs, const basic_string_view<CharT, Traits> & rhs) noexcept {
     return (lhs.compare(rhs) == jstd::CompareResult::IsSmaller);
 }
 
-template <typename CharTy>
+template <typename CharT, typename Traits>
 inline
-bool operator > (const basic_string_view<CharTy> & lhs, const basic_string_view<CharTy> & rhs) noexcept {
+bool operator <= (const basic_string_view<CharT, Traits> & lhs, const basic_string_view<CharT, Traits> & rhs) noexcept {
     return (lhs.compare(rhs) == jstd::CompareResult::IsBigger);
 }
 
-template <typename CharTy>
+template <typename CharT, typename Traits>
 inline
-void swap(basic_string_view<CharTy> & lhs, basic_string_view<CharTy> & rhs) noexcept {
+bool operator > (const basic_string_view<CharT, Traits> & lhs, const basic_string_view<CharT, Traits> & rhs) noexcept {
+    return (lhs.compare(rhs) == jstd::CompareResult::IsBigger);
+}
+
+template <typename CharT, typename Traits>
+inline
+bool operator >= (const basic_string_view<CharT, Traits> & lhs, const basic_string_view<CharT, Traits> & rhs) noexcept {
+    return (lhs.compare(rhs) == jstd::CompareResult::IsSmaller);
+}
+
+template <typename CharT, typename Traits>
+inline
+void swap(basic_string_view<CharT, Traits> & lhs, basic_string_view<CharT, Traits> & rhs) noexcept {
     lhs.swap(rhs);
 }
 
@@ -511,18 +546,21 @@ typedef basic_string_view<wchar_t>      wstring_ref;
 
 namespace std {
 
-template <typename CharTy>
+template <typename CharT, typename Traits>
 inline
-void swap(jstd::basic_string_view<CharTy> & lhs, jstd::basic_string_view<CharTy> & rhs) noexcept {
+void swap(jstd::basic_string_view<CharT, Traits> & lhs, jstd::basic_string_view<CharT, Traits> & rhs) noexcept {
     lhs.swap(rhs);
 }
 
-template <typename CharTy, typename Traits>
+template <typename CharT, typename Traits>
 inline
-std::basic_ostream<CharTy, Traits> &
-operator << (std::basic_ostream<CharTy, Traits> & os,
-             jstd::basic_string_view<CharTy, Traits> & view) {
+std::basic_ostream<CharT, Traits> &
+operator << (std::basic_ostream<CharT, Traits> & os,
+             jstd::basic_string_view<CharT, Traits> & view) {
+    CharT ch = view.read_last();
+    view.write_null();
     os << view.data();
+    view.write_last(ch);
     return os;
 }
 
