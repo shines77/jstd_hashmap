@@ -2061,7 +2061,7 @@ private:
         return { (start_index + pos), false };
     }
 
-    template <bool update_always>
+    template <bool AlwaysUpdate>
     std::pair<iterator, bool> emplace_impl(value_type && value) {
         std::uint8_t ctrl_hash;
         auto find_info = this->find_and_prepare_insert(value.first, ctrl_hash);
@@ -2081,7 +2081,7 @@ private:
             return { this->iterator_at(target), true };
         } else {
             // The key to be inserted already exists.
-            if (update_always) {
+            if (AlwaysUpdate) {
                 static constexpr bool is_rvalue_ref = std::is_rvalue_reference<decltype(value)>::value;
                 entry_type * entry = this->entry_at(target);
                 if (is_rvalue_ref)
@@ -2093,7 +2093,7 @@ private:
         }
     }
 
-    template <bool update_always, typename KeyT, typename MappedT, typename std::enable_if<
+    template <bool AlwaysUpdate, typename KeyT, typename MappedT, typename std::enable_if<
               (!jstd::is_same_ex<KeyT, value_type>::value) &&
               (!jstd::is_same_ex<KeyT, nc_value_type>::value) &&
               (!jstd::is_same_ex<KeyT, std::piecewise_construct_t>::value) &&
@@ -2122,7 +2122,7 @@ private:
         } else {
             // The key to be inserted already exists.
             static constexpr bool isMappedType = jstd::is_same_ex<MappedT, mapped_type>::value;
-            if (update_always) {
+            if (AlwaysUpdate) {
                 if (isMappedType) {
                     entry_type * entry = this->entry_at(target);
                     entry->second = std::forward<MappedT>(value);
@@ -2136,7 +2136,7 @@ private:
         }
     }
 
-    template <bool update_always, typename KeyT, typename std::enable_if<
+    template <bool AlwaysUpdate, typename KeyT, typename std::enable_if<
               (!jstd::is_same_ex<KeyT, value_type>::value) &&
               (!jstd::is_same_ex<KeyT, nc_value_type>::value) &&
               (!jstd::is_same_ex<KeyT, std::piecewise_construct_t>::value) &&
@@ -2164,7 +2164,7 @@ private:
             return { this->iterator_at(target), true };
         } else {
             // The key to be inserted already exists.
-            if (update_always) {
+            if (AlwaysUpdate) {
                 mapped_type mapped_value(std::forward<Args>(args)...);
                 entry_type * entry = this->entry_at(target);
                 entry->second = std::move(mapped_value);
@@ -2173,7 +2173,7 @@ private:
         }
     }
 
-    template <bool update_always, typename PieceWise, typename std::enable_if<
+    template <bool AlwaysUpdate, typename PieceWise, typename std::enable_if<
               (!jstd::is_same_ex<PieceWise, value_type>::value) &&
               (!jstd::is_same_ex<PieceWise, nc_value_type>::value) &&
               jstd::is_same_ex<PieceWise, std::piecewise_construct_t>::value &&
@@ -2206,7 +2206,7 @@ private:
             return { this->iterator_at(target), true };
         } else {
             // The key to be inserted already exists.
-            if (update_always) {
+            if (AlwaysUpdate) {
                 tuple_wrapper2<mapped_type> mapped_wrapper(std::move(second));
                 entry_type * entry = this->entry_at(target);
                 entry->second = std::move(mapped_wrapper.value());
@@ -2215,7 +2215,7 @@ private:
         }
     }
 
-    template <bool update_always, typename First, typename std::enable_if<
+    template <bool AlwaysUpdate, typename First, typename std::enable_if<
               (!jstd::is_same_ex<First, value_type>::value) &&
               (!jstd::is_same_ex<First, nc_value_type>::value) &&
               (!jstd::is_same_ex<First, std::piecewise_construct_t>::value) &&
@@ -2242,7 +2242,7 @@ private:
             return { this->iterator_at(target), true };
         } else {
             // The key to be inserted already exists.
-            if (update_always) {
+            if (AlwaysUpdate) {
                 entry_type * entry = this->entry_at(target);
                 entry->second = std::move(value.second);
             }
