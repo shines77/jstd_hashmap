@@ -131,7 +131,7 @@ struct IntegalHash
 
     template <typename UInt64, typename std::enable_if<
                                 (std::is_integral<UInt64>::value &&
-                                (sizeof(UInt64) > 4 && sizeof(UInt64) <= 8))>::type * = nullptr>  
+                                (sizeof(UInt64) > 4 && sizeof(UInt64) <= 8))>::type * = nullptr>
     result_type operator () (UInt64 value) const noexcept {
         //std::uint64_t hash = value * 1099511628211ull ^ 14695981039346656037ull;
         result_type hash = (result_type)((std::uint64_t)value * 14695981039346656037ull + 1099511628211ull);
@@ -140,7 +140,7 @@ struct IntegalHash
 
     template <typename Argument, typename std::enable_if<
                                   (!std::is_integral<Argument>::value ||
-                                  sizeof(Argument) > 8)>::type * = nullptr>  
+                                  sizeof(Argument) > 8)>::type * = nullptr>
     result_type operator () (const Argument & value) const noexcept {
         std::hash<Argument> hasher;
         return static_cast<result_type>(hasher(value));
@@ -225,7 +225,7 @@ public:
     static constexpr std::uint8_t kEmptyEntry   = 0b10000000;
     static constexpr std::uint8_t kDeletedEntry = 0b11111110;
     static constexpr std::uint8_t kEndOfMark    = 0b11111111;
-    static constexpr std::uint8_t kUnusedMask   = 0b10000000;    
+    static constexpr std::uint8_t kUnusedMask   = 0b10000000;
     static constexpr std::uint8_t kHash2Mask    = 0b01111111;
 
     static constexpr std::uint32_t kFullMask16  = 0x0000FFFFul;
@@ -431,7 +431,7 @@ public:
             assert((high & kMask8) == high);
 
             std::uint32_t mask16_l = 0;
-            std::uint64_t _low = low;            
+            std::uint64_t _low = low;
             while (_low != 0) {
                 std::uint32_t pos = BitUtils::bsf64(_low);
                 _low = BitUtils::clearLowBit64(_low);
@@ -1779,7 +1779,7 @@ private:
             control_byte * old_controls = this->controls();
             size_type old_cluster_mask = this->cluster_mask();
             size_type old_cluster_count = this->cluster_count();
-            
+
             entry_type * old_entries = this->entries();
             size_type old_entry_size = this->entry_size();
             size_type old_entry_mask = this->entry_mask();
@@ -1973,7 +1973,7 @@ private:
         this->entry_size_++;
         assert(this->entry_size() <= this->entry_capacity());
     }
-   
+
 
     // Use in constructor
     template <typename InputIter>
