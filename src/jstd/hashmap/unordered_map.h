@@ -133,14 +133,15 @@ public:
 
     static constexpr float kMinLoadFactor = 0.2f;
     static constexpr float kMaxLoadFactor = 0.8f;
+
     // Must be kMinLoadFactor <= loadFactor <= kMaxLoadFactor
     static constexpr float kDefaultLoadFactor = 0.5f;
 
-    static constexpr bool kNeedUseHash = true;
+    static constexpr bool kDetectStoreHash = true;
 
     static constexpr bool kNeedStoreHash =
         (!layout_policy_t::isAutoDetectStoreHash && layout_policy_t::needStoreHash) ||
-         (layout_policy_t::isAutoDetectStoreHash && (kNeedUseHash));
+         (layout_policy_t::isAutoDetectStoreHash && (kDetectStoreHash));
 
     enum entry_type_t {
         kEntryTypeShfit  = 30,
@@ -235,14 +236,22 @@ public:
         }
     };
 
+    struct bucket_ptr {
+
+    };
+
     template <bool NeedStoreHash>
     struct bucket_entry {
-        //
+        hash_entry * next;
+        hash_code_t  hash_code;
+        entry_attr_t attrib;
+        //alignas(Alignment)
+        value_type   value;
     };
 
     template <>
     struct bucket_entry<false> {
-        //
+        value_type value;
     };
 
 #if 0

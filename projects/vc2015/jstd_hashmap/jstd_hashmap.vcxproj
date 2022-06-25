@@ -45,6 +45,7 @@
     <ClInclude Include="..\..\..\src\jstd\hashmap\unordered_map.h" />
     <ClInclude Include="..\..\..\src\jstd\dll.h" />
     <ClInclude Include="..\..\..\src\jstd\iterator.h" />
+    <ClInclude Include="..\..\..\src\jstd\memory\swap.h" />
     <ClInclude Include="..\..\..\src\jstd\string\char_traits.h" />
     <ClInclude Include="..\..\..\src\jstd\string\string_def.h" />
     <ClInclude Include="..\..\..\src\jstd\string\string_helper.h" />

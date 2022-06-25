@@ -656,8 +656,7 @@ constexpr bool empty(const T(&)[Size]) noexcept
 // get dimension == 0 for initializer_list
 template <class Element>
 inline
-constexpr bool empty(
-    std::initializer_list<Element> initList) noexcept
+constexpr bool empty(std::initializer_list<Element> initList) noexcept
 {
     return (initList.size() == 0);
 }
@@ -696,6 +695,67 @@ constexpr const Element * data(
 }
 
 /////////////////////////////////////////////////////////////////
+
+#if JSTD_IS_CXX_17
+
+// implementation via constexpr if, available in C++17
+template<class It>
+constexpr typename std::iterator_traits<It>::difference_type
+    distance(It first, It last)
+{
+    using category = typename std::iterator_traits<It>::iterator_category;
+    static_assert(std::is_base_of_v<std::input_iterator_tag, category>);
+ 
+    if constexpr (std::is_base_of_v<std::random_access_iterator_tag, category>)
+        return last - first;
+    else {
+        typename std::iterator_traits<It>::difference_type result = 0;
+        while (first != last) {
+            ++first;
+            ++result;
+        }
+        return result;
+    }
+}
+
+#else // !JSTD_IS_CXX_17
+
+// implementation via tag dispatch, available in C++98 with constexpr removed
+namespace detail {
+ 
+template <typename Iter>
+constexpr // required since C++17
+typename std::iterator_traits<Iter>::difference_type 
+do_distance(Iter first, Iter last, std::input_iterator_tag)
+{
+    typename std::iterator_traits<Iter>::difference_type result = 0;
+    while (first != last) {
+        ++first;
+        ++result;
+    }
+    return result;
+}
+ 
+template <typename Iter>
+constexpr // required since C++17
+typename std::iterator_traits<Iter>::difference_type 
+do_distance(Iter first, Iter last, std::random_access_iterator_tag)
+{
+    return (last - first);
+}
+ 
+} // namespace detail
+ 
+template <typename Iter>
+constexpr // since C++17
+typename std::iterator_traits<Iter>::difference_type 
+distance(Iter first, Iter last)
+{
+    return detail::do_distance(first, last,
+                               typename std::iterator_traits<Iter>::iterator_category());
+}
+
+#endif // JSTD_IS_CXX_17
 
 } // namespace jstd
 

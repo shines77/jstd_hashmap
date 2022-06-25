@@ -35,6 +35,9 @@
     <Filter Include="src\hasher">
       <UniqueIdentifier>{baef719b-01be-4edb-9d0c-2befeb109560}</UniqueIdentifier>
     </Filter>
+    <Filter Include="src\memory">
+      <UniqueIdentifier>{7eb3727f-5278-48db-a741-a8d6f3ace302}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\src\jstd\basic\msvc\inttypes.h">
@@ -219,6 +222,9 @@
     </ClInclude>
     <ClInclude Include="..\..\..\src\jstd\system\MT19937_32.h">
       <Filter>src\system</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\memory\swap.h">
+      <Filter>src\memory</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

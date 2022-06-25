@@ -39,6 +39,7 @@ public:
     typedef CharT               char_type;
     typedef CharT               value_type;
     typedef std::size_t         size_type;
+    typedef std::intptr_t       ssize_type;
     typedef std::ptrdiff_t      difference_type;
     typedef CharT *             pointer;
     typedef const CharT *       const_pointer;
@@ -49,8 +50,9 @@ public:
     typedef jstd::string_iterator<basic_string_view<CharT>>       iterator;
     typedef jstd::const_string_iterator<basic_string_view<CharT>> const_iterator;
 
-    typedef std::basic_string<char_type>            string_type;
-    typedef basic_string_view<char_type, Traits>    this_type;
+    typedef std::basic_string<char_type>                        string_type;
+    typedef std::basic_ostream<CharT, std::char_traits<CharT>>  ostream_type;
+    typedef basic_string_view<char_type, Traits>                this_type;
 
     static constexpr size_type npos = size_type(-1);
 
@@ -102,7 +104,7 @@ public:
     constexpr size_t size() const noexcept { return this->size_; }
     constexpr size_t length() const noexcept { return this->size(); }
 
-    constexpr bool empty() const { return (this->size() == 0); }
+    constexpr bool empty() const noexcept { return (this->size() == 0); }
 
     constexpr size_type max_size() const noexcept {
         return ((std::numeric_limits<size_type>::max)() / (sizeof(char_type) * 4));
@@ -117,15 +119,7 @@ public:
     const_reference front() const { return this->data_[0]; }
     const_reference back() const { return this->data_[this->size() - 1]; }
 
-#if 1
-    basic_string_view & operator = (const this_type & view) noexcept = default;
-#else
-    basic_string_view & operator = (const this_type & rhs) noexcept {
-        this->data_ = rhs.data();
-        this->size_ = rhs.size();
-        return *this;
-    }
-#endif
+    basic_string_view & operator = (const this_type & rhs) noexcept = default;
 
     basic_string_view & operator = (const char_type * data) noexcept {
         this->data_ = data;
@@ -137,6 +131,35 @@ public:
         this->data_ = rhs.c_str();
         this->size_ = rhs.size();
         return *this;
+    }
+
+    void commit(size_type count) noexcept {
+        this->data_ += count;
+    }
+
+    void comsume(size_type count) noexcept {
+        this->data_ -= count;
+    }
+
+    void apply(ssize_type offset) noexcept {
+        this->data_ += offset;
+    }
+
+    void expand(size_type count) noexcept {
+        this->size_ += count;
+    }
+
+    void shrink(size_type count) noexcept {
+        this->size_ -= count;
+    }
+
+    void offset(ssize_type step) noexcept {
+        this->size_ += step;
+    }
+
+    void slide(ssize_type offset) noexcept {
+        this->data_ += offset;
+        this->size_ += offset;
     }
 
     void attach(const char_type * data, size_t size) {
@@ -247,15 +270,17 @@ public:
     }
 
     // Only push for temporary, no grow().
-    inline void push_back(char_type ch) {
+    inline this_type & push_back(char_type ch) {
         char_type * last_ptr = const_cast<char_type *>(this->data_ + this->size_);
         *last_ptr++ = ch;
         *last_ptr = char_type('\0');
         ++(this->size_);
+        return *this;
     }
 
-    inline void write_null() {
+    inline this_type & write_null() {
         this->write_last(char_type('\0'));
+        return *this;
     }
 
     inline char_type read_last() noexcept {
@@ -268,17 +293,10 @@ public:
         return (*last_ptr);
     }
 
-    inline void write_last(char_type ch) {
+    inline this_type & write_last(char_type ch) {
         char_type * last_ptr = const_cast<char_type *>(this->data_ + this->size_);
         *last_ptr = ch;
-    }
-
-    void commit(size_type count) {
-        this->data_ += count;
-    }
-
-    void comsume(size_type count) {
-        this->data_ -= count;
+        return *this;
     }
 
     reference operator [] (size_type pos) {
@@ -486,6 +504,40 @@ public:
         return string_type(this->data_, this->size_);
     }
 
+    friend inline ostream_type & operator << (ostream_type & out, const this_type & view) {
+        string_type text(view.data(), view.size());
+        out << text.c_str();
+        return out;
+    }
+
+    friend inline void swap(this_type & lhs, this_type & rhs) noexcept {
+        lhs.swap(rhs);
+    }
+
+    friend inline bool operator == (const this_type & lhs, const this_type & rhs) noexcept {
+        return lhs.is_equal(rhs);
+    }
+
+    friend inline bool operator != (const this_type & lhs, const this_type & rhs) noexcept {
+        return !lhs.is_equal(rhs);
+    }
+
+    friend inline bool operator < (const this_type & lhs, const this_type & rhs) noexcept {
+        return (lhs.compare(rhs) == CompareResult::IsSmaller);
+    }
+
+    friend inline bool operator <= (const this_type & lhs, const this_type & rhs) noexcept {
+        return (lhs.compare(rhs) == CompareResult::IsBigger);
+    }
+
+    friend inline bool operator > (const this_type & lhs, const this_type & rhs) noexcept {
+        return (lhs.compare(rhs) == CompareResult::IsBigger);
+    }
+
+    friend inline bool operator >= (const this_type & lhs, const this_type & rhs) noexcept {
+        return (lhs.compare(rhs) == CompareResult::IsSmaller);
+    }
+
 private:
     inline void push_back_impl(char_type ch) {
         char_type * last_ptr = const_cast<char_type *>(this->data_ + this->size_);
@@ -493,42 +545,6 @@ private:
         ++(this->size_);
     }
 }; // class basic_string_view<CharT>
-
-template <typename CharT, typename Traits>
-inline
-bool operator == (const basic_string_view<CharT, Traits> & lhs, const basic_string_view<CharT, Traits> & rhs) noexcept {
-    return lhs.is_equal(rhs);
-}
-
-template <typename CharT, typename Traits>
-inline
-bool operator != (const basic_string_view<CharT, Traits> & lhs, const basic_string_view<CharT, Traits> & rhs) noexcept {
-    return !lhs.is_equal(rhs);
-}
-
-template <typename CharT, typename Traits>
-inline
-bool operator < (const basic_string_view<CharT, Traits> & lhs, const basic_string_view<CharT, Traits> & rhs) noexcept {
-    return (lhs.compare(rhs) == jstd::CompareResult::IsSmaller);
-}
-
-template <typename CharT, typename Traits>
-inline
-bool operator <= (const basic_string_view<CharT, Traits> & lhs, const basic_string_view<CharT, Traits> & rhs) noexcept {
-    return (lhs.compare(rhs) == jstd::CompareResult::IsBigger);
-}
-
-template <typename CharT, typename Traits>
-inline
-bool operator > (const basic_string_view<CharT, Traits> & lhs, const basic_string_view<CharT, Traits> & rhs) noexcept {
-    return (lhs.compare(rhs) == jstd::CompareResult::IsBigger);
-}
-
-template <typename CharT, typename Traits>
-inline
-bool operator >= (const basic_string_view<CharT, Traits> & lhs, const basic_string_view<CharT, Traits> & rhs) noexcept {
-    return (lhs.compare(rhs) == jstd::CompareResult::IsSmaller);
-}
 
 template <typename CharT, typename Traits>
 inline
@@ -550,18 +566,6 @@ template <typename CharT, typename Traits>
 inline
 void swap(jstd::basic_string_view<CharT, Traits> & lhs, jstd::basic_string_view<CharT, Traits> & rhs) noexcept {
     lhs.swap(rhs);
-}
-
-template <typename CharT, typename Traits>
-inline
-std::basic_ostream<CharT, Traits> &
-operator << (std::basic_ostream<CharT, Traits> & os,
-             jstd::basic_string_view<CharT, Traits> & view) {
-    CharT ch = view.read_last();
-    view.write_null();
-    os << view.data();
-    view.write_last(ch);
-    return os;
 }
 
 } // namespace std

@@ -390,6 +390,7 @@ template <typename Key, typename Value>
 void benchmark_insert_random(std::size_t iters)
 {
     static constexpr std::size_t Factor = 16;
+#ifndef _DEBUG
     static constexpr std::size_t DataSize = 1024 * 1000 * Factor;
     static constexpr std::size_t Cardinal0 = 60 * Factor;
     static constexpr std::size_t Cardinal1 = 600 * Factor;
@@ -398,6 +399,16 @@ void benchmark_insert_random(std::size_t iters)
     static constexpr std::size_t Cardinal4 = 600000 * Factor;
     static constexpr std::size_t Cardinal5 = 6000000 * Factor;
     static constexpr std::size_t Cardinal6 = 60000000 * Factor;
+#else
+    static constexpr std::size_t DataSize = 1024 * 10 * Factor;
+    static constexpr std::size_t Cardinal0 = 6 * Factor;
+    static constexpr std::size_t Cardinal1 = 60 * Factor;
+    static constexpr std::size_t Cardinal2 = 600 * Factor;
+    static constexpr std::size_t Cardinal3 = 6000 * Factor;
+    static constexpr std::size_t Cardinal4 = 60000 * Factor;
+    static constexpr std::size_t Cardinal5 = 600000 * Factor;
+    static constexpr std::size_t Cardinal6 = 600000 * Factor;
+#endif
 
     printf("DataSize = %u\n\n", (uint32_t)DataSize);
 
