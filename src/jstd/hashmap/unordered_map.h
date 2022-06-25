@@ -73,7 +73,6 @@
 #include <type_traits>
 #include <stdexcept>
 
-#include "jstd/hashmap/dictionary_traits.h"
 #include "jstd/hashmap/hash_chunk_list.h"
 #include "jstd/type_traits.h"
 #include "jstd/utility.h"
@@ -118,8 +117,8 @@ public:
     typedef typename std::make_signed<size_type>::type
                                             ssize_type;
     typedef std::size_t                     index_type;
-    typedef std::size_t                     hash_code_t;
-    typedef unordered_map<Key, Value, Hash, KeyEqual, Allocator>
+    typedef std::uint32_t                   hash_code_t;
+    typedef unordered_map<Key, Value, Hash, KeyEqual, LayoutPolicy, Allocator>
                                             this_type;
 
     typedef LayoutPolicy                    layout_policy_t;
@@ -270,14 +269,32 @@ public:
         }
     };
 
-    template <bool Is64Bit = kIs64Bit>
+    typedef bucket_entry<kNeedStoreHash>    entry_type;
+    typedef value_type                      node_type;
+
+    // The maximum entry's chunk bytes, default is 32 MB bytes.
+    static constexpr size_type kMaxEntryChunkBytes = 32 * 1024 * 1024;
+    // The entry's block size per chunk (entry_type).
+    static constexpr size_type kMaxEntryChunkSize =
+            compile_time::round_to_power2<kMaxEntryChunkBytes / sizeof(entry_type)>::value;
+
+    template <typename T, bool Is64Bit = kIs64Bit>
     struct bucket_pointer {
+    public:
+        typedef T           value_type;
+        typedef T *         pointer;
+        typedef const T *   const_pointer;
+        typedef T &         reference;
+        typedef const T &   const_reference;
+
+        typedef std::size_t size_type;
+
     private:
-        bucket_entry * ptr_;
+        pointer ptr_;
 
     public:
-        bucket_pointer(bucket_entry * ptr = nullptr) noexcept : ptr_(ptr) {}
-        bucket_pointer(void * ptr = nullptr) noexcept : ptr_(reinterpret_cast<bucket_entry *>(ptr)) {}
+        bucket_pointer(pointer ptr = nullptr) noexcept : ptr_(ptr) {}
+        bucket_pointer(void * ptr = nullptr) noexcept : ptr_(reinterpret_cast<pointer>(ptr)) {}
         bucket_pointer(const bucket_pointer & src) noexcept : ptr_(src.ptr_) {}
 
         bucket_pointer & operator = (const bucket_pointer & rhs) noexcept {
@@ -288,36 +305,48 @@ public:
 
         size_type count() const noexcept { return npos; }
 
-        bucket_entry * pointer() noexcept { return this->ptr_; }
-        const bucket_entry * pointer() const noexcept { return const_cast<const bucket_entry *>(this->ptr_); }
+        pointer ptr() noexcept { return this->ptr_; }
+        const_pointer ptr() const noexcept {
+            return const_cast<const_pointer>(this->ptr_);
+        }
 
         void set_count(size_type count) noexcept {
         }
 
-        void set_pointer(bucket_entry * ptr) noexcept {
+        void set_ptr(pointer ptr) noexcept {
             this->ptr_ = ptr;
         }
 
-        void set_pointer(bucket_entry * ptr, size_type count) noexcept {
+        void set_ptr(pointer ptr, size_type count) noexcept {
             this->ptr_ = ptr;
         }
     };
 
 #if (JSTD_WORD_LEN == 64)
-    template <>
-    class bucket_pointer<true> {
-    private:
+    template <typename T>
+    class bucket_pointer<T, true> {
+    public:
+        typedef T           value_type;
+        typedef T *         pointer;
+        typedef const T *   const_pointer;
+        typedef T &         reference;
+        typedef const T &   const_reference;
+
+        typedef std::size_t size_type;
+
         static constexpr std::uintptr_t kPtrMask = 0x00FFFFFFFFFFFFFFull;
+
+    private:
         union {
             struct {
-                uintptr_t count_: 8;
-                uintptr_t iptr_:  56;
+                std::uintptr_t count_: 8;
+                std::uintptr_t iptr_:  56;
             };
-            bucket_entry * ptr_;
+            pointer ptr_;
         };
 
     public:
-        bucket_pointer(bucket_entry * ptr = nullptr) noexcept : ptr_(ptr) {}
+        bucket_pointer(pointer ptr = nullptr) noexcept : ptr_(ptr) {}
         bucket_pointer(void * ptr = nullptr) noexcept : ptr_(reinterpret_cast<bucket_entry *>(ptr)) {}
         bucket_pointer(const bucket_pointer & src) noexcept : ptr_(src.ptr_) {}
 
@@ -329,10 +358,10 @@ public:
 
         size_type count() const noexcept { return static_cast<size_type>(this->count_); }
 
-        bucket_entry * pointer() noexcept {
+        pointer ptr() noexcept {
             return reinterpret_cast<bucket_entry *>(this->iptr_);
         }
-        const bucket_entry * pointer() const noexcept {
+        const_pointer ptr() const noexcept {
             return const_cast<const bucket_entry *>(reinterpret_cast<bucket_entry *>(this->iptr_));
         }
 
@@ -340,19 +369,18 @@ public:
             this->count_ = count;
         }
 
-        void set_pointer(bucket_entry * ptr) noexcept {
+        void set_ptr(pointer ptr) noexcept {
             this->iptr_ = (std::uintptr_t)ptr;
         }
 
-        void set_pointer(bucket_entry * ptr, size_type count) noexcept {
+        void set_ptr(pointer ptr, size_type count) noexcept {
             this->count_ = count;
             this->ptr_ = (std::uintptr_t)ptr;
         }
     };
 #endif // (JSTD_WORD_LEN == 64)
 
-    typedef bucket_entry    entry_type;
-    typedef value_type      node_type;
+    typedef bucket_pointer<bucket_entry, kIs64Bit> bucket_type;
 
     template <typename ValueType>
     class basic_iterator {
@@ -679,26 +707,29 @@ public:
         lhs.swap(rhs);
     }
 
-    typedef free_list<entry_type>   free_list_t;
+    typedef free_list<entry_type>       free_list_t;
 
-    // The maximum entry's chunk bytes, default is 32 MB bytes.
-    static constexpr size_type kMaxEntryChunkBytes = 32 * 1024 * 1024;
-    // The entry's block size per chunk (entry_type).
-    static constexpr size_type kMaxEntryChunkSize =
-            compile_time::round_to_power2<kMaxEntryChunkBytes / sizeof(entry_type)>::value;
+    typedef hash_entry_chunk_list<entry_type, allocator_type, entry_allocator_type>
+                                        entry_chunk_list_t;
+    typedef typename entry_chunk_list_t::entry_chunk_t
+                                        entry_chunk_t;
+
+    typedef std::pair<iterator, bool>   insert_return_type;
 
 private:
-    entry_type **   buckets_;
-    entry_type *    entries_;
-    size_type       bucket_mask_;
-    size_type       entry_size_;
-    size_type       entry_capacity_;
-    size_type       entry_threshold_;
-    free_list_t     freelist_;
-    float           load_factor_;
+    bucket_pointer *    buckets_;
+    entry_type *        entries_;
+    size_type           bucket_mask_;
+    size_type           entry_size_;
+    size_type           entry_capacity_;
+    size_type           entry_threshold_;
+    free_list_t         freelist_;
+    mutable entry_chunk_list_t
+                        chunk_list_;
+    float               load_factor_;
 
-    hasher          hasher_;
-    key_equal       key_equal_;
+    hasher              hasher_;
+    key_equal           key_equal_;
 
     allocator_type          allocator_;
     bucket_allocator_type   bucket_allocator_;
@@ -1511,7 +1542,7 @@ private:
 
         size_type cluster_count = (new_capacity + (kClusterEntries - 1)) / kClusterEntries;
         assert(cluster_count > 0);
-        cluster_type * buckets = new cluster_type[cluster_count + 1];
+        bucket_pointer * buckets = new bucket_pointer[cluster_count + 1];
         buckets_ = buckets;
         bucket_mask_ = cluster_count - 1;
 
@@ -1654,40 +1685,6 @@ private:
         }
 
         return entry;
-    }
-
-    size_type find_impl(const key_type & key, index_type & first_cluster,
-                        index_type & last_cluster, std::uint8_t & ctrl_hash) const {
-        hash_code_t hash_code = this->get_hash(key);
-        hash_code_t hash_code_2nd = this->get_second_hash(hash_code);
-        std::uint8_t control_hash = this->get_control_hash(hash_code_2nd);
-        index_type cluster_index = this->index_for(hash_code);
-        index_type start_cluster = cluster_index;
-        first_cluster = start_cluster;
-        ctrl_hash = control_hash;
-        do {
-            const cluster_type & cluster = this->get_cluster(cluster_index);
-            std::uint32_t mask16 = cluster.matchHash(control_hash);
-            size_type start_index = cluster_index * kClusterEntries;
-            while (mask16 != 0) {
-                size_type pos = BitUtils::bsf32(mask16);
-                mask16 = BitUtils::clearLowBit32(mask16);
-                size_type index = start_index + pos;
-                const entry_type & target = this->get_entry(index);
-                if (this->key_equal_(target.first, key)) {
-                    last_cluster = cluster_index;
-                    return index;
-                }
-            }
-            if (cluster.hasAnyEmpty()) {
-                last_cluster = cluster_index;
-                return npos;
-            }
-            cluster_index = this->next_cluster(cluster_index);
-        } while (cluster_index != start_cluster);
-
-        last_cluster = npos;
-        return npos;
     }
 
     JSTD_FORCED_INLINE
@@ -1874,6 +1871,85 @@ private:
         size_type pos = BitUtils::bsf32(maskEmpty);
         size_type start_index = last_cluster * kClusterEntries;
         return { (start_index + pos), false };
+    }
+
+    bool add_chunk_or_grow_if_necessary(size_type increase_size) {
+        return false;
+    }
+
+    entry_type * got_free_entry(hash_code_t hash_code, index_type & index) {
+        if (likely(!this->freelist_.is_empty())) {
+            // Pop a free entry from freelist.
+            entry_type * free_entry = this->freelist_.pop_front();
+            return free_entry;
+        } else {
+            if (likely(this->chunk_list_.is_full())) {
+                // The chunk buffer is not enough
+                bool growed = this->add_chunk_or_grow_if_necessary(1);
+                if (growed) {
+                    // Recalculate the bucket index.
+                    index = this->index_for(hash_code);
+                }
+            }
+
+            // Got a free entry.
+            entry_type * new_entry = &this->entries_[this->chunk_list_.lastChunkSize()];
+            assert(new_entry != nullptr);
+            uint32_t chunk_id = this->chunk_list_.lastChunkId();
+            new_entry->attrib.setValue(kIsFreeEntry, chunk_id);
+            return new_entry;
+        }
+    }
+
+    template <bool AlwaysUpdate, typename ReturnType>
+    ReturnType insert_impl(const key_type & key, const mapped_type & value) {
+        assert(this->buckets() != nullptr);
+        bool inserted;
+
+        hash_code_t hash_code = this->get_hash(key);
+        index_type index = this->index_for(hash_code);
+
+        entry_type * entry = this->find_entry(key, hash_code, index);
+        if (likely(entry == nullptr)) {
+            entry_type * new_entry = this->got_free_entry(hash_code, index);
+            this->insert_to_bucket(new_entry, hash_code, index);
+            this->construct_value(new_entry, key, value);
+            this->entry_size_++;
+            entry = new_entry;
+            inserted = true;
+        }
+        else {
+            if (AlwaysUpdate) {
+                entry->value.second = value;
+            }
+            inserted = false;
+        }
+
+        return ReturnType(iterator(this, entry), inserted);
+    }
+
+    template <bool AlwaysUpdate, typename ReturnType>
+    ReturnType insert_impl(const key_type & key, mapped_type && value) {
+        assert(this->buckets() != nullptr);
+        bool inserted;
+
+        hash_code_t hash_code = this->get_hash(key);
+        index_type index = this->index_for(hash_code);
+
+        entry_type * entry = this->find_entry(key, hash_code, index);
+        if (likely(entry == nullptr)) {
+            entry = this->insert_new_entry(key, std::forward<mapped_type>(value),
+                                           hash_code, index);
+            inserted = true;
+        }
+        else {
+            if (AlwaysUpdate) {
+                entry->value.second = std::forward<mapped_type>(value);
+            }
+            inserted = false;
+        }
+
+        return ReturnType(iterator(this, entry), inserted);
     }
 
     template <bool update_always>
