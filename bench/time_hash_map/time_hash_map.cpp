@@ -716,7 +716,7 @@ template <std::size_t Size, std::size_t HashSize>
 struct has_trivial_copy< HashObject<std::uint32_t, Size, HashSize> > : true_type { };
 
 template <std::size_t Size, std::size_t HashSize>
-struct has_trivial_copy< HashObject<std::size_t, Size, HashSize> > : true_type { };
+struct has_trivial_copy< HashObject<std::uint64_t, Size, HashSize> > : true_type { };
 
 // has_trivial_destructor
 
@@ -724,7 +724,7 @@ template <std::size_t Size, std::size_t HashSize>
 struct has_trivial_destructor< HashObject<std::uint32_t, Size, HashSize> > : true_type { };
 
 template <std::size_t Size, std::size_t HashSize>
-struct has_trivial_destructor< HashObject<std::size_t, Size, HashSize> > : true_type { };
+struct has_trivial_destructor< HashObject<std::uint64_t, Size, HashSize> > : true_type { };
 
 } // namespace google
 
