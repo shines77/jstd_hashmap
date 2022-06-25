@@ -1,7 +1,7 @@
 
 #ifndef __SSE4_2__
-#define __SSE4_2__              1
-#endif // __SSE4_2__
+#define __SSE4_2__
+#endif
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -16,7 +16,7 @@
 #include <string>
 #include <utility>
 
-#if __SSE4_2__
+#ifdef __SSE4_2__
 
 // Support SSE 4.2: _mm_crc32_u32(), _mm_crc32_u64().
 #define SUPPORT_SSE42_CRC32C    1
@@ -39,7 +39,7 @@
 //
 
 #define ROUND_TO_POW2_TEST(className, funcName, N) \
-    printf("Test: [%s<%" PRIuSIZE ">] == %" PRIuSIZE ", %" PRIuSIZE ", ", \
+    printf("Test: [%s<%" PRIuPTR ">] == %" PRIuPTR ", %" PRIuPTR ", ", \
            #className, size_t(N), \
            jstd::compile_time::className<N>::value, \
            jstd::funcName(size_t(N))); \

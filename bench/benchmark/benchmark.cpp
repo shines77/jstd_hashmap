@@ -1322,7 +1322,7 @@ void RandomGenerator_test()
     printf("\n");
     printf("RandomGen::nextInt32()      = %d\n"
            "MtRandomGen::nextUInt32()   = %u\n"
-           "Mt64RandomGen::nextUInt64() = %" PRIu64 "\n",
+           "Mt64RandomGen::nextUInt64() = %" PRIuPTR "\n",
            i32, u32, u64);
     printf("\n");
 }
@@ -1429,7 +1429,7 @@ void IntegalHash_test()
     printf("hash::IntegalHash(uint64_t) sequential\n\n");
     for (std::uint64_t i = 0; i < 16; i++) {
         std::uint64_t hash64 = integalHasher64(i);
-        printf("value = %-20" PRIu64 ", hash_code = %-20" PRIu64 " (0x%08X%08X)\n",
+        printf("value = %-20" PRIuPTR ", hash_code = %-20" PRIuPTR " (0x%08X%08X)\n",
                i, hash64,
                (std::uint32_t)(hash64 >> 32),
                (std::uint32_t)(hash64 & 0xFFFFFFFFul));
@@ -1440,7 +1440,7 @@ void IntegalHash_test()
     for (std::uint64_t i = 0; i < 16; i++) {
         std::uint64_t value = next_random_u64();
         std::uint64_t hash64 = integalHasher64(value);
-        printf("value = %-20" PRIu64 ", hash_code = %-20" PRIu64 " (0x%08X%08X)\n",
+        printf("value = %-20" PRIuPTR ", hash_code = %-20" PRIuPTR " (0x%08X%08X)\n",
                value, hash64,
                (std::uint32_t)(hash64 >> 32),
                (std::uint32_t)(hash64 & 0xFFFFFFFFul));
