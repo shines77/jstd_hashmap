@@ -197,7 +197,7 @@ struct BitUtils {
         return (unsigned int)index;
     }
 
-#if (JSTD_WORD_SIZE == 64)
+#if (JSTD_WORD_LEN == 64)
     static inline
     unsigned int bsf64(unsigned __int64 x) {
         assert(x != 0);
@@ -231,7 +231,7 @@ struct BitUtils {
         return (unsigned int)index;
     }
 
-#if (JSTD_WORD_SIZE == 64)
+#if (JSTD_WORD_LEN == 64)
     static inline
     unsigned int bsr64(unsigned __int64 x) {
         assert(x != 0);
@@ -271,7 +271,7 @@ struct BitUtils {
 #endif
     }
 
-#if (JSTD_WORD_SIZE == 64)
+#if (JSTD_WORD_LEN == 64)
     static inline
     unsigned int bsf64(uint64_t x) {
         assert(x != 0);
@@ -311,7 +311,7 @@ struct BitUtils {
 #endif
     }
 
-#if (JSTD_WORD_SIZE == 64)
+#if (JSTD_WORD_LEN == 64)
     static inline
     unsigned int bsr64(uint64_t x) {
         assert(x != 0);
@@ -338,7 +338,7 @@ struct BitUtils {
         }
         return index;
     }
-#endif // (JSTD_WORD_SIZE == 64)
+#endif // (JSTD_WORD_LEN == 64)
 
 #else
 
@@ -382,7 +382,7 @@ struct BitUtils {
 #endif
     }
 
-#if (JSTD_WORD_SIZE == 64)
+#if (JSTD_WORD_LEN == 64)
     static inline
     unsigned int popcnt64(uint64_t x) {
 #if __has_builtin(__builtin_popcountll)
@@ -403,11 +403,11 @@ struct BitUtils {
                                 popcnt32((unsigned int)(x & 0xFFFFFFFFUL));
         return popcount;
     }
-#endif // (JSTD_WORD_SIZE == 64)
+#endif // (JSTD_WORD_LEN == 64)
 
     static inline
     unsigned int bsf(size_t x) {
-#if (JSTD_WORD_SIZE == 64)
+#if (JSTD_WORD_LEN == 64)
         return BitUtils::bsf64(x);
 #else
         return BitUtils::bsf32(x);
@@ -416,7 +416,7 @@ struct BitUtils {
 
     static inline
     unsigned int bsr(size_t x) {
-#if (JSTD_WORD_SIZE == 64)
+#if (JSTD_WORD_LEN == 64)
         return BitUtils::bsr64(x);
 #else
         return BitUtils::bsr32(x);
@@ -425,7 +425,7 @@ struct BitUtils {
 
     static inline
     unsigned int popcnt(size_t x) {
-#if (JSTD_WORD_SIZE == 64)
+#if (JSTD_WORD_LEN == 64)
         return BitUtils::popcnt64(x);
 #else
         return BitUtils::popcnt32(x);

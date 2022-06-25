@@ -37,34 +37,34 @@
  || defined(_M_IA64) || defined(__amd64__) || defined(__x86_64__)
   #define JSTD_IS_X86           1
   #define JSTD_IS_X86_64        1
-  #define JSTD_WORD_SIZE        64
+  #define JSTD_WORD_LEN         64
 #elif defined (_M_IX86) || defined(__i386__)
   #define JSTD_IS_X86           1
   #define JSTD_IS_X86_I386      1
-  #define JSTD_WORD_SIZE        32
+  #define JSTD_WORD_LEN         32
 #elif defined(__aarch64__) || defined(_M_ARM64) || defined(__ARM64__) || defined(__arm64__)
   #define JSTD_IS_ARM           1
   #define JSTD_IS_ARM_64        1
-  #define JSTD_WORD_SIZE        64
+  #define JSTD_WORD_LEN        64
 #elif defined(__aarch32__) || defined(_M_ARM) || defined(__ARM__) || defined(__arm__)
   #define JSTD_IS_ARM           1
   #define JSTD_IS_ARM_32        1
-  #define JSTD_WORD_SIZE        32
+  #define JSTD_WORD_LEN         32
 #elif defined(_M_MPPC)
   // Power Macintosh PowerPC
-  #define JSTD_WORD_SIZE        32
+  #define JSTD_WORD_LEN         32
 #elif defined(_M_PPC)
   // PowerPC
-  #define JSTD_WORD_SIZE        32
+  #define JSTD_WORD_LEN         32
 #endif
 
-#ifndef JSTD_WORD_SIZE
+#ifndef JSTD_WORD_LEN
   #if defined(WIN32) || defined(_WIN32)
-    #define JSTD_WORD_SIZE      32
+    #define JSTD_WORD_LEN       32
   #elif defined(WIN64) || defined(_WIN64)
-    #define JSTD_WORD_SIZE      64
+    #define JSTD_WORD_LEN       64
   #endif
-#endif // !JSTD_WORD_SIZE
+#endif // !JSTD_WORD_LEN
 
 //
 // What compiler is it?
@@ -127,14 +127,17 @@
 //
 // default: __cplusplus = 199711L, /Zc:__cplusplus
 //
-// C++11: from Visual Studio 2015 Update 3: _MSC_FULL_VER = 190024210, or __cplusplus >= 201103L
+// C++11: from Visual Studio 2015 Update 3:
+// _MSC_FULL_VER = 190024210, _MSVC_LANG = 201402L
+// or __cplusplus >= 201103L
+//
 // C++14: _MSVC_LANG = 201402L, /std:c++14
 // C++17: _MSVC_LANG = 201703L, /std:c++17
 // C++20: _MSVC_LANG = 202002L, /std:c++20
 //
 // _MSVC_LANG: Since Visual Studio 2015 Update 3
 //
-// Visual Studio 2015 Update 3: _MSC_FULL_VER = 190024210
+// Visual Studio 2015 Update 3: _MSC_FULL_VER = 190024210, _MSVC_LANG = 201402L
 //
 // 2. gcc and clang
 //
@@ -159,13 +162,14 @@
     #ifndef JSTD_IS_CXX_17
     #define JSTD_IS_CXX_17  1
     #endif
-  #elif (defined(_MSVC_LANG) && (_MSVC_LANG >= 201402L && _MSVC_LANG < 201703L)) \
-     || (__cplusplus >= 201402L && __cplusplus < 201703L)
+  #elif (defined(_MSVC_LANG) && (_MSVC_LANG >= 201402L && _MSVC_LANG < 201703L \
+     && _MSC_VER >= 1910)) \
+     || (__cplusplus >= 201402L && __cplusplus < 201703L && _MSC_VER >= 1910)
     #ifndef JSTD_IS_CXX_14
     #define JSTD_IS_CXX_14  1
     #endif
   #elif defined(_MSC_VER) && (_MSC_FULL_VER >= 190024210) \
-     || (__cplusplus >= 201103L && __cplusplus < 201402L)
+     || (__cplusplus >= 201103L)
     #ifndef JSTD_IS_CXX_11
     #define JSTD_IS_CXX_11  1
     #endif
