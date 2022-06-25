@@ -98,9 +98,9 @@ struct layout_policy {
 };
 
 template < typename Key, typename Value,
-           typename LayoutPolicy = jstd::layout_policy<Key, Value>,
            typename Hash = std::hash<Key>,
            typename KeyEqual = std::equal_to<Key>,
+           typename LayoutPolicy = jstd::layout_policy<Key, Value>,
            typename Allocator = std::allocator<std::pair<const Key, Value>> >
 class unordered_map {
 public:
@@ -128,6 +128,9 @@ public:
 
     // kMinimumCapacity must be >= 2
     static constexpr size_type kMinimumCapacity = 4;
+    // Maximum capacity is 1 << (sizeof(std::size_t) - 1).
+    static constexpr size_type kMaximumCapacity = (std::numeric_limits<size_type>::max)() / 2 + 1;
+
     // kDefaultCapacity must be >= kMinimumCapacity
     static constexpr size_type kDefaultCapacity = 4;
 
@@ -137,7 +140,15 @@ public:
     // Must be kMinLoadFactor <= loadFactor <= kMaxLoadFactor
     static constexpr float kDefaultLoadFactor = 0.5f;
 
-    static constexpr bool kDetectStoreHash = true;
+#if (JSTD_WORD_LEN == 64)
+    static constexpr std::size_t kWordLen = 64;
+    static constexpr bool kIs64Bit = true;
+#else
+    static constexpr std::size_t kWordLen = 32;
+    static constexpr bool kIs64Bit = false;
+#endif
+    static constexpr bool kDetectStoreHash = (std::is_arithmetic<key_type>::value ||
+                                              std::is_enum<key_type>::value);
 
     static constexpr bool kNeedStoreHash =
         (!layout_policy_t::isAutoDetectStoreHash && layout_policy_t::needStoreHash) ||
@@ -236,145 +247,112 @@ public:
         }
     };
 
-    struct bucket_ptr {
-
-    };
-
-    template <bool NeedStoreHash>
+    template <bool NeedStoreHash = kNeedStoreHash>
     struct bucket_entry {
-        hash_entry * next;
-        hash_code_t  hash_code;
-        entry_attr_t attrib;
-        //alignas(Alignment)
-        value_type   value;
+        bucket_entry *  next;
+        hash_code_t     hash_code;
+        entry_attr_t    attrib;
+        value_type      value;
+
+        bool compare_hash(hash_code_t hash_code) const {
+            return (this->hash_code == hash_code);
+        }
     };
 
+    // NoStoreHash bucket_entry
     template <>
     struct bucket_entry<false> {
-        value_type value;
+        bucket_entry *  next;
+        value_type      value;
+
+        constexpr bool compare_hash(hash_code_t hash_code) const {
+            return false;
+        }
     };
 
-#if 0
-#if 1
-    struct hash_entry : public value_type {
-        hash_entry() : value_type() {
-        }
-        hash_entry(const hash_entry & src) : value_type(*static_cast<value_type *>(&src)) {
-        }
-        hash_entry(hash_entry && src) noexcept(std::is_nothrow_move_constructible<value_type>::value)
-            : value_type(std::move(*static_cast<value_type *>(&src))) {
+    template <bool Is64Bit = kIs64Bit>
+    struct bucket_pointer {
+    private:
+        bucket_entry * ptr_;
+
+    public:
+        bucket_pointer(bucket_entry * ptr = nullptr) noexcept : ptr_(ptr) {}
+        bucket_pointer(void * ptr = nullptr) noexcept : ptr_(reinterpret_cast<bucket_entry *>(ptr)) {}
+        bucket_pointer(const bucket_pointer & src) noexcept : ptr_(src.ptr_) {}
+
+        bucket_pointer & operator = (const bucket_pointer & rhs) noexcept {
+            this->ptr_ = rhs.ptr_;
         }
 
-        hash_entry(const value_type & val) : value_type(val) {
-        }
-        hash_entry(value_type && val) noexcept : value_type(std::move(val)) {
+        ~bucket_pointer() = default;
+
+        size_type count() const noexcept { return npos; }
+
+        bucket_entry * pointer() noexcept { return this->ptr_; }
+        const bucket_entry * pointer() const noexcept { return const_cast<const bucket_entry *>(this->ptr_); }
+
+        void set_count(size_type count) noexcept {
         }
 
-        hash_entry(const nc_value_type & val) : value_type(val) {
-        }
-        hash_entry(nc_value_type && val) noexcept : value_type(std::move(val)) {
-        }
-
-        hash_entry(const key_type & key, const mapped_type & value) : value_type(key, value) {
-        }
-        hash_entry(const key_type & key, mapped_type && value)
-            : value_type(key, std::forward<mapped_type>(value)) {
-        }
-        hash_entry(key_type && key, mapped_type && value) noexcept
-            : value_type(std::forward<key_type>(key), std::forward<mapped_type>(value)) {
+        void set_pointer(bucket_entry * ptr) noexcept {
+            this->ptr_ = ptr;
         }
 
-#if 0
-        template <typename ... Args>
-        hash_entry(Args && ... args) : value_type(std::forward<Args>(args)...) {
-        }
-#endif
-
-        virtual ~hash_entry() {
-        }
-
-        hash_entry & operator = (const hash_entry & rhs) {
-            if (this != std::addressof(rhs)) {
-                *this = rhs;
-            }
-            return *this;
-        }
-
-        hash_entry & operator = (hash_entry && rhs)
-            noexcept(std::is_nothrow_move_assignable<value_type &&>::value) {
-            if (this != std::addressof(rhs)) {
-                *this = std::move(rhs);
-            }
-            return *this;
-        }
-
-        void swap(hash_entry & other) noexcept {
-            if (this != std::addressof(other)) {
-                std::swap(*this, other);
-            }
+        void set_pointer(bucket_entry * ptr, size_type count) noexcept {
+            this->ptr_ = ptr;
         }
     };
-#else
-    struct hash_entry {
-        value_type value;
 
-        hash_entry() : value() {
-        }
-        hash_entry(const hash_entry & src) : value(src.value) {
-        }
-        hash_entry(hash_entry && src) noexcept : value(std::move(src.value)) {
-        }
+#if (JSTD_WORD_LEN == 64)
+    template <>
+    class bucket_pointer<true> {
+    private:
+        static constexpr std::uintptr_t kPtrMask = 0x00FFFFFFFFFFFFFFull;
+        union {
+            struct {
+                uintptr_t count_: 8;
+                uintptr_t iptr_:  56;
+            };
+            bucket_entry * ptr_;
+        };
 
-        hash_entry(const value_type & val) : value(val) {
-        }
-        hash_entry(value_type && val) noexcept : value(std::move(val)) {
-        }
+    public:
+        bucket_pointer(bucket_entry * ptr = nullptr) noexcept : ptr_(ptr) {}
+        bucket_pointer(void * ptr = nullptr) noexcept : ptr_(reinterpret_cast<bucket_entry *>(ptr)) {}
+        bucket_pointer(const bucket_pointer & src) noexcept : ptr_(src.ptr_) {}
 
-        hash_entry(const key_type & key, const mapped_type & value) : value(key, value) {
-        }
-        hash_entry(const key_type & key, mapped_type && value)
-            : value(key, std::forward<mapped_type>(value)) {
-        }
-        hash_entry(key_type && key, mapped_type && value) noexcept
-            : value(std::forward<key_type>(key), std::forward<mapped_type>(value)) {
+        bucket_pointer & operator = (const bucket_pointer & rhs) noexcept {
+            this->ptr_ = rhs.ptr_;
         }
 
-        template <typename ... Args>
-        hash_entry(Args && ... args) : value(std::forward<Args>(args)...) {
+        ~bucket_pointer() = default;
+
+        size_type count() const noexcept { return static_cast<size_type>(this->count_); }
+
+        bucket_entry * pointer() noexcept {
+            return reinterpret_cast<bucket_entry *>(this->iptr_);
+        }
+        const bucket_entry * pointer() const noexcept {
+            return const_cast<const bucket_entry *>(reinterpret_cast<bucket_entry *>(this->iptr_));
         }
 
-        ~hash_entry() {
+        void set_count(size_type count) noexcept{
+            this->count_ = count;
         }
 
-        hash_entry & operator = (const hash_entry & rhs) {
-            if (this != std::addressof(rhs)) {
-                this->value = rhs.value;
-            }
-            return *this;
+        void set_pointer(bucket_entry * ptr) noexcept {
+            this->iptr_ = (std::uintptr_t)ptr;
         }
 
-        hash_entry & operator = (hash_entry && rhs) noexcept {
-            if (this != std::addressof(rhs)) {
-                this->value = std::move(rhs.value);
-            }
-            return *this;
-        }
-
-        void swap(hash_entry & other) {
-            if (this != std::addressof(other)) {
-                std::swap(this->value, other.value);
-            }
+        void set_pointer(bucket_entry * ptr, size_type count) noexcept {
+            this->count_ = count;
+            this->ptr_ = (std::uintptr_t)ptr;
         }
     };
-#endif
+#endif // (JSTD_WORD_LEN == 64)
 
-    inline void swap(hash_entry & lhs, hash_entry & rhs) noexcept {
-        lhs.swap(rhs);
-    }
-#endif
-
-    typedef value_type                  entry_type;
-    typedef value_type                  node_type;
+    typedef bucket_entry    entry_type;
+    typedef value_type      node_type;
 
     template <typename ValueType>
     class basic_iterator {
@@ -570,7 +548,7 @@ public:
     using local_iterator       = basic_local_iterator<value_type>;
     using const_local_iterator = basic_local_iterator<const value_type>;
 
-    typedef typename std::allocator_traits<allocator_type>::template rebind_alloc<entry_type *>
+    typedef typename std::allocator_traits<allocator_type>::template rebind_alloc<bucket_pointer>
                                         bucket_allocator_type;
     typedef typename std::allocator_traits<allocator_type>::template rebind_alloc<entry_type>
                                         entry_allocator_type;
@@ -637,11 +615,11 @@ public:
             --(this->size_);
         }
 
-        void inflate(size_type size) {
+        void expand(size_type size) {
             this->size_ += size;
         }
 
-        void deflate(size_type size) {
+        void shrink(size_type size) {
             assert(this->size_ >= size);
             this->size_ -= size;
         }
@@ -700,6 +678,14 @@ public:
     inline void swap(free_list<T> & lhs, free_list<T> & rhs) {
         lhs.swap(rhs);
     }
+
+    typedef free_list<entry_type>   free_list_t;
+
+    // The maximum entry's chunk bytes, default is 32 MB bytes.
+    static constexpr size_type kMaxEntryChunkBytes = 32 * 1024 * 1024;
+    // The entry's block size per chunk (entry_type).
+    static constexpr size_type kMaxEntryChunkSize =
+            compile_time::round_to_power2<kMaxEntryChunkBytes / sizeof(entry_type)>::value;
 
 private:
     entry_type **   buckets_;
@@ -1599,7 +1585,7 @@ private:
         assert(this->buckets() != nullptr);
         entry_type * entry = this->buckets_[index];
         while (entry != nullptr) {
-            if (likely(entry->hash_code != hash_code)) {
+            if (likely(!entry->compare_hash(hash_code))) {
                 entry = entry->next;
             } else {
                 if (likely(!this->key_equal_(key, entry->value.first)))
@@ -1618,14 +1604,17 @@ private:
 
         assert(this->buckets() != nullptr);
         entry_type * prev = nullptr;
-        entry_type * entry = buckets_[index];
+        entry_type * entry = this->buckets_[index];
         while (entry != nullptr) {
-            if (likely(entry->hash_code != hash_code)) {
+            if (likely(!entry->compare_hash(hash_code))) {
                 prev = entry;
                 entry = entry->next;
             }
             else {
                 if (likely(!this->key_equal_(key, entry->value.first))) {
+                    if (!kNeedStoreHash) {
+                        prev = entry;
+                    }
                     entry = entry->next;
                 } else {
                     before = prev;
@@ -1644,7 +1633,7 @@ private:
         index_type index = this->index_for(hash_code);
 
         entry_type * entry = this->find_entry(key, hash_code, index);
-        if (likely(entry == nullptr)) {
+        if (entry == nullptr) {
             entry = this->insert_new_entry(key, mapped_type(),
                                            hash_code, index);
         }
@@ -1659,7 +1648,7 @@ private:
         index_type index = this->index_for(hash_code);
 
         entry_type * entry = this->find_entry(key, hash_code, index);
-        if (likely(entry == nullptr)) {
+        if (entry == nullptr) {
             entry = this->insert_new_entry(std::forward<key_type>(key), mapped_type(),
                                            hash_code, index);
         }

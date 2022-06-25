@@ -902,8 +902,8 @@ public:
     }
 #endif
 
-    typedef value_type                  entry_type;
-    typedef value_type                  node_type;
+    typedef value_type      entry_type;
+    typedef value_type      node_type;
 
     template <typename ValueType>
     class basic_iterator {
