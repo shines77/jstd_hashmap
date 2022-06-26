@@ -101,11 +101,11 @@ struct hash_entry_chunk {
         --(this->size);
     }
 
-    void inflate(size_type size) {
+    void expand(size_type size) {
         this->size += size;
     }
 
-    void deflate(size_type size) {
+    void shrink(size_type size) {
         assert(this->size >= size);
         this->size -= size;
     }
@@ -202,7 +202,7 @@ public:
         return static_cast<uint32_t>(this->last_chunk_[0].chunk_id);
     }
 
-    size_type lastChunkSize() const {
+    size_type firstFreeIndex() const {
         return this->last_chunk_[0].size;
     }
 
