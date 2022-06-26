@@ -1673,36 +1673,6 @@ private:
         return nullptr;  // Not found
     }
 
-    entry_type * find_or_insert(const key_type & key) {
-        assert(this->buckets() != nullptr);
-
-        hash_code_t hash_code = this->get_hash(key);
-        index_type index = this->index_for(hash_code);
-
-        entry_type * entry = this->find_entry(key, hash_code, index);
-        if (entry == nullptr) {
-            entry = this->insert_new_entry(key, mapped_type(),
-                                           hash_code, index);
-        }
-
-        return entry;
-    }
-
-    entry_type * find_or_insert(key_type && key) {
-        assert(this->buckets() != nullptr);
-
-        hash_code_t hash_code = this->get_hash(key);
-        index_type index = this->index_for(hash_code);
-
-        entry_type * entry = this->find_entry(key, hash_code, index);
-        if (entry == nullptr) {
-            entry = this->insert_new_entry(std::forward<key_type>(key), mapped_type(),
-                                           hash_code, index);
-        }
-
-        return entry;
-    }
-
     JSTD_FORCED_INLINE
     size_type find_first_unused_entry(const key_type & key, std::uint8_t & ctrl_hash) {
         hash_code_t hash_code = this->get_hash(key);
@@ -1971,35 +1941,60 @@ private:
     JSTD_FORCED_INLINE
     void construct_value(entry_type * new_entry, const key_type & key,
                                                  const mapped_type & value) {
-        if (new_entry->attrib.isFreeEntry()) {
-            new_entry->attrib.setInUseEntry();
-            // Use placement new method to construct value_type.
-            this->allocator_.construct(&new_entry->value, key, value);
-        }
-        else {
-            assert(new_entry->attrib.isReusableEntry());
-            new_entry->attrib.setInUseEntry();
-            assert(key == new_entry->value.first);
-            new_entry->value.second = value;
-        }
+        // Use placement new method to construct value_type.
+        this->allocator_.construct(&new_entry->value, key, value);
     }
 
     JSTD_FORCED_INLINE
     void construct_value(entry_type * new_entry, const key_type & key,
                                                  mapped_type && value) {
-        if (new_entry->attrib.isFreeEntry()) {
-            new_entry->attrib.setInUseEntry();
-            // Use placement new method to construct value_type.
-            this->allocator_.construct(&new_entry->value, key,
-                                       std::forward<mapped_type>(value));
-        }
-        else {
-            assert(new_entry->attrib.isReusableEntry());
-            new_entry->attrib.setInUseEntry();
-            nc_value_type * n_value = reinterpret_cast<nc_value_type *>(&new_entry->value);
-            assert(key == new_entry->value.first);
-            move_assign_or_swap(new_entry->value.second, std::forward<mapped_type>(value));
-        }
+        // Use placement new to construct value_type.
+        this->allocator_.construct(&new_entry->value, key,
+                                   std::forward<mapped_type>(value));
+    }
+
+    JSTD_FORCED_INLINE
+    void construct_value(entry_type * new_entry, key_type && key,
+                                                 mapped_type && value) {
+        // Use placement new to construct value_type.
+        this->allocator_.construct(&new_entry->value,
+                                   std::forward<key_type>(key),
+                                   std::forward<mapped_type>(value));
+    }
+
+    JSTD_FORCED_INLINE
+    void construct_value(entry_type * new_entry, const value_type & value) {
+        // Use placement new to construct value_type.
+        this->allocator_.construct(&new_entry->value, value);
+    }
+
+    JSTD_FORCED_INLINE
+    void construct_value(entry_type * new_entry, value_type && value) {
+        // Use placement new to construct value_type.
+        this->allocator_.construct(&new_entry->value,
+                                   std::forward<value_type>(value));
+    }
+
+    template <typename ...Args>
+    JSTD_FORCED_INLINE
+    void construct_value_args(entry_type * new_entry, const key_type & key, Args && ... args) {
+        // Use placement new to construct value_type.
+        this->allocator_.construct(&new_entry->value, key, std::forward<Args>(args)...);
+    }
+
+    template <typename ...Args>
+    JSTD_FORCED_INLINE
+    void construct_value_args(entry_type * new_entry, key_type && key, Args && ... args) {
+        // Use placement new to construct value_type.
+        this->allocator_.construct(&new_entry->value, std::forward<key_type>(key),
+                                                      std::forward<Args>(args)...);
+    }
+
+    template <typename ...Args>
+    JSTD_FORCED_INLINE
+    void construct_value_args(entry_type * new_entry, Args && ... args) {
+        // Use placement new to construct value_type.
+        this->allocator_.construct(&new_entry->value, std::forward<Args>(args)...);
     }
 
     bool add_chunk_or_grow_if_necessary(size_type increase_size) {
@@ -2030,9 +2025,8 @@ private:
         }
     }
 
-    template <bool AlwaysUpdate, typename ReturnType>
-    ReturnType insert_impl(const key_type & key, const mapped_type & value) {
-        assert(this->buckets() != nullptr);
+    template <bool AlwaysUpdate>
+    std::pair<iterator, bool> insert_impl(const key_type & key, const mapped_type & value) {
         bool inserted;
 
         hash_code_t hash_code = this->get_hash(key);
@@ -2055,12 +2049,11 @@ private:
             inserted = false;
         }
 
-        return ReturnType(iterator(this, entry), inserted);
+        return { iterator(this, entry), inserted };
     }
 
-    template <bool AlwaysUpdate, typename ReturnType>
-    ReturnType insert_impl(const key_type & key, mapped_type && value) {
-        assert(this->buckets() != nullptr);
+    template <bool AlwaysUpdate>
+    std::pair<iterator, bool> insert_impl(const key_type & key, mapped_type && value) {
         bool inserted;
 
         hash_code_t hash_code = this->get_hash(key);
@@ -2083,12 +2076,11 @@ private:
             inserted = false;
         }
 
-        return ReturnType(iterator(this, entry), inserted);
+        return { iterator(this, entry), inserted };
     }
 
-    template <bool AlwaysUpdate, typename ReturnType>
-    ReturnType insert_impl(key_type && key, mapped_type && value) {
-        assert(this->buckets() != nullptr);
+    template <bool AlwaysUpdate>
+    std::pair<iterator, bool> insert_impl(key_type && key, mapped_type && value) {
         bool inserted;
 
         hash_code_t hash_code = this->get_hash(key);
@@ -2112,12 +2104,11 @@ private:
             inserted = false;
         }
 
-        return ReturnType(iterator(this, entry), inserted);
+        return { iterator(this, entry), inserted };
     }
 
-    template <bool AlwaysUpdate, typename ReturnType>
-    ReturnType insert_impl(value_type && value) {
-        assert(this->buckets() != nullptr);
+    template <bool AlwaysUpdate>
+    std::pair<iterator, bool> insert_impl(value_type && value) {
         bool inserted;
 
         hash_code_t hash_code = this->get_hash(key);
@@ -2140,7 +2131,75 @@ private:
             inserted = false;
         }
 
-        return ReturnType(iterator(this, entry), inserted);
+        return { iterator(this, entry), inserted };
+    }
+
+    entry_type * try_emplace_impl(const key_type & key) {
+        assert(this->buckets() != nullptr);
+
+        hash_code_t hash_code = this->get_hash(key);
+        index_type index = this->index_for(hash_code);
+
+        entry_type * entry = this->find_entry(key, hash_code, index);
+        if (entry == nullptr) {
+            entry_type * new_entry = this->got_free_entry(hash_code, index);
+            this->insert_to_bucket(new_entry, hash_code, index);
+            this->construct_value(new_entry, key, mapped_type());
+            this->entry_size_++;
+            entry = new_entry;
+        }
+
+        return entry;
+    }
+
+    entry_type * try_emplace_impl(key_type && key) {
+        assert(this->buckets() != nullptr);
+
+        hash_code_t hash_code = this->get_hash(key);
+        index_type index = this->index_for(hash_code);
+
+        entry_type * entry = this->find_entry(key, hash_code, index);
+        if (entry == nullptr) {
+            entry_type * new_entry = this->got_free_entry(hash_code, index);
+            this->insert_to_bucket(new_entry, hash_code, index);
+            this->construct_value(new_entry, std::forward<key_type>(key), mapped_type());
+            this->entry_size_++;
+            entry = new_entry;
+        }
+
+        return entry;
+    }
+
+    template <bool AlwaysUpdate>
+    std::pair<iterator, bool> emplace_impl(const value_type & value) {
+        std::uint8_t ctrl_hash;
+        auto find_info = this->find_and_prepare_insert(value.first, ctrl_hash);
+        size_type target = find_info.first;
+        bool is_exists = find_info.second;
+        if (!is_exists) {
+            // The key to be inserted is not exists.
+            assert(target != npos);
+
+            // Found a [DeletedEntry] or [EmptyEntry] to insert
+            control_byte * control = this->control_at(target);
+            assert(control->isEmptyOrDeleted());
+            control->setUsed(ctrl_hash);
+            entry_type * entry = this->entry_at(target);
+            this->entry_allocator_.construct(entry, value);
+            this->entry_size_++;
+            return { this->iterator_at(target), true };
+        } else {
+            // The key to be inserted already exists.
+            if (AlwaysUpdate) {
+                static constexpr bool is_rvalue_ref = std::is_rvalue_reference<decltype(value)>::value;
+                entry_type * entry = this->entry_at(target);
+                if (is_rvalue_ref)
+                    entry->second = std::move(value.second);
+                else
+                    entry->second = value.second;
+            }
+            return { this->iterator_at(target), false };
+        }
     }
 
     template <bool AlwaysUpdate>
@@ -2176,8 +2235,10 @@ private:
     }
 
     template <bool AlwaysUpdate, typename KeyT, typename MappedT, typename std::enable_if<
-              (!jstd::is_same_ex<KeyT, value_type>::value) &&
-              (!jstd::is_same_ex<KeyT, nc_value_type>::value) &&
+              (!jstd::is_same_ex<KeyT, value_type>::value &&
+               !std::is_constructible<value_type, KeyT &&>::value) &&
+              (!jstd::is_same_ex<KeyT, nc_value_type>::value &&
+               !std::is_constructible<nc_value_type, KeyT &&>::value) &&
               (!jstd::is_same_ex<KeyT, std::piecewise_construct_t>::value) &&
               (jstd::is_same_ex<KeyT, key_type>::value ||
                std::is_constructible<key_type, KeyT &&>::value) &&
@@ -2219,8 +2280,10 @@ private:
     }
 
     template <bool AlwaysUpdate, typename KeyT, typename std::enable_if<
-              (!jstd::is_same_ex<KeyT, value_type>::value) &&
-              (!jstd::is_same_ex<KeyT, nc_value_type>::value) &&
+              (!jstd::is_same_ex<KeyT, value_type>::value &&
+               !std::is_constructible<value_type, KeyT &&>::value) &&
+              (!jstd::is_same_ex<KeyT, nc_value_type>::value &&
+               !std::is_constructible<nc_value_type, KeyT &&>::value) &&
               (!jstd::is_same_ex<KeyT, std::piecewise_construct_t>::value) &&
               (jstd::is_same_ex<KeyT, key_type>::value ||
                std::is_constructible<key_type, KeyT &&>::value)>::type * = nullptr,
@@ -2256,8 +2319,10 @@ private:
     }
 
     template <bool AlwaysUpdate, typename PieceWise, typename std::enable_if<
-              (!jstd::is_same_ex<PieceWise, value_type>::value) &&
-              (!jstd::is_same_ex<PieceWise, nc_value_type>::value) &&
+              (!jstd::is_same_ex<PieceWise, value_type>::value &&
+               !std::is_constructible<value_type, PieceWise &&>::value) &&
+              (!jstd::is_same_ex<PieceWise, nc_value_type>::value &&
+               !std::is_constructible<nc_value_type, PieceWise &&>::value) &&
               jstd::is_same_ex<PieceWise, std::piecewise_construct_t>::value &&
               (!jstd::is_same_ex<PieceWise, key_type>::value &&
                !std::is_constructible<key_type, PieceWise &&>::value)>::type * = nullptr,
@@ -2298,8 +2363,10 @@ private:
     }
 
     template <bool AlwaysUpdate, typename First, typename std::enable_if<
-              (!jstd::is_same_ex<First, value_type>::value) &&
-              (!jstd::is_same_ex<First, nc_value_type>::value) &&
+              (!jstd::is_same_ex<First, value_type>::value &&
+               !std::is_constructible<value_type, First &&>::value) &&
+              (!jstd::is_same_ex<First, nc_value_type>::value &&
+               !std::is_constructible<nc_value_type, First &&>::value) &&
               (!jstd::is_same_ex<First, std::piecewise_construct_t>::value) &&
               (!jstd::is_same_ex<First, key_type>::value &&
                !std::is_constructible<key_type, First &&>::value)>::type * = nullptr,
