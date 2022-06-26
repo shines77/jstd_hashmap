@@ -2062,6 +2062,34 @@ private:
     }
 
     template <bool AlwaysUpdate>
+    std::pair<iterator, bool> emplace_impl(const value_type & value) {
+        std::uint8_t ctrl_hash;
+        auto find_info = this->find_and_prepare_insert(value.first, ctrl_hash);
+        size_type target = find_info.first;
+        bool is_exists = find_info.second;
+        if (!is_exists) {
+            // The key to be inserted is not exists.
+            assert(target != npos);
+
+            // Found a [DeletedEntry] or [EmptyEntry] to insert
+            control_byte * control = this->control_at(target);
+            assert(control->isEmptyOrDeleted());
+            control->setUsed(ctrl_hash);
+            entry_type * entry = this->entry_at(target);
+            this->entry_allocator_.construct(entry, value);
+            this->entry_size_++;
+            return { this->iterator_at(target), true };
+        } else {
+            // The key to be inserted already exists.
+            if (AlwaysUpdate) {
+                entry_type * entry = this->entry_at(target);
+                entry->second = value.second;
+            }
+            return { this->iterator_at(target), false };
+        }
+    }
+
+    template <bool AlwaysUpdate>
     std::pair<iterator, bool> emplace_impl(value_type && value) {
         std::uint8_t ctrl_hash;
         auto find_info = this->find_and_prepare_insert(value.first, ctrl_hash);
@@ -2094,8 +2122,10 @@ private:
     }
 
     template <bool AlwaysUpdate, typename KeyT, typename MappedT, typename std::enable_if<
-              (!jstd::is_same_ex<KeyT, value_type>::value) &&
-              (!jstd::is_same_ex<KeyT, nc_value_type>::value) &&
+              (!jstd::is_same_ex<KeyT, value_type>::value &&
+               !std::is_constructible<value_type, KeyT &&>::value) &&
+              (!jstd::is_same_ex<KeyT, nc_value_type>::value &&
+               !std::is_constructible<nc_value_type, KeyT &&>::value) &&
               (!jstd::is_same_ex<KeyT, std::piecewise_construct_t>::value) &&
               (jstd::is_same_ex<KeyT, key_type>::value ||
                std::is_constructible<key_type, KeyT &&>::value) &&
@@ -2137,8 +2167,10 @@ private:
     }
 
     template <bool AlwaysUpdate, typename KeyT, typename std::enable_if<
-              (!jstd::is_same_ex<KeyT, value_type>::value) &&
-              (!jstd::is_same_ex<KeyT, nc_value_type>::value) &&
+              (!jstd::is_same_ex<KeyT, value_type>::value &&
+               !std::is_constructible<value_type, KeyT &&>::value) &&
+              (!jstd::is_same_ex<KeyT, nc_value_type>::value &&
+               !std::is_constructible<nc_value_type, KeyT &&>::value) &&
               (!jstd::is_same_ex<KeyT, std::piecewise_construct_t>::value) &&
               (jstd::is_same_ex<KeyT, key_type>::value ||
                std::is_constructible<key_type, KeyT &&>::value)>::type * = nullptr,
@@ -2174,8 +2206,10 @@ private:
     }
 
     template <bool AlwaysUpdate, typename PieceWise, typename std::enable_if<
-              (!jstd::is_same_ex<PieceWise, value_type>::value) &&
-              (!jstd::is_same_ex<PieceWise, nc_value_type>::value) &&
+              (!jstd::is_same_ex<PieceWise, value_type>::value &&
+               !std::is_constructible<value_type, PieceWise &&>::value) &&
+              (!jstd::is_same_ex<PieceWise, nc_value_type>::value &&
+               !std::is_constructible<nc_value_type, PieceWise &&>::value) &&
               jstd::is_same_ex<PieceWise, std::piecewise_construct_t>::value &&
               (!jstd::is_same_ex<PieceWise, key_type>::value &&
                !std::is_constructible<key_type, PieceWise &&>::value)>::type * = nullptr,
@@ -2216,8 +2250,10 @@ private:
     }
 
     template <bool AlwaysUpdate, typename First, typename std::enable_if<
-              (!jstd::is_same_ex<First, value_type>::value) &&
-              (!jstd::is_same_ex<First, nc_value_type>::value) &&
+              (!jstd::is_same_ex<First, value_type>::value &&
+               !std::is_constructible<value_type, First &&>::value) &&
+              (!jstd::is_same_ex<First, nc_value_type>::value &&
+               !std::is_constructible<nc_value_type, First &&>::value) &&
               (!jstd::is_same_ex<First, std::piecewise_construct_t>::value) &&
               (!jstd::is_same_ex<First, key_type>::value &&
                !std::is_constructible<key_type, First &&>::value)>::type * = nullptr,
