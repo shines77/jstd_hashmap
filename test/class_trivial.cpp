@@ -88,6 +88,8 @@ void display_copy_constructible(const std::string & name)
 
     std::cout << "is copy-constructible: ";
     std::cout << std::is_copy_constructible<T>::value << '\n';
+    std::cout << "is trivially copyable: ";
+    std::cout << std::is_trivially_copyable<T>::value << '\n';
     std::cout << "is trivially copy-constructible: ";
     std::cout << std::is_trivially_copy_constructible<T>::value << '\n';
     std::cout << "is nothrow copy-constructible: ";
@@ -145,7 +147,7 @@ void display_destructible(const std::string & name)
     std::cout << "is destructible: ";
     std::cout << std::is_destructible<T>::value << '\n';
     std::cout << "is virtual destructor: ";
-    std::cout << std::has_virtual_destructor<T>::value << '\n';   
+    std::cout << std::has_virtual_destructor<T>::value << '\n';
     std::cout << "is trivially destructible: ";
     std::cout << std::is_trivially_destructible<T>::value << '\n';
     std::cout << "is nothrow destructible: ";
@@ -170,6 +172,8 @@ void display_copy_and_move_impl()
 
     std::cout << "is copy-constructible: ";
     std::cout << std::is_copy_constructible<T>::value << '\n';
+    std::cout << "is trivially copyable: ";
+    std::cout << std::is_trivially_copyable<T>::value << '\n';
     std::cout << "is trivially copy-constructible: ";
     std::cout << std::is_trivially_copy_constructible<T>::value << '\n';
     std::cout << "is nothrow copy-constructible: ";
@@ -199,7 +203,7 @@ void display_copy_and_move_impl()
     std::cout << "is destructible: ";
     std::cout << std::is_destructible<T>::value << '\n';
     std::cout << "is virtual destructor: ";
-    std::cout << std::has_virtual_destructor<T>::value << '\n';   
+    std::cout << std::has_virtual_destructor<T>::value << '\n';
     std::cout << "is trivially destructible: ";
     std::cout << std::is_trivially_destructible<T>::value << '\n';
     std::cout << "is nothrow destructible: ";
@@ -224,10 +228,15 @@ void display_pair_copy_and_move(const std::string & name)
     std::cout << std::boolalpha;
     std::cout << name << ":" << "\n\n";
 
-    std::cout << "First  type is pod<first_type>:  ";
+    std::cout << "First  type is std::is_pod<first_type>:  ";
     std::cout << std::is_pod<first_type>::value << '\n';
-    std::cout << "Second type is pod<second_type>: ";
+    std::cout << "Second type is std::is_pod<second_type>: ";
     std::cout << std::is_pod<second_type>::value << "\n\n";
+
+    std::cout << "First  type is std::is_arithmetic<first_type>:  ";
+    std::cout << std::is_arithmetic<first_type>::value << '\n';
+    std::cout << "Second type is std::is_arithmetic<second_type>: ";
+    std::cout << std::is_arithmetic<second_type>::value << "\n\n";
 
     display_copy_and_move_impl<T>();
 }

@@ -221,6 +221,19 @@ public:
     // Must be kMinLoadFactor <= loadFactor <= kMaxLoadFactor
     static constexpr float kDefaultLoadFactor = 0.5f;
 
+    static constexpr bool slot_is_trivial_destructor =
+            (std::is_trivially_destructible<value_type>::value ||
+            (std::is_trivially_destructible<key_type>::value &&
+             std::is_trivially_destructible<mapped_type>::value) ||
+           ((std::is_arithmetic<key_type>::value || std::is_enum<key_type>::value) &&
+            (std::is_arithmetic<mapped_type>::value || std::is_enum<mapped_type>::value)));
+
+    static constexpr bool slot_is_trivial_copyable =
+            (std::is_trivially_copyable<value_type>::value ||
+            (std::is_trivially_copyable<key_type>::value &&
+             std::is_trivially_copyable<mapped_type>::value) ||
+            (std::is_scalar<key_type>::value && std::is_scalar<mapped_type>::value));
+
     static constexpr std::uint8_t kEmptyEntry   = 0b10000000;
     static constexpr std::uint8_t kDeletedEntry = 0b11111110;
     static constexpr std::uint8_t kEndOfMark    = 0b11111111;
@@ -869,6 +882,7 @@ public:
                                         slot_allocator_type;
 
 private:
+    group_type *    orig_groups_;
     group_type *    groups_;
     size_type       group_mask_;
 
@@ -893,7 +907,7 @@ public:
                              const hasher & hash = hasher(),
                              const key_equal & equal = key_equal(),
                              const allocator_type & alloc = allocator_type()) :
-        groups_(nullptr), group_mask_(0),
+        orig_groups_(nullptr), groups_(nullptr), group_mask_(0),
         slots_(nullptr), slot_size_(0), slot_mask_(0),
         slot_threshold_(0), load_factor_(kDefaultLoadFactor),
         hasher_(hash), key_equal_(equal),
@@ -911,7 +925,7 @@ public:
                     const hasher & hash = hasher(),
                     const key_equal & equal = key_equal(),
                     const allocator_type & alloc = allocator_type()) :
-        groups_(nullptr), group_mask_(0),
+        orig_groups_(nullptr), groups_(nullptr), group_mask_(0),
         slots_(nullptr), slot_size_(0), slot_mask_(0),
         slot_threshold_(0), load_factor_(kDefaultLoadFactor),
         hasher_(hash), key_equal_(equal),
@@ -941,7 +955,7 @@ public:
     }
 
     flat16_hash_map(const flat16_hash_map & other, const Allocator & alloc) :
-        groups_(nullptr), group_mask_(0),
+        orig_groups_(nullptr), groups_(nullptr), group_mask_(0),
         slots_(nullptr), slot_size_(0), slot_mask_(0),
         slot_threshold_(0), load_factor_(kDefaultLoadFactor),
         hasher_(hasher()), key_equal_(key_equal()),
@@ -961,24 +975,26 @@ public:
     }
 
     flat16_hash_map(flat16_hash_map && other) noexcept :
-        groups_(nullptr), group_mask_(0),
+        orig_groups_(nullptr), groups_(nullptr), group_mask_(0),
         slots_(nullptr), slot_size_(0), slot_mask_(0),
         slot_threshold_(0), load_factor_(kDefaultLoadFactor),
         hasher_(std::move(other.hash_function())),
         key_equal_(std::move(other.key_eq())),
         allocator_(std::move(other.get_allocator())),
         slot_allocator_(std::move(other.get_slot_allocator())) {
+        // Swap content only
         this->swap_content(other);
     }
 
     flat16_hash_map(flat16_hash_map && other, const Allocator & alloc) noexcept :
-        groups_(nullptr), group_mask_(0),
+        orig_groups_(nullptr), groups_(nullptr), group_mask_(0),
         slots_(nullptr), slot_size_(0), slot_mask_(0),
         slot_threshold_(0), load_factor_(kDefaultLoadFactor),
         hasher_(std::move(other.hash_function())),
         key_equal_(std::move(other.key_eq())),
         allocator_(alloc),
         slot_allocator_(std::move(other.get_slot_allocator())) {
+        // Swap content only
         this->swap_content(other);
     }
 
@@ -987,7 +1003,7 @@ public:
                     const hasher & hash = hasher(),
                     const key_equal & equal = key_equal(),
                     const allocator_type & alloc = allocator_type()) :
-        groups_(nullptr), group_mask_(0),
+        orig_groups_(nullptr), groups_(nullptr), group_mask_(0),
         slots_(nullptr), slot_size_(0), slot_mask_(0),
         slot_threshold_(0), load_factor_(kDefaultLoadFactor),
         hasher_(hash), key_equal_(equal), allocator_(alloc) {
@@ -1023,11 +1039,14 @@ public:
     size_type size() const { return slot_size_; }
     size_type capacity() const { return (slot_mask_ + 1); }
 
-    control_byte * controls() { return (control_byte *)groups_; }
-    const control_byte * controls() const { return (const control_byte *)groups_; }
+    group_type * orig_groups() { return orig_groups_; }
+    const group_type * orig_groups() const { return orig_groups_; }
 
     group_type * groups() { return groups_; }
     const group_type * groups() const { return groups_; }
+
+    control_byte * controls() { return (control_byte *)this->groups(); }
+    const control_byte * controls() const { return (const control_byte *)this->groups(); }
 
     size_type group_mask() const { return group_mask_; }
     size_type group_count() const { return (group_mask_ + 1); }
@@ -1594,37 +1613,43 @@ private:
 
     template <bool finitial>
     void destory_group() noexcept {
-        if (finitial) {
-            if (this->groups_ != nullptr) {
-                delete[] this->groups_;
-                this->groups_ = nullptr;
+        if (this->orig_groups_ != nullptr) {
+            if (!finitial) {
+                for (size_type group_index = 0; group_index <= this->group_mask(); group_index++) {
+                    group_type * group = this->group_at(group_index);
+                    group->clear();
+                }
             }
-        } else {
-            for (size_type index = 0; index <= this->group_mask(); index++) {
-                group_type * group = this->group_at(index);
-                group->clear();
+            if (finitial) {
+                delete[] this->orig_groups_;
+                this->orig_groups_ = nullptr;
+                this->groups_ = nullptr;
             }
         }
     }
 
     template <bool finitial>
-    void destory_slots() noexcept {
+    void destory_slots() noexcept(slot_is_trivial_destructor) {
         // Destroy all slots.
         if (this->slots_ != nullptr) {
-            control_byte * control = this->controls();
-            for (size_type index = 0; index <= this->slot_mask(); index++) {
-                if (control->isUsed()) {
-                    slot_type * slot = this->slot_at(index);
-                    this->slot_allocator_.destroy(slot);
+            if (!slot_is_trivial_destructor) {
+                control_byte * control = this->controls();
+                assert(control != nullptr);
+                for (size_type index = 0; index <= this->slot_mask(); index++) {
+                    if (control->isUsed()) {
+                        slot_type * slot = this->slot_at(index);
+                        this->slot_allocator_.destroy(slot);
+                    }
+                    control++;
                 }
-                control++;
             }
             if (finitial) {
                 this->slot_allocator_.deallocate(this->slots_, this->slot_capacity());
                 this->slots_ = nullptr;
             }
-            this->slot_size_ = 0;
         }
+
+        this->slot_size_ = 0;
     }
 
     template <bool initialize = false>
@@ -1639,11 +1664,13 @@ private:
 
         size_type group_count = (new_capacity + (kGroupWidth - 1)) / kGroupWidth;
         assert(group_count > 0);
-        group_type * groups = new group_type[group_count + 1];
-        groups_ = groups;
+        group_type * orig_groups = new group_type[group_count + 2];
+        orig_groups_ = orig_groups;
+        groups_ = orig_groups + 1;
         group_mask_ = group_count - 1;
 
-        groups[group_count].template fillAll8<kEndOfMark>();
+        orig_groups[0              ].template fillAll8<kEndOfMark>();
+        orig_groups[group_count + 1].template fillAll8<kEndOfMark>();
 
         slot_type * slots = slot_allocator_.allocate(new_capacity);
         slots_ = slots;
@@ -1683,23 +1710,22 @@ private:
                 assert(new_capacity >= this->slot_size());
             }
 
+            group_type * old_orig_groups = this->orig_groups();
             group_type * old_groups = this->groups();
             control_byte * old_controls = this->controls();
-            size_type old_group_mask = this->group_mask();
             size_type old_group_count = this->group_count();
 
             slot_type * old_slots = this->slots();
             size_type old_slot_size = this->slot_size();
-            size_type old_slot_mask = this->slot_mask();
             size_type old_slot_capacity = this->slot_capacity();
 
             this->create_group<false>(new_capacity);
 
             //if (old_slot_capacity >= kGroupWidth)
             {
-                group_type * last_slot = old_groups + old_group_count;
+                group_type * last_group = old_groups + old_group_count;
                 slot_type * slot_start = old_slots;
-                for (group_type * group = old_groups; group != last_slot; group++) {
+                for (group_type * group = old_groups; group != last_group; group++) {
                     std::uint32_t maskUsed = group->matchUsed();
                     while (maskUsed != 0) {
                         size_type pos = BitUtils::bsf32(maskUsed);
@@ -1715,8 +1741,8 @@ private:
 
             this->slot_allocator_.deallocate(old_slots, old_slot_capacity);
 
-            if (old_groups != nullptr) {
-                delete[] old_groups;
+            if (old_orig_groups != nullptr) {
+                delete[] old_orig_groups;
             }
         }
     }

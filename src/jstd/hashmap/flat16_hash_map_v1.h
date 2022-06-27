@@ -209,8 +209,8 @@ public:
     static constexpr size_type kControlShift    = 7;
 
     static constexpr size_type kClusterBits     = 4;
-    static constexpr size_type kClusterEntries  = size_type(1) << kClusterBits;
-    static constexpr size_type kClusterMask     = kClusterEntries - 1;
+    static constexpr size_type kClusterWidth    = size_type(1) << kClusterBits;
+    static constexpr size_type kClusterMask     = kClusterWidth - 1;
     static constexpr size_type kClusterShift    = kControlShift + kClusterBits;
 
     // kMinimumCapacity must be >= 2
@@ -222,6 +222,19 @@ public:
     static constexpr float kMaxLoadFactor = 0.8f;
     // Must be kMinLoadFactor <= loadFactor <= kMaxLoadFactor
     static constexpr float kDefaultLoadFactor = 0.5f;
+
+    static constexpr bool entry_is_trivial_destructor =
+            (std::is_trivially_destructible<value_type>::value ||
+            (std::is_trivially_destructible<key_type>::value &&
+             std::is_trivially_destructible<mapped_type>::value) ||
+           ((std::is_arithmetic<key_type>::value || std::is_enum<key_type>::value) &&
+            (std::is_arithmetic<mapped_type>::value || std::is_enum<mapped_type>::value)));
+
+    static constexpr bool entry_is_trivial_copyable =
+            (std::is_trivially_copyable<value_type>::value ||
+            (std::is_trivially_copyable<key_type>::value &&
+             std::is_trivially_copyable<mapped_type>::value) ||
+            (std::is_scalar<key_type>::value && std::is_scalar<mapped_type>::value));
 
     static constexpr std::uint8_t kEmptyEntry   = 0b10000000;
     static constexpr std::uint8_t kDeletedEntry = 0b11111110;
@@ -505,7 +518,7 @@ public:
 #else
             std::uint8_t * control = (std::uint8_t *)data;
             std::uint32_t mask = 0, bit = 1;
-            for (size_type i = 0; i < kClusterEntries; i++) {
+            for (size_type i = 0; i < kClusterWidth; i++) {
                 if (control[i] == control_tag) {
                     mask |= bit;
                 }
@@ -522,7 +535,7 @@ public:
 #else
             std::uint8_t * control = (std::uint8_t *)data;
             std::uint32_t mask = 0, bit = 1;
-            for (size_type i = 0; i < kClusterEntries; i++) {
+            for (size_type i = 0; i < kClusterWidth; i++) {
                 if (control[i] == (std::uint8_t)control_tag) {
                     mask |= bit;
                 }
@@ -689,7 +702,7 @@ public:
         typedef typename BitMask128<control_byte>::bitmask_type bitmask_type;
 
         union {
-            control_byte controls[kClusterEntries];
+            control_byte controls[kClusterWidth];
             bitmask128_type bitmask;
         };
 
@@ -1162,12 +1175,12 @@ public:
     size_type entry_threshold() const { return entry_threshold_; }
 
     constexpr size_type bucket_count() const {
-        return kClusterEntries;
+        return kClusterWidth;
     }
 
     constexpr size_type bucket(const key_type & key) const {
         size_type index = this->find_impl(key);
-        return ((index != npos) ? (index / kClusterEntries) : npos);
+        return ((index != npos) ? (index / kClusterWidth) : npos);
     }
 
     float load_factor() const {
@@ -1203,7 +1216,7 @@ public:
                 size_type index = start_index + pos;
                 return this->iterator_at(index);
             }
-            start_index += kClusterEntries;
+            start_index += kClusterWidth;
         }
 
         return this->iterator_at(this->entry_capacity());
@@ -1231,7 +1244,7 @@ public:
                 size_type index = start_index + pos;
                 return this->iterator_at(index);
             }
-            start_index += kClusterEntries;
+            start_index += kClusterWidth;
         }
 
         return this->iterator_at(this->entry_capacity());
@@ -1270,7 +1283,7 @@ public:
     }
 
     static const char * name() {
-        return "jstd::flat16_hash_map<K, V>";
+        return "jstd::v1::flat16_hash_map<K, V>";
     }
 
     void clear(bool need_destory = false) noexcept {
@@ -1687,15 +1700,16 @@ private:
 
     template <bool finitial>
     void destory_cluster() noexcept {
-        if (finitial) {
-            if (this->clusters_ != nullptr) {
+        if (this->clusters_ != nullptr) {
+            if (!finitial) {
+                for (size_type index = 0; index <= this->cluster_mask(); index++) {
+                    cluster_type * cluster = this->cluster_at(index);
+                    cluster->clear();
+                }
+            }
+            if (finitial) {
                 delete[] this->clusters_;
                 this->clusters_ = nullptr;
-            }
-        } else {
-            for (size_type index = 0; index <= this->cluster_mask(); index++) {
-                cluster_type * cluster = this->cluster_at(index);
-                cluster->clear();
             }
         }
     }
@@ -1704,20 +1718,23 @@ private:
     void destory_entries() noexcept {
         // Destroy all entries.
         if (this->entries_ != nullptr) {
-            control_byte * control = this->controls();
-            for (size_type index = 0; index <= this->entry_mask(); index++) {
-                if (control->isUsed()) {
-                    entry_type * entry = this->entry_at(index);
-                    this->entry_allocator_.destroy(entry);
+            if (!entry_is_trivial_destructor) {
+                control_byte * control = this->controls();
+                for (size_type index = 0; index <= this->entry_mask(); index++) {
+                    if (control->isUsed()) {
+                        entry_type * entry = this->entry_at(index);
+                        this->entry_allocator_.destroy(entry);
+                    }
+                    control++;
                 }
-                control++;
             }
             if (finitial) {
                 this->entry_allocator_.deallocate(this->entries_, this->entry_capacity());
                 this->entries_ = nullptr;
             }
-            this->entry_size_ = 0;
         }
+
+        this->entry_size_ = 0;
     }
 
     template <bool initialize = false>
@@ -1730,7 +1747,7 @@ private:
         assert(new_capacity > 0);
         assert(new_capacity >= kMinimumCapacity);
 
-        size_type cluster_count = (new_capacity + (kClusterEntries - 1)) / kClusterEntries;
+        size_type cluster_count = (new_capacity + (kClusterWidth - 1)) / kClusterWidth;
         assert(cluster_count > 0);
         cluster_type * clusters = new cluster_type[cluster_count + 1];
         clusters_ = clusters;
@@ -1778,17 +1795,15 @@ private:
 
             cluster_type * old_clusters = this->clusters();
             control_byte * old_controls = this->controls();
-            size_type old_cluster_mask = this->cluster_mask();
             size_type old_cluster_count = this->cluster_count();
 
             entry_type * old_entries = this->entries();
             size_type old_entry_size = this->entry_size();
-            size_type old_entry_mask = this->entry_mask();
             size_type old_entry_capacity = this->entry_capacity();
 
             this->create_cluster<false>(new_capacity);
 
-            //if (old_entry_capacity >= kClusterEntries)
+            //if (old_entry_capacity >= kClusterWidth)
             {
                 cluster_type * last_cluster = old_clusters + old_cluster_count;
                 entry_type * entry_start = old_entries;
@@ -1801,7 +1816,7 @@ private:
                         this->move_insert_unique(entry);
                         this->entry_allocator_.destroy(entry);
                     }
-                    entry_start += kClusterEntries;
+                    entry_start += kClusterWidth;
                 }
             }
             assert(this->entry_size() == old_entry_size);
@@ -1823,7 +1838,7 @@ private:
         do {
             const cluster_type & cluster = this->get_cluster(cluster_index);
             std::uint32_t mask16 = cluster.matchHash(control_hash);
-            size_type start_index = cluster_index * kClusterEntries;
+            size_type start_index = cluster_index * kClusterWidth;
             while (mask16 != 0) {
                 size_type pos = BitUtils::bsf32(mask16);
                 mask16 = BitUtils::clearLowBit32(mask16);
@@ -1854,7 +1869,7 @@ private:
         do {
             const cluster_type & cluster = this->get_cluster(cluster_index);
             std::uint32_t mask16 = cluster.matchHash(control_hash);
-            size_type start_index = cluster_index * kClusterEntries;
+            size_type start_index = cluster_index * kClusterWidth;
             while (mask16 != 0) {
                 size_type pos = BitUtils::bsf32(mask16);
                 mask16 = BitUtils::clearLowBit32(mask16);
@@ -1892,7 +1907,7 @@ private:
             if (maskUnused != 0) {
                 // Found a [EmptyEntry] or [DeletedEntry] to insert
                 size_type pos = BitUtils::bsf32(maskUnused);
-                size_type start_index = cluster_index * kClusterEntries;
+                size_type start_index = cluster_index * kClusterWidth;
                 return (start_index + pos);
             }
             cluster_index = this->next_cluster(cluster_index);
@@ -1918,7 +1933,7 @@ private:
             if (maskEmpty != 0) {
                 // Found a [EmptyEntry] to insert
                 size_type pos = BitUtils::bsf32(maskEmpty);
-                size_type start_index = cluster_index * kClusterEntries;
+                size_type start_index = cluster_index * kClusterWidth;
                 return (start_index + pos);
             }
             cluster_index = this->next_cluster(cluster_index);
@@ -1998,7 +2013,7 @@ private:
         do {
             const cluster_type & cluster = this->get_cluster(cluster_index);
             std::uint32_t mask16 = cluster.matchHash(control_hash);
-            size_type start_index = cluster_index * kClusterEntries;
+            size_type start_index = cluster_index * kClusterWidth;
             while (mask16 != 0) {
                 size_type pos = BitUtils::bsf32(mask16);
                 mask16 = BitUtils::clearLowBit32(mask16);
@@ -2033,7 +2048,7 @@ private:
                 if (maskDeleted != 0) {
                     // Found a [DeletedEntry] to insert
                     size_type pos = BitUtils::bsf32(maskDeleted);
-                    size_type start_index = cluster_index * kClusterEntries;
+                    size_type start_index = cluster_index * kClusterWidth;
                     return { (start_index + pos), false };
                 }
                 if (cluster_index == last_cluster)
@@ -2058,7 +2073,7 @@ private:
 
         // It's a [EmptyEntry] or [DeletedEntry] to insert
         size_type pos = BitUtils::bsf32(maskEmpty);
-        size_type start_index = last_cluster * kClusterEntries;
+        size_type start_index = last_cluster * kClusterWidth;
         return { (start_index + pos), false };
     }
 
@@ -2297,7 +2312,7 @@ private:
         do {
             const cluster_type & cluster = this->get_cluster(cluster_index);
             std::uint32_t mask16 = cluster.matchHash(control_hash);
-            size_type start_index = cluster_index * kClusterEntries;
+            size_type start_index = cluster_index * kClusterWidth;
             while (mask16 != 0) {
                 size_type pos = BitUtils::bsf32(mask16);
                 mask16 = BitUtils::clearLowBit32(mask16);
@@ -2341,7 +2356,7 @@ private:
         assert(index <= this->entry_capacity());
         control_byte & control = this->get_control(index);
         assert(control.isUsed());
-        index_type start_cluster = (index_type)(index / kClusterEntries);
+        index_type start_cluster = (index_type)(index / kClusterWidth);
         const cluster_type & cluster = this->get_cluster(start_cluster);
         if (cluster.hasAnyEmpty()) {
             control.setEmpty();
