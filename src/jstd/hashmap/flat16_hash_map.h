@@ -2253,7 +2253,7 @@ private:
         if (group.hasAnyEmpty()) {
             control.setEmpty();
         } else {
-            size_type group_index = this->next_group(start_slot);
+            size_type slot_index = this->next_group(start_slot);
             if (slot_index != start_slot) {
                 const group_type & group = this->get_group(slot_index);
                 if (!group.isAllEmpty())
