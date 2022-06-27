@@ -1050,6 +1050,7 @@ public:
 
     size_type group_mask() const { return group_mask_; }
     size_type group_count() const { return (group_mask_ + 1); }
+    size_type group_capacity() const { return (group_mask_ + 1 + 2); }
 
     slot_type * slots() { return slots_; }
     const slot_type * slots() const { return slots_; }
@@ -1714,6 +1715,7 @@ private:
             group_type * old_groups = this->groups();
             control_byte * old_controls = this->controls();
             size_type old_group_count = this->group_count();
+            size_type old_group_capacity = this->group_capacity();
 
             slot_type * old_slots = this->slots();
             size_type old_slot_size = this->slot_size();

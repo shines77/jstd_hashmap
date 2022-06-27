@@ -94,3 +94,35 @@ PUBLIC
     "${PROJECT_BINARY_DIR}"
     ${EXTRA_INCLUDES}
 )
+
+##
+## cardinal_bench_v1
+##
+set(CARDINAL_BENCH_V1_SOURCE_FILES
+    ../bench/cardinal_bench_v1/cardinal_bench.cpp
+)
+
+add_executable(cardinal_bench_v1 ${CARDINAL_BENCH_V1_SOURCE_FILES})
+
+if (NOT MSVC)
+    # For gcc or clang warning setting
+    target_compile_options(cardinal_bench_v1
+        PUBLIC
+            -Wall -Wno-unused-function -Wno-deprecated-declarations -Wno-unused-variable -Wno-deprecated -faligned-new
+    )
+else()
+    # Warning level 3 and all warnings as errors
+    target_compile_options(cardinal_bench_v1 PUBLIC /W3 /WX)
+endif()
+
+target_link_libraries(cardinal_bench_v1
+PUBLIC
+    ${EXTRA_LIBS}
+)
+
+target_include_directories(cardinal_bench_v1
+PUBLIC
+    "${PROJECT_BINARY_DIR}/bench/cardinal_bench_v1"
+    "${PROJECT_BINARY_DIR}"
+    ${EXTRA_INCLUDES}
+)
