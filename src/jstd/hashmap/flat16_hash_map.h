@@ -98,57 +98,6 @@ std::size_t align_to(std::size_t size, std::size_t alignment)
     return size;
 }
 
-namespace hashers {
-
-static inline
-std::uint32_t Integal_hash1_u32(std::uint32_t value)
-{
-    std::uint32_t hash = value * 2654435761ul;
-    return hash;
-}
-
-static inline
-std::uint32_t Integal_hash2_u32(std::uint32_t value)
-{
-    std::uint32_t hash = value * 2654435761ul ^ 2166136261ul;
-    return hash;
-}
-
-template <typename T>
-struct IntegalHash
-{
-    typedef T           argument_type;
-    typedef std::size_t result_type;
-
-    template <typename UInt32, typename std::enable_if<
-                                (std::is_integral<UInt32>::value &&
-                                (sizeof(UInt32) <= 4))>::type * = nullptr>
-    result_type operator () (UInt32 value) const noexcept {
-        //std::uint32_t hash = value * 16777619ul ^ 2166136261ul;
-        result_type hash = (result_type)((std::uint32_t)value * 2654435761ul + 16777619ul);
-        return hash;
-    }
-
-    template <typename UInt64, typename std::enable_if<
-                                (std::is_integral<UInt64>::value &&
-                                (sizeof(UInt64) > 4 && sizeof(UInt64) <= 8))>::type * = nullptr>
-    result_type operator () (UInt64 value) const noexcept {
-        //std::uint64_t hash = value * 1099511628211ull ^ 14695981039346656037ull;
-        result_type hash = (result_type)((std::uint64_t)value * 14695981039346656037ull + 1099511628211ull);
-        return hash;
-    }
-
-    template <typename Argument, typename std::enable_if<
-                                  (!std::is_integral<Argument>::value ||
-                                  sizeof(Argument) > 8)>::type * = nullptr>
-    result_type operator () (const Argument & value) const noexcept {
-        std::hash<Argument> hasher;
-        return static_cast<result_type>(hasher(value));
-    }
-};
-
-} // namespace hashers
-
 //
 // https://github.com/abseil/abseil-cpp/issues/209
 // https://gcc.gnu.org/bugzilla/show_bug.cgi?id=87853

@@ -710,8 +710,7 @@ public:
             this->clear();
         }
 
-        ~hash_cluster() {
-        }
+        ~hash_cluster() = default;
 
         void clear() {
             bitmask.clear(&this->controls[0]);
