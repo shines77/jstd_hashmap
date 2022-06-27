@@ -705,11 +705,8 @@ public:
         };
 
         hash_group() noexcept {
-            this->clear();
         }
-
-        ~hash_group() {
-        }
+        ~hash_group() noexcept = default;
 
         void clear() {
             bitmask.clear(&this->controls[0]);
@@ -1485,7 +1482,7 @@ private:
     }
 
     inline size_type slot_prev_group(size_type slot_index) const noexcept {
-        return (size_type)(((size_type)slot_index + this->group_mask()) & this->group_mask());
+        return (size_type)(((size_type)slot_index + this->slot_mask()) & this->slot_mask());
     }
 
     inline size_type slot_next_group(size_type slot_index) const noexcept {
@@ -1670,7 +1667,16 @@ private:
         groups_ = orig_groups + 1;
         group_mask_ = group_count - 1;
 
-        orig_groups[0              ].template fillAll8<kEndOfMark>();
+        orig_groups[0].template fillAll8<kEndOfMark>();
+        if (group_count != 1) {
+            for (size_type index = 1; index <= group_count; index++) {
+                orig_groups[index].template fillAll8<kEmptyEntry>();
+            }
+        } else {
+            orig_groups[1].template fillAll8<kEmptyEntry>();
+            group_type * tail_group = (group_type *)((char *)orig_groups + kGroupWidth + new_capacity);
+            (*tail_group).template fillAll8<kEndOfMark>();
+        }
         orig_groups[group_count + 1].template fillAll8<kEndOfMark>();
 
         slot_type * slots = slot_allocator_.allocate(new_capacity);
@@ -1812,7 +1818,7 @@ private:
     }
 
     JSTD_FORCED_INLINE
-    size_type find_first_unused_slot(const key_type & key, std::uint8_t & ctrl_hash) {
+    size_type find_first_empty_or_deleted_slot(const key_type & key, std::uint8_t & ctrl_hash) {
         hash_code_t hash_code = this->get_hash(key);
         hash_code_t hash_code_2nd = this->get_second_hash(hash_code);
         std::uint8_t control_hash = this->get_control_hash(hash_code_2nd);
@@ -1820,13 +1826,13 @@ private:
         size_type first_slot = slot_index;
         ctrl_hash = control_hash;
 
-        // Find the first unused slot and insert
+        // Find the first empty or deleted slot and insert
         do {
             const group_type & group = this->get_group(slot_index);
-            std::uint32_t maskUnused = group.matchEmptyOrDeleted();
-            if (maskUnused != 0) {
+            std::uint32_t maskEmptyOrDeleted = group.matchEmptyOrDeleted();
+            if (maskEmptyOrDeleted != 0) {
                 // Found a [EmptyEntry] or [DeletedEntry] to insert
-                size_type pos = BitUtils::bsf32(maskUnused);
+                size_type pos = BitUtils::bsf32(maskEmptyOrDeleted);
                 size_type start_index = slot_index;
                 return (start_index + pos);
             }
@@ -2281,7 +2287,7 @@ private:
         if (group.hasAnyEmpty()) {
             control.setEmpty();
         } else {
-            size_type slot_index = this->next_group(start_slot);
+            size_type slot_index = this->slot_next_group(start_slot);
             if (slot_index != start_slot) {
                 const group_type & group = this->get_group(slot_index);
                 if (!group.isAllEmpty())
@@ -2299,6 +2305,7 @@ private:
     }
 
     void swap_content(flat16_hash_map & other) {
+        std::swap(this->orig_groups_, other.orig_groups());
         std::swap(this->groups_, other.groups());
         std::swap(this->group_mask_, other.group_mask());
         std::swap(this->slots_, other.slots());

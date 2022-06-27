@@ -1753,6 +1753,10 @@ private:
         clusters_ = clusters;
         cluster_mask_ = cluster_count - 1;
 
+        if (cluster_count == 1) {
+            cluster_type * tail_group = (cluster_type *)((char *)clusters + kClusterWidth + new_capacity);
+            (*clusters).template fillAll8<kEndOfMark>();
+        }
         clusters[cluster_count].template fillAll8<kEndOfMark>();
 
         entry_type * entries = entry_allocator_.allocate(new_capacity);
