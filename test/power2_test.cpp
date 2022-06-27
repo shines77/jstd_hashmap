@@ -27,6 +27,7 @@
 
 #endif // __SSE4_2__
 
+#include <jstd/basic/stddef.h>
 #include <jstd/basic/inttypes.h>
 #include <jstd/type_traits.h>
 #include <jstd/support/Power2.h>
@@ -88,6 +89,7 @@ void round_down_pow2_test()
     ROUND_TO_POW2_TEST(round_down_pow2, pow2::round_down, 2147483648);
     // 0x80000001
     ROUND_TO_POW2_TEST(round_down_pow2, pow2::round_down, 2147483649);
+#if (JSTD_WORD_LEN == 64)
     // 0x7FFFFFFFFFFFFFFEFULL
     ROUND_TO_POW2_TEST(round_down_pow2, pow2::round_down, 9223372036854775806ull);
     // 0x7FFFFFFFFFFFFFFFULL
@@ -100,7 +102,7 @@ void round_down_pow2_test()
     ROUND_TO_POW2_TEST(round_down_pow2, pow2::round_down, 18446744073709551614ull);
     // 0xFFFFFFFFFFFFFFFFULL
     ROUND_TO_POW2_TEST(round_down_pow2, pow2::round_down, 18446744073709551615ull);
-
+#endif
     printf("\n");
 }
 
@@ -146,6 +148,7 @@ void round_down_power2_test()
     ROUND_TO_POW2_TEST(round_down_power2, pow2::round_down, 2147483648);
     // 0x80000001
     ROUND_TO_POW2_TEST(round_down_power2, pow2::round_down, 2147483649);
+#if (JSTD_WORD_LEN == 64)
     // 0x7FFFFFFFFFFFFFFEFULL
     ROUND_TO_POW2_TEST(round_down_power2, pow2::round_down, 9223372036854775806ull);
     // 0x7FFFFFFFFFFFFFFFULL
@@ -158,7 +161,7 @@ void round_down_power2_test()
     ROUND_TO_POW2_TEST(round_down_power2, pow2::round_down, 18446744073709551614ull);
     // 0xFFFFFFFFFFFFFFFFULL
     ROUND_TO_POW2_TEST(round_down_power2, pow2::round_down, 18446744073709551615ull);
-
+#endif
     printf("\n");
 }
 
@@ -204,6 +207,7 @@ void round_to_pow2_test()
     ROUND_TO_POW2_TEST(round_to_pow2, pow2::round_to, 2147483648);
     // 0x80000001
     ROUND_TO_POW2_TEST(round_to_pow2, pow2::round_to, 2147483649);
+#if (JSTD_WORD_LEN == 64)
     // 0x7FFFFFFFFFFFFFFEFULL
     ROUND_TO_POW2_TEST(round_to_pow2, pow2::round_to, 9223372036854775806ull);
     // 0x7FFFFFFFFFFFFFFFULL
@@ -216,7 +220,7 @@ void round_to_pow2_test()
     ROUND_TO_POW2_TEST(round_to_pow2, pow2::round_to, 18446744073709551614ull);
     // 0xFFFFFFFFFFFFFFFFULL
     ROUND_TO_POW2_TEST(round_to_pow2, pow2::round_to, 18446744073709551615ull);
-
+#endif
     printf("\n");
 }
 
@@ -262,6 +266,7 @@ void round_to_power2_test()
     ROUND_TO_POW2_TEST(round_to_power2, pow2::round_to, 2147483648);
     // 0x80000001
     ROUND_TO_POW2_TEST(round_to_power2, pow2::round_to, 2147483649);
+#if (JSTD_WORD_LEN == 64)
     // 0x7FFFFFFFFFFFFFFEFULL
     ROUND_TO_POW2_TEST(round_to_power2, pow2::round_to, 9223372036854775806ull);
     // 0x7FFFFFFFFFFFFFFFULL
@@ -274,7 +279,7 @@ void round_to_power2_test()
     ROUND_TO_POW2_TEST(round_to_power2, pow2::round_to, 18446744073709551614ull);
     // 0xFFFFFFFFFFFFFFFFULL
     ROUND_TO_POW2_TEST(round_to_power2, pow2::round_to, 18446744073709551615ull);
-
+#endif
     printf("\n");
 }
 
@@ -320,6 +325,7 @@ void round_up_pow2_test()
     ROUND_TO_POW2_TEST(round_up_pow2, pow2::round_up, 2147483648);
     // 0x80000001
     ROUND_TO_POW2_TEST(round_up_pow2, pow2::round_up, 2147483649);
+#if (JSTD_WORD_LEN == 64)
     // 0x7FFFFFFFFFFFFFFEFULL
     ROUND_TO_POW2_TEST(round_up_pow2, pow2::round_up, 9223372036854775806ull);
     // 0x7FFFFFFFFFFFFFFFULL
@@ -332,7 +338,7 @@ void round_up_pow2_test()
     ROUND_TO_POW2_TEST(round_up_pow2, pow2::round_up, 18446744073709551614ull);
     // 0xFFFFFFFFFFFFFFFFULL
     ROUND_TO_POW2_TEST(round_up_pow2, pow2::round_up, 18446744073709551615ull);
-
+#endif
     printf("\n");
 }
 
@@ -378,6 +384,7 @@ void round_up_power2_test()
     ROUND_TO_POW2_TEST(round_up_power2, pow2::round_up, 2147483648);
     // 0x80000001
     ROUND_TO_POW2_TEST(round_up_power2, pow2::round_up, 2147483649);
+#if (JSTD_WORD_LEN == 64)
     // 0x7FFFFFFFFFFFFFFEFULL
     ROUND_TO_POW2_TEST(round_up_power2, pow2::round_up, 9223372036854775806ull);
     // 0x7FFFFFFFFFFFFFFFULL
@@ -390,7 +397,7 @@ void round_up_power2_test()
     ROUND_TO_POW2_TEST(round_up_power2, pow2::round_up, 18446744073709551614ull);
     // 0xFFFFFFFFFFFFFFFFULL
     ROUND_TO_POW2_TEST(round_up_power2, pow2::round_up, 18446744073709551615ull);
-
+#endif
     printf("\n");
 }
 
@@ -436,6 +443,7 @@ void next_pow2_test()
     ROUND_TO_POW2_TEST(next_pow2, pow2::next_pow2, 2147483648);
     // 0x80000001
     ROUND_TO_POW2_TEST(next_pow2, pow2::next_pow2, 2147483649);
+#if (JSTD_WORD_LEN == 64)
     // 0x7FFFFFFFFFFFFFFEFULL
     ROUND_TO_POW2_TEST(next_pow2, pow2::next_pow2, 9223372036854775806ull);
     // 0x7FFFFFFFFFFFFFFFULL
@@ -448,7 +456,7 @@ void next_pow2_test()
     ROUND_TO_POW2_TEST(next_pow2, pow2::next_pow2, 18446744073709551614ull);
     // 0xFFFFFFFFFFFFFFFFULL
     ROUND_TO_POW2_TEST(next_pow2, pow2::next_pow2, 18446744073709551615ull);
-
+#endif
     printf("\n");
 }
 
@@ -494,6 +502,7 @@ void next_power2_test()
     ROUND_TO_POW2_TEST(next_power2, pow2::next_pow2, 2147483648);
     // 0x80000001
     ROUND_TO_POW2_TEST(next_power2, pow2::next_pow2, 2147483649);
+#if (JSTD_WORD_LEN == 64)
     // 0x7FFFFFFFFFFFFFFEFULL
     ROUND_TO_POW2_TEST(next_power2, pow2::next_pow2, 9223372036854775806ull);
     // 0x7FFFFFFFFFFFFFFFULL
@@ -506,7 +515,7 @@ void next_power2_test()
     ROUND_TO_POW2_TEST(next_power2, pow2::next_pow2, 18446744073709551614ull);
     // 0xFFFFFFFFFFFFFFFFULL
     ROUND_TO_POW2_TEST(next_power2, pow2::next_pow2, 18446744073709551615ull);
-
+#endif
     printf("\n");
 }
 
