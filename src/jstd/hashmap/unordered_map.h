@@ -154,14 +154,12 @@ public:
          (layout_policy_t::isAutoDetectStoreHash && (kDetectStoreHash));
 
     enum entry_type_t {
-        kEntryTypeShfit  = 30,
-        kIsFreeEntry     = 0UL << kEntryTypeShfit,
-        kIsInUseEntry    = 1UL << kEntryTypeShfit,
-        kIsReusableEntry = 2UL << kEntryTypeShfit,
-        kIsRedirectEntry = 3UL << kEntryTypeShfit,
+        kEntryTypeShfit  = 31,
+        kIsEmptyEntry    = 0UL << kEntryTypeShfit,
+        kIsUsedEntry     = 1UL << kEntryTypeShfit,
 
-        kEntryTypeMask   = 0xC0000000UL,
-        kEntryIndexMask  = 0x3FFFFFFFUL
+        kEntryTypeMask   = 0x80000000ul,
+        kEntryIndexMask  = 0x7FFFFFFFul
     };
 
     struct entry_attr_t {
@@ -184,10 +182,12 @@ public:
         }
 
         uint32_t makeAttr(std::uint32_t type, std::uint32_t chunk_id) {
-            return ((type & kEntryTypeMask) | (chunk_id & kEntryIndexMask));
+            assert((type & kEntryIndexMask) == 0);
+            //return ((type & kEntryTypeMask) | (chunk_id & kEntryIndexMask));
+            return (type | (chunk_id & kEntryIndexMask));
         }
 
-        uint32_t getEntryType() const {
+        uint32_t getType() const {
             return (this->value & kEntryTypeMask);
         }
 
@@ -199,9 +199,10 @@ public:
             this->value = this->makeAttr(type, chunk_id);
         }
 
-        void setEntryType(std::uint32_t type) {
+        void setType(std::uint32_t type) {
+            assert((type & kEntryIndexMask) == 0);
             // Here is a small optimization.
-            // this->value = (_entry_type & kEntryAttrMask) | this->chunk_id();
+            // this->value = (type & kEntryAttrMask) | this->getChunkId();
             this->value = type | this->getChunkId();
         }
 
@@ -209,60 +210,268 @@ public:
             this->value = this->getEntryType() | (chunk_id & kEntryIndexMask);
         }
 
-        void setChunkIdsz(size_type chunk_id) {
+#if (JSTD_WORD_LEN == 64)
+        void setChunkId(size_type chunk_id) {
             this->value = this->getEntryType() | (static_cast<std::uint32_t>(chunk_id) & kEntryIndexMask);
         }
+#endif
 
-        bool isFreeEntry() {
-            return (this->getEntryType() == kIsFreeEntry);
+        bool isEmptyEntry() {
+            return (this->getEntryType() == kIsEmptyEntry);
         }
 
-        bool isInUseEntry() {
-            return (this->getEntryType() == kIsInUseEntry);
+        bool isUsedEntry() {
+            return (this->getEntryType() == kIsUsedEntry);
         }
 
-        bool isReusableEntry() {
-            return (this->getEntryType() == kIsReusableEntry);
+        void setEmptyEntry() {
+            setEntryType(kIsEmptyEntry);
         }
 
-        bool isRedirectEntry() {
-            return (this->getEntryType() == kIsRedirectEntry);
-        }
-
-        void setFreeEntry() {
-            setEntryType(kIsFreeEntry);
-        }
-
-        void setInUseEntry() {
-            setEntryType(kIsInUseEntry);
-        }
-
-        void setReusableEntry() {
-            setEntryType(kIsReusableEntry);
-        }
-
-        void setRedirectEntry() {
-            setEntryType(kIsRedirectEntry);
+        void setUsedEntry() {
+            setEntryType(kIsUsedEntry);
         }
     };
+
+    static constexpr std::size_t kTypeMask64    = 0x8000000000000000ull;
+    static constexpr std::size_t kIndexMask64   = 0x7FFFFFFFFFFFFFFFull;
+    static constexpr std::size_t kHashMask64    = 0x00000000FFFFFFFFull;
+
+    static constexpr std::size_t kEmptyEntry64  = 0x0000000000000000ull;
+    static constexpr std::size_t kUsedEntry64   = 0x8000000000000000ull;
+
+    static constexpr std::uint32_t kTypeMask32  = 0x80000000ul;
+    static constexpr std::uint32_t kIndexMask32 = 0x7FFFFFFFul;
+    static constexpr std::uint32_t kHashMask32  = 0xFFFFFFFFul;
+
+    static constexpr std::uint32_t kEmptyEntry32 = 0x00000000ul;
+    static constexpr std::uint32_t kUsedEntry32  = 0x80000000ul;
+
+#if (JSTD_WORD_LEN == 64)
+    struct entry_attr {
+        union {
+            struct {
+                std::size_t type      : 1;
+                std::size_t chunk_id  : 31:
+                std::size_t hash_code : 32;
+            };
+            struct {
+                std::uint32_t low:
+                std::uint32_t high;
+            };
+            std::size_t value;
+        };
+
+        explicit entry_attr(std::size_t value = 0) noexcept : value(value) {}
+        entry_attr(std::size_t type, std::size_t chunk_id, std::size_t hash_code) noexcept
+            : value(makeAttr(type, chunk_id, hash_code)) {}
+        entry_attr(const entry_attr_t & src) noexcept : value(src.value) {}
+        ~entry_attr() {}
+
+        entry_attr & operator = (const entry_attr & rhs) noexcept {
+            this->value = rhs.value;
+            return *this;
+        }
+
+        entry_attr & operator = (std::size_t value) noexcept {
+            this->value = value;
+            return *this;
+        }
+
+        std::uint32_t makeAttr(std::uint32_t type32, std::uint32_t chunk_id) {
+            assert((type32 & kIndexMask32) == 0);
+            return (type32 | (chunk_id & kIndexMask32));
+        }
+
+        std::size_t makeAttr(std::size_t type64, std::size_t chunk_id, std::size_t hash_code) {
+            assert((type64 & kIndexMask64) == 0);
+            return (type64 | ((chunk_id & kIndexMask64) << 32) | (hash_code & kHashMask64));
+        }
+
+        std::size_t getType() const {
+            return (this->value & kTypeMask64);
+        }
+
+        std::uint32_t getType32() const {
+            return (this->low & kTypeMask32);
+        }
+
+        std::size_t getChunkId() const {
+            return std::size_t(this->low & kIndexMask32);
+        }
+
+        std::size_t getHashCode() const {
+            return std::size_t(this->hash_code);
+        }
+
+        void setType(std::size_t type) {
+            assert((type & kIndexMask64) == 0);
+            this->value = (type & kTypeMask64) | (this->value & kIndexMask64);
+        }
+
+        void setChunkId(std::size_t chunk_id) {
+            this->low = this->getType32() | (std::uint32_t(chunk_id) & kIndexMask32);
+        }
+
+        void setHashCode(std::size_t hash_code) {
+            this->hash_code = std::uint32_t(hash_code);
+        }
+
+        std::size_t getLow() const {
+            return this->low;
+        }
+
+        std::size_t getValue() const {
+            return this->value;
+        }
+
+        void setValue(std::size_t type32, std::size_t chunk_id) {
+            this->low = this->makeAttr(type32, chunk_id);
+        }
+
+        void setValue(std::size_t type, std::size_t chunk_id, std::size_t hash_code) {
+            this->value = this->makeAttr(type32, chunk_id, hash_code);
+        }
+
+        bool isEmptyEntry() {
+            return (this->getType() == kEmptyEntry64);
+        }
+
+        bool isUsedEntry() {
+            return (this->getType() == kUsedEntry64);
+        }
+
+        void setEmptyEntry() {
+            this->setType(kEmptyEntry64);
+        }
+
+        void setUsedEntry() {
+            this->setType(kUsedEntry64);
+        }
+    };
+
+#else // !(JSTD_WORD_LEN == 64)
+
+    struct entry_attr {
+        union {
+            struct {
+                std::uint32_t type     : 1;
+                std::uint32_t chunk_id : 31:
+                std::uint32_t hash_code;
+            };
+            struct {
+                std::uint32_t low:
+                std::uint32_t high;
+            };
+            std::uint64_t value;
+        };
+
+        static constexpr std::uint32_t kTypeMask32  = 0x80000000ul;
+        static constexpr std::uint32_t kIndexMask32 = 0x7FFFFFFFul;
+        static constexpr std::uint32_t kHashMask32  = 0xFFFFFFFFul;
+
+        entry_attr(std::uint64_t value = 0) noexcept : value(value) {}
+        entry_attr(std::uint32_t type, std::uint32_t chunk_id, std::uint32_t hash_code) noexcept
+            : low(makeAttr(type, chunk_id)), high(hash_code) {}
+        entry_attr(const entry_attr_t & src) noexcept : value(src.value) {}
+        ~entry_attr() {}
+
+        entry_attr & operator = (const entry_attr & rhs) noexcept {
+            this->value = rhs.value;
+            return *this;
+        }
+
+        entry_attr & operator = (std::uint64_t value) noexcept {
+            this->value = value;
+            return *this;
+        }
+
+        std::uint32_t makeAttr(std::uint32_t type, std::uint32_t chunk_id) {
+            assert((type & kIndexMask32) == 0);
+            return (type | (chunk_id & kIndexMask32));
+        }
+
+        std::uint64_t makeAttr(std::uint32_t type, std::uint32_t chunk_id, std::uint32_t hash_code) {
+            assert((type & kIndexMask32) == 0);
+            return ((std::uint64_t(type | (chunk_id & kIndexMask32)) << 32) | std::uint64_t(hash_code & kHashMask32));
+        }
+
+        std::uint32_t getType() const {
+            return (this->low & kTypeMask32);
+        }
+
+        std::uint32_t getChunkId() const {
+            return (this->low & kIndexMask32);
+        }
+
+        std::uint32_t getHashCode() const {
+            return this->hash_code;
+        }
+
+        void setType(std::uint32_t type) {
+            assert((type & kIndexMask32) == 0);
+            this->low = (type & kTypeMask32) | (this->low & kIndexMask32);
+        }
+
+        void setChunkId(std::uint32_t chunk_id) {
+            this->low = this->getType32() | (chunk_id & kIndexMask32);
+        }
+
+        void setHashCode(std::uint32_t hash_code) {
+            this->hash_code = hash_code;
+        }
+
+        std::uint32_t getLow() const {
+            return this->low;
+        }
+
+        std::uint64_t getValue() const {
+            return this->value;
+        }
+
+        void setValue(std::uint32_t type, std::uint32_t chunk_id) {
+            this->low = this->makeAttr(type32, chunk_id);
+        }
+
+        void setValue(std::uint32_t type, std::uint32_t chunk_id, std::uint32_t hash_code) {
+            this->value = this->makeAttr(type, chunk_id, hash_code);
+        }
+
+        bool isEmptyEntry() {
+            return (this->getType() == kEmptyEntry64);
+        }
+
+        bool isUsedEntry() {
+            return (this->getType() == kUsedEntry64);
+        }
+
+        void setEmptyEntry() {
+            this->setType(kEmptyEntry64);
+        }
+
+        void setUsedEntry() {
+            this->setType(kUsedEntry64);
+        }
+    };
+
+#endif // (JSTD_WORD_LEN == 64)
 
     template <bool NeedStoreHash = kNeedStoreHash>
     struct bucket_entry {
         bucket_entry *  next;
-        hash_code_t     hash_code;
-        entry_attr_t    attrib;
+        entry_attr      attrib;
         value_type      value;
 
         hash_code_t get_hash() const {
-            return this->hash_code;
+            return static_cast<hash_code_t>(this->attrib.getHashCode());
         }
 
         bool compare_hash(hash_code_t hash_code) const {
-            return (this->hash_code == hash_code);
+            return (hash_code == this->get_hash());
         }
 
         void store_hash(hash_code_t hash_code) {
-            this->hash_code = hash_code;
+            this->attrib.setHashCode(static_cast<std::uint32_t>(hash_code));
         }
     };
 
@@ -1645,6 +1854,24 @@ private:
         return nullptr;  // Not found
     }
 
+    entry_type * find_entry(const key_type & key, hash_code_t hash_code, index_type index) {
+        assert(this->buckets() != nullptr);
+        entry_type * entry = this->buckets_[index];
+        while (entry != nullptr) {
+            if (likely(!entry->compare_hash(hash_code))) {
+                entry = entry->next;
+            }
+            else {
+                if (likely(!this->key_equal_(key, entry->value.first)))
+                    entry = entry->next;
+                else
+                    return entry;
+            }
+        }
+
+        return nullptr;  // Not found
+    }
+
     entry_type * find_before(const key_type & key, entry_type *& before, size_type & index) {
         hash_code_t hash_code = this->get_hash(key);
         index = this->index_for(hash_code);
@@ -1673,30 +1900,108 @@ private:
         return nullptr;  // Not found
     }
 
-    JSTD_FORCED_INLINE
-    size_type find_first_unused_entry(const key_type & key, std::uint8_t & ctrl_hash) {
-        hash_code_t hash_code = this->get_hash(key);
-        hash_code_t hash_code_2nd = this->get_second_hash(hash_code);
-        std::uint8_t control_hash = this->get_control_hash(hash_code_2nd);
-        index_type cluster_index = this->index_for(hash_code);
-        index_type first_cluster = cluster_index;
-        ctrl_hash = control_hash;
+    entry_type * find_first_valid_entry() const {
+        entry_type * first_entry = nullptr;
+        entry_type * last_entry;
 
-        // Find the first unused entry and insert
-        do {
-            const cluster_type & cluster = this->get_cluster(cluster_index);
-            std::uint32_t maskUnused = cluster.matchEmptyOrDeleted();
-            if (maskUnused != 0) {
-                // Found a [EmptyEntry] or [DeletedEntry] to insert
-                size_type pos = BitUtils::bsf32(maskUnused);
-                size_type start_index = cluster_index * kClusterEntries;
-                return (start_index + pos);
+        size_type chunk_index = 0;
+        size_type chunk_total = this->chunk_list_.size();
+        while (chunk_index < chunk_total) {
+            // Find first of not nullptr chunk.
+            const entry_chunk_t & cur_chunk = this->chunk_list_[chunk_index];
+            if (cur_chunk.entries != nullptr) {
+                first_entry = cur_chunk.entries;
+                last_entry = cur_chunk.entries + cur_chunk.size;
+                while (first_entry < last_entry) {
+                    // Find first of used entry.
+                    if (likely(!first_entry->attrib.isUsedEntry()))
+                        ++first_entry;
+                    else
+                        return first_entry;
+                }
             }
-            cluster_index = this->next_cluster(cluster_index);
-            assert(cluster_index != first_cluster);
-        } while (1);
+            chunk_index++;
+        }
 
-        return npos;
+        return first_entry;
+    }
+
+    entry_type * next_valid_entry(entry_type * entry) const {
+        assert(entry != nullptr);
+
+        size_type chunk_index = entry->attrib.getChunkId();
+        assert(chunk_index < this->chunk_list_.size());
+
+        const entry_chunk_t & cur_chunk = this->chunk_list_[chunk_index];
+        assert(cur_chunk.entries != nullptr);
+
+        entry_type * next_entry = ++entry;
+        entry_type * last_entry = cur_chunk.entries + cur_chunk.size;
+        assert(next_entry >= cur_chunk.entries);
+
+        while (next_entry < last_entry) {
+            if (likely(!next_entry->attrib.isUsedEntry()))
+                next_entry++;
+            else
+                return next_entry;
+        }
+
+        next_entry = nullptr;
+        chunk_index++;
+
+        size_type chunk_list_size = this->chunk_list_.size();
+        while (chunk_index < chunk_list_size) {
+            // Find first of not nullptr chunk.
+            const entry_chunk_t & cur_chunk2 = this->chunk_list_[chunk_index];
+            if (cur_chunk2.entries != nullptr) {
+                next_entry = cur_chunk2.entries;
+                last_entry = cur_chunk2.entries + cur_chunk2.size;
+                while (next_entry < last_entry) {
+                    // Find first of in use entry.
+                    if (likely(!next_entry->attrib.isUsedEntry()))
+                        next_entry++;
+                    else
+                        return next_entry;
+                }
+            }
+            chunk_index++;
+        }
+
+        return next_entry;
+    }
+
+    const entry_type * next_const_valid_entry(const entry_type * centry) {
+        entry_type * entry = const_cast<entry_type *>(centry);
+        entry_type * next_entry = this->next_valid_entry(entry);
+        return const_cast<const entry_type *>(next_entry);
+    }
+
+    entry_type * next_first_valid_entry(size_type chunk_index = 0,
+                                        size_type entry_index = 0) const {
+        size_type chunk_list_size = this->chunk_list_.size();
+        assert(chunk_index < chunk_list_size);
+
+        entry_type * first_entry = nullptr;
+        entry_type * last_entry;
+        while (chunk_index < chunk_list_size) {
+            // Find first of not nullptr chunk.
+            const entry_chunk_t & cur_chunk = this->chunk_list_[chunk_index];
+            if (cur_chunk.entries != nullptr) {
+                first_entry = cur_chunk.entries + entry_index;
+                last_entry = cur_chunk.entries + cur_chunk.size;
+                while (first_entry < last_entry) {
+                    // Find first of in use entry.
+                    if (likely(!first_entry->attrib.isUsedEntry()))
+                        first_entry++;
+                    else
+                        return first_entry;
+                }
+            }
+            entry_index = 0;
+            chunk_index++;
+        }
+
+        return first_entry;
     }
 
     JSTD_FORCED_INLINE
@@ -2020,7 +2325,7 @@ private:
             entry_type * new_entry = &this->entries_[this->chunk_list_.firstFreeIndex()];
             assert(new_entry != nullptr);
             uint32_t chunk_id = this->chunk_list_.lastChunkId();
-            new_entry->attrib.setValue(kIsFreeEntry, chunk_id);
+            new_entry->attrib.setValue(kEmptyEntry32, chunk_id);
             return new_entry;
         }
     }
