@@ -344,6 +344,10 @@ public:
         return this->key_;
     }
 
+    const char * buffer() const noexcept {
+        return (const char *)&this->buffer_[0];
+    }
+
     std::size_t Hash() const {
 #if USE_STAT_COUNTER
         g_num_hashes++;
@@ -372,7 +376,7 @@ public:
     }
 
     friend std::ostream & operator << (std::ostream & out, const this_type & obj) {
-        out << "HashObject(" << this->key_ << ", \"" << this->buffer_ << "\")";
+        out << "HashObject(" << obj.key() << ", \"" << obj.buffer() << "\")";
         return out;
     }
 };
@@ -417,6 +421,10 @@ public:
 
     key_type key() const noexcept {
         return this->key_;
+    }
+
+    const char * buffer() const noexcept {
+        return nullptr;
     }
 
     std::size_t Hash() const {
@@ -486,6 +494,10 @@ public:
 
     key_type key() const noexcept {
         return this->key_;
+    }
+
+    const char * buffer() const noexcept {
+        return nullptr;
     }
 
     std::size_t Hash() const {
