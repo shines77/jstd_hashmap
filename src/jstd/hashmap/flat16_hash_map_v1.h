@@ -1378,11 +1378,7 @@ public:
     }
 
     const_iterator find(const key_type & key) const {
-        size_type index = this->find_impl(key);
-        if (index != npos)
-            return this->iterator_at(index);
-        else
-            return this->end();
+        return const_cast<this_type *>(this)->find(key);
     }
 
     std::pair<iterator, iterator> equal_range(const key_type & key) {
@@ -1837,7 +1833,7 @@ private:
         hash_code_t hash_code_2nd = this->get_second_hash(hash_code);
         std::uint8_t control_hash = this->get_control_hash(hash_code_2nd);
         index_type cluster_index = this->index_for(hash_code);
-        index_type start_cluster = cluster_index;
+        index_type first_cluster = cluster_index;
         do {
             const cluster_type & cluster = this->get_cluster(cluster_index);
             std::uint32_t mask16 = cluster.matchHash(control_hash);
@@ -1855,11 +1851,12 @@ private:
                 return npos;
             }
             cluster_index = this->next_cluster(cluster_index);
-        } while (cluster_index != start_cluster);
+        } while (cluster_index != first_cluster);
 
         return npos;
     }
 
+    JSTD_FORCED_INLINE
     size_type find_impl(const key_type & key, index_type & first_cluster,
                         index_type & last_cluster, std::uint8_t & ctrl_hash) const {
         hash_code_t hash_code = this->get_hash(key);
@@ -1954,7 +1951,7 @@ private:
 
         // Found a [DeletedEntry] or [EmptyEntry] to insert
         control_byte * control = this->control_at(target);
-        assert(control->isEmptyOrDeleted());
+        assert(control->isEmpty());
         control->setUsed(ctrl_hash);
         entry_type * entry = this->entry_at(target);
         this->entry_allocator_.construct(entry,
@@ -1970,7 +1967,7 @@ private:
 
         // Found a [DeletedEntry] or [EmptyEntry] to insert
         control_byte * control = this->control_at(target);
-        assert(control->isEmptyOrDeleted());
+        assert(control->isEmpty());
         control->setUsed(ctrl_hash);
         entry_type * entry = this->entry_at(target);
         this->entry_allocator_.construct(entry, value);
@@ -1985,14 +1982,13 @@ private:
 
         // Found a [DeletedEntry] or [EmptyEntry] to insert
         control_byte * control = this->control_at(target);
-        assert(control->isEmptyOrDeleted());
+        assert(control->isEmpty());
         control->setUsed(ctrl_hash);
         entry_type * entry = this->entry_at(target);
         this->entry_allocator_.construct(entry, std::move(value));
         this->entry_size_++;
         assert(this->entry_size() <= this->entry_capacity());
     }
-
 
     // Use in constructor
     template <typename InputIter>
@@ -2041,7 +2037,7 @@ private:
             return this->find_and_prepare_insert(key, ctrl_hash);
         }
 
-        // Find the first unused entry and insert
+        // Find the first deleted or empty entry and insert
         if (cluster_index != first_cluster) {
             // Find the first [DeletedEntry] from first_cluster to last_cluster.
             cluster_index = first_cluster;
@@ -2059,7 +2055,7 @@ private:
                 cluster_index = this->next_cluster(cluster_index);
             } while (cluster_index != first_cluster);
 
-            // Not found any [DeletedEntry], and use [EmptyEntry] to insert
+            // Not found any [DeletedEntry], so we use [EmptyEntry] to insert
             // Skip to final processing
         } else {
             assert(last_cluster != npos);
@@ -2322,26 +2318,7 @@ private:
                 size_type index = start_index + pos;
                 const entry_type & target = this->get_entry(index);
                 if (this->key_equal_(target.first, key)) {
-                    control_byte & control = this->get_control(index);
-                    assert(control.isUsed());
-                    if (cluster.hasAnyEmpty()) {
-                        control.setEmpty();
-                    } else {
-                        cluster_index = this->next_cluster(cluster_index);
-                        if (cluster_index != start_cluster) {
-                            const cluster_type & cluster = this->get_cluster(cluster_index);
-                            if (!cluster.isAllEmpty())
-                                control.setDeleted();
-                            else
-                                control.setEmpty();
-                        } else {
-                            control.setEmpty();
-                        }
-                    }
-                    // Destroy entry
-                    this->entry_allocator_.destroy(&target);
-                    assert(this->entry_size_ > 0);
-                    this->entry_size_--;
+                    this->erase_entry(index);
                     return 1;
                 }
             }

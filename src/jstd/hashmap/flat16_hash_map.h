@@ -167,6 +167,7 @@ public:
 
     static constexpr float kMinLoadFactor = 0.2f;
     static constexpr float kMaxLoadFactor = 0.8f;
+
     // Must be kMinLoadFactor <= loadFactor <= kMaxLoadFactor
     static constexpr float kDefaultLoadFactor = 0.5f;
 
@@ -1211,11 +1212,7 @@ public:
     }
 
     const_iterator find(const key_type & key) const {
-        size_type index = this->find_impl(key);
-        if (index != npos)
-            return this->iterator_at(index);
-        else
-            return this->end();
+        return const_cast<this_type *>(this)->find(key);
     }
 
     std::pair<iterator, iterator> equal_range(const key_type & key) {
@@ -1640,7 +1637,7 @@ private:
     }
 
     inline bool need_grow() const {
-        return (this->slot_size_ > this->slot_threshold_);
+        return (this->slot_size_ >= this->slot_threshold_);
     }
 
     void grow_if_necessary() {
@@ -1729,9 +1726,24 @@ private:
             slot_index = this->slot_next_group(slot_index);
         } while (slot_index != start_slot);
 
+        // If not found any match slot, then search the beginning of first group.
+        if ((start_slot & kGroupMask) != 0) {
+            std::uint32_t mask16 = this->get_group(0).matchHash(control_hash);
+            if (mask16 != 0) {
+                size_type pos = BitUtils::bsf32(mask16);
+                mask16 = BitUtils::clearLowBit32(mask16);
+                size_type index = 0 + pos;
+                const slot_type & target = this->get_slot(index);
+                if (this->key_equal_(target.first, key)) {
+                    return index;
+                }
+            }
+        }
+
         return npos;
     }
 
+    JSTD_FORCED_INLINE
     size_type find_impl(const key_type & key, size_type & first_slot,
                         size_type & last_slot, std::uint8_t & ctrl_hash) const {
         hash_code_t hash_code = this->get_hash(key);
@@ -1762,6 +1774,22 @@ private:
             slot_index = this->slot_next_group(slot_index);
         } while (slot_index != start_slot);
 
+        // If not found any match slot, then search the beginning of first group.
+        if ((start_slot & kGroupMask) != 0) {
+            std::uint32_t mask16 = this->get_group(0).matchHash(control_hash);
+            if (mask16 != 0) {
+                size_type pos = BitUtils::bsf32(mask16);
+                mask16 = BitUtils::clearLowBit32(mask16);
+                size_type index = 0 + pos;
+                const slot_type & target = this->get_slot(index);
+                if (this->key_equal_(target.first, key)) {
+                    // TODO: ????
+                    last_slot = 0;
+                    return index;
+                }
+            }
+        }
+
         last_slot = npos;
         return npos;
     }
@@ -1776,18 +1804,41 @@ private:
         ctrl_hash = control_hash;
 
         // Find the first empty or deleted slot and insert
-        do {
-            const group_type & group = this->get_group(slot_index);
-            std::uint32_t maskEmptyOrDeleted = group.matchEmptyOrDeleted();
-            if (maskEmptyOrDeleted != 0) {
-                // Found a [EmptyEntry] or [DeletedEntry] to insert
-                size_type pos = BitUtils::bsf32(maskEmptyOrDeleted);
-                size_type start_index = slot_index;
-                return (start_index + pos);
+        if (this->group_count() > 2) {
+            do {
+                const group_type & group = this->get_group(slot_index);
+                std::uint32_t maskEmptyOrDeleted = group.matchEmptyOrDeleted();
+                if (maskEmptyOrDeleted != 0) {
+                    // Found a [EmptyEntry] or [DeletedEntry] to insert
+                    size_type pos = BitUtils::bsf32(maskEmptyOrDeleted);
+                    size_type start_index = slot_index;
+                    return (start_index + pos);
+                }
+                slot_index = this->slot_next_group(slot_index);
+                assert(slot_index != first_slot);
+            } while (1);
+        } else {
+            do {
+                const group_type & group = this->get_group(slot_index);
+                std::uint32_t maskEmptyOrDeleted = group.matchEmptyOrDeleted();
+                if (maskEmptyOrDeleted != 0) {
+                    // Found a [EmptyEntry] or [DeletedEntry] to insert
+                    size_type pos = BitUtils::bsf32(maskEmptyOrDeleted);
+                    size_type start_index = slot_index;
+                    return (start_index + pos);
+                }
+                slot_index = this->slot_next_group(slot_index);
+            } while (slot_index != first_slot);
+
+            // If not found any empty or deleted slot, then search the beginning of first group.
+            if ((first_slot & kGroupMask) != 0) {
+                std::uint32_t maskEmptyOrDeleted = this->get_group(0).matchEmptyOrDeleted();
+                if (maskEmptyOrDeleted != 0) {
+                    size_type pos = BitUtils::bsf32(maskEmptyOrDeleted);
+                    return (0 + pos);
+                }
             }
-            slot_index = this->slot_next_group(slot_index);
-            assert(slot_index != first_slot);
-        } while (1);
+        }
 
         return npos;
     }
@@ -1802,18 +1853,41 @@ private:
         ctrl_hash = control_hash;
 
         // Find the first empty slot and insert
-        do {
-            const group_type & group = this->get_group(slot_index);
-            std::uint32_t maskEmpty = group.matchEmpty();
-            if (maskEmpty != 0) {
-                // Found a [EmptyEntry] to insert
-                size_type pos = BitUtils::bsf32(maskEmpty);
-                size_type start_index = slot_index;
-                return (start_index + pos);
+        if (this->group_count() > 2) {
+            do {
+                const group_type & group = this->get_group(slot_index);
+                std::uint32_t maskEmpty = group.matchEmpty();
+                if (maskEmpty != 0) {
+                    // Found a [EmptyEntry] to insert
+                    size_type pos = BitUtils::bsf32(maskEmpty);
+                    size_type start_index = slot_index;
+                    return (start_index + pos);
+                }
+                slot_index = this->slot_next_group(slot_index);
+                assert(slot_index != first_slot);
+            } while (1);
+        } else {
+            do {
+                const group_type & group = this->get_group(slot_index);
+                std::uint32_t maskEmpty = group.matchEmpty();
+                if (maskEmpty != 0) {
+                    // Found a [EmptyEntry] to insert
+                    size_type pos = BitUtils::bsf32(maskEmpty);
+                    size_type start_index = slot_index;
+                    return (start_index + pos);
+                }
+                slot_index = this->slot_next_group(slot_index);
+            } while (slot_index != first_slot);
+
+            // If not found any empty slot, then search the beginning of first group.
+            if ((first_slot & kGroupMask) != 0) {
+                std::uint32_t maskEmpty = this->get_group(0).matchEmpty();
+                if (maskEmpty != 0) {
+                    size_type pos = BitUtils::bsf32(maskEmpty);
+                    return (0 + pos);
+                }
             }
-            slot_index = this->slot_next_group(slot_index);
-            assert(slot_index != first_slot);
-        } while (1);
+        }
 
         return npos;
     }
@@ -1829,8 +1903,7 @@ private:
         assert(control->isEmptyOrDeleted());
         control->setUsed(ctrl_hash);
         slot_type * slot = this->slot_at(target);
-        this->slot_allocator_.construct(slot,
-              std::move(*static_cast<value_type *>(value)));
+        this->slot_allocator_.construct(slot, std::move(*static_cast<value_type *>(value)));
         this->slot_size_++;
         assert(this->slot_size() <= this->slot_capacity());
     }
@@ -1842,7 +1915,7 @@ private:
 
         // Found a [DeletedEntry] or [EmptyEntry] to insert
         control_byte * control = this->control_at(target);
-        assert(control->isEmptyOrDeleted());
+        assert(control->isEmpty());
         control->setUsed(ctrl_hash);
         slot_type * slot = this->slot_at(target);
         this->slot_allocator_.construct(slot, value);
@@ -1857,14 +1930,13 @@ private:
 
         // Found a [DeletedEntry] or [EmptyEntry] to insert
         control_byte * control = this->control_at(target);
-        assert(control->isEmptyOrDeleted());
+        assert(control->isEmpty());
         control->setUsed(ctrl_hash);
         slot_type * slot = this->slot_at(target);
         this->slot_allocator_.construct(slot, std::move(value));
         this->slot_size_++;
         assert(this->slot_size() <= this->slot_capacity());
     }
-
 
     // Use in constructor
     template <typename InputIter>
@@ -1906,15 +1978,32 @@ private:
             slot_index = this->slot_next_group(slot_index);
         } while (slot_index != first_slot);
 
-        if (this->need_grow() || (last_slot == npos)) {
+        // If not found any match slot, then search the beginning of first group.
+        std::uint32_t firstGroupMaskEmpty = 0;
+        if ((first_slot & kGroupMask) != 0) {
+            const group_type & group = this->get_group(0);
+            std::uint32_t mask16 = group.matchHash(control_hash);
+            if (mask16 != 0) {
+                size_type pos = BitUtils::bsf32(mask16);
+                mask16 = BitUtils::clearLowBit32(mask16);
+                size_type index = 0 + pos;
+                const slot_type & target = this->get_slot(index);
+                if (this->key_equal_(target.first, key)) {
+                    return { index, true };
+                }
+            }
+            firstGroupMaskEmpty = group.matchEmpty();
+        }
+
+        if (this->need_grow() || ((maskEmpty == 0) && (firstGroupMaskEmpty == 0))) {
             // The size of slot reach the slot threshold or hashmap is full.
             this->grow_if_necessary();
 
             return this->find_and_prepare_insert(key, ctrl_hash);
         }
 
-        // Find the first unused slot and insert
-        if (slot_index != first_slot) {
+        // Find the first deleted or empty slot and insert
+        if (likely((slot_index != first_slot) || (maskEmpty == 0))) {
             // Find the first [DeletedEntry] from first_slot to last_slot.
             slot_index = first_slot;
             do {
@@ -1931,25 +2020,50 @@ private:
                 slot_index = this->slot_next_group(slot_index);
             } while (slot_index != first_slot);
 
-            // Not found any [DeletedEntry], and use [EmptyEntry] to insert
+            // If not found any deleted slot, then search the beginning of first group.
+            if ((first_slot & kGroupMask) != 0) {
+                std::uint32_t maskDeleted = this->get_group(0).matchDeleted();
+                if (maskDeleted != 0) {
+                    size_type pos = BitUtils::bsf32(maskDeleted);
+                    return { (0 + pos), false };
+                }
+            }
+
+            // Not found any [DeletedEntry], so we use [EmptyEntry] to insert
             // Skip to final processing
         } else {
             assert(last_slot != npos);
+            assert(maskEmpty != 0);
             const group_type & group = this->get_group(last_slot);
             std::uint32_t maskDeleted = group.matchDeleted();
             if (maskDeleted != 0) {
                 // Found a [DeletedEntry] to insert
                 maskEmpty = maskDeleted;
             } else {
-                // Found a [EmptyEntry] to insert
+                // If not found any deleted slot, then search the beginning of first group.
+                if ((last_slot & kGroupMask) != 0) {
+                    std::uint32_t maskDeleted = this->get_group(0).matchDeleted();
+                    if (maskDeleted != 0) {
+                        size_type pos = BitUtils::bsf32(maskDeleted);
+                        return { (0 + pos), false };
+                    }
+                }
+
+                // Maybe found a [EmptyEntry] to insert
                 assert(maskEmpty != 0);
             }
         }
 
         // It's a [EmptyEntry] or [DeletedEntry] to insert
-        size_type pos = BitUtils::bsf32(maskEmpty);
-        size_type start_index = last_slot;
-        return { (start_index + pos), false };
+        if (likely(maskEmpty != 0)) {
+            size_type pos = BitUtils::bsf32(maskEmpty);
+            size_type start_index = last_slot;
+            return { (start_index + pos), false };
+        } else {
+            assert(firstGroupMaskEmpty != 0);
+            size_type pos = BitUtils::bsf32(firstGroupMaskEmpty);
+            return { (0 + pos), false };
+        }
     }
 
     template <bool AlwaysUpdate>
@@ -2194,26 +2308,7 @@ private:
                 size_type index = start_index + pos;
                 const slot_type & target = this->get_slot(index);
                 if (this->key_equal_(target.first, key)) {
-                    control_byte & control = this->get_control(index);
-                    assert(control.isUsed());
-                    if (group.hasAnyEmpty()) {
-                        control.setEmpty();
-                    } else {
-                        slot_index = this->slot_next_group(slot_index);
-                        if (slot_index != start_slot) {
-                            const group_type & group = this->get_group(slot_index);
-                            if (!group.isAllEmpty())
-                                control.setDeleted();
-                            else
-                                control.setEmpty();
-                        } else {
-                            control.setEmpty();
-                        }
-                    }
-                    // Destroy slot
-                    this->slot_allocator_.destroy(&target);
-                    assert(this->slot_size_ > 0);
-                    this->slot_size_--;
+                    this->erase_slot(index);
                     return 1;
                 }
             }
@@ -2222,6 +2317,21 @@ private:
             }
             slot_index = this->slot_next_group(slot_index);
         } while (slot_index != start_slot);
+
+        // If not found any match slot, then search the beginning of first group.
+        if ((start_slot & kGroupMask) != 0) {
+            std::uint32_t mask16 = this->get_group(0).matchHash(control_hash);
+            if (mask16 != 0) {
+                size_type pos = BitUtils::bsf32(mask16);
+                mask16 = BitUtils::clearLowBit32(mask16);
+                size_type index = 0 + pos;
+                const slot_type & target = this->get_slot(index);
+                if (this->key_equal_(target.first, key)) {
+                    this->erase_slot(index);
+                    return 1;
+                }
+            }
+        }
 
         return 0;
     }

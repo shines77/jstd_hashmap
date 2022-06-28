@@ -450,7 +450,6 @@ public:
         out << "HashObject(" << obj.key() << ")";
         return out;
     }
-
 };
 
 #if defined(WIN64) || defined(_WIN64) || defined(_M_X64) || defined(_M_AMD64) \
