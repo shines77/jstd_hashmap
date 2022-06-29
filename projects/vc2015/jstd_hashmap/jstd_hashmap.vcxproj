@@ -33,6 +33,7 @@
     <ClInclude Include="..\..\..\src\jstd\basic\unistd.h" />
     <ClInclude Include="..\..\..\src\jstd\basic\vld.h" />
     <ClInclude Include="..\..\..\src\jstd\basic\vld_def.h" />
+    <ClInclude Include="..\..\..\src\jstd\config\config.h" />
     <ClInclude Include="..\..\..\src\jstd\hasher\fnv1a.h" />
     <ClInclude Include="..\..\..\src\jstd\hasher\hash.h" />
     <ClInclude Include="..\..\..\src\jstd\hasher\hash_crc32c.h" />
@@ -47,6 +48,7 @@
     <ClInclude Include="..\..\..\src\jstd\hashmap\unordered_map.h" />
     <ClInclude Include="..\..\..\src\jstd\dll.h" />
     <ClInclude Include="..\..\..\src\jstd\iterator.h" />
+    <ClInclude Include="..\..\..\src\jstd\lang\launder.h" />
     <ClInclude Include="..\..\..\src\jstd\memory\swap.h" />
     <ClInclude Include="..\..\..\src\jstd\string\char_traits.h" />
     <ClInclude Include="..\..\..\src\jstd\string\string_def.h" />

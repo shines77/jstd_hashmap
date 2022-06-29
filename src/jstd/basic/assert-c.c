@@ -10,28 +10,28 @@
 
 #if _MSC_VER
 #include <crtdbg.h>
-#ifndef JIMIC_USE_DBGBREAK_DLG
-#define JIMIC_USE_DBGBREAK_DLG   JSTD_IS_DEBUG
+#ifndef JSTD_USE_DBGBREAK_DLG
+#define JSTD_USE_DBGBREAK_DLG   JSTD_IS_DEBUG
 #endif
 #endif
 
 //! Type for an assertion handler
-//typedef void (*jimic_assertion_handler_type)(const char * filename, int line,
-//                                             const char * expression, const char * comment);
+//typedef void (*jstd_assertion_handler_type)(const char * filename, int line,
+//                                            const char * expression, const char * comment);
 
-static jimic_assertion_handler_type jimic_assertion_handler = NULL;
+static jstd_assertion_handler_type jstd_assertion_handler = NULL;
 
-jimic_assertion_handler_type
-JIMIC_EXPORTED_FUNC set_c_assertion_handler(jimic_assertion_handler_type new_handler) {
-    jimic_assertion_handler_type old_handler = jimic_assertion_handler;
-    jimic_assertion_handler = new_handler;
+jstd_assertion_handler_type
+JSTD_EXPORTED_FUNC set_c_assertion_handler(jstd_assertion_handler_type new_handler) {
+    jstd_assertion_handler_type old_handler = jstd_assertion_handler;
+    jstd_assertion_handler = new_handler;
     return old_handler;
 }
 
-void JIMIC_EXPORTED_FUNC jimic_assertion_failure(const char * filename, int line,
-                                                 const char * expression, const char * comment) {
+void JSTD_EXPORTED_FUNC jstd_assertion_failure(const char * filename, int line,
+                                               const char * expression, const char * comment) {
     static int already_failed;
-    jimic_assertion_handler_type assert_handler = jimic_assertion_handler;    
+    jstd_assertion_handler_type assert_handler = jstd_assertion_handler;    
     if (assert_handler) {
         (*assert_handler)(filename, line, expression, comment);
     }
@@ -41,8 +41,8 @@ void JIMIC_EXPORTED_FUNC jimic_assertion_failure(const char * filename, int line
             fprintf(stderr, "Assertion %s failed on line %d of file %s\n", expression, line, filename);
             if (comment)
                 fprintf(stderr, "Detailed description: %s\n", comment);
-#if JIMIC_USE_DBGBREAK_DLG
-            if (1 == _CrtDbgReport(_CRT_ASSERT, filename, line, "jimi_shared_debug.dll",
+#if JSTD_USE_DBGBREAK_DLG
+            if (1 == _CrtDbgReport(_CRT_ASSERT, filename, line, "jstd_shared_debug.dll",
                 "%s\r\n%s", expression, comment ? comment : "")) {
                 _CrtDbgBreak();
             }
@@ -58,7 +58,7 @@ void JIMIC_EXPORTED_FUNC jimic_assertion_failure(const char * filename, int line
 
 #if !JIMI_MALLOC_BUILD
     //! Report a runtime warning.
-    void JIMIC_EXPORTED_FUNC jimic_runtime_warning(const char * format, ...)
+    void JSTD_EXPORTED_FUNC jstd_runtime_warning(const char * format, ...)
     {
         va_list args;
         char str[1024];
@@ -66,7 +66,7 @@ void JIMIC_EXPORTED_FUNC jimic_assertion_failure(const char * filename, int line
         va_start(args, format);
         vsnprintf(str, 1024, format, args);
         va_end(args);
-        fprintf(stderr, "Jimi Warning: %s\n", str);
+        fprintf(stderr, "Jstd warning: %s\n", str);
     }
 #endif
 

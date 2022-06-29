@@ -38,6 +38,12 @@
     <Filter Include="src\memory">
       <UniqueIdentifier>{7eb3727f-5278-48db-a741-a8d6f3ace302}</UniqueIdentifier>
     </Filter>
+    <Filter Include="src\config">
+      <UniqueIdentifier>{747d3b02-a761-4e85-a224-a5789bb692c0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\lang">
+      <UniqueIdentifier>{835340cb-6b9d-4313-8fff-d2c95c7138a1}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\src\jstd\basic\msvc\inttypes.h">
@@ -231,6 +237,12 @@
     </ClInclude>
     <ClInclude Include="..\..\..\src\jstd\hashmap\flat16_hash_map_v1.h">
       <Filter>src\hashmap</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\config\config.h">
+      <Filter>src\config</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\lang\launder.h">
+      <Filter>src\lang</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
