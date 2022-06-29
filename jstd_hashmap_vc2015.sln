@@ -36,7 +36,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "class_trivial", "projects\v
 		{C9282A5D-9424-4753-B9A4-9EFB2615A3F8} = {C9282A5D-9424-4753-B9A4-9EFB2615A3F8}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "feature_test", "feature_test\feature_test.vcxproj", "{0AF39E3D-ADCA-41D9-AE60-CC13E830784C}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "feature_test", "projects\vc2015\feature_test\feature_test.vcxproj", "{0AF39E3D-ADCA-41D9-AE60-CC13E830784C}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
