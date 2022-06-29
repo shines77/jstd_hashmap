@@ -169,7 +169,7 @@ public:
     static constexpr float kMaxLoadFactor = 0.8f;
 
     // Must be kMinLoadFactor <= loadFactor <= kMaxLoadFactor
-    static constexpr float kDefaultLoadFactor = 0.5f;
+    static constexpr float kDefaultLoadFactor = 0.75f;
 
 #if defined(__GNUC__) || (defined(__clang__) && !defined(_MSC_VER))
     static constexpr bool isGccOrClang = true;
@@ -1073,20 +1073,7 @@ public:
     }
 
     const_iterator begin() const {
-        group_type * group = this->groups();
-        group_type * last_slot = this->groups() + this->group_count();
-        size_type start_index = 0;
-        for (; group != last_slot; group++) {
-            std::uint32_t maskUsed = group->matchUsed();
-            if (maskUsed != 0) {
-                size_type pos = BitUtils::bsf32(maskUsed);
-                size_type index = start_index + pos;
-                return this->iterator_at(index);
-            }
-            start_index += kGroupWidth;
-        }
-
-        return this->iterator_at(this->slot_capacity());
+        return const_cast<this_type *>(this)->begin();
     }
 
     const_iterator cbegin() const {
@@ -1617,7 +1604,7 @@ private:
         groups_ = groups;
         group_mask_ = group_count - 1;
 
-#if 1
+#if 0
         std::fill_n((std::uint8_t *)groups, sizeof(group_type) * group_count, kEmptyEntry);
 #elif 1
         std::memset((void *)groups, kEmptyEntry, sizeof(group_type) * group_count);
