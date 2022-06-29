@@ -171,18 +171,28 @@ public:
     // Must be kMinLoadFactor <= loadFactor <= kMaxLoadFactor
     static constexpr float kDefaultLoadFactor = 0.5f;
 
-    static constexpr bool slot_is_trivial_destructor =
-            (std::is_trivially_destructible<value_type>::value ||
-            (std::is_trivially_destructible<key_type>::value &&
-             std::is_trivially_destructible<mapped_type>::value) ||
-           ((std::is_arithmetic<key_type>::value || std::is_enum<key_type>::value) &&
-            (std::is_arithmetic<mapped_type>::value || std::is_enum<mapped_type>::value)));
+#if defined(__GNUC__) || (defined(__clang__) && !defined(_MSC_VER))
+    static constexpr bool isGccOrClang = true;
+#else
+    static constexpr bool isGccOrClang = false;
+#endif
+    static constexpr bool isPlaneKeyHash = isGccOrClang &&
+                                           std::is_same<Hash, std::hash<key_type>>::value &&
+                                          (std::is_arithmetic<key_type>::value ||
+                                           std::is_enum<key_type>::value);
 
     static constexpr bool slot_is_trivial_copyable =
             (std::is_trivially_copyable<value_type>::value ||
             (std::is_trivially_copyable<key_type>::value &&
              std::is_trivially_copyable<mapped_type>::value) ||
             (std::is_scalar<key_type>::value && std::is_scalar<mapped_type>::value));
+
+    static constexpr bool slot_is_trivial_destructor =
+            (std::is_trivially_destructible<value_type>::value ||
+            (std::is_trivially_destructible<key_type>::value &&
+             std::is_trivially_destructible<mapped_type>::value) ||
+           ((std::is_arithmetic<key_type>::value || std::is_enum<key_type>::value) &&
+            (std::is_arithmetic<mapped_type>::value || std::is_enum<mapped_type>::value)));
 
     static constexpr std::uint8_t kEmptyEntry   = 0b10000000;
     static constexpr std::uint8_t kDeletedEntry = 0b11111110;
@@ -1667,33 +1677,59 @@ private:
 
             this->create_group<false>(new_capacity);
 
-            if ((this->max_load_factor() < 0.5f) && false) {
-                control_byte * last_control = old_controls + old_slot_capacity;
-                slot_type * slot = old_slots;
-                for (control_byte * control = old_controls; control != last_control; control++) {
-                    if (likely(control->isUsed())) {
-                        this->move_insert_unique(slot);
-                        if (!slot_is_trivial_destructor) {
-                            this->slot_allocator_.destroy(slot);
+            if (isPlaneKeyHash) {
+                std::memcpy(this->controls(), old_controls, sizeof(control_byte) *
+                           (this->slot_capacity() + kGroupWidth));
+
+                if (slot_is_trivial_copyable) {
+                    std::memcpy(this->slots(), old_slots, sizeof(slot_type) * this->slot_capacity());
+                } else {
+                    group_type * last_group = old_groups + old_group_count;
+                    size_type start_index = 0;
+                    for (group_type * group = old_groups; group != last_group; group++) {
+                        std::uint32_t maskUsed = group->matchUsed();
+                        while (maskUsed != 0) {
+                            size_type pos = BitUtils::bsf32(maskUsed);
+                            maskUsed = BitUtils::clearLowBit32(maskUsed);
+                            size_type index = start_index + pos;
+                            slot_type * old_slot = old_slots + index;
+                            std::memcpy(this->slot_at(index), old_slot, sizeof(slot_type));
+                            if (!slot_is_trivial_destructor) {
+                                this->slot_allocator_.destroy(old_slot);
+                            }
                         }
+                        start_index += kGroupWidth;
                     }
-                    slot++;
                 }
             } else {
-                group_type * last_group = old_groups + old_group_count;
-                slot_type * slot_start = old_slots;
-                for (group_type * group = old_groups; group != last_group; group++) {
-                    std::uint32_t maskUsed = group->matchUsed();
-                    while (maskUsed != 0) {
-                        size_type pos = BitUtils::bsf32(maskUsed);
-                        maskUsed = BitUtils::clearLowBit32(maskUsed);
-                        slot_type * slot = slot_start + pos;
-                        this->move_insert_unique(slot);
-                        if (!slot_is_trivial_destructor) {
-                            this->slot_allocator_.destroy(slot);
+                if ((this->max_load_factor() < 0.5f) && false) {
+                    control_byte * last_control = old_controls + old_slot_capacity;
+                    slot_type * old_slot = old_slots;
+                    for (control_byte * control = old_controls; control != last_control; control++) {
+                        if (likely(control->isUsed())) {
+                            this->move_insert_unique(old_slot);
+                            if (!slot_is_trivial_destructor) {
+                                this->slot_allocator_.destroy(old_slot);
+                            }
                         }
+                        old_slot++;
                     }
-                    slot_start += kGroupWidth;
+                } else {
+                    group_type * last_group = old_groups + old_group_count;
+                    slot_type * slot_start = old_slots;
+                    for (group_type * group = old_groups; group != last_group; group++) {
+                        std::uint32_t maskUsed = group->matchUsed();
+                        while (maskUsed != 0) {
+                            size_type pos = BitUtils::bsf32(maskUsed);
+                            maskUsed = BitUtils::clearLowBit32(maskUsed);
+                            slot_type * old_slot = slot_start + pos;
+                            this->move_insert_unique(old_slot);
+                            if (!slot_is_trivial_destructor) {
+                                this->slot_allocator_.destroy(old_slot);
+                            }
+                        }
+                        slot_start += kGroupWidth;
+                    }
                 }
             }
             assert(this->slot_size() == old_slot_size);
