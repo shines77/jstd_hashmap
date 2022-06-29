@@ -28,7 +28,9 @@
 #pragma once
 #endif
 
-#if defined(_M_IX86) || defined(_M_X64)
+#if defined(_M_X64) || defined(_M_AMD64) \
+ || defined(_M_IA64) || defined(__amd64__) || defined(__x86_64__) \
+ || defined (_M_IX86) || defined(__i386__)
 
 //
 // See: https://sites.uclouvain.be/SystInfo/usr/include/x86intrin.h.html
@@ -40,23 +42,23 @@
 // https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.htm
 //
 
-#ifdef __MMX__
+#if defined(__MMX__)
 #include <mmintrin.h>
 #endif
 
-#ifdef __SSE__
+#if defined(__SSE__)
 #include <xmmintrin.h>
 #endif
 
-#ifdef __SSE2__
+#if defined(__SSE2__)
 #include <emmintrin.h>
 #endif
 
-#ifdef __SSE3__
+#if defined(__SSE3__)
 #include <pmmintrin.h>
 #endif
 
-#ifdef __SSSE3__
+#if defined(__SSSE3__)
 #include <tmmintrin.h>
 #endif
 
@@ -64,20 +66,24 @@
 #include <ammintrin.h>
 #endif
 
-#ifdef __SSE4_1__
+#if defined(__SSE4_1__)
 #include <smmintrin.h>
 #endif
 
-#ifdef __SSE4_2__
+#if defined(__SSE4_2__) || defined(CRC32)
 #include <nmmintrin.h>
 #endif
 
-#ifdef __SSE5__
+#if defined(__SSE5__)
+#if defined(_MSC_VER)
+#include <ammintrin.h>
+#else
 //#include <bmmintrin.h>
 #endif
+#endif // __SSE5__
 
-#if defined(__AES__) || defined(__PCLMUL__)
-/* For AES && PCLMULQDQ */
+#if defined(__AES__) || defined(__VAES__) || defined(__PCLMUL__)  || defined(PCLMULQDQ)
+/* For AES, VAES && PCLMULQDQ */
 #include <wmmintrin.h>
 #endif
 
@@ -89,16 +95,34 @@
 #endif
 #endif // __AVX__ || __AVX2__
 
-#ifdef __3dNOW__
-#if defined(_M_IX86)
-#include <mm3dnow.h>
+#if defined(__POPCNT__)
+#if defined(_MSC_VER)
+#include <nmmintrin.h>
+#else
+#include <nmmintrin.h>
+#include <immintrin.h>
+#if defined(__GNUC__)
+#include <popcntintrin.h>
 #endif
+#endif // _MSC_VER
+#endif // __POPCNT__
+
+#if defined(LZCNT) || defined(BMI1) || defined(BMI2) || defined(SHA) || defined(FMA)
+#include <immintrin.h>
 #endif
 
-#ifdef __FMA4__
+#if defined(__3dNOW__)
+#include <mm3dnow.h>
+#endif // __3dNOW__
+
+#if defined(__FMA4__)
 //#include <fma4intrin.h>
 #endif
 
-#endif // _M_IX86 || _M_X64
+#if defined(__GNUC__) && !defined(__clang__)
+#include <x86gprintrin.h>
+#endif
+
+#endif // _M_IX86 || _M_X64 || __amd64__ || __i386__
 
 #endif // JSTD_MSVC_X86_INTRIN_H

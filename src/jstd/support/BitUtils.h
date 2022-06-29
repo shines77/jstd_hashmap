@@ -18,11 +18,12 @@
 #endif
 
 // defined(__GNUC__) && (__GNUC__ * 1000 + __GNUC_MINOR__ >= 4005)
-#if defined(__GNUC__) || defined(__clang__)
+#if defined(__GNUC__) || (defined(__clang__) && !defined(_MSC_VER))
 #include <x86intrin.h>
 #endif
 
-#include <nmmintrin.h>  // For SSE 4.2, _mm_popcnt_u32(), _mm_popcnt_u64()
+//#include <nmmintrin.h>  // For SSE 4.2, _mm_popcnt_u32(), _mm_popcnt_u64()
+#include "jstd/support/msvc_x86intrin.h"
 
 #if (defined(_MSC_VER) && (_MSC_VER >= 1500)) && !defined(__clang__) // >= MSVC 2008
     #pragma intrinsic(_BitScanReverse)
@@ -266,6 +267,8 @@ struct BitUtils {
 #if __has_builtin(__builtin_ctz)
         // gcc: __bsfd(x)
         return (unsigned int)__builtin_ctz(x);
+#elif defined(__GNUC__)
+        return __bsfd(x);
 #else
         return (unsigned int)BitUtils::__internal_ctz(x);
 #endif
@@ -278,6 +281,8 @@ struct BitUtils {
 #if __has_builtin(__builtin_ctzll)
         // gcc: __bsfq(x)
         return (unsigned int)__builtin_ctzll((unsigned long long)x);
+#elif defined(__GNUC__)
+        return __bsfq(x);
 #else
         return (unsigned int)BitUtils::__internal_ctzll(x);
 #endif
@@ -306,6 +311,8 @@ struct BitUtils {
 #if __has_builtin(__builtin_clz)
         // gcc: __bsrd(x)
         return (unsigned int)(31 - __builtin_clz(x));
+#elif defined(__GNUC__)
+        return __bsrd(x);
 #else
         return (unsigned int)(31 - BitUtils::__internal_clz(x));
 #endif
@@ -318,6 +325,8 @@ struct BitUtils {
 #if __has_builtin(__builtin_clzll)
         // gcc: __bsrq(x)
         return (unsigned int)(63 - __builtin_clzll((unsigned long long)x));
+#elif defined(__GNUC__)
+        return __bsrq(x);
 #else
         return (unsigned int)(63 - BitUtils::__internal_clzll(x));
 #endif
@@ -371,7 +380,6 @@ struct BitUtils {
     static inline
     unsigned int popcnt32(unsigned int x) {
 #if __has_builtin(__builtin_popcount)
-        // gcc: __bsfd(x)
         return (unsigned int)__builtin_popcount(x);
 #elif defined(__POPCNT__)
         int popcount = _mm_popcnt_u32(x);
@@ -386,10 +394,9 @@ struct BitUtils {
     static inline
     unsigned int popcnt64(uint64_t x) {
 #if __has_builtin(__builtin_popcountll)
-        // gcc: __bsfq(x)
         return (unsigned int)__builtin_popcountll((unsigned long long)x);
 #elif defined(__POPCNT__)
-        __int64 popcount = _mm_popcnt_u64(x);
+        int64_t popcount = _mm_popcnt_u64(x);
         return (unsigned int)popcount;
 #else
         unsigned int popcount = __internal_popcnt64(x);
