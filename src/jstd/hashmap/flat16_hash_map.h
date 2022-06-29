@@ -1618,6 +1618,8 @@ private:
         group_mask_ = group_count - 1;
 
 #if 1
+        std::fill_n((std::uint8_t *)groups, sizeof(group_type) * group_count, kEmptyEntry);
+#elif 1
         std::memset((void *)groups, kEmptyEntry, sizeof(group_type) * group_count);
 #else
         for (size_type index = 0; index < group_count; index++) {
@@ -1679,44 +1681,33 @@ private:
 
             this->create_group<false>(new_capacity);
 
-            if (isPlaneKeyHash && slot_is_trivial_copyable && false) {
-#if 0
-                std::memcpy(this->controls(), old_controls, sizeof(control_byte) *
-                            (old_slot_capacity + kGroupWidth));
-
-                if (slot_is_trivial_copyable) {
-                    std::memcpy(this->slots(), old_slots, sizeof(slot_type) * old_slot_capacity);
+            if ((this->max_load_factor() < 0.5f) && false) {
+                control_byte * last_control = old_controls + old_slot_capacity;
+                slot_type * old_slot = old_slots;
+                for (control_byte * control = old_controls; control != last_control; control++) {
+                    if (likely(control->isUsed())) {
+                        this->move_insert_unique(old_slot);
+                        if (!slot_is_trivial_destructor) {
+                            this->slot_allocator_.destroy(old_slot);
+                        }
+                    }
+                    old_slot++;
                 }
-#endif
             } else {
-                if ((this->max_load_factor() < 0.5f) && false) {
-                    control_byte * last_control = old_controls + old_slot_capacity;
-                    slot_type * old_slot = old_slots;
-                    for (control_byte * control = old_controls; control != last_control; control++) {
-                        if (likely(control->isUsed())) {
-                            this->move_insert_unique(old_slot);
-                            if (!slot_is_trivial_destructor) {
-                                this->slot_allocator_.destroy(old_slot);
-                            }
+                group_type * last_group = old_groups + old_group_count;
+                slot_type * slot_start = old_slots;
+                for (group_type * group = old_groups; group != last_group; group++) {
+                    std::uint32_t maskUsed = group->matchUsed();
+                    while (maskUsed != 0) {
+                        size_type pos = BitUtils::bsf32(maskUsed);
+                        maskUsed = BitUtils::clearLowBit32(maskUsed);
+                        slot_type * old_slot = slot_start + pos;
+                        this->move_insert_unique(old_slot);
+                        if (!slot_is_trivial_destructor) {
+                            this->slot_allocator_.destroy(old_slot);
                         }
-                        old_slot++;
                     }
-                } else {
-                    group_type * last_group = old_groups + old_group_count;
-                    slot_type * slot_start = old_slots;
-                    for (group_type * group = old_groups; group != last_group; group++) {
-                        std::uint32_t maskUsed = group->matchUsed();
-                        while (maskUsed != 0) {
-                            size_type pos = BitUtils::bsf32(maskUsed);
-                            maskUsed = BitUtils::clearLowBit32(maskUsed);
-                            slot_type * old_slot = slot_start + pos;
-                            this->move_insert_unique(old_slot);
-                            if (!slot_is_trivial_destructor) {
-                                this->slot_allocator_.destroy(old_slot);
-                            }
-                        }
-                        slot_start += kGroupWidth;
-                    }
+                    slot_start += kGroupWidth;
                 }
             }
             assert(this->slot_size() == old_slot_size);
@@ -1928,7 +1919,7 @@ private:
 
         // Found a [DeletedEntry] or [EmptyEntry] to insert
         control_byte * control = this->control_at(target);
-        assert(control->isEmptyOrDeleted());
+        assert(control->isEmpty());
         control->setUsed(ctrl_hash);
         slot_type * slot = this->slot_at(target);
         this->slot_allocator_.construct(slot, std::move(*static_cast<value_type *>(value)));
