@@ -147,7 +147,7 @@
 #define HASH_FUNCTION_ID        ID_STD_HASH
 #endif
 
-#if (HASH_FUNCTION_ID == ID_FAST_SIMPLE_HASH)
+#if (HASH_FUNCTION_ID == ID_SIMPLE_HASH)
   #define HASH_MAP_FUNCTION     test::SimpleHash
 #elif (HASH_FUNCTION_ID == ID_INTEGAL_HASH)
   #define HASH_MAP_FUNCTION     test::IntegalHash

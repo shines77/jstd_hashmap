@@ -1679,7 +1679,7 @@ private:
 
             if (isPlaneKeyHash && slot_is_trivial_copyable) {
                 std::memcpy(this->controls(), old_controls, sizeof(control_byte) *
-                           (this->slot_capacity() + kGroupWidth));
+                            (old_slot_capacity + kGroupWidth));
 
                 if (slot_is_trivial_copyable) {
                     std::memcpy(this->slots(), old_slots, sizeof(slot_type) * old_slot_capacity);
