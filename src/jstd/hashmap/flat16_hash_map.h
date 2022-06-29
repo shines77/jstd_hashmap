@@ -1617,12 +1617,14 @@ private:
         groups_ = groups;
         group_mask_ = group_count - 1;
 
-        if (group_count != 1) {
-            for (size_type index = 0; index < group_count; index++) {
-                groups[index].template fillAll8<kEmptyEntry>();
-            }
-        } else {
-            groups[0].template fillAll8<kEmptyEntry>();
+#if 1
+        std::memset((void *)groups, kEmptyEntry, sizeof(group_type) * group_count);
+#else
+        for (size_type index = 0; index < group_count; index++) {
+            groups[index].template fillAll8<kEmptyEntry>();
+        }
+#endif
+        if (group_count == 1) {
             group_type * tail_group = (group_type *)((char *)groups + new_capacity);
             (*tail_group).template fillAll8<kEndOfMark>();
         }
@@ -1678,12 +1680,14 @@ private:
             this->create_group<false>(new_capacity);
 
             if (isPlaneKeyHash && slot_is_trivial_copyable && false) {
+#if 0
                 std::memcpy(this->controls(), old_controls, sizeof(control_byte) *
                             (old_slot_capacity + kGroupWidth));
 
                 if (slot_is_trivial_copyable) {
                     std::memcpy(this->slots(), old_slots, sizeof(slot_type) * old_slot_capacity);
                 }
+#endif
             } else {
                 if ((this->max_load_factor() < 0.5f) && false) {
                     control_byte * last_control = old_controls + old_slot_capacity;
