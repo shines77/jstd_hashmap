@@ -120,7 +120,8 @@
 //#include <fma4intrin.h>
 #endif
 
-#if defined(__GNUC__) || defined(__clang__)
+#if (defined(__GNUC__) && (__GNUC__ >= 11)) || (defined(__clang__) && (__clang_major__ >= 15))
+// gcc 11.0 higher, or clang 15.0 higher
 #include <x86gprintrin.h>
 #endif
 
