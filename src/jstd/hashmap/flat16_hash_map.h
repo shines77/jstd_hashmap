@@ -1667,7 +1667,7 @@ private:
 
             this->create_group<false>(new_capacity);
 
-            if ((this->max_load_factor() < 0.5f) || true) {
+            if ((this->max_load_factor() < 0.5f) && false) {
                 control_byte * last_control = old_controls + old_slot_capacity;
                 slot_type * slot = old_slots;
                 for (control_byte * control = old_controls; control != last_control; control++) {
