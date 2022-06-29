@@ -1603,7 +1603,7 @@ private:
 
         size_type group_count = (new_capacity + (kGroupWidth - 1)) / kGroupWidth;
         assert(group_count > 0);
-        group_type * groups = new group_type[group_count + 2];
+        group_type * groups = new group_type[group_count + 1];
         groups_ = groups;
         group_mask_ = group_count - 1;
 
@@ -1616,7 +1616,7 @@ private:
             group_type * tail_group = (group_type *)((char *)groups + new_capacity);
             (*tail_group).template fillAll8<kEndOfMark>();
         }
-        groups[group_count + 1].template fillAll8<kEndOfMark>();
+        groups[group_count].template fillAll8<kEndOfMark>();
 
         slot_type * slots = slot_allocator_.allocate(new_capacity);
         slots_ = slots;
