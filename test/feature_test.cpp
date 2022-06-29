@@ -771,10 +771,12 @@ constexpr bool is_feature_supported(const CompilerFeature & x)
 
 void print_compiler_feature(const CompilerFeature & x)
 {
-    std::string value{ is_feature_supported(x) ? x.value : "------" };
+    std::string value{ is_feature_supported(x) ? x.value : "-------" };
+#if 0
     if (value.back() == 'L') {
         value.pop_back(); //~ 201603L -> 201603
     }
+#endif
 
     // value.insert(4, 1, '-'); //~ 201603 -> 2016-03
     if ((printConfig.supported_features && is_feature_supported(x)) ||
