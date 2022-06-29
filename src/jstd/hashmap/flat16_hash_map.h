@@ -169,7 +169,7 @@ public:
     static constexpr float kMaxLoadFactor = 0.8f;
 
     // Must be kMinLoadFactor <= loadFactor <= kMaxLoadFactor
-    static constexpr float kDefaultLoadFactor = 0.75f;
+    static constexpr float kDefaultLoadFactor = 0.5f;
 
 #if defined(__GNUC__) || (defined(__clang__) && !defined(_MSC_VER))
     static constexpr bool isGccOrClang = true;
