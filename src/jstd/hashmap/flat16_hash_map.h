@@ -1612,7 +1612,7 @@ private:
                 groups[index].template fillAll8<kEmptyEntry>();
             }
         } else {
-            groups[1].template fillAll8<kEmptyEntry>();
+            groups[0].template fillAll8<kEmptyEntry>();
             group_type * tail_group = (group_type *)((char *)groups + new_capacity);
             (*tail_group).template fillAll8<kEndOfMark>();
         }
