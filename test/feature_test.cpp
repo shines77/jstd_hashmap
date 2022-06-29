@@ -418,19 +418,19 @@ static CompilerMarco compiler_others[] = {
 #endif
 
 #ifdef __cpp_constexpr
-    COMPILER_MARCO_ENTRY(__cpp_constexpr)
+    COMPILER_MARCO_ENTRY(__cpp_constexpr),
 #endif
 
 #ifdef __cpp_variable_templates
-    COMPILER_MARCO_ENTRY(__cpp_variable_templates)
+    COMPILER_MARCO_ENTRY(__cpp_variable_templates),
 #endif
 
 #ifdef __cpp_lib_integer_sequence
-    COMPILER_MARCO_ENTRY(__cpp_lib_integer_sequence)
+    COMPILER_MARCO_ENTRY(__cpp_lib_integer_sequence),
 #endif
 
 #ifdef __cpp_exceptions
-    COMPILER_MARCO_ENTRY(__cpp_exceptions)
+    COMPILER_MARCO_ENTRY(__cpp_exceptions),
 #endif
 };
 
