@@ -1677,7 +1677,7 @@ private:
 
             this->create_group<false>(new_capacity);
 
-            if (isPlaneKeyHash && slot_is_trivial_copyable) {
+            if (isPlaneKeyHash && slot_is_trivial_copyable && false) {
                 std::memcpy(this->controls(), old_controls, sizeof(control_byte) *
                             (old_slot_capacity + kGroupWidth));
 
