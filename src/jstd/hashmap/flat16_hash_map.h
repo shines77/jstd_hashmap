@@ -1677,29 +1677,12 @@ private:
 
             this->create_group<false>(new_capacity);
 
-            if (isPlaneKeyHash) {
+            if (isPlaneKeyHash && slot_is_trivial_copyable) {
                 std::memcpy(this->controls(), old_controls, sizeof(control_byte) *
                            (this->slot_capacity() + kGroupWidth));
 
                 if (slot_is_trivial_copyable) {
-                    std::memcpy(this->slots(), old_slots, sizeof(slot_type) * this->slot_capacity());
-                } else {
-                    group_type * last_group = old_groups + old_group_count;
-                    size_type start_index = 0;
-                    for (group_type * group = old_groups; group != last_group; group++) {
-                        std::uint32_t maskUsed = group->matchUsed();
-                        while (maskUsed != 0) {
-                            size_type pos = BitUtils::bsf32(maskUsed);
-                            maskUsed = BitUtils::clearLowBit32(maskUsed);
-                            size_type index = start_index + pos;
-                            slot_type * old_slot = old_slots + index;
-                            std::memcpy(this->slot_at(index), old_slot, sizeof(slot_type));
-                            if (!slot_is_trivial_destructor) {
-                                this->slot_allocator_.destroy(old_slot);
-                            }
-                        }
-                        start_index += kGroupWidth;
-                    }
+                    std::memcpy(this->slots(), old_slots, sizeof(slot_type) * old_slot_capacity);
                 }
             } else {
                 if ((this->max_load_factor() < 0.5f) && false) {
