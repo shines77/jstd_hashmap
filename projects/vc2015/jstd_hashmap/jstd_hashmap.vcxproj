@@ -61,7 +61,7 @@
     <ClInclude Include="..\..\..\src\jstd\string\string_view.h" />
     <ClInclude Include="..\..\..\src\jstd\string\string_view_array.h" />
     <ClInclude Include="..\..\..\src\jstd\support\BitUtils.h" />
-    <ClInclude Include="..\..\..\src\jstd\support\msvc_x86intrin.h" />
+    <ClInclude Include="..\..\..\src\jstd\support\x86_intrin.h" />
     <ClInclude Include="..\..\..\src\jstd\support\Power2.h" />
     <ClInclude Include="..\..\..\src\jstd\support\SSEHelper.h" />
     <ClInclude Include="..\..\..\src\jstd\system\Console.h" />

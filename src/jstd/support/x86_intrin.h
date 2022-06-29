@@ -21,8 +21,8 @@
    see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see
    <http://www.gnu.org/licenses/>.  */
 
-#ifndef JSTD_MSVC_X86_INTRIN_H
-#define JSTD_MSVC_X86_INTRIN_H
+#ifndef JSTD_SUPPORT_X86_INTRIN_H
+#define JSTD_SUPPORT_X86_INTRIN_H
 
 #if defined(_MSC_VER) && (_MSC_VER >= 1020)
 #pragma once
@@ -70,7 +70,7 @@
 #include <smmintrin.h>
 #endif
 
-#if defined(__SSE4_2__) || defined(CRC32)
+#if defined(__SSE4_2__) || defined(__CRC32__)
 #include <nmmintrin.h>
 #endif
 
@@ -82,7 +82,7 @@
 #endif
 #endif // __SSE5__
 
-#if defined(__AES__) || defined(__VAES__) || defined(__PCLMUL__)  || defined(PCLMULQDQ)
+#if defined(__AES__) || defined(__VAES__) || defined(__PCLMUL__)  || defined(__PCLMULQDQ__)
 /* For AES, VAES && PCLMULQDQ */
 #include <wmmintrin.h>
 #endif
@@ -90,7 +90,7 @@
 #if defined(__AVX__) || defined(__AVX2__)
 /* For including AVX instructions */
 #include <immintrin.h>
-#if defined(__GNUC__)
+#if defined(__GNUC__) || defined(__clang__)
 #include <avxintrin.h>
 #endif
 #endif // __AVX__ || __AVX2__
@@ -101,13 +101,14 @@
 #else
 #include <nmmintrin.h>
 #include <immintrin.h>
-#if defined(__GNUC__)
+#if defined(__GNUC__) || defined(__clang__)
 #include <popcntintrin.h>
 #endif
 #endif // _MSC_VER
 #endif // __POPCNT__
 
-#if defined(LZCNT) || defined(BMI1) || defined(BMI2) || defined(SHA) || defined(FMA)
+#if defined(__LZCNT__) || defined(__BMI__) || defined(__BMI1__) || defined(__BMI2__) \
+ || defined(__SHA__) || defined(__FMA__)
 #include <immintrin.h>
 #endif
 
@@ -119,10 +120,10 @@
 //#include <fma4intrin.h>
 #endif
 
-#if defined(__GNUC__) && !defined(__clang__)
+#if defined(__GNUC__) || defined(__clang__)
 #include <x86gprintrin.h>
 #endif
 
 #endif // _M_IX86 || _M_X64 || __amd64__ || __i386__
 
-#endif // JSTD_MSVC_X86_INTRIN_H
+#endif // JSTD_SUPPORT_X86_INTRIN_H

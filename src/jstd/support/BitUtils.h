@@ -23,7 +23,7 @@
 #endif
 
 //#include <nmmintrin.h>  // For SSE 4.2, _mm_popcnt_u32(), _mm_popcnt_u64()
-#include "jstd/support/msvc_x86intrin.h"
+#include "jstd/support/x86_intrin.h"
 
 #if (defined(_MSC_VER) && (_MSC_VER >= 1500)) && !defined(__clang__) // >= MSVC 2008
     #pragma intrinsic(_BitScanReverse)
@@ -267,7 +267,7 @@ struct BitUtils {
 #if __has_builtin(__builtin_ctz)
         // gcc: __bsfd(x)
         return (unsigned int)__builtin_ctz(x);
-#elif defined(__GNUC__)
+#elif defined(__GNUC__) || defined(__clang__)
         return __bsfd(x);
 #else
         return (unsigned int)BitUtils::__internal_ctz(x);
@@ -281,7 +281,7 @@ struct BitUtils {
 #if __has_builtin(__builtin_ctzll)
         // gcc: __bsfq(x)
         return (unsigned int)__builtin_ctzll((unsigned long long)x);
-#elif defined(__GNUC__)
+#elif defined(__GNUC__) || defined(__clang__)
         return __bsfq(x);
 #else
         return (unsigned int)BitUtils::__internal_ctzll(x);
@@ -311,7 +311,7 @@ struct BitUtils {
 #if __has_builtin(__builtin_clz)
         // gcc: __bsrd(x)
         return (unsigned int)(31 - __builtin_clz(x));
-#elif defined(__GNUC__)
+#elif defined(__GNUC__) || defined(__clang__)
         return __bsrd(x);
 #else
         return (unsigned int)(31 - BitUtils::__internal_clz(x));
@@ -325,7 +325,7 @@ struct BitUtils {
 #if __has_builtin(__builtin_clzll)
         // gcc: __bsrq(x)
         return (unsigned int)(63 - __builtin_clzll((unsigned long long)x));
-#elif defined(__GNUC__)
+#elif defined(__GNUC__) || defined(__clang__)
         return __bsrq(x);
 #else
         return (unsigned int)(63 - BitUtils::__internal_clzll(x));
