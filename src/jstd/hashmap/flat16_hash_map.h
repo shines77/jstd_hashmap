@@ -653,7 +653,7 @@ public:
     template <typename T>
     using BitMask128 = BitMask128_u64<T>;
 
-#endif
+#endif // __SSE2__
 
     struct hash_group {
         typedef BitMask128<control_byte>                        bitmask128_type;
@@ -1588,6 +1588,21 @@ private:
         this->slot_size_ = 0;
     }
 
+    inline bool need_grow() const {
+        return (this->slot_size_ >= this->slot_threshold_);
+    }
+
+    void grow_if_necessary() {
+        size_type new_capacity = (this->slot_mask_ + 1) * 2;
+        this->rehash_impl<false, true>(new_capacity);
+    }
+
+    JSTD_FORCED_INLINE
+    void reserve_for_insert(size_type init_capacity) {
+        size_type new_capacity = this->capacity_for_reserve(init_capacity);
+        this->create_group<true>(new_capacity);
+    }
+
     template <bool initialize = false>
     void create_group(size_type init_capacity) {
         size_type new_capacity;
@@ -1604,9 +1619,7 @@ private:
         groups_ = groups;
         group_mask_ = group_count - 1;
 
-#if 0
-        std::fill_n((std::uint8_t *)groups, sizeof(group_type) * group_count, kEmptyEntry);
-#elif 1
+#if 1
         std::memset((void *)groups, kEmptyEntry, sizeof(group_type) * group_count);
 #else
         for (size_type index = 0; index < group_count; index++) {
@@ -1628,21 +1641,6 @@ private:
         }
         slot_mask_ = new_capacity - 1;
         slot_threshold_ = (size_type)((float)new_capacity * this->max_load_factor());
-    }
-
-    inline bool need_grow() const {
-        return (this->slot_size_ >= this->slot_threshold_);
-    }
-
-    void grow_if_necessary() {
-        size_type new_capacity = (this->slot_mask_ + 1) * 2;
-        this->rehash_impl<false, true>(new_capacity);
-    }
-
-    JSTD_FORCED_INLINE
-    void reserve_for_insert(size_type init_capacity) {
-        size_type new_capacity = this->capacity_for_reserve(init_capacity);
-        this->create_group<true>(new_capacity);
     }
 
     template <bool AllowShrink, bool AlwaysResize>
