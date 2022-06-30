@@ -64,6 +64,7 @@
 #include <vector>
 #include <utility>      // For std::pair<First, Second>, std::integer_sequence<T...>
 #include <tuple>        // For std::tuple<Ts...>
+#include <initializer_list>
 #include <algorithm>    // For std::max(), std::min()
 #include <type_traits>
 #include <stdexcept>
@@ -75,6 +76,7 @@
 #include "jstd/utility.h"
 #include "jstd/support/BitUtils.h"
 #include "jstd/support/Power2.h"
+#include "jstd/support/BitVec.h"
 
 #ifdef _MSC_VER
 #ifndef __SSE2__
@@ -149,35 +151,6 @@ struct IntegalHash
 };
 
 } // namespace hashers
-
-//
-// https://github.com/abseil/abseil-cpp/issues/209
-// https://gcc.gnu.org/bugzilla/show_bug.cgi?id=87853
-// _mm_cmpgt_epi8 is broken under GCC with -funsigned-char
-// Work around this by using the portable implementation of Group
-// when using -funsigned-char under GCC.
-//
-inline __m128i _mm_cmpgt_epi8_fixed(__m128i A, __m128i B) {
-#if defined(__GNUC__) && !defined(__clang__)
-    if (std::is_unsigned<char>::value) {
-        const __m128i mask = _mm_set1_epi8(0x80);
-        const __m128i diff = _mm_subs_epi8(B, A);
-        return _mm_cmpeq_epi8(_mm_and_si128(diff, mask), mask);
-    }
-#endif
-    return _mm_cmpgt_epi8(A, B);
-}
-
-inline __m128i _mm_cmplt_epi8_fixed(__m128i A, __m128i B) {
-#if defined(__GNUC__) && !defined(__clang__)
-    if (std::is_unsigned<char>::value) {
-        const __m128i mask = _mm_set1_epi8(0x80);
-        const __m128i diff = _mm_subs_epi8(A, B);
-        return _mm_cmpeq_epi8(_mm_and_si128(diff, mask), mask);
-    }
-#endif
-    return _mm_cmplt_epi8(A, B);
-}
 
 template < typename Key, typename Value,
            typename Hash = std::hash<Key>,

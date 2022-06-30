@@ -90,21 +90,11 @@
 
 namespace jstd {
 
-static inline
-std::size_t align_to(std::size_t size, std::size_t alignment)
-{
-    assert(alignment > 0);
-    assert((alignment & (alignment - 1)) == 0);
-    size = (size + alignment - 1) & ~(alignment - 1);
-    assert((size / alignment * alignment) == size);
-    return size;
-}
-
 template < typename Key, typename Value,
            typename Hash = std::hash<Key>,
            typename KeyEqual = std::equal_to<Key>,
            typename Allocator = std::allocator<std::pair<const Key, Value>> >
-class flat16_hash_map {
+class robin16_hash_map {
 public:
     typedef Key                             key_type;
     typedef Value                           mapped_type;
@@ -120,7 +110,7 @@ public:
     typedef typename std::make_signed<size_type>::type
                                             ssize_type;
     typedef std::size_t                     hash_code_t;
-    typedef flat16_hash_map<Key, Value, Hash, KeyEqual, Allocator>
+    typedef robin16_hash_map<Key, Value, Hash, KeyEqual, Allocator>
                                             this_type;
 
     static constexpr size_type npos = size_type(-1);
@@ -829,13 +819,13 @@ private:
     slot_allocator_type     slot_allocator_;
 
 public:
-    flat16_hash_map() : flat16_hash_map(kDefaultCapacity) {
+    robin16_hash_map() : robin16_hash_map(kDefaultCapacity) {
     }
 
-    explicit flat16_hash_map(size_type init_capacity,
-                             const hasher & hash = hasher(),
-                             const key_equal & equal = key_equal(),
-                             const allocator_type & alloc = allocator_type()) :
+    explicit robin16_hash_map(size_type init_capacity,
+                              const hasher & hash = hasher(),
+                              const key_equal & equal = key_equal(),
+                              const allocator_type & alloc = allocator_type()) :
         groups_(nullptr), group_mask_(0),
         slots_(nullptr), slot_size_(0), slot_mask_(0),
         slot_threshold_(0), load_factor_(kDefaultLoadFactor),
@@ -844,16 +834,16 @@ public:
         this->create_group<true>(init_capacity);
     }
 
-    explicit flat16_hash_map(const allocator_type & alloc)
-        : flat16_hash_map(kDefaultCapacity, hasher(), key_equal(), alloc) {
+    explicit robin16_hash_map(const allocator_type & alloc)
+        : robin16_hash_map(kDefaultCapacity, hasher(), key_equal(), alloc) {
     }
 
     template <typename InputIter>
-    flat16_hash_map(InputIter first, InputIter last,
-                    size_type init_capacity = kDefaultCapacity,
-                    const hasher & hash = hasher(),
-                    const key_equal & equal = key_equal(),
-                    const allocator_type & alloc = allocator_type()) :
+    robin16_hash_map(InputIter first, InputIter last,
+                     size_type init_capacity = kDefaultCapacity,
+                     const hasher & hash = hasher(),
+                     const key_equal & equal = key_equal(),
+                     const allocator_type & alloc = allocator_type()) :
         groups_(nullptr), group_mask_(0),
         slots_(nullptr), slot_size_(0), slot_mask_(0),
         slot_threshold_(0), load_factor_(kDefaultLoadFactor),
@@ -864,26 +854,26 @@ public:
     }
 
     template <typename InputIter>
-    flat16_hash_map(InputIter first, InputIter last,
-                    size_type init_capacity,
-                    const allocator_type & alloc)
-        : flat16_hash_map(first, last, init_capacity, hasher(), key_equal(), alloc) {
+    robin16_hash_map(InputIter first, InputIter last,
+                     size_type init_capacity,
+                     const allocator_type & alloc)
+        : robin16_hash_map(first, last, init_capacity, hasher(), key_equal(), alloc) {
     }
 
     template <typename InputIter>
-    flat16_hash_map(InputIter first, InputIter last,
-                    size_type init_capacity,
-                    const hasher & hash,
-                    const allocator_type & alloc)
-        : flat16_hash_map(first, last, init_capacity, hash, key_equal(), alloc) {
+    robin16_hash_map(InputIter first, InputIter last,
+                     size_type init_capacity,
+                     const hasher & hash,
+                     const allocator_type & alloc)
+        : robin16_hash_map(first, last, init_capacity, hash, key_equal(), alloc) {
     }
 
-    flat16_hash_map(const flat16_hash_map & other)
-        : flat16_hash_map(other, std::allocator_traits<allocator_type>::
-                                 select_on_container_copy_construction(other.get_allocator())) {
+    robin16_hash_map(const robin16_hash_map & other)
+        : robin16_hash_map(other, std::allocator_traits<allocator_type>::
+                                  select_on_container_copy_construction(other.get_allocator())) {
     }
 
-    flat16_hash_map(const flat16_hash_map & other, const Allocator & alloc) :
+    robin16_hash_map(const robin16_hash_map & other, const Allocator & alloc) :
         groups_(nullptr), group_mask_(0),
         slots_(nullptr), slot_size_(0), slot_mask_(0),
         slot_threshold_(0), load_factor_(kDefaultLoadFactor),
@@ -903,7 +893,7 @@ public:
         }
     }
 
-    flat16_hash_map(flat16_hash_map && other) noexcept :
+    robin16_hash_map(robin16_hash_map && other) noexcept :
         groups_(nullptr), group_mask_(0),
         slots_(nullptr), slot_size_(0), slot_mask_(0),
         slot_threshold_(0), load_factor_(kDefaultLoadFactor),
@@ -915,7 +905,7 @@ public:
         this->swap_content(other);
     }
 
-    flat16_hash_map(flat16_hash_map && other, const Allocator & alloc) noexcept :
+    robin16_hash_map(robin16_hash_map && other, const Allocator & alloc) noexcept :
         groups_(nullptr), group_mask_(0),
         slots_(nullptr), slot_size_(0), slot_mask_(0),
         slot_threshold_(0), load_factor_(kDefaultLoadFactor),
@@ -927,11 +917,11 @@ public:
         this->swap_content(other);
     }
 
-    flat16_hash_map(std::initializer_list<value_type> init_list,
-                    size_type init_capacity = kDefaultCapacity,
-                    const hasher & hash = hasher(),
-                    const key_equal & equal = key_equal(),
-                    const allocator_type & alloc = allocator_type()) :
+    robin16_hash_map(std::initializer_list<value_type> init_list,
+                     size_type init_capacity = kDefaultCapacity,
+                     const hasher & hash = hasher(),
+                     const key_equal & equal = key_equal(),
+                     const allocator_type & alloc = allocator_type()) :
         groups_(nullptr), group_mask_(0),
         slots_(nullptr), slot_size_(0), slot_mask_(0),
         slot_threshold_(0), load_factor_(kDefaultLoadFactor),
@@ -942,20 +932,20 @@ public:
         this->insert(init_list.begin(), init_list.end());
     }
 
-    flat16_hash_map(std::initializer_list<value_type> init_list,
-                    size_type init_capacity,
-                    const allocator_type & alloc)
-        : flat16_hash_map(init_list, init_capacity, hasher(), key_equal(), alloc) {
+    robin16_hash_map(std::initializer_list<value_type> init_list,
+                     size_type init_capacity,
+                     const allocator_type & alloc)
+        : robin16_hash_map(init_list, init_capacity, hasher(), key_equal(), alloc) {
     }
 
-    flat16_hash_map(std::initializer_list<value_type> init_list,
-                    size_type init_capacity,
-                    const hasher & hash,
-                    const allocator_type & alloc)
-        : flat16_hash_map(init_list, init_capacity, hash, key_equal(), alloc) {
+    robin16_hash_map(std::initializer_list<value_type> init_list,
+                     size_type init_capacity,
+                     const hasher & hash,
+                     const allocator_type & alloc)
+        : robin16_hash_map(init_list, init_capacity, hash, key_equal(), alloc) {
     }
 
-    ~flat16_hash_map() {
+    ~robin16_hash_map() {
         this->destroy<true>();
     }
 
@@ -1082,7 +1072,7 @@ public:
     }
 
     static const char * name() {
-        return "jstd::flat16_hash_map<K, V>";
+        return "jstd::robin16_hash_map<K, V>";
     }
 
     void clear(bool need_destory = false) noexcept {
@@ -1123,7 +1113,7 @@ public:
         this->rehash_impl<true, false>(new_capacity);
     }
 
-    void swap(flat16_hash_map & other) {
+    void swap(robin16_hash_map & other) {
         if (&other != this) {
             this->swap_impl(other);
         }
@@ -1143,7 +1133,7 @@ public:
             slot_type * slot = this->slot_at(index);
             return slot->second;
         } else {
-            throw std::out_of_range("std::out_of_range exception: jstd::flat16_hash_map<K,V>::at(key), "
+            throw std::out_of_range("std::out_of_range exception: jstd::robin16_hash_map<K,V>::at(key), "
                                     "the specified key is not exists.");
         }
     }
@@ -1154,7 +1144,7 @@ public:
             slot_type * slot = this->slot_at(index);
             return slot->second;
         } else {
-            throw std::out_of_range("std::out_of_range exception: jstd::flat16_hash_map<K,V>::at(key) const, "
+            throw std::out_of_range("std::out_of_range exception: jstd::robin16_hash_map<K,V>::at(key) const, "
                                     "the specified key is not exists.");
         }
     }
@@ -2340,7 +2330,7 @@ private:
         this->slot_size_--;
     }
 
-    void swap_content(flat16_hash_map & other) {
+    void swap_content(robin16_hash_map & other) {
         std::swap(this->groups_, other.groups());
         std::swap(this->group_mask_, other.group_mask());
         std::swap(this->slots_, other.slots());
@@ -2350,7 +2340,7 @@ private:
         std::swap(this->load_factor_, other.max_load_factor());
     }
 
-    void swap_policy(flat16_hash_map & other) {
+    void swap_policy(robin16_hash_map & other) {
         std::swap(this->hasher_, other.hash_function());
         std::swap(this->key_equal_, other.key_eq());
         if (std::allocator_traits<allocator_type>::propagate_on_container_swap::value) {
@@ -2361,7 +2351,7 @@ private:
         }
     }
 
-    void swap_impl(flat16_hash_map & other) {
+    void swap_impl(robin16_hash_map & other) {
         this->swap_content(other);
         this->swap_policy(other);
     }

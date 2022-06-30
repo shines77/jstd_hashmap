@@ -111,25 +111,6 @@
 #endif // likely() & unlikely()
 
 //
-// Aligned prefix and suffix declare
-//
-#if defined(_MSC_VER)
-#ifndef ALIGNED_PREFIX
-#define ALIGNED_PREFIX(n)       __declspec(align(n))
-#endif
-#ifndef ALIGNED_SUFFIX
-#define ALIGNED_SUFFIX(n)
-#endif
-#else
-#ifndef ALIGNED_PREFIX
-#define ALIGNED_PREFIX(n)
-#endif
-#ifndef ALIGNED_SUFFIX
-#define ALIGNED_SUFFIX(n)       __attribute__((aligned(n)))
-#endif
-#endif // ALIGNED(n)
-
-//
 // From: https://hackage.haskell.org/package/LibClang-3.4.0/src/llvm/include/llvm/Support/Compiler.h
 //
 // __builtin_assume_aligned() is support by GCC >= 4.7 and clang >= 3.6.
@@ -190,19 +171,58 @@
 
 #endif // _MSC_VER
 
-#if defined(_MSC_VER) && !defined(__clang__)
-#define NAKED_DECL      __declspec(naked)
-#elif defined(__attribute__)
-#define NAKED_DECL      __attribute__((naked))
+//
+// Aligned prefix and suffix declare
+//
+#if defined(_MSC_VER)
+#ifndef ALIGNED_PREFIX
+#define ALIGNED_PREFIX(n)       __declspec(align(n))
+#endif
+#ifndef ALIGNED_SUFFIX
+#define ALIGNED_SUFFIX(n)
+#endif
 #else
-#define NAKED_DECL
+#ifndef ALIGNED_PREFIX
+#define ALIGNED_PREFIX(n)
+#endif
+#ifndef ALIGNED_SUFFIX
+#define ALIGNED_SUFFIX(n)       __attribute__((aligned(n)))
+#endif
+#endif // ALIGNED(n)
+
+/*********************************************************************************
+    GCC:
+
+    uint32_t fill_cache(void) __attribute__((naked)); // Declaration
+    attribute should be specified in declaration not in implementation
+
+    uint32_t fill_cache(void)
+    {
+        __asm__ ("addi 3, 0, 0\n");  // R3 = 0
+        // More asm here modifying R3 and filling the cache lines.
+    }
+
+*********************************************************************************/
+
+#if defined(_MSC_VER) && !defined(__clang__)
+#define NAKED_DECL_PREFIX      __declspec(naked)
+#define NAKED_DECL_SUFFIX
+#elif defined(__attribute__)
+#define NAKED_DECL_PREFIX
+#define NAKED_DECL_SUFFIX      __attribute__((naked))
+#else
+#define NAKED_DECL_PREFIX
+#define NAKED_DECL_SUFFIX
 #endif
 
 #ifndef JSTD_CDECL
+#define JSTD_CDECL
 #if defined(_MSC_VER) && !defined(__clang__)
-#define JSTD_CDECL      __cdecl
+#define JSTD_CDECL_PREFIX      __cdecl
+#define JSTD_CDECL_SUFFIX
 #else
-#define JSTD_CDECL      __attribute__((__cdecl__))
+#define JSTD_CDECL_PREFIX
+#define JSTD_CDECL_SUFFIX      __attribute__((__cdecl__))
 #endif
 #endif // JSTD_CDECL
 

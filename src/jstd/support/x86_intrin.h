@@ -113,7 +113,9 @@
 #endif
 
 #if defined(__3dNOW__)
+#if defined (_M_IX86) || defined(__i386__)
 #include <mm3dnow.h>
+#endif
 #endif // __3dNOW__
 
 #if defined(__FMA4__)

@@ -78,6 +78,7 @@
 #include "jstd/utility.h"
 #include "jstd/support/BitUtils.h"
 #include "jstd/support/Power2.h"
+#include "jstd/support/BitVec.h"
 
 namespace jstd {
 

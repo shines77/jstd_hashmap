@@ -45,6 +45,7 @@
     <ClInclude Include="..\..\..\src\jstd\hashmap\hashmap_analyzer.h" />
     <ClInclude Include="..\..\..\src\jstd\hashmap\hash_chunk_list.h" />
     <ClInclude Include="..\..\..\src\jstd\hashmap\key_extractor.h" />
+    <ClInclude Include="..\..\..\src\jstd\hashmap\robin16_hash_map.h" />
     <ClInclude Include="..\..\..\src\jstd\hashmap\unordered_map.h" />
     <ClInclude Include="..\..\..\src\jstd\dll.h" />
     <ClInclude Include="..\..\..\src\jstd\iterator.h" />

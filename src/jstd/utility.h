@@ -15,6 +15,7 @@
 #include <utility>
 #include <type_traits>
 
+#include "jstd/basic/stddef.h"
 #include "jstd/utility/integer_sequence.h"
 #include "jstd/type_traits.h"
 
@@ -59,6 +60,50 @@ auto const_castor(T * ptr) -> const typename std::remove_const<T>::type * {
 } // namespace jstd
 
 namespace jstd {
+
+template <typename T = void>
+static inline
+bool check_alignment(T * address, size_t alignment)
+{
+    uintptr_t ptr = (uintptr_t)address;
+    JSTD_ASSERT(alignment > 0);
+    JSTD_ASSERT((alignment & (alignment - 1)) == 0);
+    return ((ptr & (alignment - 1)) == 0);
+}
+
+template <typename T, size_t alignment = std::alignment_of<T>::value>
+static inline
+bool check_alignment(T * address)
+{
+    uintptr_t ptr = (uintptr_t)address;
+    JSTD_STATIC_ASSERT((alignment > 0),
+                       "check_alignment<T, N>(addr): alignment must bigger than 0.");
+    JSTD_STATIC_ASSERT(((alignment & (alignment - 1)) == 0),
+                       "check_alignment<T, N>(addr): alignment must be power of 2.");
+    return ((ptr & (alignment - 1)) == 0);
+}
+
+template <typename T>
+static inline
+T * pointer_align_to(T * address, size_t alignment)
+{
+    JSTD_ASSERT(alignment > 0 );
+    JSTD_ASSERT((alignment & (alignment - 1)) == 0);
+    uintptr_t ptr = ((uintptr_t)address + alignment - 1) & (~(alignment - 1));
+    return (T *)ptr;
+}
+
+template <size_t alignment, typename T>
+static inline
+T * pointer_align_to(T * address)
+{
+    JSTD_STATIC_ASSERT((alignment > 0),
+                       "pointer_align_to<N>(): alignment must bigger than 0.");
+    JSTD_STATIC_ASSERT(((alignment & (alignment - 1)) == 0),
+                       "pointer_align_to<N>(): alignment must be power of 2.");
+    uintptr_t ptr = ((uintptr_t)address + alignment - 1) & (~(alignment - 1));
+    return (T *)ptr;
+}
 
 //
 // tuple_wrapper<T, DecayT, bool IsIntegral>

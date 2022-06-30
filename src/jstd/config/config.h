@@ -252,7 +252,7 @@
   #define __has_include(x)              0
 #endif
 
-#if defined(_MSC_VER)
+#if defined(_MSC_VER) && !defined(__clang__)
 #ifndef __attribute__
   #define __attribute__(x)
 #endif
