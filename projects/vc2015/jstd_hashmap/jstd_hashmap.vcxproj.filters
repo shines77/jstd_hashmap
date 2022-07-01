@@ -255,14 +255,5 @@
     <ClCompile Include="..\..\..\src\jstd\basic\assert-c.c">
       <Filter>src\basic</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\src\jstd\system\crtdbg_env.cpp">
-      <Filter>src\system</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\jstd\system\getchar.cpp">
-      <Filter>src\system</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\jstd\system\sleep.cpp">
-      <Filter>src\system</Filter>
-    </ClCompile>
   </ItemGroup>
 </Project>

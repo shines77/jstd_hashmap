@@ -187,9 +187,6 @@ include_directories(test)
 
 set(JSTD_SOURCE_FILES
     src/jstd/dll_main.cpp
-    src/jstd/system/sleep.cpp
-    src/jstd/system/getchar.cpp
-    src/jstd/system/crtdbg_env.cpp
 )
 
 # add_subdirectory(main EXCLUDE_FROM_ALL src/main/asm)
