@@ -83,6 +83,16 @@ bool check_alignment(T * address)
     return ((ptr & (alignment - 1)) == 0);
 }
 
+static inline
+std::size_t align_to(std::size_t size, std::size_t alignment)
+{
+    assert(alignment > 0);
+    assert((alignment & (alignment - 1)) == 0);
+    size = (size + alignment - 1) & ~(alignment - 1);
+    assert((size / alignment * alignment) == size);
+    return size;
+}
+
 template <typename T>
 static inline
 T * pointer_align_to(T * address, size_t alignment)
@@ -90,7 +100,7 @@ T * pointer_align_to(T * address, size_t alignment)
     JSTD_ASSERT(alignment > 0 );
     JSTD_ASSERT((alignment & (alignment - 1)) == 0);
     uintptr_t ptr = ((uintptr_t)address + alignment - 1) & (~(alignment - 1));
-    return (T *)ptr;
+    return reinterpret_cast<T *>(ptr);
 }
 
 template <size_t alignment, typename T>
@@ -102,7 +112,7 @@ T * pointer_align_to(T * address)
     JSTD_STATIC_ASSERT(((alignment & (alignment - 1)) == 0),
                        "pointer_align_to<N>(): alignment must be power of 2.");
     uintptr_t ptr = ((uintptr_t)address + alignment - 1) & (~(alignment - 1));
-    return (T *)ptr;
+    return reinterpret_cast<T *>(ptr);
 }
 
 //

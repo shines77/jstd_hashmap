@@ -223,7 +223,7 @@ static const char * header_fields[] = {
     "Last"
 };
 
-#if 1
+#if 0
 
 static const size_t kHeaderFieldSize = sizeof(header_fields) / sizeof(char *);
 
@@ -1463,16 +1463,16 @@ void print_result(const PairType & pair) {
 void flat16_hash_map_int_int_test()
 {
     typedef jstd::flat16_hash_map<int, int> hash_map_t;
-    typedef typename hash_map_t::entry_type    entry_type;
-    typedef typename hash_map_t::cluster_type  cluster_type;
+    typedef typename hash_map_t::slot_type      slot_type;
+    typedef typename hash_map_t::group_type     group_type;
 
     hash_map_t flat_hash_map;
 
-    printf("flat_hash_map.clusters() = %p\n", flat_hash_map.clusters());
-    printf("sizeof(cluster_type)     = %u\n\n", (uint32_t)sizeof(cluster_type));
+    printf("flat_hash_map.groups()   = %p\n", flat_hash_map.groups());
+    printf("sizeof(cluster_type)     = %u\n\n", (uint32_t)sizeof(group_type));
 
-    printf("flat_hash_map.entries()  = %p\n", flat_hash_map.entries());
-    printf("sizeof(entry_type)       = %u\n\n", (uint32_t)sizeof(entry_type));
+    printf("flat_hash_map.slot_type() = %p\n", flat_hash_map.slots());
+    printf("sizeof(slot_type)         = %u\n\n", (uint32_t)sizeof(slot_type));
 
     flat_hash_map.insert(std::make_pair(1, 111));
     flat_hash_map.insert(std::make_pair(1, 999));
@@ -1500,16 +1500,16 @@ void flat16_hash_map_int_int_test()
 void flat16_hash_map_int64_string_test()
 {
     typedef jstd::flat16_hash_map<int64_t, std::string> hash_map_t;
-    typedef typename hash_map_t::entry_type    entry_type;
-    typedef typename hash_map_t::cluster_type  cluster_type;
+    typedef typename hash_map_t::slot_type      slot_type;
+    typedef typename hash_map_t::group_type     group_type;
 
     hash_map_t flat_hash_map;
 
-    printf("flat_hash_map.clusters() = %p\n", flat_hash_map.clusters());
-    printf("sizeof(cluster_type)     = %u\n\n", (uint32_t)sizeof(cluster_type));
+    printf("flat_hash_map.groups()   = %p\n", flat_hash_map.groups());
+    printf("sizeof(cluster_type)     = %u\n\n", (uint32_t)sizeof(group_type));
 
-    printf("flat_hash_map.entries()  = %p\n", flat_hash_map.entries());
-    printf("sizeof(entry_type)       = %u\n\n", (uint32_t)sizeof(entry_type));
+    printf("flat_hash_map.slot_type() = %p\n", flat_hash_map.slots());
+    printf("sizeof(slot_type)         = %u\n\n", (uint32_t)sizeof(slot_type));
 
     flat_hash_map.insert(std::make_pair(0, "abc"));
     flat_hash_map.insert(std::make_pair(0, "ABC"));
@@ -1542,16 +1542,16 @@ void flat16_hash_map_int64_string_test()
 void flat16_hash_map_string_string_test()
 {
     typedef jstd::flat16_hash_map<std::string, std::string> hash_map_t;
-    typedef typename hash_map_t::entry_type    entry_type;
-    typedef typename hash_map_t::cluster_type  cluster_type;
+    typedef typename hash_map_t::slot_type      slot_type;
+    typedef typename hash_map_t::group_type     group_type;
 
     hash_map_t flat_hash_map;
 
-    printf("flat_hash_map.clusters() = %p\n", flat_hash_map.clusters());
-    printf("sizeof(cluster_type)     = %u\n\n", (uint32_t)sizeof(cluster_type));
+    printf("flat_hash_map.groups()   = %p\n", flat_hash_map.groups());
+    printf("sizeof(cluster_type)     = %u\n\n", (uint32_t)sizeof(group_type));
 
-    printf("flat_hash_map.entries()  = %p\n", flat_hash_map.entries());
-    printf("sizeof(entry_type)       = %u\n\n", (uint32_t)sizeof(entry_type));
+    printf("flat_hash_map.slot_type() = %p\n", flat_hash_map.slots());
+    printf("sizeof(slot_type)         = %u\n\n", (uint32_t)sizeof(slot_type));
 
 #if 0
     print_result( flat_hash_map.insert("a", "a") );

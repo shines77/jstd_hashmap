@@ -90,16 +90,6 @@
 
 namespace jstd {
 
-static inline
-std::size_t align_to(std::size_t size, std::size_t alignment)
-{
-    assert(alignment > 0);
-    assert((alignment & (alignment - 1)) == 0);
-    size = (size + alignment - 1) & ~(alignment - 1);
-    assert((size / alignment * alignment) == size);
-    return size;
-}
-
 template < typename Key, typename Value,
            typename Hash = std::hash<Key>,
            typename KeyEqual = std::equal_to<Key>,
@@ -143,6 +133,12 @@ public:
 
     // Must be kMinLoadFactor <= loadFactor <= kMaxLoadFactor
     static constexpr float kDefaultLoadFactor = 0.5f;
+
+    static constexpr size_type kLoadFactorAmplify = 65536;
+    static constexpr std::uint32_t kDefaultLoadFactorInt =
+            std::uint32_t(kDefaultLoadFactor * kLoadFactorAmplify);
+    static constexpr std::uint32_t kDefaultLoadFactorRevInt =
+            std::uint32_t(1.0f / kDefaultLoadFactor * kLoadFactorAmplify);
 
 #if defined(__GNUC__) || (defined(__clang__) && !defined(_MSC_VER))
     static constexpr bool isGccOrClang = true;
@@ -819,8 +815,9 @@ private:
     size_type       slot_size_;
     size_type       slot_mask_;
 
-    size_type       slot_threshold_;
-    float           load_factor_;
+    size_type       left_empties_;
+    std::uint32_t   n_mlf_;
+    std::uint32_t   n_mlf_rev_;
 
     hasher          hasher_;
     key_equal       key_equal_;
@@ -838,7 +835,8 @@ public:
                              const allocator_type & alloc = allocator_type()) :
         groups_(nullptr), group_mask_(0),
         slots_(nullptr), slot_size_(0), slot_mask_(0),
-        slot_threshold_(0), load_factor_(kDefaultLoadFactor),
+        left_empties_(0), n_mlf_(kDefaultLoadFactorInt),
+        n_mlf_rev_(kDefaultLoadFactorRevInt),
         hasher_(hash), key_equal_(equal),
         allocator_(alloc), slot_allocator_(alloc) {
         this->create_group<true>(init_capacity);
@@ -856,7 +854,8 @@ public:
                     const allocator_type & alloc = allocator_type()) :
         groups_(nullptr), group_mask_(0),
         slots_(nullptr), slot_size_(0), slot_mask_(0),
-        slot_threshold_(0), load_factor_(kDefaultLoadFactor),
+        left_empties_(0), n_mlf_(kDefaultLoadFactorInt),
+        n_mlf_rev_(kDefaultLoadFactorRevInt),
         hasher_(hash), key_equal_(equal),
         allocator_(alloc), slot_allocator_(alloc) {
         this->create_group<true>(init_capacity);
@@ -886,7 +885,8 @@ public:
     flat16_hash_map(const flat16_hash_map & other, const Allocator & alloc) :
         groups_(nullptr), group_mask_(0),
         slots_(nullptr), slot_size_(0), slot_mask_(0),
-        slot_threshold_(0), load_factor_(kDefaultLoadFactor),
+        left_empties_(0), n_mlf_(kDefaultLoadFactorInt),
+        n_mlf_rev_(kDefaultLoadFactorRevInt),
         hasher_(hasher()), key_equal_(key_equal()),
         allocator_(alloc), slot_allocator_(alloc) {
         // Prepare enough space to ensure that no expansion is required during the insertion process.
@@ -906,7 +906,8 @@ public:
     flat16_hash_map(flat16_hash_map && other) noexcept :
         groups_(nullptr), group_mask_(0),
         slots_(nullptr), slot_size_(0), slot_mask_(0),
-        slot_threshold_(0), load_factor_(kDefaultLoadFactor),
+        left_empties_(0), n_mlf_(kDefaultLoadFactorInt),
+        n_mlf_rev_(kDefaultLoadFactorRevInt),
         hasher_(std::move(other.hash_function())),
         key_equal_(std::move(other.key_eq())),
         allocator_(std::move(other.get_allocator())),
@@ -918,7 +919,8 @@ public:
     flat16_hash_map(flat16_hash_map && other, const Allocator & alloc) noexcept :
         groups_(nullptr), group_mask_(0),
         slots_(nullptr), slot_size_(0), slot_mask_(0),
-        slot_threshold_(0), load_factor_(kDefaultLoadFactor),
+        left_empties_(0), n_mlf_(kDefaultLoadFactorInt),
+        n_mlf_rev_(kDefaultLoadFactorRevInt),
         hasher_(std::move(other.hash_function())),
         key_equal_(std::move(other.key_eq())),
         allocator_(alloc),
@@ -934,7 +936,8 @@ public:
                     const allocator_type & alloc = allocator_type()) :
         groups_(nullptr), group_mask_(0),
         slots_(nullptr), slot_size_(0), slot_mask_(0),
-        slot_threshold_(0), load_factor_(kDefaultLoadFactor),
+        left_empties_(0), n_mlf_(kDefaultLoadFactorInt),
+        n_mlf_rev_(kDefaultLoadFactorRevInt),
         hasher_(hash), key_equal_(equal), allocator_(alloc) {
         // Prepare enough space to ensure that no expansion is required during the insertion process.
         size_type new_capacity = (init_capacity >= init_list.size()) ? init_capacity : init_list.size();
@@ -984,7 +987,19 @@ public:
     size_type slot_size() const { return slot_size_; }
     size_type slot_mask() const { return slot_mask_; }
     size_type slot_capacity() const { return (slot_mask_ + 1); }
-    size_type slot_threshold() const { return slot_threshold_; }
+    size_type left_empties() const { return left_empties_; }
+    size_type slot_empties() const {
+        return ((this->slot_capacity() - this->slot_threshold()) + left_empties_);
+    }
+    size_type slot_deleted() const {
+        return (this->slot_used() - this->slot_size());
+    }
+    size_type slot_used() const {
+        return (this->slot_threshold() - this->left_empties());
+    }
+    size_type slot_threshold() const {
+        return (this->slot_capacity() * this->integral_mlf() / kLoadFactorAmplify);
+    }
 
     constexpr size_type bucket_count() const {
         return kGroupWidth;
@@ -999,21 +1014,53 @@ public:
         return ((float)this->slot_size() / this->slot_capacity());
     }
 
-    void max_load_factor(float load_factor) {
-        if (load_factor < kMinLoadFactor)
-            load_factor = kMinLoadFactor;
-        if (load_factor > kMaxLoadFactor)
-            load_factor = kMaxLoadFactor;
-        this->load_factor_ = load_factor;
-        this->slot_threshold_ = (size_type)((float)this->slot_capacity() * load_factor);
+    void max_load_factor(float mlf) {
+        if (mlf < kMinLoadFactor)
+            mlf = kMinLoadFactor;
+        if (mlf > kMaxLoadFactor)
+            mlf = kMaxLoadFactor;
+        assert(mlf != 0.0f);
+        size_type old_slot_used = this->slot_used();
+        std::uint32_t n_mlf = (std::uint32_t)std::ceil(mlf * kLoadFactorAmplify);
+        std::uint32_t n_mlf_rev = (std::uint32_t)std::ceil(1.0f / mlf * kLoadFactorAmplify);
+        this->n_mlf_ = n_mlf;
+        this->n_mlf_rev_ = n_mlf_rev;
+        size_type new_slot_threshold = this->slot_capacity() * n_mlf / kLoadFactorAmplify;
+        if (old_slot_used > new_slot_threshold) {
+            size_type min_required_capacity;
+            size_type slot_deleted = old_slot_used - this->slot_size();
+            if ((slot_deleted < (this->slot_capacity() / 5)) ||
+                (min_required_capacity = this->min_require_capacity(this->slot_size()) >
+                 this->slot_capacity())) {
+                this->rehash(this->slot_size());
+            } else {
+                // Reorder entry and no grow
+            }
+        }
+    }
+
+    std::uint32_t integral_mlf() const {
+        return this->n_mlf_;
+    }
+
+    std::uint32_t integral_mlf_rev() const {
+        return this->n_mlf_rev_;
     }
 
     float max_load_factor() const {
-        return this->load_factor_;
+        return ((float)this->integral_mlf() / kLoadFactorAmplify);
     }
 
-    float default_load_factor() const {
+    float default_mlf() const {
         return kDefaultLoadFactor;
+    }
+
+    size_type mul_mlf(size_type capacity) const {
+        return (capacity * this->integral_mlf() / kLoadFactorAmplify);
+    }
+
+    size_type div_mlf(size_type capacity) const {
+        return (capacity * this->integral_mlf_rev() / kLoadFactorAmplify);
     }
 
     iterator begin() {
@@ -1108,7 +1155,7 @@ public:
 
     void rehash(size_type new_capacity, bool read_only = false) {
         if (!read_only)
-            new_capacity = (std::max)(this->capacity_for_reserve(new_capacity), this->slot_size());
+            new_capacity = (std::max)(this->min_require_capacity(new_capacity), this->slot_size());
         else
             new_capacity = (std::max)(new_capacity, this->slot_size());
         this->rehash_impl<true, false>(new_capacity);
@@ -1117,7 +1164,7 @@ public:
     void shrink_to_fit(bool read_only = false) {
         size_type new_capacity;
         if (!read_only)
-            new_capacity = this->capacity_for_reserve(this->slot_size());
+            new_capacity = this->min_require_capacity(this->slot_size());
         else
             new_capacity = this->slot_size();
         this->rehash_impl<true, false>(new_capacity);
@@ -1342,8 +1389,8 @@ private:
     }
 
     JSTD_FORCED_INLINE
-    size_type capacity_for_reserve(size_type init_capacity) {
-        size_type new_capacity = (size_type)std::ceil((float)init_capacity / this->max_load_factor());
+    size_type min_require_capacity(size_type init_capacity) {
+        size_type new_capacity = init_capacity * this->integral_mlf_rev() / kLoadFactorAmplify;
         return new_capacity;
     }
 
@@ -1559,10 +1606,11 @@ private:
         }
 
         this->slot_size_ = 0;
+        this->left_empties_ = 0;
     }
 
     inline bool need_grow() const {
-        return (this->slot_size_ >= this->slot_threshold_);
+        return (this->left_empties_ <= 0);
     }
 
     void grow_if_necessary() {
@@ -1572,7 +1620,7 @@ private:
 
     JSTD_FORCED_INLINE
     void reserve_for_insert(size_type init_capacity) {
-        size_type new_capacity = this->capacity_for_reserve(init_capacity);
+        size_type new_capacity = this->min_require_capacity(init_capacity);
         this->create_group<true>(new_capacity);
     }
 
@@ -1613,7 +1661,8 @@ private:
             slot_size_ = 0;
         }
         slot_mask_ = new_capacity - 1;
-        slot_threshold_ = (size_type)((float)new_capacity * this->max_load_factor());
+        size_type slot_threshold = new_capacity * this->integral_mlf() / kLoadFactorAmplify;
+        left_empties_ = slot_threshold;
     }
 
     template <bool AllowShrink, bool AlwaysResize>
@@ -1636,6 +1685,7 @@ private:
             slot_type * old_slots = this->slots();
             size_type old_slot_size = this->slot_size();
             size_type old_slot_capacity = this->slot_capacity();
+            size_type old_left_empties = this->left_empties();
 
             this->create_group<false>(new_capacity);
 
@@ -1668,7 +1718,9 @@ private:
                     slot_start += kGroupWidth;
                 }
             }
+
             assert(this->slot_size() == old_slot_size);
+            left_empties_ -= this->slot_size();
 
             this->slot_allocator_.deallocate(old_slots, old_slot_capacity);
 
@@ -2341,23 +2393,26 @@ private:
     }
 
     void swap_content(flat16_hash_map & other) {
-        std::swap(this->groups_, other.groups());
-        std::swap(this->group_mask_, other.group_mask());
-        std::swap(this->slots_, other.slots());
-        std::swap(this->slot_size_, other.slot_size());
-        std::swap(this->slot_mask_, other.slot_mask());
-        std::swap(this->slot_threshold_, other.slot_threshold());
-        std::swap(this->load_factor_, other.max_load_factor());
+        using std::swap;
+        swap(this->groups_, other.groups());
+        swap(this->group_mask_, other.group_mask());
+        swap(this->slots_, other.slots());
+        swap(this->slot_size_, other.slot_size());
+        swap(this->slot_mask_, other.slot_mask());
+        swap(this->left_empties_, other.slot_empties());
+        swap(this->n_mlf_, other.integral_mlf());
+        swap(this->n_mlf_rev_, other.integral_mlf_rev());
     }
 
     void swap_policy(flat16_hash_map & other) {
-        std::swap(this->hasher_, other.hash_function());
-        std::swap(this->key_equal_, other.key_eq());
+        using std::swap;
+        swap(this->hasher_, other.hash_function());
+        swap(this->key_equal_, other.key_eq());
         if (std::allocator_traits<allocator_type>::propagate_on_container_swap::value) {
-            std::swap(this->allocator_, other.get_allocator());
+            swap(this->allocator_, other.get_allocator());
         }
         if (std::allocator_traits<slot_allocator_type>::propagate_on_container_swap::value) {
-            std::swap(this->slot_allocator_, other.get_slot_allocator());
+            swap(this->slot_allocator_, other.get_slot_allocator());
         }
     }
 
