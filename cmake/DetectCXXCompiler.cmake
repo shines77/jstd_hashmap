@@ -187,6 +187,13 @@ elseif (MINGW)
   endif()
 endif()
 
+message("")
+message(STATUS "CMAKE_COMPILER_IS_GNUCC  = ${CMAKE_COMPILER_IS_GNUCC}")
+message(STATUS "CMAKE_COMPILER_IS_GNUCXX = ${CMAKE_COMPILER_IS_GNUCXX}")
+message(STATUS "CMAKE_COMPILER_IS_CLANGCC  = ${CMAKE_COMPILER_IS_CLANGCC}")
+message(STATUS "CMAKE_COMPILER_IS_CLANGCXX = ${CMAKE_COMPILER_IS_CLANGCXX}")
+message("")
+
 # Fix handling of duplicated files in the same static library:
 # https://public.kitware.com/Bug/view.php?id=14874
 if (CMAKE_VERSION VERSION_LESS "3.1")
