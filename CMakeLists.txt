@@ -145,11 +145,11 @@ if (NOT MSVC)
     ## -faligned-new: GCC >= 7.1, CLANG >= 4.0
     ## See: https://trac.wildfiregames.com/ticket/5139
     if (CMAKE_COMPILER_IS_CLANGCXX)
-        if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 4.0)
+        if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL "4.0.0")
             set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -faligned-new")
         endif()
     elseif (CMAKE_COMPILER_IS_GNUCXX)
-        if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 7.1)
+        if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL "7.0.1")
             set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -faligned-new")
         endif()
     endif()

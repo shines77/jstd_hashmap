@@ -84,7 +84,7 @@ elseif (CMAKE_COMPILER_IS_GNUCXX)
     string(REGEX MATCH "[0-9]+\\.[0-9]+" CMAKE_GCC_REGEX_VERSION "${CMAKE_JSTD_GCC_VERSION_FULL}")
   endif()
 
-  # dumpversion prints only major version since gcc7
+  # dumpversion prints only major version since gcc 7.0
   if ((NOT CMAKE_GCC_REGEX_VERSION) AND (${CMAKE_JSTD_GCC_VERSION_FULL} GREATER 6))
     execute_process(COMMAND ${CMAKE_CXX_COMPILER} ${CMAKE_CXX_COMPILER_ARG1} -dumpfullversion
                   OUTPUT_VARIABLE CMAKE_JSTD_GCC_VERSION_FULL
