@@ -1866,7 +1866,7 @@ private:
             std::uint8_t ctrl_hash;
             size_type target = find_first_non_used_slot(slot->first, ctrl_hash);
             intptr_t distance = intptr_t(index - target);
-            if (distance < kGroupWidth && distance >= 0) {
+            if (distance < intptr_t(kGroupWidth) && distance >= 0) {
                 // If the distance of old index and new index is less than kGroupWidth,
                 // we don't need to move it because it's already in the best position.
                 ctrl->setUsed(ctrl_hash);
