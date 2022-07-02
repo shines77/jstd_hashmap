@@ -1465,12 +1465,16 @@ private:
         return static_cast<std::uint8_t>(hash_code & kControlHashMask);
     }
 
+    inline size_type index_salt() const noexcept {
+        return (size_type)((std::uintptr_t)this->groups() >> 12);
+    }
+
     inline size_type index_for(hash_code_t hash_code) const noexcept {
-        return (size_type)((size_type)hash_code & this->slot_mask());
+        return (((size_type)hash_code ^ this->index_salt()) & this->slot_mask());
     }
 
     inline size_type index_for(hash_code_t hash_code, size_type slot_mask) const noexcept {
-        return (size_type)((size_type)hash_code & slot_mask);
+        return (((size_type)hash_code ^ this->index_salt()) & slot_mask);
     }
 
     inline size_type prev_group(size_type group_index) const noexcept {
