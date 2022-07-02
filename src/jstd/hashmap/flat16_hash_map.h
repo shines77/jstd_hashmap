@@ -1749,7 +1749,7 @@ private:
                     old_slot++;
                 }
             } else {
-#if 0
+#if 1
                 group_type * last_group = old_groups + old_group_count;
                 slot_type * slot_start = old_slots;
                 for (group_type * group = old_groups; group != last_group; group++) {
