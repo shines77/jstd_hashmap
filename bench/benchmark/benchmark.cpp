@@ -223,7 +223,7 @@ static const char * header_fields[] = {
     "Last"
 };
 
-#if 0
+#if 1
 
 static const size_t kHeaderFieldSize = sizeof(header_fields) / sizeof(char *);
 

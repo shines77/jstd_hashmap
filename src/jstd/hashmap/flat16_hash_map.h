@@ -50,6 +50,7 @@
 #pragma once
 
 #include <memory.h>
+#include <string.h>
 #include <math.h>
 #include <assert.h>
 
@@ -60,7 +61,7 @@
 #include <cmath>        // For std::ceil()
 #include <memory>       // For std::swap(), std::pointer_traits<T>
 #include <limits>       // For std::numeric_limits<T>
-#include <cstring>      // For std::memset()
+#include <cstring>      // For std::memset(), std::memcpy()
 #include <vector>
 #include <utility>      // For std::pair<First, Second>, std::integer_sequence<T...>
 #include <tuple>        // For std::tuple<Ts...>
@@ -93,12 +94,12 @@ namespace jstd {
 template < typename Key, typename Value,
            typename Hash = std::hash<Key>,
            typename KeyEqual = std::equal_to<Key>,
-           typename Allocator = std::allocator<std::pair<const Key, Value>> >
+           typename Allocator = std::allocator<std::pair<Key, Value>> >
 class flat16_hash_map {
 public:
     typedef Key                             key_type;
     typedef Value                           mapped_type;
-    typedef std::pair<const Key, Value>     value_type;
+    typedef std::pair<Key, Value>           value_type;
     typedef std::pair<Key, Value>           nc_value_type;
 
     typedef Hash                            hasher;
@@ -241,8 +242,7 @@ public:
         }
 
         void setAllZeros(pointer data) {
-            __m128i tmp;
-            __m128i zero_bits = _mm_xor_si128(tmp, tmp);
+            __m128i zero_bits = _mm_setzero_si128();
             _mm_storeu_si128((__m128i *)data, zero_bits);
         }
 
@@ -305,6 +305,20 @@ public:
             __m128i control_bits = _mm_loadu_si128((const __m128i *)data);
             std::uint32_t mask = (std::uint32_t)_mm_movemask_epi8(control_bits);
             return mask;
+        }
+
+        void conventSpecialToEmptyAndUsedToDeleted(pointer data) {
+            __m128i ctrl = _mm_loadu_si128((const __m128i *)data);
+            __m128i kMSBs = _mm_set1_epi8(static_cast<char>(-128));
+            __m128i kX126 = _mm_set1_epi8(static_cast<char>(126));
+#ifdef __SSSE3__
+            __m128i result = _mm_or_si128(_mm_shuffle_epi8(kX126, ctrl), kMSBs);
+#else
+            __m128i zeros = _mm_setzero_si128();
+            __m128i special_mask = _mm_cmpgt_epi8_fixed(zeros, ctrl);
+            __m128i result = _mm_or_si128(kMSBs, _mm_andnot_si128(special_mask, kX126));
+#endif
+            _mm_storeu_si128(reinterpret_cast<__m128i *>(data), result);
         }
 
         bool hasAnyMatch(const_pointer data, std::uint8_t control_hash) const {
@@ -563,6 +577,15 @@ public:
             return { low, high };
         }
 
+        void conventSpecialToEmptyAndUsedToDeleted(const_pointer data) {
+            bitmask128_t * bm128 = this->to_bitmask128(data);
+            std::uint64_t low  = bm128->low  & kMSBs;
+            std::uint64_t high = bm128->high & kMSBs;
+            low  = (~low  + (low  >> 7)) & ~kLSBs;
+            high = (~high + (high >> 7)) & ~kLSBs;
+            return { low, high };
+        }
+
         bool hasAnyMatch(const_pointer data, std::uint8_t control_hash) const {
             bitmask128_t bitmask = this->matchHash(data, control_hash);
             return (bitmask.low != 0 && bitmask.high != 0);
@@ -717,12 +740,17 @@ public:
         bool isAllUnused() const {
             return bitmask.isAllUnused(&this->controls[0]);
         }
+
+        void conventDeletedToEmptyAndUsedToDeleted() {
+            bitmask.conventSpecialToEmptyAndUsedToDeleted(&this->controls[0]);
+        }
     };
 
     typedef hash_group      group_type;
 
     typedef value_type      slot_type;
     typedef value_type      node_type;
+    typedef nc_value_type   nc_slot_type;
 
     template <typename ValueType>
     class basic_iterator {
@@ -806,6 +834,8 @@ public:
 
     typedef typename std::allocator_traits<allocator_type>::template rebind_alloc<slot_type>
                                         slot_allocator_type;
+    typedef typename std::allocator_traits<allocator_type>::template rebind_alloc<nc_slot_type>
+                                        nc_slot_allocator_type;
 
 private:
     group_type *    groups_;
@@ -824,6 +854,7 @@ private:
 
     allocator_type          allocator_;
     slot_allocator_type     slot_allocator_;
+    nc_slot_allocator_type  nc_slot_allocator_;
 
 public:
     flat16_hash_map() : flat16_hash_map(kDefaultCapacity) {
@@ -837,8 +868,8 @@ public:
         slots_(nullptr), slot_size_(0), slot_mask_(0),
         left_empties_(0), n_mlf_(kDefaultLoadFactorInt),
         n_mlf_rev_(kDefaultLoadFactorRevInt),
-        hasher_(hash), key_equal_(equal),
-        allocator_(alloc), slot_allocator_(alloc) {
+        hasher_(hash), key_equal_(equal), allocator_(alloc),
+        slot_allocator_(alloc), nc_slot_allocator_(alloc) {
         this->create_group<true>(init_capacity);
     }
 
@@ -856,8 +887,8 @@ public:
         slots_(nullptr), slot_size_(0), slot_mask_(0),
         left_empties_(0), n_mlf_(kDefaultLoadFactorInt),
         n_mlf_rev_(kDefaultLoadFactorRevInt),
-        hasher_(hash), key_equal_(equal),
-        allocator_(alloc), slot_allocator_(alloc) {
+        hasher_(hash), key_equal_(equal), allocator_(alloc),
+        slot_allocator_(alloc), nc_slot_allocator_(alloc) {
         this->create_group<true>(init_capacity);
         this->insert(first, last);
     }
@@ -887,8 +918,8 @@ public:
         slots_(nullptr), slot_size_(0), slot_mask_(0),
         left_empties_(0), n_mlf_(kDefaultLoadFactorInt),
         n_mlf_rev_(kDefaultLoadFactorRevInt),
-        hasher_(hasher()), key_equal_(key_equal()),
-        allocator_(alloc), slot_allocator_(alloc) {
+        hasher_(hasher()), key_equal_(key_equal()), allocator_(alloc),
+        slot_allocator_(alloc), nc_slot_allocator_(alloc) {
         // Prepare enough space to ensure that no expansion is required during the insertion process.
         size_type other_size = other.slot_size();
         this->reserve_for_insert(other_size);
@@ -911,7 +942,8 @@ public:
         hasher_(std::move(other.hash_function())),
         key_equal_(std::move(other.key_eq())),
         allocator_(std::move(other.get_allocator())),
-        slot_allocator_(std::move(other.get_slot_allocator())) {
+        slot_allocator_(std::move(other.get_slot_allocator())),
+        nc_slot_allocator_(std::move(other.get_nc_slot_allocator())) {
         // Swap content only
         this->swap_content(other);
     }
@@ -924,7 +956,8 @@ public:
         hasher_(std::move(other.hash_function())),
         key_equal_(std::move(other.key_eq())),
         allocator_(alloc),
-        slot_allocator_(std::move(other.get_slot_allocator())) {
+        slot_allocator_(std::move(other.get_slot_allocator())),
+        nc_slot_allocator_(std::move(other.get_nc_slot_allocator())) {
         // Swap content only
         this->swap_content(other);
     }
@@ -938,7 +971,8 @@ public:
         slots_(nullptr), slot_size_(0), slot_mask_(0),
         left_empties_(0), n_mlf_(kDefaultLoadFactorInt),
         n_mlf_rev_(kDefaultLoadFactorRevInt),
-        hasher_(hash), key_equal_(equal), allocator_(alloc) {
+        hasher_(hash), key_equal_(equal), allocator_(alloc),
+        slot_allocator_(alloc), nc_slot_allocator_(alloc) {
         // Prepare enough space to ensure that no expansion is required during the insertion process.
         size_type new_capacity = (init_capacity >= init_list.size()) ? init_capacity : init_list.size();
         this->reserve_for_insert(new_capacity);
@@ -1029,12 +1063,14 @@ public:
         if (old_slot_used > new_slot_threshold) {
             size_type min_required_capacity;
             size_type slot_deleted = old_slot_used - this->slot_size();
-            if ((slot_deleted < (this->slot_capacity() / 5)) ||
+            if ((this->slot_capacity() <= size_type(32)) ||
+                (slot_deleted < (this->slot_capacity() / 5)) ||
                 (min_required_capacity = this->min_require_capacity(this->slot_size()) >
                  this->slot_capacity())) {
                 this->rehash(this->slot_size());
             } else {
-                // Reorder entry and no grow
+                // Reorder slot and no grow
+                this->drop_deleted_no_grow();
             }
         }
     }
@@ -1120,6 +1156,10 @@ public:
         return this->slot_allocator_;
     }
 
+    nc_slot_allocator_type get_nc_slot_allocator() const noexcept {
+        return this->nc_slot_allocator_;
+    }
+
     hasher hash_function() const {
         return this->hasher_;
     }
@@ -1142,6 +1182,7 @@ public:
             }
         }
         this->destroy<false>();
+        this->left_empties_ = this->slot_capacity() * this->n_mlf_ / kLoadFactorAmplify;
         assert(this->slot_size() == 0);
     }
 
@@ -1606,16 +1647,22 @@ private:
         }
 
         this->slot_size_ = 0;
-        this->left_empties_ = 0;
     }
 
     inline bool need_grow() const {
         return (this->left_empties_ <= 0);
     }
 
-    void grow_if_necessary() {
-        size_type new_capacity = (this->slot_mask_ + 1) * 2;
-        this->rehash_impl<false, true>(new_capacity);
+    void reorder_or_grow_if_necessary() {
+        size_type slot_deleted;
+        if ((this->slot_capacity() > size_type(32)) &&
+            (slot_deleted = this->slot_deleted() >= this->slot_capacity() / 5)) {
+            // Reorder slot and no grow
+            this->drop_deleted_no_grow();
+        } else {
+            size_type new_capacity = (this->slot_mask_ + 1) * 2;
+            this->rehash_impl<false, true>(new_capacity);
+        }
     }
 
     JSTD_FORCED_INLINE
@@ -1730,6 +1777,123 @@ private:
         }
     }
 
+    void convent_all_slots() {
+        assert(this->control_at(this->slot_capacity())->isUsed());
+        group_type * groups = this->groups();
+        size_type group_count = this->group_count();
+        for (size_type group_index = 0; group_index < this->group_count(); group_index++) {
+            groups[group_index].conventDeletedToEmptyAndUsedToDeleted();
+        }
+
+        // Mirror the beginning control bytes.
+        std::memcpy((void *)&groups[group_count], (const void *)&groups[0], sizeof(group_type));
+        control_byte * control = this->control_at(0);
+
+        // Set the end of mark
+        if (control->isEmpty()) {
+            control->setEndOf();
+        }
+    }
+
+    JSTD_FORCED_INLINE
+    void transfer_slot(size_type dest_index, size_type src_index) {
+        slot_type * dest_slot = this->slot_at(dest_index);
+        slot_type * src_slot  = this->slot_at(src_index);
+        this->transfer_slot(dest_slot, src_slot);
+    }
+
+    JSTD_FORCED_INLINE
+    void transfer_slot(slot_type * dest_slot, slot_type * src_slot) {
+        this->nc_slot_allocator_.construct(dest_slot, std::move(*reinterpret_cast<nc_slot_type *>(src_slot)));
+        if (!slot_is_trivial_destructor) {
+            this->nc_slot_allocator_.destroy(src_slot);
+        }
+    }
+
+    JSTD_FORCED_INLINE
+    void swap_slot(slot_type * slot1, slot_type * slot2, slot_type * tmp) {
+#if 1
+        using std::swap;
+        swap(*reinterpret_cast<nc_slot_type *>(slot1), *reinterpret_cast<nc_slot_type *>(slot2));
+#elif 1
+        this->nc_slot_allocator_.construct(tmp, std::move(*reinterpret_cast<nc_slot_type *>(slot1)));
+        this->nc_slot_allocator_.construct(slot1, std::move(*reinterpret_cast<nc_slot_type *>(slot2)));
+        this->nc_slot_allocator_.construct(slot2, std::move(*reinterpret_cast<nc_slot_type *>(tmp)));
+        if (!slot_is_trivial_destructor) {
+            this->nc_slot_allocator_.destroy(tmp);
+        }
+#else
+        this->nc_slot_allocator_.construct(tmp, std::move(*reinterpret_cast<nc_slot_type *>(slot1)));
+        *slot1 = std::move(*reinterpret_cast<nc_slot_type *>(slot2));
+        *slot2 = std::move(*reinterpret_cast<nc_slot_type *>(tmp));
+        if (!slot_is_trivial_destructor) {
+            this->nc_slot_allocator_.destroy(tmp);
+        }
+#endif
+    }
+
+    JSTD_FORCED_INLINE
+    void reset_left_empties() {
+        this->left_empties_ = this->slot_threshold() - this->slot_size();
+    }
+
+    void drop_deleted_no_grow() {
+        // Algorithm:
+        // - mark all DELETED slots as EMPTY
+        // - mark all USED slots as DELETED
+        // - for each slot marked as DELETED
+        //     hash = Hash(element)
+        //     target = find_first_unused(hash)
+        //     if target is in the same group
+        //       mark slot as USED
+        //     else if target is EMPTY
+        //       transfer element to target
+        //       mark slot as EMPTY
+        //       mark target as USED
+        //     else if target is DELETED
+        //       swap current element with target element
+        //       mark target as USED
+        //       repeat procedure for current slot with moved from element (target)
+        this->convent_all_slots();
+
+        alignas(slot_type) unsigned char raw[sizeof(slot_type)];
+        slot_type * tmp_slot = reinterpret_cast<slot_type *>(&raw);
+
+        for (size_type index = 0; index < this->slot_capacity(); index++) {
+            control_byte * ctrl = this->control_at(index);
+            if (ctrl->isDeleted()) continue;
+            slot_type * slot = this->slot_at(index);
+            std::uint8_t ctrl_hash;
+            size_type target = find_first_non_used_slot(slot->first, ctrl_hash);
+            intptr_t distance = intptr_t(index - target);
+            if (distance < kGroupWidth && distance >= 0) {
+                // If the distance of old index and new index is less than kGroupWidth,
+                // we don't need to move it because it's already in the best position.
+                ctrl->setUsed(ctrl_hash);
+                continue;
+            }
+
+            control_byte * new_ctrl = this->control_at(target);
+            slot_type * new_slot = this->slot_at(target);
+            if (new_ctrl->isEmpty()) {
+                // Transfer the old slot to the new (Empty) slot.
+                new_ctrl->setUsed(ctrl_hash);
+                this->transfer_slot(new_slot, slot);
+                ctrl->setEmpty();
+            } else {
+                // Swap the old and new slot.
+                assert(new_ctrl->isDeleted());
+                // Until we are done rehashing, DELETED marks previously USED slots.
+                new_ctrl->setUsed(ctrl_hash);
+                this->swap_slot(slot, new_slot, tmp_slot);
+                // Repeat check the swap slot.
+                index--;
+            }
+        }
+
+        this->reset_left_empties();
+    }
+
     size_type find_impl(const key_type & key) const {
         hash_code_t hash_code = this->get_hash(key);
         hash_code_t hash_code_2nd = this->get_second_hash(hash_code);
@@ -1824,7 +1988,7 @@ private:
     }
 
     JSTD_FORCED_INLINE
-    size_type find_first_empty_or_deleted_slot(const key_type & key, std::uint8_t & ctrl_hash) {
+    size_type find_first_non_used_slot(const key_type & key, std::uint8_t & ctrl_hash) {
         hash_code_t hash_code = this->get_hash(key);
         hash_code_t hash_code_2nd = this->get_second_hash(hash_code);
         std::uint8_t control_hash = this->get_control_hash(hash_code_2nd);
@@ -2026,7 +2190,7 @@ private:
 
         if (this->need_grow() || ((maskEmpty == 0) && (firstGroupMaskEmpty == 0))) {
             // The size of slot reach the slot threshold or hashmap is full.
-            this->grow_if_necessary();
+            this->reorder_or_grow_if_necessary();
 
             return this->find_and_prepare_insert(key, ctrl_hash);
         }
@@ -2082,6 +2246,9 @@ private:
                 assert(maskEmpty != 0);
             }
         }
+
+        assert(this->left_empties_ > 0);
+        this->left_empties_--;
 
         // It's a [EmptyEntry] or [DeletedEntry] to insert
         if (likely(maskEmpty != 0)) {
@@ -2374,16 +2541,20 @@ private:
         const group_type & group = this->get_group(start_slot);
         if (group.hasAnyEmpty()) {
             control.setEmpty();
+            this->left_empties_++;
         } else {
             size_type slot_index = this->slot_next_group(start_slot);
             if (slot_index != start_slot) {
                 const group_type & group = this->get_group(slot_index);
-                if (!group.isAllEmpty())
+                if (!group.isAllEmpty()) {
                     control.setDeleted();
-                else
+                } else {
                     control.setEmpty();
+                    this->left_empties_++;
+                }
             } else {
                 control.setEmpty();
+                this->left_empties_++;
             }
         }
         // Destroy slot
@@ -2413,6 +2584,9 @@ private:
         }
         if (std::allocator_traits<slot_allocator_type>::propagate_on_container_swap::value) {
             swap(this->slot_allocator_, other.get_slot_allocator());
+        }
+        if (std::allocator_traits<nc_slot_allocator_type>::propagate_on_container_swap::value) {
+            swap(this->nc_slot_allocator_, other.get_nc_slot_allocator());
         }
     }
 
