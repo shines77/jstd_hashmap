@@ -1064,7 +1064,7 @@ public:
             size_type min_required_capacity;
             size_type slot_deleted = old_slot_used - this->slot_size();
             if ((this->slot_capacity() <= size_type(32)) ||
-                (slot_deleted < (this->slot_capacity() / 5)) ||
+                (slot_deleted < (this->slot_capacity() / 8)) ||
                 (min_required_capacity = this->min_require_capacity(this->slot_size()) >
                  this->slot_capacity())) {
                 this->rehash(this->slot_size());
@@ -1656,7 +1656,7 @@ private:
     void reorder_or_grow_if_necessary() {
         size_type slot_deleted;
         if ((this->slot_capacity() > size_type(32)) &&
-            (slot_deleted = this->slot_deleted() >= this->slot_capacity() / 5)) {
+            (slot_deleted = this->slot_deleted() >= this->slot_capacity() / 8)) {
             // Reorder slot and no grow
             this->drop_deleted_no_grow();
         } else {
