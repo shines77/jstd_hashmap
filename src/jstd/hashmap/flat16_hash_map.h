@@ -1749,6 +1749,7 @@ private:
                     old_slot++;
                 }
             } else {
+#if 0
                 group_type * last_group = old_groups + old_group_count;
                 slot_type * slot_start = old_slots;
                 for (group_type * group = old_groups; group != last_group; group++) {
@@ -1764,6 +1765,23 @@ private:
                     }
                     slot_start += kGroupWidth;
                 }
+#else
+                group_type * last_group = old_groups + old_group_count - 1;
+                slot_type * slot_start = old_slots + old_slot_capacity - kGroupWidth;
+                for (group_type * group = last_group; group >= old_groups; group--) {
+                    std::uint32_t maskUsed = group->matchUsed();
+                    while (maskUsed != 0) {
+                        size_type pos = BitUtils::bsf32(maskUsed);
+                        maskUsed = BitUtils::clearLowBit32(maskUsed);
+                        slot_type * old_slot = slot_start + pos;
+                        this->move_insert_unique(old_slot);
+                        if (!slot_is_trivial_destructor) {
+                            this->slot_allocator_.destroy(old_slot);
+                        }
+                    }
+                    slot_start -= kGroupWidth;
+                }
+#endif
             }
 
             assert(this->slot_size() == old_slot_size);
