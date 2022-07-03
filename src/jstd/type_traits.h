@@ -522,17 +522,17 @@ private:
                (sizeof(PairT) == sizeof(Pair)) &&
                (alignof(PairT) == alignof(Pair)) &&
                (OffsetOf<PairT>::kFirst == OffsetOf<Pair>::kFirst) &&
-               (OffsetOf<PairT>::kSecond == <Pair>::kSecond));
+               (OffsetOf<PairT>::kSecond == OffsetOf<Pair>::kSecond));
     }
 
 public:
     // Whether std::pair<const K, V> and std::pair<K, V> are layout-compatible.
     // If they are, then it is safe to store them in a union and read from either.
-    static constexpr bool value = (std::is_standard_layout<K>() &&
+    static constexpr bool value = (std::is_standard_layout<Key>() &&
                                    std::is_standard_layout<Pair>() &&
                                    (OffsetOf<Pair>::kFirst == 0) &&
-                                   isLayoutCompatible<std::pair<K, V>>() &&
-                                   isLayoutCompatible<std::pair<const K, V>>());
+                                   isLayoutCompatible<std::pair<Key, Value>>() &&
+                                   isLayoutCompatible<std::pair<const Key, Value>>());
 };
 
 //
