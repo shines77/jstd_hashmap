@@ -121,13 +121,13 @@ std::uint32_t bitScanReverse(SizeType N)
 
 template <typename SizeType, SizeType Min_n = 0>
 inline
-typename jstd::size_type_t<SizeType>::type
+typename size_type_t<SizeType>::type
 prev_pow2(SizeType N)
 {
     static_assert(std::is_integral<SizeType>::value,
                   "Error: pow2::prev_pow2(SizeType n) -- n must be a integral type.");
     typedef typename std::make_unsigned<SizeType>::type unsigned_type;
-    typedef typename jstd::size_type_t<SizeType>::type  return_type;
+    typedef typename size_type_t<SizeType>::type        return_type;
     unsigned_type n = static_cast<unsigned_type>(N);
     if ((n > 1) || (Min_n > 1)) {
         assert(n > 1);
@@ -152,13 +152,13 @@ prev_pow2(SizeType N)
 
 template <typename SizeType, SizeType Min_n = 0>
 inline
-typename jstd::size_type_t<SizeType>::type
+typename size_type_t<SizeType>::type
 round_down(SizeType N)
 {
     static_assert(std::is_integral<SizeType>::value,
                   "Error: pow2::round_down(SizeType n) -- n must be a integral type.");
     typedef typename std::make_unsigned<SizeType>::type unsigned_type;
-    typedef typename jstd::size_type_t<SizeType>::type  return_type;
+    typedef typename size_type_t<SizeType>::type        return_type;
 #ifdef _DEBUG
     typedef typename std::make_signed<SizeType>::type   signed_type;
 #endif
@@ -185,13 +185,13 @@ round_down(SizeType N)
 
 template <typename SizeType, SizeType Min_n = 0>
 inline
-typename jstd::size_type_t<SizeType>::type
+typename size_type_t<SizeType>::type
 round_to(SizeType N)
 {
     static_assert(std::is_integral<SizeType>::value,
                   "Error: pow2::round_to(SizeType n) -- n must be a integral type.");
     typedef typename std::make_unsigned<SizeType>::type unsigned_type;
-    typedef typename jstd::size_type_t<SizeType>::type  return_type;
+    typedef typename size_type_t<SizeType>::type        return_type;
     unsigned_type n = static_cast<unsigned_type>(N);
     if ((n > 0) || (Min_n > 0)) {
         assert(n > 0);
@@ -215,13 +215,13 @@ round_to(SizeType N)
 
 template <typename SizeType, SizeType Min_n = 0>
 inline
-typename jstd::size_type_t<SizeType>::type
+typename size_type_t<SizeType>::type
 round_up(SizeType N)
 {
     static_assert(std::is_integral<SizeType>::value,
                   "Error: pow2::round_up(SizeType n) -- n must be a integral type.");
     typedef typename std::make_unsigned<SizeType>::type unsigned_type;
-    typedef typename jstd::size_type_t<SizeType>::type  return_type;
+    typedef typename size_type_t<SizeType>::type        return_type;
 #ifdef _DEBUG
     typedef typename std::make_signed<SizeType>::type   signed_type;
 #endif
@@ -253,13 +253,13 @@ round_up(SizeType N)
 
 template <typename SizeType, SizeType Min_n = 0>
 inline
-typename jstd::size_type_t<SizeType>::type
+typename size_type_t<SizeType>::type
 next_pow2(SizeType N)
 {
     static_assert(std::is_integral<SizeType>::value,
                   "Error: pow2::next_pow2(SizeType n) -- n must be a integral type.");
     typedef typename std::make_unsigned<SizeType>::type unsigned_type;
-    typedef typename jstd::size_type_t<SizeType>::type  return_type;
+    typedef typename size_type_t<SizeType>::type        return_type;
     unsigned_type n = static_cast<unsigned_type>(N);
     if ((n < ((std::numeric_limits<unsigned_type>::max)() / 2 + 1)) || (sizeof(SizeType) != 4)) {
         if ((n > 0) || (Min_n > 0)) {

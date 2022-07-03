@@ -293,11 +293,15 @@ public:
 
         std::uint32_t matchEmpty(const_pointer data) const {
 #if defined(__SSSE3__)
-            // This only works when kEmptyEntry is 0b10000000.
-            __m128i control_bits = _mm_loadu_si128((const __m128i *)data);
-            __m128i empty_mask = _mm_sign_epi8(control_bits, control_bits);
-            std::uint32_t mask = (std::uint32_t)_mm_movemask_epi8(empty_mask);
-            return mask;
+            if (kEmptyEntry == std::uint8_t(0b10000000)) {
+                // This only works when kEmptyEntry is 0b10000000.
+                __m128i control_bits = _mm_loadu_si128((const __m128i *)data);
+                __m128i empty_mask = _mm_sign_epi8(control_bits, control_bits);
+                std::uint32_t mask = (std::uint32_t)_mm_movemask_epi8(empty_mask);
+                return mask;
+            } else {
+                return this->matchControlTag(data, kEmptyEntry);
+            }
 #else
             return this->matchControlTag(data, kEmptyEntry);
 #endif
@@ -313,6 +317,12 @@ public:
             __m128i match_mask = _mm_cmplt_epi8_fixed(control_bits, tag_bits);
             std::uint32_t mask = (std::uint32_t)_mm_movemask_epi8(control_bits);
             return mask;
+        }
+
+        std::uint32_t matchNotEmptyOrNotDeleted(const_pointer data) const {
+            std::uint32_t maskEmptyOrDeleted = this->matchEmptyOrDeleted(data);
+            std::uint32_t maskNotEmptyOrNotDeleted = (maskEmptyOrDeleted ^ kFullMask16);
+            return maskNotEmptyOrNotDeleted;
         }
 
         std::uint32_t matchUsed(const_pointer data) const {
@@ -579,6 +589,16 @@ public:
             return { low, high };
         }
 
+        bitmask128_t matchNotEmptyOrNotDeleted(const_pointer data) const {
+            // kEmptyOrDeleted < kEndOfMark = 0b11111111
+            bitmask128_t * bm128 = this->to_bitmask128(data);
+            std::uint64_t low  = bm128->low;
+            std::uint64_t high = bm128->high;
+            low  = (low  & (~low  << 7) & kMSBs) ^ kMSBs;
+            high = (high & (~high << 7) & kMSBs) ^ kMSBs;
+            return { low, high };
+        }
+
         bitmask128_t matchUsed(const_pointer data) const {
             // kUsedEntry = 0b0xxxxxxx
             bitmask128_t * bm128 = this->to_bitmask128(data);
@@ -709,12 +729,20 @@ public:
             return bitmask.matchEmptyOrDeleted(&this->controls[0]);
         }
 
+        bitmask_type matchNotEmptyOrNotDeleted() const {
+            return bitmask.matchNotEmptyOrNotDeleted(&this->controls[0]);
+        }
+
         bitmask_type matchUsed() const {
             return bitmask.matchUsed(&this->controls[0]);
         }
 
         bitmask_type matchUnused() const {
             return bitmask.matchUnused(&this->controls[0]);
+        }
+
+        void conventDeletedToEmptyAndUsedToDeleted() {
+            bitmask.conventSpecialToEmptyAndUsedToDeleted(&this->controls[0]);
         }
 
         bool hasAnyMatch(std::uint8_t control_hash) const {
@@ -759,10 +787,6 @@ public:
 
         bool isAllUnused() const {
             return bitmask.isAllUnused(&this->controls[0]);
-        }
-
-        void conventDeletedToEmptyAndUsedToDeleted() {
-            bitmask.conventSpecialToEmptyAndUsedToDeleted(&this->controls[0]);
         }
     };
 
@@ -1146,11 +1170,12 @@ public:
 
     iterator begin() {
 #if 1
+        assert(this->control_at(this->slot_capacity())->isUsed());
         group_type * group = this->groups();
         group_type * last_slot = this->groups() + this->group_count();
         size_type start_index = 0;
         for (; group != last_slot; group++) {
-            std::uint32_t maskUsed = group->matchUsed();
+            std::uint32_t maskUsed = group->matchNotEmptyOrNotDeleted();
             if (maskUsed != 0) {
                 size_type pos = BitUtils::bsf32(maskUsed);
                 size_type index = start_index + pos;
@@ -1927,7 +1952,7 @@ private:
                         while (maskUsed != 0) {
                             size_type pos = BitUtils::bsf32(maskUsed);
                             maskUsed = BitUtils::clearLowBit32(maskUsed);
-                            size_type old_index = this->round_index(start_index + pos, old_slot_mask);
+                            size_type old_index = start_index + pos;
                             slot_type * old_slot = old_slots + old_index;
                             this->move_insert_unique(old_slot);
                             if (!is_slot_trivial_destructor) {
@@ -1944,7 +1969,7 @@ private:
                         while (maskUsed != 0) {
                             size_type pos = BitUtils::bsf32(maskUsed);
                             maskUsed = BitUtils::clearLowBit32(maskUsed);
-                            size_type old_index = this->round_index(start_index + pos, old_slot_mask);
+                            size_type old_index = start_index + pos;
                             slot_type * old_slot = old_slots + old_index;
                             this->move_insert_unique(old_slot);
                             if (!is_slot_trivial_destructor) {
