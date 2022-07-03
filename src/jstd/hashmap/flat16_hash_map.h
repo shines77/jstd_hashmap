@@ -1170,12 +1170,12 @@ public:
 
     iterator begin() {
 #if 1
-        assert(this->control_at(this->slot_capacity())->isUsed());
+        assert(!(this->control_at(this->slot_capacity())->isEmptyOrDeleted()));
         group_type * group = this->groups();
-        group_type * last_slot = this->groups() + this->group_count();
+        group_type * last_group = this->groups() + this->group_count();
         size_type start_index = 0;
-        for (; group != last_slot; group++) {
-            std::uint32_t maskUsed = group->matchNotEmptyOrNotDeleted();
+        for (; group != last_group; group++) {
+            std::uint32_t maskUsed = group->matchUsed();
             if (maskUsed != 0) {
                 size_type pos = BitUtils::bsf32(maskUsed);
                 size_type index = start_index + pos;
@@ -1784,6 +1784,7 @@ private:
         }
     }
 
+    template <bool WriteEndofMark>
     JSTD_FORCED_INLINE
     void copy_and_mirror_controls() {
         // Copy and mirror the beginning control bytes.
@@ -1792,11 +1793,13 @@ private:
         std::memcpy((void *)&controls[this->slot_capacity()], (const void *)&controls[0],
                     sizeof(control_byte) * copy_size);
 
-        // Set the end of mark
-        control_byte * ctrl_0 = controls;
-        if (ctrl_0->isEmptyOrDeleted()) {
-            control_byte * ctrl_mirror = this->control_at(this->slot_capacity());
-            ctrl_mirror->setEndOf();
+        if (WriteEndofMark) {
+            // Set the end of mark
+            control_byte * ctrl_0 = controls;
+            if (ctrl_0->isEmptyOrDeleted()) {
+                control_byte * ctrl_mirror = this->control_at(this->slot_capacity());
+                ctrl_mirror->setEndOf();
+            }
         }
     }
 
@@ -1870,27 +1873,29 @@ private:
 
         size_type group_count = (new_capacity + (kGroupWidth - 1)) / kGroupWidth;
         assert(group_count > 0);
-        group_type * groups = new group_type[group_count + 1];
-        groups_ = groups;
+        group_type * new_groups = new group_type[group_count + 1];
+        groups_ = new_groups;
         group_mask_ = group_count - 1;
 
 #if 1
-        std::memset((void *)groups, kEmptyEntry, sizeof(group_type) * group_count);
+        std::memset((void *)new_groups, kEmptyEntry, sizeof(group_type) * group_count);
 #else
         for (size_type index = 0; index < group_count; index++) {
-            groups[index].template fillAll8<kEmptyEntry>();
+            new_groups[index].template fillAll8<kEmptyEntry>();
         }
 #endif
         if (new_capacity >= kGroupWidth) {
-            groups[group_count].template fillAll8<kEmptyEntry>();
+            new_groups[group_count].template fillAll8<kEmptyEntry>();
         } else {
             assert(new_capacity < kGroupWidth);
-            group_type * tail_group = (group_type *)((char *)groups + new_capacity * 2);
+            group_type * tail_group = (group_type *)((char *)new_groups + new_capacity * 2);
             (*tail_group).template fillAll8<kEndOfMark>();
 
-            groups[group_count].template fillAll8<kEndOfMark>();
+            new_groups[group_count].template fillAll8<kEndOfMark>();
         }
-        control_byte * endof_ctrl = this->control_at(new_capacity);
+
+        control_byte * new_controls = (control_byte *)new_groups;
+        control_byte * endof_ctrl = new_controls + new_capacity;
         endof_ctrl->setEndOf();
 
         slot_type * slots = slot_allocator_.allocate(new_capacity);
@@ -2006,7 +2011,7 @@ private:
     }
 
     void convent_all_slots() {
-        assert(this->control_at(this->slot_capacity())->isUsed());
+        assert(!(this->control_at(this->slot_capacity())->isEmptyOrDeleted()));
 
         // Convert all [Deleted] to [Empty], and [Used] to [Deleted].
         group_type * groups = this->groups();
@@ -2016,7 +2021,7 @@ private:
         }
 
         // Copy and mirror the beginning control bytes.
-        this->copy_and_mirror_controls();
+        this->template copy_and_mirror_controls<false>();
     }
 
     JSTD_FORCED_INLINE
@@ -2343,9 +2348,6 @@ private:
         for (InputIter iter = first; iter != last; ++iter) {
             this->insert_unique(static_cast<value_type>(*iter));
         }
-
-        // Copy and mirror the beginning control bytes.
-        this->copy_and_mirror_controls();
     }
 
     std::pair<size_type, bool>

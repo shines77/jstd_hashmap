@@ -74,6 +74,7 @@
 #include <immintrin.h>
 
 #include "jstd/type_traits.h"
+#include "jstd/iterator.h"
 #include "jstd/utility.h"
 #include "jstd/support/BitUtils.h"
 #include "jstd/support/Power2.h"
@@ -274,11 +275,15 @@ public:
 
         std::uint32_t matchEmpty(const_pointer data) const {
 #if defined(__SSSE3__)
-            // This only works when kEmptyEntry is 0b10000000.
-            __m128i control_bits = _mm_loadu_si128((const __m128i *)data);
-            __m128i empty_mask = _mm_sign_epi8(control_bits, control_bits);
-            std::uint32_t mask = (std::uint32_t)_mm_movemask_epi8(empty_mask);
-            return mask;
+            if (kEmptyEntry == std::uint8_t(0b10000000)) {
+                // This only works when kEmptyEntry is 0b10000000.
+                __m128i control_bits = _mm_loadu_si128((const __m128i *)data);
+                __m128i empty_mask = _mm_sign_epi8(control_bits, control_bits);
+                std::uint32_t mask = (std::uint32_t)_mm_movemask_epi8(empty_mask);
+                return mask;
+            } else {
+                return this->matchControlTag(data, kEmptyEntry);
+            }
 #else
             return this->matchControlTag(data, kEmptyEntry);
 #endif
@@ -294,6 +299,12 @@ public:
             __m128i match_mask = _mm_cmplt_epi8_fixed(control_bits, tag_bits);
             std::uint32_t mask = (std::uint32_t)_mm_movemask_epi8(control_bits);
             return mask;
+        }
+
+        std::uint32_t matchNotEmptyOrNotDeleted(const_pointer data) const {
+            std::uint32_t maskEmptyOrDeleted = this->matchEmptyOrDeleted(data);
+            std::uint32_t maskNotEmptyOrNotDeleted = (maskEmptyOrDeleted ^ kFullMask16);
+            return maskNotEmptyOrNotDeleted;
         }
 
         std::uint32_t matchUsed(const_pointer data) const {
@@ -560,6 +571,16 @@ public:
             return { low, high };
         }
 
+        bitmask128_t matchNotEmptyOrNotDeleted(const_pointer data) const {
+            // kEmptyOrDeleted < kEndOfMark = 0b11111111
+            bitmask128_t * bm128 = this->to_bitmask128(data);
+            std::uint64_t low  = bm128->low;
+            std::uint64_t high = bm128->high;
+            low  = (low  & (~low  << 7) & kMSBs) ^ kMSBs;
+            high = (high & (~high << 7) & kMSBs) ^ kMSBs;
+            return { low, high };
+        }
+
         bitmask128_t matchUsed(const_pointer data) const {
             // kUsedEntry = 0b0xxxxxxx
             bitmask128_t * bm128 = this->to_bitmask128(data);
@@ -648,7 +669,7 @@ public:
 
 #endif // __SSE2__
 
-    struct hash_group {
+    struct map_group {
         typedef BitMask128<control_byte>                        bitmask128_type;
         typedef typename BitMask128<control_byte>::bitmask_type bitmask_type;
 
@@ -657,9 +678,9 @@ public:
             bitmask128_type bitmask;
         };
 
-        hash_group() noexcept {
+        map_group() noexcept {
         }
-        ~hash_group() noexcept = default;
+        ~map_group() noexcept = default;
 
         void clear() {
             bitmask.clear(&this->controls[0]);
@@ -690,12 +711,20 @@ public:
             return bitmask.matchEmptyOrDeleted(&this->controls[0]);
         }
 
+        bitmask_type matchNotEmptyOrNotDeleted() const {
+            return bitmask.matchNotEmptyOrNotDeleted(&this->controls[0]);
+        }
+
         bitmask_type matchUsed() const {
             return bitmask.matchUsed(&this->controls[0]);
         }
 
         bitmask_type matchUnused() const {
             return bitmask.matchUnused(&this->controls[0]);
+        }
+
+        void conventDeletedToEmptyAndUsedToDeleted() {
+            bitmask.conventSpecialToEmptyAndUsedToDeleted(&this->controls[0]);
         }
 
         bool hasAnyMatch(std::uint8_t control_hash) const {
@@ -741,13 +770,9 @@ public:
         bool isAllUnused() const {
             return bitmask.isAllUnused(&this->controls[0]);
         }
-
-        void conventDeletedToEmptyAndUsedToDeleted() {
-            bitmask.conventSpecialToEmptyAndUsedToDeleted(&this->controls[0]);
-        }
     };
 
-    typedef hash_group      group_type;
+    typedef map_group      group_type;
 
     typedef value_type      slot_type;
     typedef value_type      node_type;
@@ -814,7 +839,7 @@ public:
         }
 
         pointer operator -> () const {
-            return std::addressof(*this->slot_);
+            return std::addressof(*(this->slot_));
         }
 
         operator basic_iterator<const remove_const_value_type>() const {
@@ -890,7 +915,10 @@ public:
         n_mlf_rev_(kDefaultLoadFactorRevInt),
         hasher_(hash), key_equal_(equal), allocator_(alloc),
         slot_allocator_(alloc), nc_slot_allocator_(alloc) {
-        this->create_group<true>(init_capacity);
+        // Prepare enough space to ensure that no expansion is required during the insertion process.
+        size_type input_size = distance(first, last);
+        size_type reserve_capacity = (init_capacity >= input_size) ? init_capacity : input_size;
+        this->reserve_for_insert(reserve_capacity);
         this->insert(first, last);
     }
 
@@ -975,8 +1003,8 @@ public:
         hasher_(hash), key_equal_(equal), allocator_(alloc),
         slot_allocator_(alloc), nc_slot_allocator_(alloc) {
         // Prepare enough space to ensure that no expansion is required during the insertion process.
-        size_type new_capacity = (init_capacity >= init_list.size()) ? init_capacity : init_list.size();
-        this->reserve_for_insert(new_capacity);
+        size_type reserve_capacity = (init_capacity >= init_list.size()) ? init_capacity : init_list.size();
+        this->reserve_for_insert(reserve_capacity);
         this->insert(init_list.begin(), init_list.end());
     }
 
@@ -1060,7 +1088,7 @@ public:
         std::uint32_t n_mlf_rev = (std::uint32_t)std::ceil(1.0f / mlf * kLoadFactorAmplify);
         this->n_mlf_ = n_mlf;
         this->n_mlf_rev_ = n_mlf_rev;
-        size_type new_slot_threshold = this->slot_capacity() * n_mlf / kLoadFactorAmplify;
+        size_type new_slot_threshold = this->slot_threshold();
         if (old_slot_used > new_slot_threshold) {
             size_type min_required_capacity;
             size_type slot_deleted = old_slot_used - this->slot_size();
@@ -1103,9 +1131,9 @@ public:
     iterator begin() {
 #if 1
         group_type * group = this->groups();
-        group_type * last_slot = this->groups() + this->group_count();
+        group_type * last_group = this->groups() + this->group_count();
         size_type start_index = 0;
-        for (; group != last_slot; group++) {
+        for (; group != last_group; group++) {
             std::uint32_t maskUsed = group->matchUsed();
             if (maskUsed != 0) {
                 size_type pos = BitUtils::bsf32(maskUsed);
@@ -1471,11 +1499,18 @@ private:
     }
 
     inline size_type index_for(hash_code_t hash_code) const noexcept {
-        return (((size_type)hash_code ^ this->index_salt()) & this->slot_mask());
+        if (kUseIndexSalt)
+            return (((size_type)hash_code ^ this->index_salt()) & this->slot_mask());
+        else
+            return ((size_type)hash_code & this->slot_mask());
     }
 
     inline size_type index_for(hash_code_t hash_code, size_type slot_mask) const noexcept {
-        return (((size_type)hash_code ^ this->index_salt()) & slot_mask);
+        assert(pow2::is_pow2(slot_mask + 1));
+        if (kUseIndexSalt)
+            return (((size_type)hash_code ^ this->index_salt()) & slot_mask);
+        else
+            return ((size_type)hash_code & slot_mask);
     }
 
     inline size_type prev_group(size_type group_index) const noexcept {
@@ -1699,7 +1734,7 @@ private:
             groups[index].template fillAll8<kEmptyEntry>();
         }
 #endif
-        if (group_count == 1) {
+        if (new_capacity < kGroupWidth) {
             group_type * tail_group = (group_type *)((char *)groups + new_capacity);
             (*tail_group).template fillAll8<kEndOfMark>();
         }
@@ -1800,22 +1835,37 @@ private:
         }
     }
 
+    template <bool WriteEndofMark>
+    JSTD_FORCED_INLINE
+    void copy_and_mirror_controls() {
+        // Copy and mirror the beginning control bytes.
+        size_type copy_size = (std::min)(this->slot_capacity(), kGroupWidth);
+        control_byte * controls = this->controls();
+        std::memcpy((void *)&controls[this->slot_capacity()], (const void *)&controls[0],
+                    sizeof(control_byte) * copy_size);
+
+        if (WriteEndofMark) {
+            // Set the end of mark
+            control_byte * ctrl_0 = controls;
+            if (ctrl_0->isEmptyOrDeleted()) {
+                control_byte * ctrl_mirror = this->control_at(this->slot_capacity());
+                ctrl_mirror->setEndOf();
+            }
+        }
+    }
+
     void convent_all_slots() {
         assert(this->control_at(this->slot_capacity())->isUsed());
+
+        // Convert all [Deleted] to [Empty], and [Used] to [Deleted].
         group_type * groups = this->groups();
         size_type group_count = this->group_count();
         for (size_type group_index = 0; group_index < this->group_count(); group_index++) {
             groups[group_index].conventDeletedToEmptyAndUsedToDeleted();
         }
 
-        // Mirror the beginning control bytes.
-        std::memcpy((void *)&groups[group_count], (const void *)&groups[0], sizeof(group_type));
-        control_byte * control = this->control_at(0);
-
-        // Set the end of mark
-        if (control->isEmpty()) {
-            control->setEndOf();
-        }
+        // Copy and mirror the beginning control bytes.
+        this->template copy_and_mirror_controls<false>();
     }
 
     JSTD_FORCED_INLINE
@@ -1884,10 +1934,12 @@ private:
 
         for (size_type index = 0; index < this->slot_capacity(); index++) {
             control_byte * ctrl = this->control_at(index);
-            if (ctrl->isDeleted()) continue;
+            if (ctrl->isDeleted()) {
+                continue;
+            }
             slot_type * slot = this->slot_at(index);
             std::uint8_t ctrl_hash;
-            size_type target = find_first_non_used_slot(slot->first, ctrl_hash);
+            size_type target = this->find_first_non_used_slot(slot->first, ctrl_hash);
             intptr_t distance = intptr_t(index - target);
             if (distance < intptr_t(kGroupWidth) && distance >= 0) {
                 // If the distance of old index and new index is less than kGroupWidth,
@@ -2109,17 +2161,17 @@ private:
     }
 
     // Use in rehash_impl()
-    void move_insert_unique(slot_type * value) {
+    void move_insert_unique(slot_type * slot) {
         std::uint8_t ctrl_hash;
-        size_type target = this->find_first_empty_slot(value->first, ctrl_hash);
+        size_type target = this->find_first_empty_slot(slot->first, ctrl_hash);
         assert(target != npos);
 
         // Found a [DeletedEntry] or [EmptyEntry] to insert
         control_byte * control = this->control_at(target);
         assert(control->isEmpty());
         control->setUsed(ctrl_hash);
-        slot_type * slot = this->slot_at(target);
-        this->slot_allocator_.construct(slot, std::move(*static_cast<value_type *>(value)));
+        slot_type * new_slot = this->slot_at(target);
+        this->slot_allocator_.construct(new_slot, std::move(*static_cast<value_type *>(slot)));
         this->slot_size_++;
         assert(this->slot_size() <= this->slot_capacity());
     }
