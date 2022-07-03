@@ -74,6 +74,7 @@
 #include <immintrin.h>
 
 #include "jstd/type_traits.h"
+#include "jstd/iterator.h"
 #include "jstd/utility.h"
 #include "jstd/support/BitUtils.h"
 #include "jstd/support/Power2.h"
@@ -92,27 +93,30 @@
 namespace jstd {
 
 template < typename Key, typename Value,
-           typename Hash = std::hash<Key>,
-           typename KeyEqual = std::equal_to<Key>,
-           typename Allocator = std::allocator<std::pair<Key, Value>> >
+           typename Hash = std::hash<typename std::remove_cv<Key>::type>,
+           typename KeyEqual = std::equal_to<typename std::remove_cv<Key>::type>,
+           typename Allocator = std::allocator<std::pair<typename std::remove_const<typename std::remove_cv<Key>::type>::type,
+                                                         typename std::remove_cv<Value>::type>> >
 class flat16_hash_map {
 public:
-    typedef Key                             key_type;
-    typedef Value                           mapped_type;
-    typedef std::pair<Key, Value>           value_type;
-    typedef std::pair<Key, Value>           nc_value_type;
+    typedef typename std::remove_cv<Key>::type      key_type;
+    typedef typename std::remove_cv<Value>::type    mapped_type;
 
-    typedef Hash                            hasher;
-    typedef KeyEqual                        key_equal;
-    typedef Allocator                       allocator_type;
-    typedef typename Hash::result_type      hash_result_t;
+    typedef std::pair<key_type, mapped_type>        value_type;
+    typedef std::pair<key_type, mapped_type>        mutable_value_type;
 
-    typedef std::size_t                     size_type;
-    typedef typename std::make_signed<size_type>::type
-                                            ssize_type;
-    typedef std::size_t                     hash_code_t;
+    typedef Hash                                    hasher;
+    typedef KeyEqual                                key_equal;
+    typedef Allocator                               allocator_type;
+    typedef typename Hash::result_type              hash_result_t;
+
+    typedef std::size_t                             size_type;
+    typedef std::intptr_t                           ssize_type;
+    typedef std::size_t                             hash_code_t;
     typedef flat16_hash_map<Key, Value, Hash, KeyEqual, Allocator>
-                                            this_type;
+                                                    this_type;
+
+    static constexpr bool kUseIndexSalt = true;
 
     static constexpr size_type npos = size_type(-1);
 
@@ -151,18 +155,22 @@ public:
                                           (std::is_arithmetic<key_type>::value ||
                                            std::is_enum<key_type>::value);
 
-    static constexpr bool slot_is_trivial_copyable =
+    static constexpr bool is_slot_trivial_copyable =
             (std::is_trivially_copyable<value_type>::value ||
             (std::is_trivially_copyable<key_type>::value &&
              std::is_trivially_copyable<mapped_type>::value) ||
             (std::is_scalar<key_type>::value && std::is_scalar<mapped_type>::value));
 
-    static constexpr bool slot_is_trivial_destructor =
+    static constexpr bool is_slot_trivial_destructor =
             (std::is_trivially_destructible<value_type>::value ||
             (std::is_trivially_destructible<key_type>::value &&
              std::is_trivially_destructible<mapped_type>::value) ||
            ((std::is_arithmetic<key_type>::value || std::is_enum<key_type>::value) &&
             (std::is_arithmetic<mapped_type>::value || std::is_enum<mapped_type>::value)));
+
+    static constexpr bool kIsCompatibleLayout =
+            std::is_same<value_type, mutable_value_type>::value ||
+            is_compatible_layout<value_type, mutable_value_type>::value;
 
     static constexpr std::uint8_t kEmptyEntry   = 0b10000000;
     static constexpr std::uint8_t kDeletedEntry = 0b11111110;
@@ -199,12 +207,24 @@ public:
             return ((std::int8_t)this->value < (std::int8_t)kEndOfMark);
         }
 
+        static bool isEmptyOrDeleted(std::uint8_t tag) {
+            return ((std::int8_t)tag < (std::int8_t)kEndOfMark);
+        }
+
         bool isUsed() const {
             return ((std::int8_t)this->value >= (std::int8_t)0);
         }
 
+        static bool isUsed(std::uint8_t tag) {
+            return ((std::int8_t)tag >= (std::int8_t)0);
+        }
+
         bool isUnused() const {
             return ((std::int8_t)this->value < (std::int8_t)0);
+        }
+
+        static bool isUnused(std::uint8_t tag) {
+            return ((std::int8_t)tag < (std::int8_t)0);
         }
 
         void setEmpty() {
@@ -647,7 +667,7 @@ public:
 
 #endif // __SSE2__
 
-    struct hash_group {
+    struct map_group {
         typedef BitMask128<control_byte>                        bitmask128_type;
         typedef typename BitMask128<control_byte>::bitmask_type bitmask_type;
 
@@ -656,9 +676,9 @@ public:
             bitmask128_type bitmask;
         };
 
-        hash_group() noexcept {
+        map_group() noexcept {
         }
-        ~hash_group() noexcept = default;
+        ~map_group() noexcept = default;
 
         void clear() {
             bitmask.clear(&this->controls[0]);
@@ -746,11 +766,23 @@ public:
         }
     };
 
-    typedef hash_group      group_type;
+    typedef map_group      group_type;
 
-    typedef value_type      slot_type;
-    typedef value_type      node_type;
-    typedef nc_value_type   nc_slot_type;
+    class slot_type {
+    public:
+        union {
+            value_type          value;
+            mutable_value_type  mutable_value;
+            const key_type      key;
+            key_type            mutable_key;
+        };
+
+        slot_type() {}
+        ~slot_type() = delete;
+    };
+
+    typedef slot_type       mutable_slot_type;
+    typedef slot_type       node_type;
 
     template <typename ValueType>
     class basic_iterator {
@@ -809,11 +841,12 @@ public:
         }
 
         reference operator * () const {
-            return *(this->slot_);
+            return this->slot_->value;
         }
 
         pointer operator -> () const {
-            return std::addressof(*this->slot_);
+            return std::addressof(this->slot_->value);
+            //return &(this->slot_->value);
         }
 
         operator basic_iterator<const remove_const_value_type>() const {
@@ -832,10 +865,12 @@ public:
     using iterator       = basic_iterator<value_type>;
     using const_iterator = basic_iterator<const value_type>;
 
+    typedef typename std::allocator_traits<allocator_type>::template rebind_alloc<mutable_value_type>
+                                        mutable_allocator_type;
     typedef typename std::allocator_traits<allocator_type>::template rebind_alloc<slot_type>
                                         slot_allocator_type;
-    typedef typename std::allocator_traits<allocator_type>::template rebind_alloc<nc_slot_type>
-                                        nc_slot_allocator_type;
+    typedef typename std::allocator_traits<allocator_type>::template rebind_alloc<mutable_slot_type>
+                                        mutable_slot_allocator_type;
 
 private:
     group_type *    groups_;
@@ -852,9 +887,10 @@ private:
     hasher          hasher_;
     key_equal       key_equal_;
 
-    allocator_type          allocator_;
-    slot_allocator_type     slot_allocator_;
-    nc_slot_allocator_type  nc_slot_allocator_;
+    allocator_type              allocator_;
+    mutable_allocator_type      mutable_allocator_;
+    slot_allocator_type         slot_allocator_;
+    mutable_slot_allocator_type mutable_slot_allocator_;
 
 public:
     flat16_hash_map() : flat16_hash_map(kDefaultCapacity) {
@@ -868,8 +904,9 @@ public:
         slots_(nullptr), slot_size_(0), slot_mask_(0),
         left_empties_(0), n_mlf_(kDefaultLoadFactorInt),
         n_mlf_rev_(kDefaultLoadFactorRevInt),
-        hasher_(hash), key_equal_(equal), allocator_(alloc),
-        slot_allocator_(alloc), nc_slot_allocator_(alloc) {
+        hasher_(hash), key_equal_(equal),
+        allocator_(alloc), mutable_allocator_(alloc),
+        slot_allocator_(alloc), mutable_slot_allocator_(alloc) {
         this->create_group<true>(init_capacity);
     }
 
@@ -887,9 +924,13 @@ public:
         slots_(nullptr), slot_size_(0), slot_mask_(0),
         left_empties_(0), n_mlf_(kDefaultLoadFactorInt),
         n_mlf_rev_(kDefaultLoadFactorRevInt),
-        hasher_(hash), key_equal_(equal), allocator_(alloc),
-        slot_allocator_(alloc), nc_slot_allocator_(alloc) {
-        this->create_group<true>(init_capacity);
+        hasher_(hash), key_equal_(equal),
+        allocator_(alloc), mutable_allocator_(alloc),
+        slot_allocator_(alloc), mutable_slot_allocator_(alloc) {
+        // Prepare enough space to ensure that no expansion is required during the insertion process.
+        size_type input_size = distance(first, last);
+        size_type reserve_capacity = (init_capacity >= input_size) ? init_capacity : input_size;
+        this->reserve_for_insert(reserve_capacity);
         this->insert(first, last);
     }
 
@@ -918,8 +959,9 @@ public:
         slots_(nullptr), slot_size_(0), slot_mask_(0),
         left_empties_(0), n_mlf_(kDefaultLoadFactorInt),
         n_mlf_rev_(kDefaultLoadFactorRevInt),
-        hasher_(hasher()), key_equal_(key_equal()), allocator_(alloc),
-        slot_allocator_(alloc), nc_slot_allocator_(alloc) {
+        hasher_(hasher()), key_equal_(key_equal()),
+        allocator_(alloc), mutable_allocator_(alloc),
+        slot_allocator_(alloc), mutable_slot_allocator_(alloc) {
         // Prepare enough space to ensure that no expansion is required during the insertion process.
         size_type other_size = other.slot_size();
         this->reserve_for_insert(other_size);
@@ -942,8 +984,9 @@ public:
         hasher_(std::move(other.hash_function())),
         key_equal_(std::move(other.key_eq())),
         allocator_(std::move(other.get_allocator())),
+        mutable_allocator_(std::move(other.get_mutable_allocator())),
         slot_allocator_(std::move(other.get_slot_allocator())),
-        nc_slot_allocator_(std::move(other.get_nc_slot_allocator())) {
+        mutable_slot_allocator_(std::move(other.get_mutable_slot_allocator())) {
         // Swap content only
         this->swap_content(other);
     }
@@ -956,8 +999,9 @@ public:
         hasher_(std::move(other.hash_function())),
         key_equal_(std::move(other.key_eq())),
         allocator_(alloc),
+        mutable_allocator_(std::move(other.get_mutable_allocator())),
         slot_allocator_(std::move(other.get_slot_allocator())),
-        nc_slot_allocator_(std::move(other.get_nc_slot_allocator())) {
+        mutable_slot_allocator_(std::move(other.get_mutable_slot_allocator())) {
         // Swap content only
         this->swap_content(other);
     }
@@ -971,11 +1015,12 @@ public:
         slots_(nullptr), slot_size_(0), slot_mask_(0),
         left_empties_(0), n_mlf_(kDefaultLoadFactorInt),
         n_mlf_rev_(kDefaultLoadFactorRevInt),
-        hasher_(hash), key_equal_(equal), allocator_(alloc),
-        slot_allocator_(alloc), nc_slot_allocator_(alloc) {
+        hasher_(hash), key_equal_(equal),
+        allocator_(alloc), mutable_allocator_(alloc),
+        slot_allocator_(alloc), mutable_slot_allocator_(alloc) {
         // Prepare enough space to ensure that no expansion is required during the insertion process.
-        size_type new_capacity = (init_capacity >= init_list.size()) ? init_capacity : init_list.size();
-        this->reserve_for_insert(new_capacity);
+        size_type reserve_capacity = (init_capacity >= init_list.size()) ? init_capacity : init_list.size();
+        this->reserve_for_insert(reserve_capacity);
         this->insert(init_list.begin(), init_list.end());
     }
 
@@ -1013,7 +1058,7 @@ public:
 
     size_type group_mask() const { return group_mask_; }
     size_type group_count() const { return (group_mask_ + 1); }
-    size_type group_capacity() const { return (group_mask_ + 1 + 2); }
+    size_type group_capacity() const { return (this->group_count() + 1); }
 
     slot_type * slots() { return slots_; }
     const slot_type * slots() const { return slots_; }
@@ -1059,7 +1104,7 @@ public:
         std::uint32_t n_mlf_rev = (std::uint32_t)std::ceil(1.0f / mlf * kLoadFactorAmplify);
         this->n_mlf_ = n_mlf;
         this->n_mlf_rev_ = n_mlf_rev;
-        size_type new_slot_threshold = this->slot_capacity() * n_mlf / kLoadFactorAmplify;
+        size_type new_slot_threshold = this->slot_threshold();
         if (old_slot_used > new_slot_threshold) {
             size_type min_required_capacity;
             size_type slot_deleted = old_slot_used - this->slot_size();
@@ -1152,12 +1197,16 @@ public:
         return this->allocator_;
     }
 
+    mutable_allocator_type get_mutable_allocator() const noexcept {
+        return this->mutable_allocator_;
+    }
+
     slot_allocator_type get_slot_allocator() const noexcept {
         return this->slot_allocator_;
     }
 
-    nc_slot_allocator_type get_nc_slot_allocator() const noexcept {
-        return this->nc_slot_allocator_;
+    mutable_slot_allocator_type get_mutable_slot_allocator() const noexcept {
+        return this->mutable_slot_allocator_;
     }
 
     hasher hash_function() const {
@@ -1295,7 +1344,7 @@ public:
 
     template <typename P, typename std::enable_if<
               (!jstd::is_same_ex<P, value_type>::value) &&
-              (!jstd::is_same_ex<P, nc_value_type>::value) &&
+              (!jstd::is_same_ex<P, mutable_value_type>::value) &&
               std::is_constructible<value_type, P &&>::value>::type * = nullptr>
     std::pair<iterator, bool> insert(P && value) {
         return this->emplace_impl<false>(std::forward<P>(value));
@@ -1311,7 +1360,7 @@ public:
 
     template <typename P, typename std::enable_if<
               (!jstd::is_same_ex<P, value_type>::value) &&
-              (!jstd::is_same_ex<P, nc_value_type>::value) &&
+              (!jstd::is_same_ex<P, mutable_value_type>::value) &&
               std::is_constructible<value_type, P &&>::value>::type * = nullptr>
     std::pair<iterator, bool> insert(const_iterator hint, P && value) {
         return this->emplace_impl<false>(std::forward<P>(value));
@@ -1358,7 +1407,7 @@ public:
 
     template <typename P, typename std::enable_if<
               (!jstd::is_same_ex<P, value_type>::value) &&
-              (!jstd::is_same_ex<P, nc_value_type>::value) &&
+              (!jstd::is_same_ex<P, mutable_value_type>::value) &&
               std::is_constructible<value_type, P &&>::value>::type * = nullptr>
     std::pair<iterator, bool> insert_always(P && value) {
         return this->emplace_impl<true>(std::forward<P>(value));
@@ -1465,16 +1514,32 @@ private:
         return static_cast<std::uint8_t>(hash_code & kControlHashMask);
     }
 
+    size_type round_index(size_type index) const {
+        return (index & this->slot_mask());
+    }
+
+    size_type round_index(size_type index, size_type slot_mask) const {
+        assert(pow2::is_pow2(slot_mask + 1));
+        return (index & slot_mask);
+    }
+
     inline size_type index_salt() const noexcept {
         return (size_type)((std::uintptr_t)this->groups() >> 12);
     }
 
     inline size_type index_for(hash_code_t hash_code) const noexcept {
-        return (((size_type)hash_code ^ this->index_salt()) & this->slot_mask());
+        if (kUseIndexSalt)
+            return (((size_type)hash_code ^ this->index_salt()) & this->slot_mask());
+        else
+            return ((size_type)hash_code & this->slot_mask());
     }
 
     inline size_type index_for(hash_code_t hash_code, size_type slot_mask) const noexcept {
-        return (((size_type)hash_code ^ this->index_salt()) & slot_mask);
+        assert(pow2::is_pow2(slot_mask + 1));
+        if (kUseIndexSalt)
+            return (((size_type)hash_code ^ this->index_salt()) & slot_mask);
+        else
+            return ((size_type)hash_code & slot_mask);
     }
 
     inline size_type prev_group(size_type group_index) const noexcept {
@@ -1500,6 +1565,16 @@ private:
 
     const control_byte * control_at(size_type slot_index) const noexcept {
         assert(slot_index <= this->slot_capacity());
+        return (this->controls() + slot_index);
+    }
+
+    control_byte * control_at_special(size_type slot_index) noexcept {
+        assert(slot_index <= (this->slot_capacity() + kGroupWidth));
+        return (this->controls() + slot_index);
+    }
+
+    const control_byte * control_at_special(size_type slot_index) const noexcept {
+        assert(slot_index <= (this->slot_capacity() + kGroupWidth));
         return (this->controls() + slot_index);
     }
 
@@ -1605,6 +1680,12 @@ private:
         return control->isUsed();
     }
 
+    static void placement_new_slot(slot_type * slot) {
+        // The construction of union doesn't do anything at runtime but it allows us
+        // to access its members without violating aliasing rules.
+        new (slot) slot_type;
+    }
+
     template <bool finitial>
     void destroy() noexcept {
         this->destory_slots<finitial>();
@@ -1630,16 +1711,15 @@ private:
     }
 
     template <bool finitial>
-    void destory_slots() noexcept(slot_is_trivial_destructor) {
+    void destory_slots() noexcept(is_slot_trivial_destructor) {
         // Destroy all slots.
         if (this->slots_ != nullptr) {
-            if (!slot_is_trivial_destructor) {
+            if (!is_slot_trivial_destructor) {
                 control_byte * control = this->controls();
                 assert(control != nullptr);
                 for (size_type index = 0; index <= this->slot_mask(); index++) {
                     if (control->isUsed()) {
-                        slot_type * slot = this->slot_at(index);
-                        this->slot_allocator_.destroy(slot);
+                        this->destroy_slot(index);
                     }
                     control++;
                 }
@@ -1651,6 +1731,84 @@ private:
         }
 
         this->slot_size_ = 0;
+    }
+
+    JSTD_FORCED_INLINE
+    void destroy_slot(size_type index) {
+        slot_type * slot = this->slot_at(index);
+        this->destroy_slot(slot);
+    }
+
+    JSTD_FORCED_INLINE
+    void destroy_slot(slot_type * slot) {
+        this->allocator_.destroy(&slot->value);
+    }
+
+    JSTD_FORCED_INLINE
+    void destroy_mutable_slot(size_type index) {
+        slot_type * slot = this->slot_at(index);
+        this->destroy_mutable_slot(slot);
+    }
+
+    JSTD_FORCED_INLINE
+    void destroy_mutable_slot(slot_type * slot) {
+        if (kIsCompatibleLayout) {
+            this->mutable_allocator_.destroy(&slot->mutable_value);
+        } else {
+            this->allocator_.destroy(&slot->value);
+        }
+    }
+
+    JSTD_FORCED_INLINE
+    void copy_and_mirror_controls() {
+        // Copy and mirror the beginning control bytes.
+        size_type copy_size = (std::min)(this->slot_capacity(), kGroupWidth);
+        control_byte * controls = this->controls();
+        std::memcpy((void *)&controls[this->slot_capacity()], (const void *)&controls[0],
+                    sizeof(control_byte) * copy_size);
+
+        // Set the end of mark
+        control_byte * ctrl_0 = controls;
+        if (ctrl_0->isEmptyOrDeleted()) {
+            control_byte * ctrl_mirror = this->control_at(this->slot_capacity());
+            ctrl_mirror->setEndOf();
+        }
+    }
+
+#if 0
+    JSTD_FORCED_INLINE
+    void setMirrorCtrl(size_type index, std::uint8_t tag) {
+        if (index < kGroupWidth) {
+            control_byte * ctrl_mirror = this->control_at_special(index + this->slot_capacity());
+            ctrl_mirror->value = tag;
+            if (index == 0) {
+                if (control_byte::isEmptyOrDeleted(tag)) {
+                    ctrl_mirror->setEndOf();
+                }
+            }
+        }
+    }
+#endif
+
+    JSTD_FORCED_INLINE
+    void setUsedMirrorCtrl(size_type index, std::uint8_t ctrl_hash) {
+        assert(control_byte::isUsed(ctrl_hash));
+        if (index < kGroupWidth) {
+            control_byte * ctrl_mirror = this->control_at_special(index + this->slot_capacity());
+            ctrl_mirror->value = ctrl_hash;
+        }
+    }
+
+    JSTD_FORCED_INLINE
+    void setUnusedMirrorCtrl(size_type index, std::uint8_t tag) {
+        if (index < kGroupWidth) {
+            control_byte * ctrl_mirror = this->control_at_special(index + this->slot_capacity());
+            ctrl_mirror->value = tag;
+            if (index == 0) {
+                assert(control_byte::isEmptyOrDeleted(tag));
+                ctrl_mirror->setEndOf();
+            }
+        }
     }
 
     inline bool need_grow() const {
@@ -1698,11 +1856,17 @@ private:
             groups[index].template fillAll8<kEmptyEntry>();
         }
 #endif
-        if (group_count == 1) {
-            group_type * tail_group = (group_type *)((char *)groups + new_capacity);
+        if (new_capacity >= kGroupWidth) {
+            groups[group_count].template fillAll8<kEmptyEntry>();
+        } else {
+            assert(new_capacity < kGroupWidth);
+            group_type * tail_group = (group_type *)((char *)groups + new_capacity * 2);
             (*tail_group).template fillAll8<kEndOfMark>();
+
+            groups[group_count].template fillAll8<kEndOfMark>();
         }
-        groups[group_count].template fillAll8<kEndOfMark>();
+        control_byte * endof_ctrl = this->control_at(this->slot_capacity());
+        endof_ctrl->setEndOf();
 
         slot_type * slots = slot_allocator_.allocate(new_capacity);
         slots_ = slots;
@@ -1735,6 +1899,7 @@ private:
 
             slot_type * old_slots = this->slots();
             size_type old_slot_size = this->slot_size();
+            size_type old_slot_mask = this->slot_mask();
             size_type old_slot_capacity = this->slot_capacity();
             size_type old_left_empties = this->left_empties();
 
@@ -1746,46 +1911,62 @@ private:
                 for (control_byte * control = old_controls; control != last_control; control++) {
                     if (likely(control->isUsed())) {
                         this->move_insert_unique(old_slot);
-                        if (!slot_is_trivial_destructor) {
-                            this->slot_allocator_.destroy(old_slot);
+                        if (!is_slot_trivial_destructor) {
+                            this->destroy_slot(old_slot);
                         }
                     }
                     old_slot++;
                 }
             } else {
+                if (old_slot_capacity >= kGroupWidth) {
 #if 1
-                group_type * last_group = old_groups + old_group_count;
-                slot_type * slot_start = old_slots;
-                for (group_type * group = old_groups; group != last_group; group++) {
-                    std::uint32_t maskUsed = group->matchUsed();
-                    while (maskUsed != 0) {
-                        size_type pos = BitUtils::bsf32(maskUsed);
-                        maskUsed = BitUtils::clearLowBit32(maskUsed);
-                        slot_type * old_slot = slot_start + pos;
-                        this->move_insert_unique(old_slot);
-                        if (!slot_is_trivial_destructor) {
-                            this->slot_allocator_.destroy(old_slot);
+                    group_type * last_group = old_groups + old_group_count;
+                    size_type start_index = 0;
+                    for (group_type * group = old_groups; group != last_group; group++) {
+                        std::uint32_t maskUsed = group->matchUsed();
+                        while (maskUsed != 0) {
+                            size_type pos = BitUtils::bsf32(maskUsed);
+                            maskUsed = BitUtils::clearLowBit32(maskUsed);
+                            size_type old_index = this->round_index(start_index + pos, old_slot_mask);
+                            slot_type * old_slot = old_slots + old_index;
+                            this->move_insert_unique(old_slot);
+                            if (!is_slot_trivial_destructor) {
+                                this->destroy_slot(old_slot);
+                            }
                         }
+                        start_index += kGroupWidth;
                     }
-                    slot_start += kGroupWidth;
-                }
 #else
-                group_type * last_group = old_groups + old_group_count - 1;
-                slot_type * slot_start = old_slots + old_slot_capacity - kGroupWidth;
-                for (group_type * group = last_group; group >= old_groups; group--) {
-                    std::uint32_t maskUsed = group->matchUsed();
-                    while (maskUsed != 0) {
-                        size_type pos = BitUtils::bsf32(maskUsed);
-                        maskUsed = BitUtils::clearLowBit32(maskUsed);
-                        slot_type * old_slot = slot_start + pos;
-                        this->move_insert_unique(old_slot);
-                        if (!slot_is_trivial_destructor) {
-                            this->slot_allocator_.destroy(old_slot);
+                    group_type * last_group = old_groups + old_group_count - 1;
+                    size_type start_index = old_slot_capacity - kGroupWidth;
+                    for (group_type * group = last_group; group >= old_groups; group--) {
+                        std::uint32_t maskUsed = group->matchUsed();
+                        while (maskUsed != 0) {
+                            size_type pos = BitUtils::bsf32(maskUsed);
+                            maskUsed = BitUtils::clearLowBit32(maskUsed);
+                            size_type old_index = this->round_index(start_index + pos, old_slot_mask);
+                            slot_type * old_slot = old_slots + old_index;
+                            this->move_insert_unique(old_slot);
+                            if (!is_slot_trivial_destructor) {
+                                this->destroy_slot(old_slot);
+                            }
                         }
+                        start_index -= kGroupWidth;
                     }
-                    slot_start -= kGroupWidth;
-                }
 #endif
+                } else {
+                    control_byte * last_control = old_controls + old_slot_capacity;
+                    slot_type * old_slot = old_slots;
+                    for (control_byte * control = old_controls; control != last_control; control++) {
+                        if (likely(control->isUsed())) {
+                            this->move_insert_unique(old_slot);
+                            if (!is_slot_trivial_destructor) {
+                                this->destroy_slot(old_slot);
+                            }
+                        }
+                        old_slot++;
+                    }
+                }
             }
 
             assert(this->slot_size() == old_slot_size);
@@ -1801,20 +1982,16 @@ private:
 
     void convent_all_slots() {
         assert(this->control_at(this->slot_capacity())->isUsed());
+
+        // Convert all [Deleted] to [Empty], and [Used] to [Deleted].
         group_type * groups = this->groups();
         size_type group_count = this->group_count();
         for (size_type group_index = 0; group_index < this->group_count(); group_index++) {
             groups[group_index].conventDeletedToEmptyAndUsedToDeleted();
         }
 
-        // Mirror the beginning control bytes.
-        std::memcpy((void *)&groups[group_count], (const void *)&groups[0], sizeof(group_type));
-        control_byte * control = this->control_at(0);
-
-        // Set the end of mark
-        if (control->isEmpty()) {
-            control->setEndOf();
-        }
+        // Copy and mirror the beginning control bytes.
+        this->copy_and_mirror_controls();
     }
 
     JSTD_FORCED_INLINE
@@ -1826,9 +2003,17 @@ private:
 
     JSTD_FORCED_INLINE
     void transfer_slot(slot_type * dest_slot, slot_type * src_slot) {
-        this->nc_slot_allocator_.construct(dest_slot, std::move(*reinterpret_cast<nc_slot_type *>(src_slot)));
-        if (!slot_is_trivial_destructor) {
-            this->nc_slot_allocator_.destroy(src_slot);
+        if (kIsCompatibleLayout) {
+            this->mutable_allocator_.construct(&dest_slot->mutable_value,
+                    std::move(*reinterpret_cast<mutable_value_type *>(&src_slot->mutable_value)));
+            if (!is_slot_trivial_destructor) {
+                this->destroy_mutable_slot(src_slot);
+            }
+        } else {
+            this->allocator_.construct(&dest_slot->value, std::move(*reinterpret_cast<value_type *>(&src_slot->value)));
+            if (!is_slot_trivial_destructor) {
+                this->destroy_slot(src_slot);
+            }
         }
     }
 
@@ -1836,21 +2021,39 @@ private:
     void swap_slot(slot_type * slot1, slot_type * slot2, slot_type * tmp) {
 #if 1
         using std::swap;
-        swap(*reinterpret_cast<nc_slot_type *>(slot1), *reinterpret_cast<nc_slot_type *>(slot2));
+        if (kIsCompatibleLayout) {
+            swap(*reinterpret_cast<mutable_value_type *>(&slot1->mutable_value),
+                 *reinterpret_cast<mutable_value_type *>(&slot2->mutable_value));
+        } else {
+            swap(*reinterpret_cast<value_type *>(&slot1->value),
+                 *reinterpret_cast<value_type *>(&slot2->value));
+        }
 #elif 1
-        this->nc_slot_allocator_.construct(tmp, std::move(*reinterpret_cast<nc_slot_type *>(slot1)));
-        this->nc_slot_allocator_.construct(slot1, std::move(*reinterpret_cast<nc_slot_type *>(slot2)));
-        this->nc_slot_allocator_.construct(slot2, std::move(*reinterpret_cast<nc_slot_type *>(tmp)));
-        if (!slot_is_trivial_destructor) {
-            this->nc_slot_allocator_.destroy(tmp);
+        /*
+        if (kIsCompatibleLayout) {
+            this->mutable_slot_allocator_.construct(tmp, std::move(*reinterpret_cast<mutable_slot_type *>(slot1)));
+            this->mutable_slot_allocator_.construct(slot1, std::move(*reinterpret_cast<mutable_slot_type *>(slot2)));
+            this->mutable_slot_allocator_.construct(slot2, std::move(*reinterpret_cast<mutable_slot_type *>(tmp)));
+            if (!is_slot_trivial_destructor) {
+                this->mutable_slot_allocator_.destroy(tmp);
+            }
+        } else {
+            //
         }
+        //*/
 #else
-        this->nc_slot_allocator_.construct(tmp, std::move(*reinterpret_cast<nc_slot_type *>(slot1)));
-        *slot1 = std::move(*reinterpret_cast<nc_slot_type *>(slot2));
-        *slot2 = std::move(*reinterpret_cast<nc_slot_type *>(tmp));
-        if (!slot_is_trivial_destructor) {
-            this->nc_slot_allocator_.destroy(tmp);
+        /*
+        if (kIsCompatibleLayout) {
+            this->mutable_slot_allocator_.construct(tmp, std::move(*reinterpret_cast<mutable_slot_type *>(slot1)));
+            *slot1 = std::move(*reinterpret_cast<mutable_slot_type *>(slot2));
+            *slot2 = std::move(*reinterpret_cast<mutable_slot_type *>(tmp));
+            if (!is_slot_trivial_destructor) {
+                this->mutable_slot_allocator_.destroy(tmp);
+            }
+        } else {
+            //
         }
+        //*/
 #endif
     }
 
@@ -1876,6 +2079,8 @@ private:
         //       swap current element with target element
         //       mark target as USED
         //       repeat procedure for current slot with moved from element (target)
+
+        // Convert all [Deleted] to [Empty], and [Used] to [Deleted].
         this->convent_all_slots();
 
         alignas(slot_type) unsigned char raw[sizeof(slot_type)];
@@ -1883,15 +2088,18 @@ private:
 
         for (size_type index = 0; index < this->slot_capacity(); index++) {
             control_byte * ctrl = this->control_at(index);
-            if (ctrl->isDeleted()) continue;
+            if (ctrl->isDeleted()) {
+                continue;
+            }
             slot_type * slot = this->slot_at(index);
             std::uint8_t ctrl_hash;
-            size_type target = find_first_non_used_slot(slot->first, ctrl_hash);
+            size_type target = this->find_first_non_used_slot(slot->value.first, ctrl_hash);
             intptr_t distance = intptr_t(index - target);
             if (distance < intptr_t(kGroupWidth) && distance >= 0) {
                 // If the distance of old index and new index is less than kGroupWidth,
                 // we don't need to move it because it's already in the best position.
                 ctrl->setUsed(ctrl_hash);
+                this->setUsedMirrorCtrl(index, ctrl_hash);
                 continue;
             }
 
@@ -1900,14 +2108,21 @@ private:
             if (new_ctrl->isEmpty()) {
                 // Transfer the old slot to the new (Empty) slot.
                 new_ctrl->setUsed(ctrl_hash);
+                this->setUsedMirrorCtrl(target, ctrl_hash);
+
                 this->transfer_slot(new_slot, slot);
+
                 ctrl->setEmpty();
+                this->setUnusedMirrorCtrl(index, kEmptyEntry);
             } else {
-                // Swap the old and new slot.
+                // Swap the old slot and new slot.
                 assert(new_ctrl->isDeleted());
                 // Until we are done rehashing, DELETED marks previously USED slots.
                 new_ctrl->setUsed(ctrl_hash);
+                this->setUsedMirrorCtrl(target, ctrl_hash);
+
                 this->swap_slot(slot, new_slot, tmp_slot);
+
                 // Repeat check the swap slot.
                 index--;
             }
@@ -1929,9 +2144,9 @@ private:
             while (mask16 != 0) {
                 size_type pos = BitUtils::bsf32(mask16);
                 mask16 = BitUtils::clearLowBit32(mask16);
-                size_type index = start_index + pos;
+                size_type index = this->round_index(start_index + pos);
                 const slot_type & target = this->get_slot(index);
-                if (this->key_equal_(target.first, key)) {
+                if (this->key_equal_(target.value.first, key)) {
                     return index;
                 }
             }
@@ -1940,20 +2155,6 @@ private:
             }
             slot_index = this->slot_next_group(slot_index);
         } while (slot_index != start_slot);
-
-        // If not found any match slot, then search the beginning of first group.
-        if ((start_slot & kGroupMask) != 0) {
-            std::uint32_t mask16 = this->get_group(0).matchHash(control_hash);
-            if (mask16 != 0) {
-                size_type pos = BitUtils::bsf32(mask16);
-                mask16 = BitUtils::clearLowBit32(mask16);
-                size_type index = 0 + pos;
-                const slot_type & target = this->get_slot(index);
-                if (this->key_equal_(target.first, key)) {
-                    return index;
-                }
-            }
-        }
 
         return npos;
     }
@@ -1975,9 +2176,9 @@ private:
             while (mask16 != 0) {
                 size_type pos = BitUtils::bsf32(mask16);
                 mask16 = BitUtils::clearLowBit32(mask16);
-                size_type index = start_index + pos;
+                size_type index = this->round_index(start_index + pos);
                 const slot_type & target = this->get_slot(index);
-                if (this->key_equal_(target.first, key)) {
+                if (this->key_equal_(target.value.first, key)) {
                     last_slot = slot_index;
                     return index;
                 }
@@ -1988,22 +2189,6 @@ private:
             }
             slot_index = this->slot_next_group(slot_index);
         } while (slot_index != start_slot);
-
-        // If not found any match slot, then search the beginning of first group.
-        if ((start_slot & kGroupMask) != 0) {
-            std::uint32_t mask16 = this->get_group(0).matchHash(control_hash);
-            if (mask16 != 0) {
-                size_type pos = BitUtils::bsf32(mask16);
-                mask16 = BitUtils::clearLowBit32(mask16);
-                size_type index = 0 + pos;
-                const slot_type & target = this->get_slot(index);
-                if (this->key_equal_(target.first, key)) {
-                    // TODO: ????
-                    last_slot = 0;
-                    return index;
-                }
-            }
-        }
 
         last_slot = npos;
         return npos;
@@ -2019,41 +2204,18 @@ private:
         ctrl_hash = control_hash;
 
         // Find the first empty or deleted slot and insert
-        if (this->group_count() > 2) {
-            do {
-                const group_type & group = this->get_group(slot_index);
-                std::uint32_t maskEmptyOrDeleted = group.matchEmptyOrDeleted();
-                if (maskEmptyOrDeleted != 0) {
-                    // Found a [EmptyEntry] or [DeletedEntry] to insert
-                    size_type pos = BitUtils::bsf32(maskEmptyOrDeleted);
-                    size_type start_index = slot_index;
-                    return (start_index + pos);
-                }
-                slot_index = this->slot_next_group(slot_index);
-                assert(slot_index != first_slot);
-            } while (1);
-        } else {
-            do {
-                const group_type & group = this->get_group(slot_index);
-                std::uint32_t maskEmptyOrDeleted = group.matchEmptyOrDeleted();
-                if (maskEmptyOrDeleted != 0) {
-                    // Found a [EmptyEntry] or [DeletedEntry] to insert
-                    size_type pos = BitUtils::bsf32(maskEmptyOrDeleted);
-                    size_type start_index = slot_index;
-                    return (start_index + pos);
-                }
-                slot_index = this->slot_next_group(slot_index);
-            } while (slot_index != first_slot);
-
-            // If not found any empty or deleted slot, then search the beginning of first group.
-            if ((first_slot & kGroupMask) != 0) {
-                std::uint32_t maskEmptyOrDeleted = this->get_group(0).matchEmptyOrDeleted();
-                if (maskEmptyOrDeleted != 0) {
-                    size_type pos = BitUtils::bsf32(maskEmptyOrDeleted);
-                    return (0 + pos);
-                }
+        do {
+            const group_type & group = this->get_group(slot_index);
+            std::uint32_t maskEmptyOrDeleted = group.matchEmptyOrDeleted();
+            if (maskEmptyOrDeleted != 0) {
+                // Found a [EmptyEntry] or [DeletedEntry] to insert
+                size_type pos = BitUtils::bsf32(maskEmptyOrDeleted);
+                size_type start_index = slot_index;
+                return this->round_index(start_index + pos);
             }
-        }
+            slot_index = this->slot_next_group(slot_index);
+            assert(slot_index != first_slot);
+        } while (1);
 
         return npos;
     }
@@ -2068,57 +2230,41 @@ private:
         ctrl_hash = control_hash;
 
         // Find the first empty slot and insert
-        if (this->group_count() > 2) {
-            do {
-                const group_type & group = this->get_group(slot_index);
-                std::uint32_t maskEmpty = group.matchEmpty();
-                if (maskEmpty != 0) {
-                    // Found a [EmptyEntry] to insert
-                    size_type pos = BitUtils::bsf32(maskEmpty);
-                    size_type start_index = slot_index;
-                    return (start_index + pos);
-                }
-                slot_index = this->slot_next_group(slot_index);
-                assert(slot_index != first_slot);
-            } while (1);
-        } else {
-            do {
-                const group_type & group = this->get_group(slot_index);
-                std::uint32_t maskEmpty = group.matchEmpty();
-                if (maskEmpty != 0) {
-                    // Found a [EmptyEntry] to insert
-                    size_type pos = BitUtils::bsf32(maskEmpty);
-                    size_type start_index = slot_index;
-                    return (start_index + pos);
-                }
-                slot_index = this->slot_next_group(slot_index);
-            } while (slot_index != first_slot);
-
-            // If not found any empty slot, then search the beginning of first group.
-            if ((first_slot & kGroupMask) != 0) {
-                std::uint32_t maskEmpty = this->get_group(0).matchEmpty();
-                if (maskEmpty != 0) {
-                    size_type pos = BitUtils::bsf32(maskEmpty);
-                    return (0 + pos);
-                }
+        do {
+            const group_type & group = this->get_group(slot_index);
+            std::uint32_t maskEmpty = group.matchEmpty();
+            if (maskEmpty != 0) {
+                // Found a [EmptyEntry] to insert
+                size_type pos = BitUtils::bsf32(maskEmpty);
+                size_type start_index = slot_index;
+                return this->round_index(start_index + pos);
             }
-        }
+            slot_index = this->slot_next_group(slot_index);
+            assert(slot_index != first_slot);
+        } while (1);
 
         return npos;
     }
 
     // Use in rehash_impl()
-    void move_insert_unique(slot_type * value) {
+    void move_insert_unique(slot_type * slot) {
         std::uint8_t ctrl_hash;
-        size_type target = this->find_first_empty_slot(value->first, ctrl_hash);
+        size_type target = this->find_first_empty_slot(slot->value.first, ctrl_hash);
         assert(target != npos);
 
         // Found a [DeletedEntry] or [EmptyEntry] to insert
         control_byte * control = this->control_at(target);
         assert(control->isEmpty());
         control->setUsed(ctrl_hash);
-        slot_type * slot = this->slot_at(target);
-        this->slot_allocator_.construct(slot, std::move(*static_cast<value_type *>(value)));
+        this->setUsedMirrorCtrl(target, ctrl_hash);
+
+        slot_type * new_slot = this->slot_at(target);
+        if (kIsCompatibleLayout) {
+            this->mutable_allocator_.construct(&new_slot->mutable_value,
+                                               std::move(*static_cast<mutable_value_type *>(&slot->mutable_value)));
+        } else {
+            this->allocator_.construct(&new_slot->value, std::move(slot->value));
+        }
         this->slot_size_++;
         assert(this->slot_size() <= this->slot_capacity());
     }
@@ -2132,8 +2278,14 @@ private:
         control_byte * control = this->control_at(target);
         assert(control->isEmpty());
         control->setUsed(ctrl_hash);
+        this->setUsedMirrorCtrl(target, ctrl_hash);
+
         slot_type * slot = this->slot_at(target);
-        this->slot_allocator_.construct(slot, value);
+        if (kIsCompatibleLayout) {
+            this->mutable_allocator_.construct(&slot->mutable_value, value);
+        } else {
+            this->allocator_.construct(&slot->value, value);
+        }
         this->slot_size_++;
         assert(this->slot_size() <= this->slot_capacity());
     }
@@ -2147,8 +2299,15 @@ private:
         control_byte * control = this->control_at(target);
         assert(control->isEmpty());
         control->setUsed(ctrl_hash);
+        this->setUsedMirrorCtrl(target, ctrl_hash);
+
         slot_type * slot = this->slot_at(target);
-        this->slot_allocator_.construct(slot, std::move(value));
+        if (kIsCompatibleLayout) {
+            this->mutable_allocator_.construct(&slot->mutable_value,
+                                               std::move(*static_cast<mutable_value_type *>(&value)));
+        } else {
+            this->allocator_.construct(&slot->value, std::move(value));
+        }
         this->slot_size_++;
         assert(this->slot_size() <= this->slot_capacity());
     }
@@ -2159,6 +2318,9 @@ private:
         for (InputIter iter = first; iter != last; ++iter) {
             this->insert_unique(static_cast<value_type>(*iter));
         }
+
+        // Copy and mirror the beginning control bytes.
+        this->copy_and_mirror_controls();
     }
 
     std::pair<size_type, bool>
@@ -2179,9 +2341,9 @@ private:
             while (mask16 != 0) {
                 size_type pos = BitUtils::bsf32(mask16);
                 mask16 = BitUtils::clearLowBit32(mask16);
-                size_type index = start_index + pos;
+                size_type index = this->round_index(start_index + pos);
                 const slot_type & target = this->get_slot(index);
-                if (this->key_equal_(target.first, key)) {
+                if (this->key_equal_(target.value.first, key)) {
                     return { index, true };
                 }
             }
@@ -2193,24 +2355,7 @@ private:
             slot_index = this->slot_next_group(slot_index);
         } while (slot_index != first_slot);
 
-        // If not found any match slot, then search the beginning of first group.
-        std::uint32_t firstGroupMaskEmpty = 0;
-        if ((first_slot & kGroupMask) != 0) {
-            const group_type & group = this->get_group(0);
-            std::uint32_t mask16 = group.matchHash(control_hash);
-            if (mask16 != 0) {
-                size_type pos = BitUtils::bsf32(mask16);
-                mask16 = BitUtils::clearLowBit32(mask16);
-                size_type index = 0 + pos;
-                const slot_type & target = this->get_slot(index);
-                if (this->key_equal_(target.first, key)) {
-                    return { index, true };
-                }
-            }
-            firstGroupMaskEmpty = group.matchEmpty();
-        }
-
-        if (this->need_grow() || ((maskEmpty == 0) && (firstGroupMaskEmpty == 0))) {
+        if (this->need_grow() || (last_slot == npos)) {
             // The size of slot reach the slot threshold or hashmap is full.
             this->reorder_or_grow_if_necessary();
 
@@ -2218,7 +2363,7 @@ private:
         }
 
         // Find the first deleted or empty slot and insert
-        if (likely((slot_index != first_slot) || (maskEmpty == 0))) {
+        if (likely(slot_index != first_slot)) {
             // Find the first [DeletedEntry] from first_slot to last_slot.
             slot_index = first_slot;
             do {
@@ -2228,60 +2373,38 @@ private:
                     // Found a [DeletedEntry] to insert
                     size_type pos = BitUtils::bsf32(maskDeleted);
                     size_type start_index = slot_index;
-                    return { (start_index + pos), false };
+                    return { this->round_index(start_index + pos), false };
                 }
                 if (slot_index == last_slot)
                     break;
                 slot_index = this->slot_next_group(slot_index);
             } while (slot_index != first_slot);
 
-            // If not found any deleted slot, then search the beginning of first group.
-            if ((first_slot & kGroupMask) != 0) {
-                std::uint32_t maskDeleted = this->get_group(0).matchDeleted();
-                if (maskDeleted != 0) {
-                    size_type pos = BitUtils::bsf32(maskDeleted);
-                    return { (0 + pos), false };
-                }
-            }
+            assert(this->left_empties_ > 0);
+            this->left_empties_--;
 
             // Not found any [DeletedEntry], so we use [EmptyEntry] to insert
             // Skip to final processing
         } else {
             assert(last_slot != npos);
-            assert(maskEmpty != 0);
             const group_type & group = this->get_group(last_slot);
             std::uint32_t maskDeleted = group.matchDeleted();
             if (maskDeleted != 0) {
                 // Found a [DeletedEntry] to insert
                 maskEmpty = maskDeleted;
             } else {
-                // If not found any deleted slot, then search the beginning of first group.
-                if ((last_slot & kGroupMask) != 0) {
-                    std::uint32_t maskDeleted = this->get_group(0).matchDeleted();
-                    if (maskDeleted != 0) {
-                        size_type pos = BitUtils::bsf32(maskDeleted);
-                        return { (0 + pos), false };
-                    }
-                }
-
                 // Maybe found a [EmptyEntry] to insert
                 assert(maskEmpty != 0);
+
+                assert(this->left_empties_ > 0);
+                this->left_empties_--;
             }
         }
 
-        assert(this->left_empties_ > 0);
-        this->left_empties_--;
-
         // It's a [EmptyEntry] or [DeletedEntry] to insert
-        if (likely(maskEmpty != 0)) {
-            size_type pos = BitUtils::bsf32(maskEmpty);
-            size_type start_index = last_slot;
-            return { (start_index + pos), false };
-        } else {
-            assert(firstGroupMaskEmpty != 0);
-            size_type pos = BitUtils::bsf32(firstGroupMaskEmpty);
-            return { (0 + pos), false };
-        }
+        size_type pos = BitUtils::bsf32(maskEmpty);
+        size_type start_index = last_slot;
+        return { this->round_index(start_index + pos), false };
     }
 
     template <bool AlwaysUpdate>
@@ -2298,6 +2421,7 @@ private:
             control_byte * control = this->control_at(target);
             assert(control->isEmptyOrDeleted());
             control->setUsed(ctrl_hash);
+            this->setUsedMirrorCtrl(target, ctrl_hash);
             slot_type * slot = this->slot_at(target);
             this->slot_allocator_.construct(slot, value);
             this->slot_size_++;
@@ -2326,8 +2450,12 @@ private:
             control_byte * control = this->control_at(target);
             assert(control->isEmptyOrDeleted());
             control->setUsed(ctrl_hash);
+            this->setUsedMirrorCtrl(target, ctrl_hash);
             slot_type * slot = this->slot_at(target);
-            this->slot_allocator_.construct(slot, std::forward<value_type>(value));
+            if (kIsCompatibleLayout)
+                this->mutable_allocator_.construct(&slot->mutable_value, std::forward<value_type>(value));
+            else
+                this->allocator_.construct(&slot->value, std::forward<value_type>(value));
             this->slot_size_++;
             return { this->iterator_at(target), true };
         } else {
@@ -2336,9 +2464,9 @@ private:
                 static constexpr bool is_rvalue_ref = std::is_rvalue_reference<decltype(value)>::value;
                 slot_type * slot = this->slot_at(target);
                 if (is_rvalue_ref)
-                    slot->second = std::move(value.second);
+                    slot->value.second = std::move(value.second);
                 else
-                    slot->second = value.second;
+                    slot->value.second = value.second;
             }
             return { this->iterator_at(target), false };
         }
@@ -2347,8 +2475,8 @@ private:
     template <bool AlwaysUpdate, typename KeyT, typename MappedT, typename std::enable_if<
               (!jstd::is_same_ex<KeyT, value_type>::value &&
                !std::is_constructible<value_type, KeyT &&>::value) &&
-              (!jstd::is_same_ex<KeyT, nc_value_type>::value &&
-               !std::is_constructible<nc_value_type, KeyT &&>::value) &&
+              (!jstd::is_same_ex<KeyT, mutable_value_type>::value &&
+               !std::is_constructible<mutable_value_type, KeyT &&>::value) &&
               (!jstd::is_same_ex<KeyT, std::piecewise_construct_t>::value) &&
               (jstd::is_same_ex<KeyT, key_type>::value ||
                std::is_constructible<key_type, KeyT &&>::value) &&
@@ -2367,9 +2495,16 @@ private:
             control_byte * control = this->control_at(target);
             assert(control->isEmptyOrDeleted());
             control->setUsed(ctrl_hash);
+            this->setUsedMirrorCtrl(target, ctrl_hash);
             slot_type * slot = this->slot_at(target);
-            this->slot_allocator_.construct(slot, std::forward<KeyT>(key),
-                                                  std::forward<MappedT>(value));
+            if (kIsCompatibleLayout) {
+                this->mutable_allocator_.construct(&slot->mutable_value,
+                                                   std::forward<KeyT>(key),
+                                                   std::forward<MappedT>(value));
+            } else {
+                this->allocator_.construct(&slot->value, std::forward<KeyT>(key),
+                                                         std::forward<MappedT>(value));
+            }
             this->slot_size_++;
             return { this->iterator_at(target), true };
         } else {
@@ -2378,11 +2513,11 @@ private:
             if (AlwaysUpdate) {
                 if (isMappedType) {
                     slot_type * slot = this->slot_at(target);
-                    slot->second = std::forward<MappedT>(value);
+                    slot->value.second = std::forward<MappedT>(value);
                 } else {
                     mapped_type mapped_value(std::forward<MappedT>(value));
                     slot_type * slot = this->slot_at(target);
-                    slot->second = std::move(mapped_value);
+                    slot->value.second = std::move(mapped_value);
                 }
             }
             return { this->iterator_at(target), false };
@@ -2392,8 +2527,8 @@ private:
     template <bool AlwaysUpdate, typename KeyT, typename std::enable_if<
               (!jstd::is_same_ex<KeyT, value_type>::value &&
                !std::is_constructible<value_type, KeyT &&>::value) &&
-              (!jstd::is_same_ex<KeyT, nc_value_type>::value &&
-               !std::is_constructible<nc_value_type, KeyT &&>::value) &&
+              (!jstd::is_same_ex<KeyT, mutable_value_type>::value &&
+               !std::is_constructible<mutable_value_type, KeyT &&>::value) &&
               (!jstd::is_same_ex<KeyT, std::piecewise_construct_t>::value) &&
               (jstd::is_same_ex<KeyT, key_type>::value ||
                std::is_constructible<key_type, KeyT &&>::value)>::type * = nullptr,
@@ -2411,10 +2546,19 @@ private:
             control_byte * control = this->control_at(target);
             assert(control->isEmptyOrDeleted());
             control->setUsed(ctrl_hash);
+            this->setUsedMirrorCtrl(target, ctrl_hash);
             slot_type * slot = this->slot_at(target);
-            this->slot_allocator_.construct(slot, std::piecewise_construct,
-                                                  std::forward_as_tuple(std::forward<KeyT>(key)),
-                                                  std::forward_as_tuple(std::forward<Args>(args)...));
+            if (kIsCompatibleLayout) {
+                this->mutable_allocator_.construct(&slot->mutable_value,
+                                                   std::piecewise_construct,
+                                                   std::forward_as_tuple(std::forward<KeyT>(key)),
+                                                   std::forward_as_tuple(std::forward<Args>(args)...));
+            } else {
+                this->allocator_.construct(&slot->value,
+                                           std::piecewise_construct,
+                                           std::forward_as_tuple(std::forward<KeyT>(key)),
+                                           std::forward_as_tuple(std::forward<Args>(args)...));
+            }
             this->slot_size_++;
             return { this->iterator_at(target), true };
         } else {
@@ -2422,7 +2566,7 @@ private:
             if (AlwaysUpdate) {
                 mapped_type mapped_value(std::forward<Args>(args)...);
                 slot_type * slot = this->slot_at(target);
-                slot->second = std::move(mapped_value);
+                slot->value.second = std::move(mapped_value);
             }
             return { this->iterator_at(target), false };
         }
@@ -2431,8 +2575,8 @@ private:
     template <bool AlwaysUpdate, typename PieceWise, typename std::enable_if<
               (!jstd::is_same_ex<PieceWise, value_type>::value &&
                !std::is_constructible<value_type, PieceWise &&>::value) &&
-              (!jstd::is_same_ex<PieceWise, nc_value_type>::value &&
-               !std::is_constructible<nc_value_type, PieceWise &&>::value) &&
+              (!jstd::is_same_ex<PieceWise, mutable_value_type>::value &&
+               !std::is_constructible<mutable_value_type, PieceWise &&>::value) &&
               jstd::is_same_ex<PieceWise, std::piecewise_construct_t>::value &&
               (!jstd::is_same_ex<PieceWise, key_type>::value &&
                !std::is_constructible<key_type, PieceWise &&>::value)>::type * = nullptr,
@@ -2455,10 +2599,19 @@ private:
             control_byte * control = this->control_at(target);
             assert(control->isEmptyOrDeleted());
             control->setUsed(ctrl_hash);
+            this->setUsedMirrorCtrl(target, ctrl_hash);
             slot_type * slot = this->slot_at(target);
-            this->slot_allocator_.construct(slot, std::piecewise_construct,
-                                                  std::forward<std::tuple<Ts1...>>(first),
-                                                  std::forward<std::tuple<Ts2...>>(second));
+            if (kIsCompatibleLayout) {
+                this->mutable_allocator_.construct(&slot->mutable_value,
+                                                   std::piecewise_construct,
+                                                   std::forward<std::tuple<Ts1...>>(first),
+                                                   std::forward<std::tuple<Ts2...>>(second));
+            } else {
+                this->allocator_.construct(&slot->value,
+                                           std::piecewise_construct,
+                                           std::forward<std::tuple<Ts1...>>(first),
+                                           std::forward<std::tuple<Ts2...>>(second));
+            }
             this->slot_size_++;
             return { this->iterator_at(target), true };
         } else {
@@ -2466,7 +2619,7 @@ private:
             if (AlwaysUpdate) {
                 tuple_wrapper2<mapped_type> mapped_wrapper(std::move(second));
                 slot_type * slot = this->slot_at(target);
-                slot->second = std::move(mapped_wrapper.value());
+                slot->value.second = std::move(mapped_wrapper.value());
             }
             return { this->iterator_at(target), false };
         }
@@ -2475,8 +2628,8 @@ private:
     template <bool AlwaysUpdate, typename First, typename std::enable_if<
               (!jstd::is_same_ex<First, value_type>::value &&
                !std::is_constructible<value_type, First &&>::value) &&
-              (!jstd::is_same_ex<First, nc_value_type>::value &&
-               !std::is_constructible<nc_value_type, First &&>::value) &&
+              (!jstd::is_same_ex<First, mutable_value_type>::value &&
+               !std::is_constructible<mutable_value_type, First &&>::value) &&
               (!jstd::is_same_ex<First, std::piecewise_construct_t>::value) &&
               (!jstd::is_same_ex<First, key_type>::value &&
                !std::is_constructible<key_type, First &&>::value)>::type * = nullptr,
@@ -2495,15 +2648,20 @@ private:
             control_byte * control = this->control_at(target);
             assert(control->isEmptyOrDeleted());
             control->setUsed(ctrl_hash);
+            this->setUsedMirrorCtrl(target, ctrl_hash);
             slot_type * slot = this->slot_at(target);
-            this->slot_allocator_.construct(slot, std::move(value));
+            if (kIsCompatibleLayout) {
+                this->mutable_allocator_.construct(&slot->mutable_value, std::move(value));
+            } else {
+                this->allocator_.construct(&slot->value, std::move(value));
+            }
             this->slot_size_++;
             return { this->iterator_at(target), true };
         } else {
             // The key to be inserted already exists.
             if (AlwaysUpdate) {
                 slot_type * slot = this->slot_at(target);
-                slot->second = std::move(value.second);
+                slot->value.second = std::move(value.second);
             }
             return { this->iterator_at(target), false };
         }
@@ -2523,9 +2681,9 @@ private:
             while (mask16 != 0) {
                 size_type pos = BitUtils::bsf32(mask16);
                 mask16 = BitUtils::clearLowBit32(mask16);
-                size_type index = start_index + pos;
+                size_type index = this->round_index(start_index + pos);
                 const slot_type & target = this->get_slot(index);
-                if (this->key_equal_(target.first, key)) {
+                if (this->key_equal_(target.value.first, key)) {
                     this->erase_slot(index);
                     return 1;
                 }
@@ -2536,21 +2694,6 @@ private:
             slot_index = this->slot_next_group(slot_index);
         } while (slot_index != start_slot);
 
-        // If not found any match slot, then search the beginning of first group.
-        if ((start_slot & kGroupMask) != 0) {
-            std::uint32_t mask16 = this->get_group(0).matchHash(control_hash);
-            if (mask16 != 0) {
-                size_type pos = BitUtils::bsf32(mask16);
-                mask16 = BitUtils::clearLowBit32(mask16);
-                size_type index = 0 + pos;
-                const slot_type & target = this->get_slot(index);
-                if (this->key_equal_(target.first, key)) {
-                    this->erase_slot(index);
-                    return 1;
-                }
-            }
-        }
-
         return 0;
     }
 
@@ -2560,27 +2703,35 @@ private:
         control_byte & control = this->get_control(index);
         assert(control.isUsed());
         size_type start_slot = index;
+
+        // Increment the left empties first, and decrement it when is setDeleted().
+        this->left_empties_++;
+
         const group_type & group = this->get_group(start_slot);
         if (group.hasAnyEmpty()) {
             control.setEmpty();
-            this->left_empties_++;
+            this->setUnusedMirrorCtrl(index, kEmptyEntry);
         } else {
             size_type slot_index = this->slot_next_group(start_slot);
             if (slot_index != start_slot) {
                 const group_type & group = this->get_group(slot_index);
                 if (!group.isAllEmpty()) {
+                    // Decrement the left empties when is setDeleted().
+                    this->left_empties_--;
                     control.setDeleted();
+                    this->setUnusedMirrorCtrl(index, kDeletedEntry);
                 } else {
                     control.setEmpty();
-                    this->left_empties_++;
+                    this->setUnusedMirrorCtrl(index, kEmptyEntry);
                 }
             } else {
                 control.setEmpty();
-                this->left_empties_++;
+                this->setUnusedMirrorCtrl(index, kEmptyEntry);
             }
         }
+
         // Destroy slot
-        this->slot_allocator_.destroy(this->slot_at(index));
+        this->destroy_slot(index);
         assert(this->slot_size_ > 0);
         this->slot_size_--;
     }
@@ -2604,11 +2755,14 @@ private:
         if (std::allocator_traits<allocator_type>::propagate_on_container_swap::value) {
             swap(this->allocator_, other.get_allocator());
         }
+        if (std::allocator_traits<mutable_allocator_type>::propagate_on_container_swap::value) {
+            swap(this->mutable_allocator_, other.get_mutable_allocator());
+        }
         if (std::allocator_traits<slot_allocator_type>::propagate_on_container_swap::value) {
             swap(this->slot_allocator_, other.get_slot_allocator());
         }
-        if (std::allocator_traits<nc_slot_allocator_type>::propagate_on_container_swap::value) {
-            swap(this->nc_slot_allocator_, other.get_nc_slot_allocator());
+        if (std::allocator_traits<mutable_slot_allocator_type>::propagate_on_container_swap::value) {
+            swap(this->mutable_slot_allocator_, other.get_mutable_slot_allocator());
         }
     }
 

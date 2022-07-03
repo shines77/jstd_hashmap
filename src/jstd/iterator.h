@@ -699,16 +699,16 @@ constexpr const Element * data(
 #if JSTD_IS_CXX_17
 
 // implementation via constexpr if, available in C++17
-template<class It>
+template<class Iter>
 constexpr typename std::iterator_traits<It>::difference_type
-    distance(It first, It last)
+    distance(Iter first, Iter last)
 {
-    using category = typename std::iterator_traits<It>::iterator_category;
-    static_assert(std::is_base_of_v<std::input_iterator_tag, category>);
+    using category = typename std::iterator_traits<Iter>::iterator_category;
+    static_assert(std::is_base_of<std::input_iterator_tag, category>::value);
  
-    if constexpr (std::is_base_of_v<std::random_access_iterator_tag, category>)
+    if constexpr (std::is_base_of<std::random_access_iterator_tag, category>::value) {
         return last - first;
-    else {
+    } else {
         typename std::iterator_traits<It>::difference_type result = 0;
         while (first != last) {
             ++first;

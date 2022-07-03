@@ -6,6 +6,8 @@
 #pragma once
 #endif
 
+#include <stddef.h>     // For offsetof
+
 #include <cstdint>
 #include <cstddef>
 #include <cstdbool>
@@ -490,6 +492,77 @@ struct has_mapped_type {
 
     static constexpr bool value = std::is_same<decltype(check<T>(nullptr)), std::true_type>::value;
 };
+
+//////////////////////////////////////////////////////////////////////////////////
+
+template <typename Pair, typename = std::true_type>
+struct OffsetOf {
+    static constexpr std::size_t kFirst  = static_cast<std::size_t>(-1);
+    static constexpr std::size_t kSecond = static_cast<std::size_t>(-1);
+};
+
+template <typename Pair>
+struct OffsetOf<Pair, typename std::is_standard_layout<Pair>::type> {
+    static constexpr std::size_t kFirst  = offsetof(Pair, first);
+    static constexpr std::size_t kSecond = offsetof(Pair, second);
+};
+
+template <typename Key, typename Value>
+struct is_absl_compatible_layout {
+private:
+    struct Pair {
+        Key     first;
+        Value   second;
+    };
+
+    // Is PairT layout-compatible with Pair ?
+    template <typename PairT>
+    static constexpr bool isLayoutCompatible() {
+        return (std::is_standard_layout<PairT>() &&
+               (sizeof(PairT) == sizeof(Pair)) &&
+               (alignof(PairT) == alignof(Pair)) &&
+               (OffsetOf<PairT>::kFirst == OffsetOf<Pair>::kFirst) &&
+               (OffsetOf<PairT>::kSecond == <Pair>::kSecond));
+    }
+
+public:
+    // Whether std::pair<const K, V> and std::pair<K, V> are layout-compatible.
+    // If they are, then it is safe to store them in a union and read from either.
+    static constexpr bool value = (std::is_standard_layout<K>() &&
+                                   std::is_standard_layout<Pair>() &&
+                                   (OffsetOf<Pair>::kFirst == 0) &&
+                                   isLayoutCompatible<std::pair<K, V>>() &&
+                                   isLayoutCompatible<std::pair<const K, V>>());
+};
+
+//
+// Pair        = std::pair<const Key, Value>
+// MutablePair = std::pair<Key, Value>
+//
+template <typename Pair, typename MutablePair>
+struct is_compatible_layout {
+public:
+    typedef typename Pair::first_type           First;
+    typedef typename Pair::second_type          Second;
+    typedef typename MutablePair::first_type    MutableFirst;
+    typedef typename MutablePair::second_type   MutableSecond;
+
+public:
+    // Whether std::pair<const Key, Value> and std::pair<Key, Value> are layout-compatible.
+    // If they are, then it is safe to store them in a union and read from either.
+    static constexpr bool value = (std::is_standard_layout<First>() &&
+                                   std::is_standard_layout<MutableFirst>() &&
+                                   std::is_standard_layout<Second>() &&
+                                   std::is_standard_layout<MutableSecond>() &&
+                                   std::is_standard_layout<Pair>() &&
+                                   std::is_standard_layout<MutablePair>() &&
+                                   (sizeof(Pair)  == sizeof(MutablePair)) &&
+                                   (alignof(Pair) == alignof(MutablePair)) &&
+                                   (OffsetOf<Pair>::kFirst  == OffsetOf<MutablePair>::kFirst) &&
+                                   (OffsetOf<Pair>::kSecond == OffsetOf<MutablePair>::kSecond));
+};
+
+//////////////////////////////////////////////////////////////////////////////////
 
 } // namespace jstd
 

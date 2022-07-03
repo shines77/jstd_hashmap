@@ -152,13 +152,13 @@ public:
                                           (std::is_arithmetic<key_type>::value ||
                                            std::is_enum<key_type>::value);
 
-    static constexpr bool slot_is_trivial_copyable =
+    static constexpr bool is_slot_trivial_copyable =
             (std::is_trivially_copyable<value_type>::value ||
             (std::is_trivially_copyable<key_type>::value &&
              std::is_trivially_copyable<mapped_type>::value) ||
             (std::is_scalar<key_type>::value && std::is_scalar<mapped_type>::value));
 
-    static constexpr bool slot_is_trivial_destructor =
+    static constexpr bool is_slot_trivial_destructor =
             (std::is_trivially_destructible<value_type>::value ||
             (std::is_trivially_destructible<key_type>::value &&
              std::is_trivially_destructible<mapped_type>::value) ||
@@ -1014,7 +1014,7 @@ public:
 
     size_type group_mask() const { return group_mask_; }
     size_type group_count() const { return (group_mask_ + 1); }
-    size_type group_capacity() const { return (group_mask_ + 1 + 2); }
+    size_type group_capacity() const { return (this->group_count() + 1); }
 
     slot_type * slots() { return slots_; }
     const slot_type * slots() const { return slots_; }
@@ -1631,10 +1631,10 @@ private:
     }
 
     template <bool finitial>
-    void destory_slots() noexcept(slot_is_trivial_destructor) {
+    void destory_slots() noexcept(is_slot_trivial_destructor) {
         // Destroy all slots.
         if (this->slots_ != nullptr) {
-            if (!slot_is_trivial_destructor) {
+            if (!is_slot_trivial_destructor) {
                 control_byte * control = this->controls();
                 assert(control != nullptr);
                 for (size_type index = 0; index <= this->slot_mask(); index++) {
@@ -1747,7 +1747,7 @@ private:
                 for (control_byte * control = old_controls; control != last_control; control++) {
                     if (likely(control->isUsed())) {
                         this->move_insert_unique(old_slot);
-                        if (!slot_is_trivial_destructor) {
+                        if (!is_slot_trivial_destructor) {
                             this->slot_allocator_.destroy(old_slot);
                         }
                     }
@@ -1764,7 +1764,7 @@ private:
                         maskUsed = BitUtils::clearLowBit32(maskUsed);
                         slot_type * old_slot = slot_start + pos;
                         this->move_insert_unique(old_slot);
-                        if (!slot_is_trivial_destructor) {
+                        if (!is_slot_trivial_destructor) {
                             this->slot_allocator_.destroy(old_slot);
                         }
                     }
@@ -1780,7 +1780,7 @@ private:
                         maskUsed = BitUtils::clearLowBit32(maskUsed);
                         slot_type * old_slot = slot_start + pos;
                         this->move_insert_unique(old_slot);
-                        if (!slot_is_trivial_destructor) {
+                        if (!is_slot_trivial_destructor) {
                             this->slot_allocator_.destroy(old_slot);
                         }
                     }
@@ -1828,7 +1828,7 @@ private:
     JSTD_FORCED_INLINE
     void transfer_slot(slot_type * dest_slot, slot_type * src_slot) {
         this->nc_slot_allocator_.construct(dest_slot, std::move(*reinterpret_cast<nc_slot_type *>(src_slot)));
-        if (!slot_is_trivial_destructor) {
+        if (!is_slot_trivial_destructor) {
             this->nc_slot_allocator_.destroy(src_slot);
         }
     }
@@ -1842,14 +1842,14 @@ private:
         this->nc_slot_allocator_.construct(tmp, std::move(*reinterpret_cast<nc_slot_type *>(slot1)));
         this->nc_slot_allocator_.construct(slot1, std::move(*reinterpret_cast<nc_slot_type *>(slot2)));
         this->nc_slot_allocator_.construct(slot2, std::move(*reinterpret_cast<nc_slot_type *>(tmp)));
-        if (!slot_is_trivial_destructor) {
+        if (!is_slot_trivial_destructor) {
             this->nc_slot_allocator_.destroy(tmp);
         }
 #else
         this->nc_slot_allocator_.construct(tmp, std::move(*reinterpret_cast<nc_slot_type *>(slot1)));
         *slot1 = std::move(*reinterpret_cast<nc_slot_type *>(slot2));
         *slot2 = std::move(*reinterpret_cast<nc_slot_type *>(tmp));
-        if (!slot_is_trivial_destructor) {
+        if (!is_slot_trivial_destructor) {
             this->nc_slot_allocator_.destroy(tmp);
         }
 #endif
@@ -2245,6 +2245,9 @@ private:
                 }
             }
 
+            assert(this->left_empties_ > 0);
+            this->left_empties_--;
+
             // Not found any [DeletedEntry], so we use [EmptyEntry] to insert
             // Skip to final processing
         } else {
@@ -2267,11 +2270,11 @@ private:
 
                 // Maybe found a [EmptyEntry] to insert
                 assert(maskEmpty != 0);
+
+                assert(this->left_empties_ > 0);
+                this->left_empties_--;
             }
         }
-
-        assert(this->left_empties_ > 0);
-        this->left_empties_--;
 
         // It's a [EmptyEntry] or [DeletedEntry] to insert
         if (likely(maskEmpty != 0)) {
