@@ -1890,7 +1890,7 @@ private:
 
             groups[group_count].template fillAll8<kEndOfMark>();
         }
-        control_byte * endof_ctrl = this->control_at(this->slot_capacity());
+        control_byte * endof_ctrl = this->control_at(new_capacity);
         endof_ctrl->setEndOf();
 
         slot_type * slots = slot_allocator_.allocate(new_capacity);
