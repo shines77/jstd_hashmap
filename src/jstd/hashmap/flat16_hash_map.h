@@ -116,7 +116,7 @@ public:
     typedef flat16_hash_map<Key, Value, Hash, KeyEqual, Allocator>
                                                     this_type;
 
-    static constexpr bool kUseIndexSalt = true;
+    static constexpr bool kUseIndexSalt = false;
 
     static constexpr size_type npos = size_type(-1);
 
