@@ -79,14 +79,6 @@
 #include <memory>
 #include <utility>
 #include <vector>
-#include <unordered_map>
-#if defined(_MSC_VER)
-#include <hash_map>
-#define STDEXT_HASH_NAMESPACE stdext
-#else
-#include <ext/hash_map>
-#define STDEXT_HASH_NAMESPACE __gnu_cxx
-#endif
 #include <algorithm>
 
 /* SIMD support features */
@@ -125,6 +117,14 @@
 #include <jstd/basic/stdint.h>
 #include <jstd/basic/inttypes.h>
 
+#include <unordered_map>
+#if defined(_MSC_VER)
+#include <hash_map>
+#define STDEXT_HASH_NAMESPACE stdext
+#else
+#include <ext/hash_map>
+#define STDEXT_HASH_NAMESPACE __gnu_cxx
+#endif
 #include <jstd/hashmap/flat16_hash_map.h>
 #include <jstd/hashmap/hashmap_analyzer.h>
 #include <jstd/hasher/hash_helper.h>

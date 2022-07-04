@@ -375,6 +375,18 @@ static CompilerMarco compiler_arch[] = {
     COMPILER_MARCO_ENTRY(JSTD_WORD_LEN),
 #endif
 
+#ifdef __BYTE_ORDER
+    COMPILER_MARCO_ENTRY(__BYTE_ORDER),
+#endif
+
+#ifdef __LITTLE_ENDIAN
+    COMPILER_MARCO_ENTRY(__LITTLE_ENDIAN),
+#endif
+
+#ifdef __BIG_ENDIAN
+    COMPILER_MARCO_ENTRY(__BIG_ENDIAN),
+#endif
+
 #ifdef __BIG_ENDIAN__
     COMPILER_MARCO_ENTRY(__BIG_ENDIAN__),
 #endif

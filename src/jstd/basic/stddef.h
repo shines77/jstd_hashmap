@@ -292,11 +292,26 @@
 //
 // Little-Endian or Big-Endian
 //
-#define JSTD_LITTLE_ENDIAN  0
-#define JSTD_BIG_ENDIAN     1
+#define JSTD_LITTLE_ENDIAN  1234
+#define JSTD_BIG_ENDIAN     4321
 
+/*
+* My best guess at if you are big-endian or little-endian.
+* This may need adjustment.
+*/
 #ifndef JSTD_ENDIAN
-#define JSTD_ENDIAN  JSTD_LITTLE_ENDIAN
-#endif
+#if (defined(__BYTE_ORDER) && defined(__LITTLE_ENDIAN) && (__BYTE_ORDER == __LITTLE_ENDIAN)) || \
+    (defined(i386) || defined(__i386__) || defined(__i486__) || \
+     defined(__i586__) || defined(__i686__) || defined(vax) || defined(MIPSEL) || \
+     defined(_M_X64) || defined(_M_AMD64) || defined(_M_IA64) || \
+     defined(__amd64__) || defined(__x86_64__) || defined (_M_IX86))
+  #define JSTD_ENDIAN  JSTD_LITTLE_ENDIAN
+#elif (defined(__BYTE_ORDER) && defined(__BIG_ENDIAN) && (__BYTE_ORDER == __BIG_ENDIAN)) || \
+      (defined(sparc) || defined(POWERPC) || defined(mc68000) || defined(sel))
+  #define JSTD_ENDIAN  JSTD_BIG_ENDIAN
+#else
+  #define JSTD_ENDIAN  JSTD_LITTLE_ENDIAN
+#endif // __BYTE_ORDER
+#endif // !JSTD_ENDIAN
 
 #endif // JSTD_BASIC_STDDEF_H
