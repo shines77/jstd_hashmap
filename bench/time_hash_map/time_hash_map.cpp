@@ -81,6 +81,10 @@
 #include <vector>
 #include <algorithm>
 
+#define USE_STD_UNORDERED_MAP       1
+#define USE_JSTD_FLAT16_HASH_MAP    1
+#define USE_JSTD_ROBIN32_HASH_MAP   1
+
 /* SIMD support features */
 #define JSTD_HAVE_MMX           1
 #define JSTD_HAVE_SSE           1
@@ -125,7 +129,12 @@
 #include <ext/hash_map>
 #define STDEXT_HASH_NAMESPACE __gnu_cxx
 #endif
+#if USE_JSTD_FLAT16_HASH_MAP
 #include <jstd/hashmap/flat16_hash_map.h>
+#endif
+#if USE_JSTD_ROBIN32_HASH_MAP
+#include <jstd/hashmap/robin32_hash_map.h>
+#endif
 #include <jstd/hashmap/hashmap_analyzer.h>
 #include <jstd/hasher/hash_helper.h>
 #include <jstd/string/string_view.h>
@@ -185,6 +194,7 @@ static const bool FLAGS_test_std_hash_map = false;
 #endif
 static const bool FLAGS_test_std_unordered_map = true;
 static const bool FLAGS_test_jstd_flat16_hash_map = true;
+static const bool FLAGS_test_jstd_robin32_hash_map = true;
 static const bool FLAGS_test_map = true;
 
 static const bool FLAGS_test_4_bytes = true;
@@ -1394,13 +1404,16 @@ static void test_all_hashmaps(std::size_t obj_size, std::size_t iters) {
             "stdext::hash_map<K, V>", obj_size, 0, iters, has_stress_hash_function);
     }
 
+#if USE_STD_UNORDERED_MAP
     if (FLAGS_test_std_unordered_map) {
         measure_hashmap<std::unordered_map<HashObj,   Value, HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>,
                         std::unordered_map<HashObj *, Value, HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>
                         >(
             "std::unordered_map<K, V>", obj_size, 0, iters, has_stress_hash_function);
     }
+#endif
 
+#if USE_JSTD_FLAT16_HASH_MAP
     if (FLAGS_test_jstd_flat16_hash_map) {
         typedef jstd::flat16_hash_map<HashObj, Value, HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>> flat16_hash_map;
         measure_hashmap<jstd::flat16_hash_map<HashObj,   Value, HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>,
@@ -1409,6 +1422,18 @@ static void test_all_hashmaps(std::size_t obj_size, std::size_t iters) {
             "jstd::flat16_hash_map<K, V>", obj_size,
             sizeof(typename flat16_hash_map::node_type), iters, has_stress_hash_function);
     }
+#endif
+
+#if USE_JSTD_FLAT16_HASH_MAP
+    if (FLAGS_test_jstd_robin32_hash_map) {
+        typedef jstd::robin32_hash_map<HashObj, Value, HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>> robin32_hash_map;
+        measure_hashmap<jstd::robin32_hash_map<HashObj,   Value, HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>,
+                        jstd::robin32_hash_map<HashObj *, Value, HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>
+                        >(
+            "jstd::robin32_hash_map<K, V>", obj_size,
+            sizeof(typename robin32_hash_map::node_type), iters, has_stress_hash_function);
+    }
+#endif
 }
 
 void benchmark_all_hashmaps(std::size_t iters)

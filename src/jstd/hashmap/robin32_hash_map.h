@@ -216,7 +216,7 @@ public:
             return (tag >= kEmptyEntry);
         }
 
-        void setUsed(std::uint8_t ctrl_hash) {
+        void setHash(std::uint8_t ctrl_hash) {
             this->hash = ctrl_hash;
         }
 
@@ -231,6 +231,11 @@ public:
         void setDistance(std::uint8_t distance) {
             assert(distance < kEndOfMark);
             this->distance = distance;
+        }
+
+        void setUsed(std::uint8_t ctrl_hash, std::uint8_t distance) {
+            this->setHash(ctrl_hash);
+            this->setDistance(distance);
         }
     };
 
@@ -273,19 +278,6 @@ public:
 
         typedef std::uint32_t bitmask_type;
 
-        static constexpr __m256i kLowMask16  = _mm256_set1_epi16((short)0x00FF);
-        static constexpr __m256i kHighMask16 = _mm256_set1_epi16((short)0xFF00);
-        static constexpr alignas(64) __m256i kDistance16[4] = {
-            _mm256_setr_epi16(0x0000, 0x0001, 0x0002, 0x0003, 0x0004, 0x0005, 0x0006, 0x0007,
-                              0x0008, 0x0009, 0x000A, 0x000B, 0x000C, 0x000D, 0x000E, 0x000F),
-            _mm256_setr_epi16(0x00FF, 0x00FF, 0x00FF, 0x00FF, 0x0000, 0x0001, 0x0002, 0x0003,
-                              0x0004, 0x0005, 0x0006, 0x0007, 0x0008, 0x0009, 0x000A, 0x000B),
-            _mm256_setr_epi16(0x00FF, 0x00FF, 0x00FF, 0x00FF, 0x00FF, 0x00FF, 0x00FF, 0x00FF,
-                              0x0000, 0x0001, 0x0002, 0x0003, 0x0004, 0x0005, 0x0006, 0x0007),
-            _mm256_setr_epi16(0x00FF, 0x00FF, 0x00FF, 0x00FF, 0x00FF, 0x00FF, 0x00FF, 0x00FF,
-                              0x00FF, 0x00FF, 0x00FF, 0x00FF, 0x0000, 0x0001, 0x0002, 0x0003),
-        };
-
         void clear(pointer data) {
             this->template fillAll16<kEmptyEntry>(data);
         }
@@ -317,6 +309,7 @@ public:
         }
 
         std::uint32_t matchLowControlTag(const_pointer data, std::uint16_t control_tag) const {
+            const __m256i kLowMask16  = _mm256_set1_epi16((short)0x00FF);
             __m256i tag_bits = _mm256_set1_epi16(control_tag);
             __m256i control_bits = _mm256_loadu_si256((const __m256i *)data);
             __m256i low_bits = _mm256_and_si256(control_bits, kLowMask16);
@@ -326,6 +319,7 @@ public:
         }
 
         std::uint32_t matchHighControlTag(const_pointer data, std::uint16_t control_tag) const {
+            const __m256i kHighMask16 = _mm256_set1_epi16((short)0xFF00);
             __m256i tag_bits = _mm256_set1_epi16(control_tag);
             __m256i control_bits = _mm256_loadu_si256((const __m256i *)data);
             __m256i high_bits = _mm256_and_si256(control_bits, kHighMask16);
@@ -336,6 +330,8 @@ public:
 
         MatchMask2<std::uint32_t>
         matchHashAndEmpty(const_pointer data, std::uint16_t ctrl_hash) const {
+            const __m256i kLowMask16  = _mm256_set1_epi16((short)0x00FF);
+            const __m256i kHighMask16 = _mm256_set1_epi16((short)0xFF00);
             __m256i empty_bits = _mm256_set1_epi16(kEmptyEntry);
             __m256i hash_bits  = _mm256_set1_epi16(ctrl_hash);
             __m256i ctrl_bits = _mm256_loadu_si256((const __m256i *)data);
@@ -352,7 +348,19 @@ public:
         MatchMask3<std::uint32_t>
         matchHashAndDistance(const_pointer data, std::uint16_t ctrl_hash, std::uint16_t distance) const {
             assert((distance & std::uint16_t(0x03)) == 0);
-            __m256i & dist_base = kDistance16[(distance % kGroupWidth) / 4];
+            const __m256i kLowMask16  = _mm256_set1_epi16((short)0x00FF);
+            const __m256i kHighMask16 = _mm256_set1_epi16((short)0xFF00);
+            const __m256i kDistance16[4] = {
+                _mm256_setr_epi16(0x0000, 0x0001, 0x0002, 0x0003, 0x0004, 0x0005, 0x0006, 0x0007,
+                                  0x0008, 0x0009, 0x000A, 0x000B, 0x000C, 0x000D, 0x000E, 0x000F),
+                _mm256_setr_epi16(0x00FF, 0x00FF, 0x00FF, 0x00FF, 0x0000, 0x0001, 0x0002, 0x0003,
+                                  0x0004, 0x0005, 0x0006, 0x0007, 0x0008, 0x0009, 0x000A, 0x000B),
+                _mm256_setr_epi16(0x00FF, 0x00FF, 0x00FF, 0x00FF, 0x00FF, 0x00FF, 0x00FF, 0x00FF,
+                                  0x0000, 0x0001, 0x0002, 0x0003, 0x0004, 0x0005, 0x0006, 0x0007),
+                _mm256_setr_epi16(0x00FF, 0x00FF, 0x00FF, 0x00FF, 0x00FF, 0x00FF, 0x00FF, 0x00FF,
+                                  0x00FF, 0x00FF, 0x00FF, 0x00FF, 0x0000, 0x0001, 0x0002, 0x0003),
+            };
+            const __m256i & dist_base = kDistance16[(distance % kGroupWidth) / 4];
             __m256i dist_plus  = _mm256_set1_epi16((short)distance);
             __m256i empty_bits = _mm256_set1_epi16(kEmptyEntry);
             __m256i hash_bits  = _mm256_set1_epi16(ctrl_hash);
@@ -381,6 +389,7 @@ public:
         }
 
         std::uint32_t matchUsed(const_pointer data) const {
+            const __m256i kLowMask16  = _mm256_set1_epi16((short)0x00FF);
             __m256i tag_bits = _mm256_set1_epi16(kEndOfMark);
             __m256i control_bits = _mm256_loadu_si256((const __m256i *)data);
             __m256i low_bits = _mm256_and_si256(control_bits, kLowMask16);
@@ -1272,6 +1281,10 @@ private:
         return (index & slot_mask);
     }
 
+    std::uint8_t round_distance(size_type distance) const {
+        return ((distance <= kEndOfMark) ? std::uint8_t(distance) : kEndOfMark);
+    }
+
     inline size_type index_salt() const noexcept {
         return (size_type)((std::uintptr_t)this->groups() >> 12);
     }
@@ -1529,10 +1542,11 @@ private:
 
 #if 0
     JSTD_FORCED_INLINE
-    void setMirrorCtrl(size_type index, std::uint8_t tag) {
+    void setMirrorCtrl(size_type index, std::uint8_t tag, std::uint8_t distance) {
         if (index < kGroupWidth) {
             control_byte * ctrl_mirror = this->control_at_ex(index + this->slot_capacity());
-            ctrl_mirror->value = tag;
+            ctrl_mirror->hash = tag;
+            ctrl_mirror->distance = distance;
             if (index == 0) {
                 if (control_byte::isEmpty(tag)) {
                     ctrl_mirror->setEndOf();
@@ -1568,16 +1582,9 @@ private:
         return (this->left_empties_ <= 0);
     }
 
-    void reorder_or_grow_if_necessary() {
-        size_type slot_deleted;
-        if ((this->slot_capacity() > size_type(32)) &&
-            (slot_deleted = this->slot_deleted() >= this->slot_capacity() / 8)) {
-            // Reorder slot and no grow
-            this->drop_deleted_no_grow();
-        } else {
-            size_type new_capacity = (this->slot_mask_ + 1) * 2;
-            this->rehash_impl<false, true>(new_capacity);
-        }
+    void grow_if_necessary() {
+        size_type new_capacity = (this->slot_mask_ + 1) * 2;
+        this->rehash_impl<false, true>(new_capacity);
     }
 
     JSTD_FORCED_INLINE
@@ -1807,80 +1814,6 @@ private:
 #endif
     }
 
-    JSTD_FORCED_INLINE
-    void reset_left_empties() {
-        this->left_empties_ = this->slot_threshold() - this->slot_size();
-    }
-
-    void drop_deleted_no_grow() {
-        // Algorithm:
-        // - mark all DELETED slots as EMPTY
-        // - mark all USED slots as DELETED
-        // - for each slot marked as DELETED
-        //     hash = Hash(element)
-        //     target = find_first_unused(hash)
-        //     if target is in the same group
-        //       mark slot as USED
-        //     else if target is EMPTY
-        //       transfer element to target
-        //       mark slot as EMPTY
-        //       mark target as USED
-        //     else if target is DELETED
-        //       swap current element with target element
-        //       mark target as USED
-        //       repeat procedure for current slot with moved from element (target)
-
-        // Convert all [Deleted] to [Empty], and [Used] to [Deleted].
-        this->convent_all_slots();
-
-        alignas(slot_type) unsigned char raw[sizeof(slot_type)];
-        slot_type * tmp_slot = reinterpret_cast<slot_type *>(&raw);
-
-        for (size_type index = 0; index < this->slot_capacity(); index++) {
-            control_type * ctrl = this->control_at(index);
-            if (ctrl->isDeleted()) {
-                continue;
-            }
-            slot_type * slot = this->slot_at(index);
-            std::uint8_t ctrl_hash;
-            size_type target = this->find_first_empty_slot(slot->value.first, ctrl_hash);
-            intptr_t distance = intptr_t(index - target);
-            if (distance < intptr_t(kGroupWidth) && distance >= 0) {
-                // If the distance of old index and new index is less than kGroupWidth,
-                // we don't need to move it because it's already in the best position.
-                ctrl->setUsed(ctrl_hash);
-                this->setUsedMirrorCtrl(index, ctrl_hash);
-                continue;
-            }
-
-            control_type * new_ctrl = this->control_at(target);
-            slot_type * new_slot = this->slot_at(target);
-            if (new_ctrl->isEmpty()) {
-                // Transfer the old slot to the new (Empty) slot.
-                new_ctrl->setUsed(ctrl_hash);
-                this->setUsedMirrorCtrl(target, ctrl_hash);
-
-                this->transfer_slot(new_slot, slot);
-
-                ctrl->setEmpty();
-                this->setUnusedMirrorCtrl(index, kEmptyEntry);
-            } else {
-                // Swap the old slot and new slot.
-                assert(new_ctrl->isDeleted());
-                // Until we are done rehashing, DELETED marks previously USED slots.
-                new_ctrl->setUsed(ctrl_hash);
-                this->setUsedMirrorCtrl(target, ctrl_hash);
-
-                this->swap_slot(slot, new_slot, tmp_slot);
-
-                // Repeat check the swap slot.
-                index--;
-            }
-        }
-
-        this->reset_left_empties();
-    }
-
     size_type find_impl(const key_type & key) const {
         hash_code_t hash_code = this->get_hash(key);
         hash_code_t hash_code_2nd = this->get_second_hash(hash_code);
@@ -1913,7 +1846,7 @@ private:
 
     JSTD_FORCED_INLINE
     size_type find_impl(const key_type & key, size_type & first_slot,
-                        size_type & last_slot, std::uint8_t & out_ctrl_hash) const {
+                        size_type & last_slot, std::uint8_t & o_ctrl_hash) const {
         hash_code_t hash_code = this->get_hash(key);
         hash_code_t hash_code_2nd = this->get_second_hash(hash_code);
         std::uint8_t ctrl_hash = this->get_ctrl_hash(hash_code_2nd);
@@ -1921,11 +1854,11 @@ private:
         size_type start_slot = slot_index;
         std::uint8_t distance = 0;
         first_slot = start_slot;
-        out_ctrl_hash = ctrl_hash;
+        o_ctrl_hash = ctrl_hash;
         do {
             const group_type & group = this->get_group(slot_index);
             auto mask32 = group.matchHashAndDistance(ctrl_hash, distance);
-            std::uint32_t maskHash = mask32.first;
+            std::uint32_t maskHash = mask32.maskHash;
             size_type start_index = slot_index;
             while (maskHash != 0) {
                 size_type pos = BitUtils::bsf32(maskHash);
@@ -1937,10 +1870,11 @@ private:
                     return index;
                 }
             }
-            if (mask32.second != 0) {
+            if (mask32.maskEmpty != 0) {
                 last_slot = slot_index;
                 return npos;
             }
+            distance += kGroupWidth;
             slot_index = this->slot_next_group(slot_index);
         } while (slot_index != start_slot);
 
@@ -1949,13 +1883,14 @@ private:
     }
 
     JSTD_FORCED_INLINE
-    size_type find_first_empty_slot(const key_type & key, std::uint8_t & ctrl_hash) {
+    size_type find_first_empty_slot(const key_type & key, std::uint8_t & o_ctrl_hash,
+                                                          std::uint8_t & distance) {
         hash_code_t hash_code = this->get_hash(key);
         hash_code_t hash_code_2nd = this->get_second_hash(hash_code);
         std::uint8_t ctrl_hash = this->get_ctrl_hash(hash_code_2nd);
         size_type slot_index = this->index_for(hash_code);
         size_type first_slot = slot_index;
-        ctrl_hash = control_hash;
+        o_ctrl_hash = ctrl_hash;
 
         // Find the first empty slot and insert
         do {
@@ -1964,27 +1899,31 @@ private:
             if (maskEmpty != 0) {
                 // Found a [EmptyEntry] to insert
                 size_type pos = BitUtils::bsf32(maskEmpty);
-                size_type start_index = slot_index;
-                return this->round_index(start_index + pos);
+                size_type index = slot_index + (pos >> 1);
+                distance = this->round_distance(index - first_slot);
+                return this->round_index(index);
             }
             slot_index = this->slot_next_group(slot_index);
             assert(slot_index != first_slot);
         } while (1);
 
+        distance = kEmptyEntry;
         return npos;
     }
 
     // Use in rehash_impl()
     void move_insert_unique(slot_type * slot) {
+        std::uint8_t distance;
         std::uint8_t ctrl_hash;
-        size_type target = this->find_first_empty_slot(slot->value.first, ctrl_hash);
+        size_type target = this->find_first_empty_slot(slot->value.first,
+                                                       ctrl_hash, distance);
         assert(target != npos);
 
         // Found a [EmptyEntry] to insert
         control_type * control = this->control_at(target);
         assert(control->isEmpty());
-        control->setUsed(ctrl_hash);
-        this->setUsedMirrorCtrl(target, ctrl_hash);
+        control->setUsed(ctrl_hash, distance);
+        this->setUsedMirrorCtrl(target, ctrl_hash, distance);
 
         slot_type * new_slot = this->slot_at(target);
         if (kIsCompatibleLayout) {
@@ -2049,49 +1988,56 @@ private:
     }
 
     std::pair<size_type, bool>
-    find_and_prepare_insert(const key_type & key, std::uint8_t & ctrl_hash, std::uint8_t & distance) {
+    find_and_prepare_insert(const key_type & key, std::uint8_t & o_ctrl_hash, std::uint8_t & o_distance) {
         hash_code_t hash_code = this->get_hash(key);
         hash_code_t hash_code_2nd = this->get_second_hash(hash_code);
         std::uint8_t ctrl_hash = this->get_ctrl_hash(hash_code_2nd);
         size_type slot_index = this->index_for(hash_code);
         size_type first_slot = slot_index;
         size_type last_slot = npos;
+        std::uint8_t distance = 0;
         std::uint32_t maskEmpty;
-        ctrl_hash = control_hash;
+        o_ctrl_hash = ctrl_hash;
 
         do {
             const group_type & group = this->get_group(slot_index);
-            std::uint32_t mask16 = group.matchHash(ctrl_hash);
-            size_type start_index = slot_index;
-            while (mask16 != 0) {
-                size_type pos = BitUtils::bsf32(mask16);
-                mask16 = BitUtils::clearLowBit32(mask16);
-                size_type index = this->round_index(start_index + pos);
+            auto mask32 = group.matchHashAndDistance(ctrl_hash, distance);
+            std::uint32_t maskHash = mask32.maskHash;
+            while (maskHash != 0) {
+                size_type pos = BitUtils::bsf32(maskHash);
+                maskHash = BitUtils::clearLowBit32(maskHash);
+                size_type index = slot_index + (pos >> 1);
+                distance = this->round_distance(index);
+                index = this->round_index(index);
                 const slot_type & target = this->get_slot(index);
                 if (this->key_equal_(target.value.first, key)) {
+                    o_distance = distance;
                     return { index, true };
                 }
             }
-            maskEmpty = group.matchEmpty();
+            maskEmpty = mask32.maskEmpty;
             if (maskEmpty != 0) {
                 last_slot = slot_index;
                 break;
             }
+            distance += kGroupWidth;
             slot_index = this->slot_next_group(slot_index);
         } while (slot_index != first_slot);
 
         if (this->need_grow() || (last_slot == npos)) {
             // The size of slot reach the slot threshold or hashmap is full.
-            this->reorder_or_grow_if_necessary();
+            this->grow_if_necessary();
 
-            return this->find_and_prepare_insert(key, ctrl_hash);
+            return this->find_and_prepare_insert(key, o_ctrl_hash, o_distance);
         }
 
         // It's a [EmptyEntry] to insert
         assert(maskEmpty != 0);
         size_type pos = BitUtils::bsf32(maskEmpty);
-        size_type start_index = last_slot;
-        return { this->round_index(start_index + pos), false };
+        size_type index = last_slot + (pos >> 1);
+        o_distance = this->round_distance(index);
+        index = this->round_index(index);
+        return { index, false };
     }
 
     template <bool AlwaysUpdate>
@@ -2126,8 +2072,9 @@ private:
 
     template <bool AlwaysUpdate>
     std::pair<iterator, bool> emplace_impl(value_type && value) {
+        std::uint8_t distance = 0;
         std::uint8_t ctrl_hash;
-        auto find_info = this->find_and_prepare_insert(value.first, ctrl_hash);
+        auto find_info = this->find_and_prepare_insert(value.first, ctrl_hash, distance);
         size_type target = find_info.first;
         bool is_exists = find_info.second;
         if (!is_exists) {
@@ -2137,8 +2084,8 @@ private:
             // Found a [EmptyEntry] to insert
             control_type * control = this->control_at(target);
             assert(control->isEmpty());
-            control->setUsed(ctrl_hash);
-            this->setUsedMirrorCtrl(target, ctrl_hash);
+            control->setUsed(ctrl_hash, distance);
+            this->setUsedMirrorCtrl(target, ctrl_hash, distance);
             slot_type * slot = this->slot_at(target);
             if (kIsCompatibleLayout)
                 this->mutable_allocator_.construct(&slot->mutable_value, std::forward<value_type>(value));
@@ -2171,8 +2118,9 @@ private:
               (jstd::is_same_ex<MappedT, mapped_type>::value ||
                std::is_constructible<mapped_type, MappedT &&>::value)>::type * = nullptr>
     std::pair<iterator, bool> emplace_impl(KeyT && key, MappedT && value) {
+        std::uint8_t distance = 0;
         std::uint8_t ctrl_hash;
-        auto find_info = this->find_and_prepare_insert(key, ctrl_hash);
+        auto find_info = this->find_and_prepare_insert(key, ctrl_hash, distance);
         size_type target = find_info.first;
         bool is_exists = find_info.second;
         if (!is_exists) {
@@ -2182,8 +2130,8 @@ private:
             // Found a [EmptyEntry] to insert
             control_type * control = this->control_at(target);
             assert(control->isEmpty());
-            control->setUsed(ctrl_hash);
-            this->setUsedMirrorCtrl(target, ctrl_hash);
+            control->setUsed(ctrl_hash, distance);
+            this->setUsedMirrorCtrl(target, ctrl_hash, distance);
             slot_type * slot = this->slot_at(target);
             if (kIsCompatibleLayout) {
                 this->mutable_allocator_.construct(&slot->mutable_value,
@@ -2222,8 +2170,9 @@ private:
                std::is_constructible<key_type, KeyT &&>::value)>::type * = nullptr,
               typename ... Args>
     std::pair<iterator, bool> emplace_impl(KeyT && key, Args && ... args) {
+        std::uint8_t distance = 0;
         std::uint8_t ctrl_hash;
-        auto find_info = this->find_and_prepare_insert(key, ctrl_hash);
+        auto find_info = this->find_and_prepare_insert(key, ctrl_hash, distance);
         size_type target = find_info.first;
         bool is_exists = find_info.second;
         if (!is_exists) {
@@ -2233,8 +2182,8 @@ private:
             // Found a [EmptyEntry] to insert
             control_type * control = this->control_at(target);
             assert(control->isEmpty());
-            control->setUsed(ctrl_hash);
-            this->setUsedMirrorCtrl(target, ctrl_hash);
+            control->setUsed(ctrl_hash, distance);
+            this->setUsedMirrorCtrl(target, ctrl_hash, distance);
             slot_type * slot = this->slot_at(target);
             if (kIsCompatibleLayout) {
                 this->mutable_allocator_.construct(&slot->mutable_value,
@@ -2272,9 +2221,10 @@ private:
     std::pair<iterator, bool> emplace_impl(PieceWise && hint,
                                            std::tuple<Ts1...> && first,
                                            std::tuple<Ts2...> && second) {
+        std::uint8_t distance = 0;
         std::uint8_t ctrl_hash;
         tuple_wrapper2<key_type> key_wrapper(first);
-        auto find_info = this->find_and_prepare_insert(key_wrapper.value(), ctrl_hash);
+        auto find_info = this->find_and_prepare_insert(key_wrapper.value(), ctrl_hash, distance);
         size_type target = find_info.first;
         bool is_exists = find_info.second;
         if (!is_exists) {
@@ -2284,8 +2234,8 @@ private:
             // Found a [EmptyEntry] to insert
             control_type * control = this->control_at(target);
             assert(control->isEmpty());
-            control->setUsed(ctrl_hash);
-            this->setUsedMirrorCtrl(target, ctrl_hash);
+            control->setUsed(ctrl_hash, distance);
+            this->setUsedMirrorCtrl(target, ctrl_hash, distance);
             slot_type * slot = this->slot_at(target);
             if (kIsCompatibleLayout) {
                 this->mutable_allocator_.construct(&slot->mutable_value,
@@ -2321,9 +2271,10 @@ private:
                !std::is_constructible<key_type, First &&>::value)>::type * = nullptr,
               typename ... Args>
     std::pair<iterator, bool> emplace_impl(First && first, Args && ... args) {
+        std::uint8_t distance = 0;
         std::uint8_t ctrl_hash;
         value_type value(std::forward<First>(first), std::forward<Args>(args)...);
-        auto find_info = this->find_and_prepare_insert(value.first, ctrl_hash);
+        auto find_info = this->find_and_prepare_insert(value.first, ctrl_hash, distance);
         size_type target = find_info.first;
         bool is_exists = find_info.second;
         if (!is_exists) {
@@ -2333,8 +2284,8 @@ private:
             // Found a [EmptyEntry] to insert
             control_type * control = this->control_at(target);
             assert(control->isEmpty());
-            control->setUsed(ctrl_hash);
-            this->setUsedMirrorCtrl(target, ctrl_hash);
+            control->setUsed(ctrl_hash, distance);
+            this->setUsedMirrorCtrl(target, ctrl_hash, distance);
             slot_type * slot = this->slot_at(target);
             if (kIsCompatibleLayout) {
                 this->mutable_allocator_.construct(&slot->mutable_value, std::move(value));
@@ -2360,23 +2311,25 @@ private:
         std::uint8_t ctrl_hash = this->get_ctrl_hash(hash_code_2nd);
         size_type slot_index = this->index_for(hash_code);
         size_type start_slot = slot_index;
+        std::uint8_t distance = 0;
         do {
             const group_type & group = this->get_group(slot_index);
-            std::uint32_t mask16 = group.matchHash(ctrl_hash);
-            size_type start_index = slot_index;
-            while (mask16 != 0) {
-                size_type pos = BitUtils::bsf32(mask16);
-                mask16 = BitUtils::clearLowBit32(mask16);
-                size_type index = this->round_index(start_index + pos);
+            auto mask32 = group.matchHashAndDistance(ctrl_hash, distance);
+            std::uint32_t maskHash = mask32.maskHash;
+            while (maskHash != 0) {
+                size_type pos = BitUtils::bsf32(maskHash);
+                maskHash = BitUtils::clearLowBit32(maskHash);
+                size_type index = this->round_index(slot_index + (pos >> 1));
                 const slot_type & target = this->get_slot(index);
                 if (this->key_equal_(target.value.first, key)) {
                     this->erase_slot(index);
                     return 1;
                 }
             }
-            if (group.hasAnyEmpty()) {
+            if (mask32.maskEmpty != 0) {
                 return 0;
             }
+            distance += kGroupWidth;
             slot_index = this->slot_next_group(slot_index);
         } while (slot_index != start_slot);
 

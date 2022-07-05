@@ -790,7 +790,7 @@ public:
         }
     };
 
-    typedef map_group      group_type;
+    typedef map_group  group_type;
 
     class slot_type {
     public:
