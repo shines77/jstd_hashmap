@@ -64,7 +64,7 @@ static const uint32_t kInitPrime32 = 0x165667C5UL;
 
 static uint32_t intel_int_hash_crc32c_x86(uint32_t value)
 {
-    uint32_t crc32 = ~0ul;
+    uint32_t crc32 = ~uint32_t(0);
     crc32 = _mm_crc32_u32(crc32, value);
     return crc32;
 }
@@ -73,8 +73,8 @@ static uint32_t intel_int_hash_crc32c_x86(uint32_t value)
 
 static uint64_t intel_int_hash_crc32c_x64(uint64_t value)
 {
-    uint64_t crc32  = ~0ull;
-    uint64_t crc32r =  0ull;
+    uint64_t crc32  = ~uint64_t(0);
+    uint64_t crc32r =  uint64_t(0);
     crc32  = _mm_crc32_u64(crc32,  value);
     crc32r = _mm_crc32_u64(crc32r, value);
     return ((crc32 & 0x00000000FFFFFFFFull) | (crc32r << 32));
@@ -90,7 +90,7 @@ static uint32_t intel_hash_crc32c_x86(const char * data, size_t length)
     static const uint32_t kMaskOne = 0xFFFFFFFFUL;
     const char * data_end = data + length;
 
-    uint32_t crc32 = ~0ul;
+    uint32_t crc32 = ~uint32_t(0);
     ssize_t remain = static_cast<ssize_t>(length);
 
     do {
@@ -130,7 +130,7 @@ static uint32_t intel_hash_crc32c_x64(const char * data, size_t length)
     static const uint64_t kMaskOne = 0xFFFFFFFFFFFFFFFFULL;
     const char * data_end = data + length;
 
-    uint64_t crc64 = ~0ull;
+    uint64_t crc64 = ~uint64_t(0);
     ssize_t remain = static_cast<ssize_t>(length);
 
     do {
@@ -165,7 +165,7 @@ static uint32_t intel_hash_crc32c_x64(const char * data, size_t length)
 static uint32_t intel_hash_crc32c_simple_x86(const char * data, size_t length)
 {
     assert(data != nullptr);
-    uint32_t crc32 = ~0ul;
+    uint32_t crc32 = ~uint32_t(0);
 
     static const size_t kStepSize = sizeof(uint32_t);
     uint32_t * src = (uint32_t *)data;
@@ -192,7 +192,7 @@ static uint32_t intel_hash_crc32c_simple_x86(const char * data, size_t length)
 static uint32_t intel_hash_crc32c_simple_x64(const char * data, size_t length)
 {
     assert(data != nullptr);
-    uint64_t crc64 = ~0ull;
+    uint64_t crc64 = ~uint64_t(0);
 
     static const size_t kStepSize = sizeof(uint64_t);
     uint64_t * src = (uint64_t *)data;

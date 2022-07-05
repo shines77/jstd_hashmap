@@ -147,10 +147,6 @@
 
 #include "BenchmarkResult.h"
 
-#define PRINT_MACRO_HELPER(x)   #x
-#define PRINT_MACRO(x)          PRINT_MACRO_HELPER(x)
-#define PRINT_MACRO_VAR(x)      #x " = " PRINT_MACRO_HELPER(x)
-
 #define USE_STAT_COUNTER        1
 
 #if USE_STAT_COUNTER
@@ -182,7 +178,11 @@
   #define HASH_MAP_FUNCTION     std::hash
 #endif // HASH_FUNCTION_ID
 
-#pragma message(PRINT_MACRO_VAR(HASH_MAP_FUNCTION))
+#define MARCO_TO_STRING(x)      #x
+#define PRINT_MARCO(x)          MARCO_TO_STRING(x)
+#define PRINT_MARCO_VAR(x)      #x " = " MARCO_TO_STRING(x)
+
+#pragma message(PRINT_MARCO_VAR(HASH_MAP_FUNCTION))
 
 static const bool FLAGS_test_sparse_hash_map = true;
 static const bool FLAGS_test_dense_hash_map = true;
@@ -1462,14 +1462,16 @@ void benchmark_all_hashmaps(std::size_t iters)
 
 void std_hash_test()
 {
-    printf("std::hash<std::uint32_t>\n\n");
+    printf("#define HASH_MAP_FUNCTION = %s\n\n", MARCO_TO_STRING(HASH_MAP_FUNCTION));
+
+    printf("%s<std::uint32_t>\n\n", MARCO_TO_STRING(HASH_MAP_FUNCTION));
     for(std::uint32_t i = 0; i < 8; i++) {
         std::size_t hash_code = HASH_MAP_FUNCTION<std::uint32_t>()(i);
         printf("key = %3u, hash_code = %" PRIuPTR "\n", i, hash_code);
     }
     printf("\n");
 
-    printf("std::hash<std::uint64_t>\n\n");
+    printf("%s<std::uint64_t>\n\n", MARCO_TO_STRING(HASH_MAP_FUNCTION));
     for(std::size_t i = 0; i < 8; i++) {
         std::size_t hash_code = HASH_MAP_FUNCTION<std::uint64_t>()(i);
         printf("key = %3" PRIuPTR ", hash_code = %" PRIuPTR "\n", i, hash_code);
@@ -1490,9 +1492,7 @@ int main(int argc, char * argv[])
 
     jtest::CPU::warm_up(1000);
 
-    printf("#define HASH_MAP_FUNCTION = %s\n\n", PRINT_MACRO(HASH_MAP_FUNCTION));
-
-    if (1) std_hash_test();
+    if (1) { std_hash_test(); }
 
     if (1) {
         printf("-------------------------- benchmark_all_hashmaps(iters) ---------------------------\n\n");

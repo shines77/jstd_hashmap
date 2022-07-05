@@ -133,10 +133,6 @@
 // From: https://dirtysalt.github.io/html/hashtable-perf-comparison.html
 //
 
-#define PRINT_MACRO_HELPER(x)   #x
-#define PRINT_MACRO(x)          PRINT_MACRO_HELPER(x)
-#define PRINT_MACRO_VAR(x)      #x " = " PRINT_MACRO_HELPER(x)
-
 #define ID_STD_HASH             0   // std::hash<T>
 #define ID_SIMPLE_HASH          1   // test::SimpleHash<T>
 #define ID_INTEGAL_HASH         2   // test::IntegalHash<T>
@@ -154,6 +150,12 @@
 #else
   #define HASH_MAP_FUNCTION     std::hash
 #endif // HASH_FUNCTION_MODE
+
+#define MARCO_TO_STRING(x)      #x
+#define PRINT_MARCO(x)          MARCO_TO_STRING(x)
+#define PRINT_MARCO_VAR(x)      #x " = " MARCO_TO_STRING(x)
+
+#pragma message(PRINT_MARCO_VAR(HASH_MAP_FUNCTION))
 
 #ifndef _DEBUG
 static const std::size_t kDefaultIters = 10000000;
@@ -530,6 +532,25 @@ void benchmark_all_hashmaps(std::size_t iters)
     benchmark_SimpleHash_insert_random<std::size_t, std::size_t>(iters);    
 }
 
+void std_hash_test()
+{
+    printf("#define HASH_MAP_FUNCTION = %s\n\n", MARCO_TO_STRING(HASH_MAP_FUNCTION));
+
+    printf("%s<std::uint32_t>\n\n", MARCO_TO_STRING(HASH_MAP_FUNCTION));
+    for(std::uint32_t i = 0; i < 8; i++) {
+        std::size_t hash_code = HASH_MAP_FUNCTION<std::uint32_t>()(i);
+        printf("key = %3u, hash_code = %" PRIuPTR "\n", i, hash_code);
+    }
+    printf("\n");
+
+    printf("%s<std::uint64_t>\n\n", MARCO_TO_STRING(HASH_MAP_FUNCTION));
+    for(std::size_t i = 0; i < 8; i++) {
+        std::size_t hash_code = HASH_MAP_FUNCTION<std::uint64_t>()(i);
+        printf("key = %3" PRIuPTR ", hash_code = %" PRIuPTR "\n", i, hash_code);
+    }
+    printf("\n");
+}
+
 int main(int argc, char * argv[])
 {
     jstd::RandomGen   RandomGen(20200831);
@@ -543,7 +564,7 @@ int main(int argc, char * argv[])
 
     jtest::CPU::warm_up(1000);
 
-    printf("#define HASH_MAP_FUNCTION = %s\n\n", PRINT_MACRO(HASH_MAP_FUNCTION));
+    if (1) { std_hash_test(); }
 
     if (1) {
         printf("------------------------------ benchmark_all_hashmaps ------------------------------\n\n");
