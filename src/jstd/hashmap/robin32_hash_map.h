@@ -196,6 +196,10 @@ public:
             return (this->distance == kEmptyEntry);
         }
 
+        static bool isEmpty(std::uint8_t tag) {
+            return (tag == kEmptyEntry);
+        }
+
         bool isEndOf() const {
             return (this->distance == kEndOfMark);
         }
@@ -2314,7 +2318,7 @@ private:
 
     JSTD_FORCED_INLINE
     void erase_slot(size_type slot_index) {
-        assert(index <= this->slot_capacity());
+        assert(slot_index <= this->slot_capacity());
         assert(this->control_at(slot_index)->isUsed());
         size_type start_slot = slot_index;
 

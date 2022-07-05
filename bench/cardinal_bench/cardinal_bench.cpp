@@ -449,13 +449,85 @@ void benchmark_insert_random(std::size_t iters)
     run_insert_random<jstd::flat16_hash_map<Key, Value>>(name1, keys, Cardinal6);
 }
 
+template <typename Key, typename Value>
+void benchmark_SimpleHash_insert_random(std::size_t iters)
+{
+    static constexpr std::size_t Factor = 16;
+#ifndef _DEBUG
+    static constexpr std::size_t DataSize = 1024 * 1000 * Factor;
+    static constexpr std::size_t Cardinal0 = 60 * Factor;
+    static constexpr std::size_t Cardinal1 = 600 * Factor;
+    static constexpr std::size_t Cardinal2 = 6000 * Factor;
+    static constexpr std::size_t Cardinal3 = 60000 * Factor;
+    static constexpr std::size_t Cardinal4 = 600000 * Factor;
+    static constexpr std::size_t Cardinal5 = 6000000 * Factor;
+    static constexpr std::size_t Cardinal6 = 60000000 * Factor;
+#else
+    static constexpr std::size_t DataSize = 1024 * 10 * Factor;
+    static constexpr std::size_t Cardinal0 = 6 * Factor;
+    static constexpr std::size_t Cardinal1 = 60 * Factor;
+    static constexpr std::size_t Cardinal2 = 600 * Factor;
+    static constexpr std::size_t Cardinal3 = 6000 * Factor;
+    static constexpr std::size_t Cardinal4 = 60000 * Factor;
+    static constexpr std::size_t Cardinal5 = 600000 * Factor;
+    static constexpr std::size_t Cardinal6 = 600000 * Factor;
+#endif
+
+    printf("DataSize = %u\n\n", (uint32_t)DataSize);
+
+    std::string name0, name1;
+    name0 = get_hashmap_name<Key, Value>("std::unordered_map<%s, %s>");
+    name1 = get_hashmap_name<Key, Value>("jstd::flat16_hash_map<%s, %s>");
+
+    std::vector<Key> keys;
+
+    keys = generate_random_keys<Key>(DataSize, Cardinal0);
+    run_insert_random<std::unordered_map<Key, Value, test::SimpleHash<Key>>>   (name0, keys, Cardinal0);
+    run_insert_random<jstd::flat16_hash_map<Key, Value, test::SimpleHash<Key>>>(name1, keys, Cardinal0);
+
+    keys = generate_random_keys<Key>(DataSize, Cardinal1);
+    run_insert_random<std::unordered_map<Key, Value, test::SimpleHash<Key>>>   (name0, keys, Cardinal1);
+    run_insert_random<jstd::flat16_hash_map<Key, Value, test::SimpleHash<Key>>>(name1, keys, Cardinal1);
+
+    keys = generate_random_keys<Key>(DataSize, Cardinal2);
+    run_insert_random<std::unordered_map<Key, Value, test::SimpleHash<Key>>>   (name0, keys, Cardinal2);
+    run_insert_random<jstd::flat16_hash_map<Key, Value, test::SimpleHash<Key>>>(name1, keys, Cardinal2);
+
+    keys = generate_random_keys<Key>(DataSize, Cardinal3);
+    run_insert_random<std::unordered_map<Key, Value, test::SimpleHash<Key>>>   (name0, keys, Cardinal3);
+    run_insert_random<jstd::flat16_hash_map<Key, Value, test::SimpleHash<Key>>>(name1, keys, Cardinal3);
+
+    keys = generate_random_keys<Key>(DataSize, Cardinal4);
+    run_insert_random<std::unordered_map<Key, Value, test::SimpleHash<Key>>>   (name0, keys, Cardinal4);
+    run_insert_random<jstd::flat16_hash_map<Key, Value, test::SimpleHash<Key>>>(name1, keys, Cardinal4);
+
+#if 0
+    keys = generate_random_keys<Key>(DataSize, Cardinal5);
+    run_insert_random<std::unordered_map<Key, Value, test::SimpleHash<Key>>>   (name0, keys, Cardinal5);
+    run_insert_random<jstd::flat16_hash_map<Key, Value, test::SimpleHash<Key>>>(name1, keys, Cardinal5);
+#endif
+
+    keys = generate_random_keys<Key>(DataSize, Cardinal6);
+    run_insert_random<std::unordered_map<Key, Value, test::SimpleHash<Key>>>   (name0, keys, Cardinal6);
+    run_insert_random<jstd::flat16_hash_map<Key, Value, test::SimpleHash<Key>>>(name1, keys, Cardinal6);
+}
+
 void benchmark_all_hashmaps(std::size_t iters)
 {
+#if 1
     benchmark_insert_random<int, int>(iters);
 
     printf("------------------------------------------------------------------------------------\n\n");
 
     benchmark_insert_random<std::size_t, std::size_t>(iters);
+
+    printf("------------------------------------------------------------------------------------\n\n");
+#endif
+    benchmark_SimpleHash_insert_random<int, int>(iters);
+
+    printf("------------------------------------------------------------------------------------\n\n");
+
+    benchmark_SimpleHash_insert_random<std::size_t, std::size_t>(iters);    
 }
 
 int main(int argc, char * argv[])
