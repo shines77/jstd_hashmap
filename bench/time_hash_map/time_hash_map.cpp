@@ -182,6 +182,14 @@
 #define PRINT_MACRO(x)          MACRO_TO_STRING(x)
 #define PRINT_MACRO_VAR(x)      #x " = " MACRO_TO_STRING(x)
 
+#ifndef UINT64_High
+#define UINT64_High(u64)    ((uint32_t)(u64 >> 32))
+#endif
+
+#ifndef UINT64_Low
+#define UINT64_Low(u64)     ((uint32_t)(u64 & 0x00000000FFFFFFFFull))
+#endif
+
 #pragma message(PRINT_MACRO_VAR(HASH_MAP_FUNCTION))
 
 static const bool FLAGS_test_sparse_hash_map = true;
@@ -1465,16 +1473,18 @@ void std_hash_test()
     printf("#define HASH_MAP_FUNCTION = %s\n\n", PRINT_MACRO(HASH_MAP_FUNCTION));
 
     printf("%s<std::uint32_t>\n\n", PRINT_MACRO(HASH_MAP_FUNCTION));
-    for(std::uint32_t i = 0; i < 8; i++) {
+    for (std::uint32_t i = 0; i < 8; i++) {
         std::size_t hash_code = HASH_MAP_FUNCTION<std::uint32_t>()(i);
-        printf("key = %3u, hash_code = %" PRIuPTR "\n", i, hash_code);
+        printf("key = %3u, hash_code = 0x%08X%08X\n",
+               i, UINT64_High(hash_code), UINT64_Low(hash_code));
     }
     printf("\n");
 
     printf("%s<std::uint64_t>\n\n", PRINT_MACRO(HASH_MAP_FUNCTION));
-    for(std::size_t i = 0; i < 8; i++) {
+    for (std::uint64_t i = 0; i < 8; i++) {
         std::size_t hash_code = HASH_MAP_FUNCTION<std::uint64_t>()(i);
-        printf("key = %3" PRIuPTR ", hash_code = %" PRIuPTR "\n", i, hash_code);
+        printf("key = %3" PRIuPTR ", hash_code = 0x%08X%08X\n",
+               i, UINT64_High(hash_code), UINT64_Low(hash_code));
     }
     printf("\n");
 }

@@ -76,6 +76,7 @@
 #include "jstd/type_traits.h"
 #include "jstd/iterator.h"
 #include "jstd/utility.h"
+#include "jstd/hasher/hash_crc32c.h"
 #include "jstd/support/BitUtils.h"
 #include "jstd/support/Power2.h"
 #include "jstd/support/BitVec.h"
@@ -116,7 +117,7 @@ public:
     typedef flat16_hash_map<Key, Value, Hash, KeyEqual, Allocator>
                                                     this_type;
 
-    static constexpr bool kUseIndexSalt = true;
+    static constexpr bool kUseIndexSalt = false;
 
     static constexpr size_type npos = size_type(-1);
 
@@ -1535,7 +1536,7 @@ private:
 
     inline hash_code_t get_second_hash(hash_code_t value) const noexcept {
 #if 1
-        return value;
+        return (size_type)hashers::simple_int_hash_crc32c((size_type)value);
 #else
         hash_code_t hash_code;
         if (sizeof(size_type) == 4)
@@ -1565,17 +1566,17 @@ private:
 
     inline size_type index_for(hash_code_t hash_code) const noexcept {
         if (kUseIndexSalt)
-            return ((((size_type)hash_code >> kControlShift) ^ this->index_salt()) & this->slot_mask());
+            return (((size_type)hash_code ^ this->index_salt()) & this->slot_mask());
         else
-            return (((size_type)hash_code >> kControlShift) & this->slot_mask());
+            return ((size_type)hash_code & this->slot_mask());
     }
 
     inline size_type index_for(hash_code_t hash_code, size_type slot_mask) const noexcept {
         assert(pow2::is_pow2(slot_mask + 1));
         if (kUseIndexSalt)
-            return ((((size_type)hash_code >> kControlShift) ^ this->index_salt()) & slot_mask);
+            return (((size_type)hash_code ^ this->index_salt()) & slot_mask);
         else
-            return (((size_type)hash_code >> kControlShift) & slot_mask);
+            return ((size_type)hash_code & slot_mask);
     }
 
     inline size_type prev_group(size_type group_index) const noexcept {

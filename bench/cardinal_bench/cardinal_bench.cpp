@@ -155,6 +155,14 @@
 #define PRINT_MACRO(x)          MACRO_TO_STRING(x)
 #define PRINT_MACRO_VAR(x)      #x " = " MACRO_TO_STRING(x)
 
+#ifndef UINT64_High
+#define UINT64_High(u64)    ((uint32_t)(u64 >> 32))
+#endif
+
+#ifndef UINT64_Low
+#define UINT64_Low(u64)     ((uint32_t)(u64 & 0x00000000FFFFFFFFull))
+#endif
+
 #pragma message(PRINT_MACRO_VAR(HASH_MAP_FUNCTION))
 
 #ifndef _DEBUG
@@ -412,7 +420,7 @@ void benchmark_insert_random(std::size_t iters)
     static constexpr std::size_t Cardinal6 = 600000 * Factor;
 #endif
 
-    printf("DataSize = %u\n\n", (uint32_t)DataSize);
+    printf("DataSize = %u, std::hash<T>\n\n", (uint32_t)DataSize);
 
     std::string name0, name1;
     name0 = get_hashmap_name<Key, Value>("std::unordered_map<%s, %s>");
@@ -475,7 +483,7 @@ void benchmark_SimpleHash_insert_random(std::size_t iters)
     static constexpr std::size_t Cardinal6 = 600000 * Factor;
 #endif
 
-    printf("DataSize = %u\n\n", (uint32_t)DataSize);
+    printf("DataSize = %u, test::SimpleHash<T>\n\n", (uint32_t)DataSize);
 
     std::string name0, name1;
     name0 = get_hashmap_name<Key, Value>("std::unordered_map<%s, %s>");
@@ -537,16 +545,44 @@ void std_hash_test()
     printf("#define HASH_MAP_FUNCTION = %s\n\n", PRINT_MACRO(HASH_MAP_FUNCTION));
 
     printf("%s<std::uint32_t>\n\n", PRINT_MACRO(HASH_MAP_FUNCTION));
-    for(std::uint32_t i = 0; i < 8; i++) {
+    for (std::uint32_t i = 0; i < 8; i++) {
         std::size_t hash_code = HASH_MAP_FUNCTION<std::uint32_t>()(i);
-        printf("key = %3u, hash_code = %" PRIuPTR "\n", i, hash_code);
+        printf("key = %3u, hash_code = 0x%08X%08X\n",
+               i, UINT64_High(hash_code), UINT64_Low(hash_code));
     }
     printf("\n");
 
     printf("%s<std::uint64_t>\n\n", PRINT_MACRO(HASH_MAP_FUNCTION));
-    for(std::size_t i = 0; i < 8; i++) {
+    for (std::uint64_t i = 0; i < 8; i++) {
         std::size_t hash_code = HASH_MAP_FUNCTION<std::uint64_t>()(i);
-        printf("key = %3" PRIuPTR ", hash_code = %" PRIuPTR "\n", i, hash_code);
+        printf("key = %3" PRIuPTR ", hash_code = 0x%08X%08X\n",
+               i, UINT64_High(hash_code), UINT64_Low(hash_code));
+    }
+    printf("\n");
+}
+
+void int_hash_crc32c_test()
+{
+    printf("jstd::hashers::int_hash_crc32c<std::uint32_t>\n\n");
+    for (std::uint32_t i = 0; i < 8; i++) {
+        std::uint32_t hash_code = jstd::hashers::intel_int_hash_crc32c_x86(i);
+        printf("key = %3u, hash_code = 0x%08X\n", i, hash_code);
+    }
+    printf("\n");
+
+    printf("jstd::hashers::int_hash_crc32c<std::uint64_t>\n\n");
+    for (std::uint64_t i = 0; i < 8; i++) {
+        std::uint64_t hash_code = jstd::hashers::intel_int_hash_crc32c_x64(i);
+        printf("key = %3" PRIuPTR ", hash_code = 0x%08X%08X\n",
+               i, UINT64_High(hash_code), UINT64_Low(hash_code));
+    }
+    printf("\n");
+
+    printf("jstd::hashers::simple_int_hash_crc32c<std::size_t>\n\n");
+    for (std::size_t i = 0; i < 8; i++) {
+        std::size_t hash_code = jstd::hashers::simple_int_hash_crc32c(i);
+        printf("key = %3" PRIuPTR ", hash_code = 0x%08X\n",
+               i, UINT64_Low(hash_code));
     }
     printf("\n");
 }
@@ -565,6 +601,7 @@ int main(int argc, char * argv[])
     jtest::CPU::warm_up(1000);
 
     if (1) { std_hash_test(); }
+    if (1) { int_hash_crc32c_test(); }
 
     if (1) {
         printf("------------------------------ benchmark_all_hashmaps ------------------------------\n\n");

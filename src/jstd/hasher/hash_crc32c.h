@@ -62,6 +62,19 @@ static const uint32_t kInitPrime32 = 0x165667C5UL;
 
 #ifdef __SSE4_2__
 
+static size_t intel_simple_int_hash_crc32c(size_t value)
+{
+#if JSTD_IS_X86_64
+    uint64_t crc32 = ~uint64_t(0);
+    crc32 = _mm_crc32_u64(crc32, static_cast<uint64_t>(value));
+    return static_cast<size_t>(crc32);
+#else
+    uint32_t crc32 = ~uint32_t(0);
+    crc32 = _mm_crc32_u32(crc32, static_cast<uint32_t>(value));
+    return static_cast<size_t>(crc32);
+#endif
+}
+
 static uint32_t intel_int_hash_crc32c_x86(uint32_t value)
 {
     uint32_t crc32 = ~uint32_t(0);
@@ -240,6 +253,15 @@ static size_t int_hash_crc32c(size_t value)
   #else
     return intel_int_hash_crc32c_x86(value);
   #endif
+#else
+    return hashers::Times31(value, sizeof(value));
+#endif
+}
+
+static size_t simple_int_hash_crc32c(size_t value)
+{
+#ifdef __SSE4_2__
+    return intel_simple_int_hash_crc32c(value);
 #else
     return hashers::Times31(value, sizeof(value));
 #endif
