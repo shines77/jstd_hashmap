@@ -80,6 +80,17 @@
 #include <algorithm>
 #include <cassert>
 
+#define USE_JSTD_HASH_TABLE         0
+#define USE_JSTD_DICTIONARY         0
+
+#define USE_STD_UNORDERED_MAP       0
+#define USE_JSTD_FLAT16_HASH_MAP    0
+#define USE_JSTD_ROBIN32_HASH_MAP   1
+#define USE_SKA_FLAT_HASH_MAP       0
+#define USE_SKA_BYTELL_HASH_MAP     0
+#define USE_ABSL_FLAT_HASH_MAP      0
+#define USE_ABSL_NODE_HASH_MAP      0
+
 /* SIMD support features */
 #define JSTD_HAVE_MMX           1
 #define JSTD_HAVE_SSE           1
@@ -109,14 +120,16 @@
 
 #define STRING_UTILS_MODE       STRING_UTILS_STL
 
-#define USE_JSTD_HASH_TABLE     0
-#define USE_JSTD_DICTIONARY     0
-
 #include <jstd/basic/stddef.h>
 #include <jstd/basic/stdint.h>
 #include <jstd/basic/inttypes.h>
 
+#if USE_JSTD_FLAT16_HASH_MAP
 #include <jstd/hashmap/flat16_hash_map.h>
+#endif
+#if USE_JSTD_ROBIN32_HASH_MAP
+#include <jstd/hashmap/robin32_hash_map.h>
+#endif
 #include <jstd/hashmap/hashmap_analyzer.h>
 #include <jstd/hasher/hash_helper.h>
 #include <jstd/string/string_view.h>
@@ -156,11 +169,11 @@
 #define PRINT_MACRO_VAR(x)      #x " = " MACRO_TO_STRING(x)
 
 #ifndef UINT64_High
-#define UINT64_High(u64)    ((uint32_t)(u64 >> 32))
+#define UINT64_High(u64)        ((uint32_t)(u64 >> 32))
 #endif
 
 #ifndef UINT64_Low
-#define UINT64_Low(u64)     ((uint32_t)(u64 & 0x00000000FFFFFFFFull))
+#define UINT64_Low(u64)         ((uint32_t)(u64 & 0x00000000FFFFFFFFull))
 #endif
 
 #pragma message(PRINT_MACRO_VAR(HASH_MAP_FUNCTION))
@@ -343,17 +356,15 @@ std::string get_hashmap_name(const char * fmt)
 }
 
 template <typename Key>
-std::vector<Key> generate_random_keys(std::size_t data_size, std::size_t key_range)
+void generate_random_keys(std::vector<Key> & keys, std::size_t data_size, std::size_t key_range)
 {
     jstd::MtRandomGen mtRandomGen(20200831);
 
-    std::vector<Key> keys;
+    keys.clear();
     keys.resize(data_size);
     for (std::size_t i = 0; i < data_size; i++) {
         keys[i] = static_cast<Key>(mtRandomGen.nextUInt() % key_range);
     }
-
-    return keys;
 }
 
 template <typename HashMap, typename Key = typename HashMap::key_type>
@@ -396,6 +407,28 @@ void run_insert_random(const std::string & name, std::vector<Key> & keys, std::s
     }
 }
 
+template <typename Key, typename Value, std::size_t DataSize, std::size_t Cardinal>
+void benchmark_insert_random_impl()
+{
+    std::string name0, name1, name2;
+    name0 = get_hashmap_name<Key, Value>("std::unordered_map<%s, %s>");
+    name1 = get_hashmap_name<Key, Value>("jstd::flat16_hash_map<%s, %s>");
+    name2 = get_hashmap_name<Key, Value>("jstd::robin32_hash_map<%s, %s>");
+
+    std::vector<Key> keys;
+    generate_random_keys<Key>(keys, DataSize, Cardinal);
+
+#if USE_STD_UNORDERED_MAP
+    run_insert_random<std::unordered_map<Key, Value>>    (name0, keys, Cardinal);
+#endif
+#if USE_JSTD_FLAT16_HASH_MAP
+    run_insert_random<jstd::flat16_hash_map<Key, Value>> (name1, keys, Cardinal);
+#endif
+#if USE_JSTD_ROBIN32_HASH_MAP
+    run_insert_random<jstd::robin32_hash_map<Key, Value>>(name2, keys, Cardinal);
+#endif
+}
+
 template <typename Key, typename Value>
 void benchmark_insert_random(std::size_t iters)
 {
@@ -422,41 +455,41 @@ void benchmark_insert_random(std::size_t iters)
 
     printf("DataSize = %u, std::hash<T>\n\n", (uint32_t)DataSize);
 
-    std::string name0, name1;
+    benchmark_insert_random_impl<Key, Value, DataSize, Cardinal0>();
+    printf("-----------------------------------------------------------------------\n\n");
+    benchmark_insert_random_impl<Key, Value, DataSize, Cardinal1>();
+    printf("-----------------------------------------------------------------------\n\n");
+    benchmark_insert_random_impl<Key, Value, DataSize, Cardinal2>();
+    printf("-----------------------------------------------------------------------\n\n");
+    benchmark_insert_random_impl<Key, Value, DataSize, Cardinal3>();
+    printf("-----------------------------------------------------------------------\n\n");
+    benchmark_insert_random_impl<Key, Value, DataSize, Cardinal4>();
+    printf("-----------------------------------------------------------------------\n\n");
+    //benchmark_insert_random_impl<Key, Value, DataSize, Cardinal5>();
+    //printf("-----------------------------------------------------------------------\n\n");
+    benchmark_insert_random_impl<Key, Value, DataSize, Cardinal6>();
+}
+
+template <typename Key, typename Value, std::size_t DataSize, std::size_t Cardinal>
+void benchmark_SimpleHash_insert_random_impl()
+{
+    std::string name0, name1, name2;
     name0 = get_hashmap_name<Key, Value>("std::unordered_map<%s, %s>");
     name1 = get_hashmap_name<Key, Value>("jstd::flat16_hash_map<%s, %s>");
+    name2 = get_hashmap_name<Key, Value>("jstd::robin32_hash_map<%s, %s>");
 
     std::vector<Key> keys;
+    generate_random_keys<Key>(keys, DataSize, Cardinal);
 
-    keys = generate_random_keys<Key>(DataSize, Cardinal0);
-    run_insert_random<std::unordered_map<Key, Value>>   (name0, keys, Cardinal0);
-    run_insert_random<jstd::flat16_hash_map<Key, Value>>(name1, keys, Cardinal0);
-
-    keys = generate_random_keys<Key>(DataSize, Cardinal1);
-    run_insert_random<std::unordered_map<Key, Value>>   (name0, keys, Cardinal1);
-    run_insert_random<jstd::flat16_hash_map<Key, Value>>(name1, keys, Cardinal1);
-
-    keys = generate_random_keys<Key>(DataSize, Cardinal2);
-    run_insert_random<std::unordered_map<Key, Value>>   (name0, keys, Cardinal2);
-    run_insert_random<jstd::flat16_hash_map<Key, Value>>(name1, keys, Cardinal2);
-
-    keys = generate_random_keys<Key>(DataSize, Cardinal3);
-    run_insert_random<std::unordered_map<Key, Value>>   (name0, keys, Cardinal3);
-    run_insert_random<jstd::flat16_hash_map<Key, Value>>(name1, keys, Cardinal3);
-
-    keys = generate_random_keys<Key>(DataSize, Cardinal4);
-    run_insert_random<std::unordered_map<Key, Value>>   (name0, keys, Cardinal4);
-    run_insert_random<jstd::flat16_hash_map<Key, Value>>(name1, keys, Cardinal4);
-
-#if 0
-    keys = generate_random_keys<Key>(DataSize, Cardinal5);
-    run_insert_random<std::unordered_map<Key, Value>>   (name0, keys, Cardinal5);
-    run_insert_random<jstd::flat16_hash_map<Key, Value>>(name1, keys, Cardinal5);
+#if USE_STD_UNORDERED_MAP
+    run_insert_random<std::unordered_map<Key, Value, test::SimpleHash<Key>>>    (name0, keys, Cardinal);
 #endif
-
-    keys = generate_random_keys<Key>(DataSize, Cardinal6);
-    run_insert_random<std::unordered_map<Key, Value>>   (name0, keys, Cardinal6);
-    run_insert_random<jstd::flat16_hash_map<Key, Value>>(name1, keys, Cardinal6);
+#if USE_JSTD_FLAT16_HASH_MAP
+    run_insert_random<jstd::flat16_hash_map<Key, Value, test::SimpleHash<Key>>> (name1, keys, Cardinal);
+#endif
+#if USE_JSTD_ROBIN32_HASH_MAP
+    run_insert_random<jstd::robin32_hash_map<Key, Value, test::SimpleHash<Key>>>(name2, keys, Cardinal);
+#endif
 }
 
 template <typename Key, typename Value>
@@ -485,41 +518,19 @@ void benchmark_SimpleHash_insert_random(std::size_t iters)
 
     printf("DataSize = %u, test::SimpleHash<T>\n\n", (uint32_t)DataSize);
 
-    std::string name0, name1;
-    name0 = get_hashmap_name<Key, Value>("std::unordered_map<%s, %s>");
-    name1 = get_hashmap_name<Key, Value>("jstd::flat16_hash_map<%s, %s>");
-
-    std::vector<Key> keys;
-
-    keys = generate_random_keys<Key>(DataSize, Cardinal0);
-    run_insert_random<std::unordered_map<Key, Value, test::SimpleHash<Key>>>   (name0, keys, Cardinal0);
-    run_insert_random<jstd::flat16_hash_map<Key, Value, test::SimpleHash<Key>>>(name1, keys, Cardinal0);
-
-    keys = generate_random_keys<Key>(DataSize, Cardinal1);
-    run_insert_random<std::unordered_map<Key, Value, test::SimpleHash<Key>>>   (name0, keys, Cardinal1);
-    run_insert_random<jstd::flat16_hash_map<Key, Value, test::SimpleHash<Key>>>(name1, keys, Cardinal1);
-
-    keys = generate_random_keys<Key>(DataSize, Cardinal2);
-    run_insert_random<std::unordered_map<Key, Value, test::SimpleHash<Key>>>   (name0, keys, Cardinal2);
-    run_insert_random<jstd::flat16_hash_map<Key, Value, test::SimpleHash<Key>>>(name1, keys, Cardinal2);
-
-    keys = generate_random_keys<Key>(DataSize, Cardinal3);
-    run_insert_random<std::unordered_map<Key, Value, test::SimpleHash<Key>>>   (name0, keys, Cardinal3);
-    run_insert_random<jstd::flat16_hash_map<Key, Value, test::SimpleHash<Key>>>(name1, keys, Cardinal3);
-
-    keys = generate_random_keys<Key>(DataSize, Cardinal4);
-    run_insert_random<std::unordered_map<Key, Value, test::SimpleHash<Key>>>   (name0, keys, Cardinal4);
-    run_insert_random<jstd::flat16_hash_map<Key, Value, test::SimpleHash<Key>>>(name1, keys, Cardinal4);
-
-#if 0
-    keys = generate_random_keys<Key>(DataSize, Cardinal5);
-    run_insert_random<std::unordered_map<Key, Value, test::SimpleHash<Key>>>   (name0, keys, Cardinal5);
-    run_insert_random<jstd::flat16_hash_map<Key, Value, test::SimpleHash<Key>>>(name1, keys, Cardinal5);
-#endif
-
-    keys = generate_random_keys<Key>(DataSize, Cardinal6);
-    run_insert_random<std::unordered_map<Key, Value, test::SimpleHash<Key>>>   (name0, keys, Cardinal6);
-    run_insert_random<jstd::flat16_hash_map<Key, Value, test::SimpleHash<Key>>>(name1, keys, Cardinal6);
+    benchmark_SimpleHash_insert_random_impl<Key, Value, DataSize, Cardinal0>();
+    printf("-----------------------------------------------------------------------\n\n");
+    benchmark_SimpleHash_insert_random_impl<Key, Value, DataSize, Cardinal1>();
+    printf("-----------------------------------------------------------------------\n\n");
+    benchmark_SimpleHash_insert_random_impl<Key, Value, DataSize, Cardinal2>();
+    printf("-----------------------------------------------------------------------\n\n");
+    benchmark_SimpleHash_insert_random_impl<Key, Value, DataSize, Cardinal3>();
+    printf("-----------------------------------------------------------------------\n\n");
+    benchmark_SimpleHash_insert_random_impl<Key, Value, DataSize, Cardinal4>();
+    printf("-----------------------------------------------------------------------\n\n");
+    //benchmark_SimpleHash_insert_random_impl<Key, Value, DataSize, Cardinal5>();
+    //printf("-----------------------------------------------------------------------\n\n");
+    benchmark_SimpleHash_insert_random_impl<Key, Value, DataSize, Cardinal6>();
 }
 
 void benchmark_all_hashmaps(std::size_t iters)
@@ -533,11 +544,14 @@ void benchmark_all_hashmaps(std::size_t iters)
 
     printf("------------------------------------------------------------------------------------\n\n");
 #endif
+
     benchmark_SimpleHash_insert_random<int, int>(iters);
 
     printf("------------------------------------------------------------------------------------\n\n");
 
-    benchmark_SimpleHash_insert_random<std::size_t, std::size_t>(iters);    
+    benchmark_SimpleHash_insert_random<std::size_t, std::size_t>(iters);
+
+    printf("------------------------------------------------------------------------------------\n\n");
 }
 
 void std_hash_test()
@@ -563,6 +577,7 @@ void std_hash_test()
 
 void int_hash_crc32c_test()
 {
+#if 0
     printf("jstd::hashers::int_hash_crc32c<std::uint32_t>\n\n");
     for (std::uint32_t i = 0; i < 8; i++) {
         std::uint32_t hash_code = jstd::hashers::intel_int_hash_crc32c_x86(i);
@@ -577,6 +592,7 @@ void int_hash_crc32c_test()
                i, UINT64_High(hash_code), UINT64_Low(hash_code));
     }
     printf("\n");
+#endif
 
     printf("jstd::hashers::simple_int_hash_crc32c<std::size_t>\n\n");
     for (std::size_t i = 0; i < 8; i++) {
@@ -603,7 +619,8 @@ int main(int argc, char * argv[])
     if (1) { std_hash_test(); }
     if (1) { int_hash_crc32c_test(); }
 
-    if (1) {
+    if (1)
+    {
         printf("------------------------------ benchmark_all_hashmaps ------------------------------\n\n");
         benchmark_all_hashmaps(iters);
     }
