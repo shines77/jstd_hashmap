@@ -76,6 +76,7 @@
 #include "jstd/type_traits.h"
 #include "jstd/iterator.h"
 #include "jstd/utility.h"
+#include "jstd/hasher/hash_crc32c.h"
 #include "jstd/support/BitUtils.h"
 #include "jstd/support/Power2.h"
 #include "jstd/support/BitVec.h"
@@ -1260,12 +1261,16 @@ private:
     }
 
     inline hash_code_t get_second_hash(hash_code_t value) const noexcept {
+#if 1
+        return (size_type)hashers::simple_int_hash_crc32c((size_type)value);
+#else
         hash_code_t hash_code;
         if (sizeof(size_type) == 4)
             hash_code = (hash_code_t)((size_type)value * 2654435761ul);
         else
             hash_code = (hash_code_t)((size_type)value * 14695981039346656037ull);
         return hash_code;
+#endif
     }
 
     inline std::uint8_t get_ctrl_hash(hash_code_t hash_code) const noexcept {

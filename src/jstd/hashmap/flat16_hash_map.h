@@ -1579,6 +1579,14 @@ private:
             return ((size_type)hash_code & slot_mask);
     }
 
+    inline size_type next_index(size_type index) const noexcept {
+        return ((index + 1) & this->slot_mask());
+    }
+
+    inline size_type next_index(size_type index, size_type slot_mask) const noexcept {
+        return ((index + 1) & slot_mask);
+    }
+
     inline size_type prev_group(size_type group_index) const noexcept {
         return (size_type)(((size_type)group_index + this->group_mask()) & this->group_mask());
     }
