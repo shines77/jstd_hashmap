@@ -547,7 +547,8 @@ public:
             return bitmask.matchEmptyOrZero(&this->controls[0]);
         }
 
-        bitmask_type matchEmptyAndDistance(std::uint8_t distance) const {
+        MatchMask2A<std::uint32_t>
+        matchEmptyAndDistance(std::uint8_t distance) const {
             return bitmask.matchEmptyAndDistance(&this->controls[0], distance);
         }
 
