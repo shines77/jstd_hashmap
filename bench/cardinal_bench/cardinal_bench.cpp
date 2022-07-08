@@ -550,8 +550,6 @@ void benchmark_all_hashmaps(std::size_t iters)
     printf("------------------------------------------------------------------------------------\n\n");
 
     benchmark_SimpleHash_insert_random<std::size_t, std::size_t>(iters);
-
-    printf("------------------------------------------------------------------------------------\n\n");
 }
 
 void std_hash_test()
