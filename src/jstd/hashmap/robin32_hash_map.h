@@ -183,6 +183,8 @@ public:
     static constexpr std::uint8_t kUnusedMask   = 0b10000000;
     static constexpr std::uint8_t kHash2Mask    = 0b11111111;
 
+    static constexpr std::uint8_t kDistLimit    = 0b10000000;
+
     static constexpr std::uint32_t kFullMask16  = 0x0000FFFFul;
     static constexpr std::uint32_t kFullMask32  = 0xFFFFFFFFul;
 
@@ -255,11 +257,11 @@ public:
         }
 
         void setDistance(std::uint8_t distance) {
-            assert(distance < kEmptyEntry);
             this->distance = distance;
         }
 
         void setUsed(std::uint8_t ctrl_hash, std::uint8_t distance) {
+            assert(distance < kEmptyEntry);
             this->setHash(ctrl_hash);
             this->setDistance(distance);
         }
@@ -553,6 +555,8 @@ public:
             const __m256i kDistanceBase =
                 _mm256_setr_epi16(0x0000, 0x0001, 0x0002, 0x0003, 0x0004, 0x0005, 0x0006, 0x0007,
                                   0x0008, 0x0009, 0x000A, 0x000B, 0x000C, 0x000D, 0x000E, 0x000F);
+            if (distance > 128)
+                distance = distance;
             __m256i ctrl_bits  = _mm256_loadu_si256((const __m256i *)data);
             __m256i dist_value = _mm256_set1_epi16(distance);
             __m256i hash_bits  = _mm256_set1_epi16(ctrl_hash);
@@ -1476,12 +1480,14 @@ private:
     }
 
     inline hash_code_t get_hash(const key_type & key) const noexcept {
-        hash_code_t hash_code = static_cast<hash_code_t>(hashers::int_hash_crc32c(this->hasher_(key)));
+        hash_code_t hash_code = static_cast<hash_code_t>(this->hasher_(key));
         return hash_code;
     }
 
     inline hash_code_t get_second_hash(hash_code_t value) const noexcept {
 #if 1
+        return value;
+#elif 1
         return (size_type)hashers::simple_int_hash_crc32c((size_type)value);
 #else
         hash_code_t hash_code;
@@ -1494,7 +1500,10 @@ private:
     }
 
     inline std::uint8_t get_ctrl_hash(hash_code_t hash_code) const noexcept {
-        return static_cast<std::uint8_t>(hash_code & kControlHashMask);
+        std::uint8_t ctrl_hash = static_cast<std::uint8_t>(hash_code & kControlHashMask);
+        if (ctrl_hash == std::uint8_t(0x63))
+            ctrl_hash = ctrl_hash;
+        return ctrl_hash;
     }
 
     size_type round_index(size_type index) const {
@@ -1511,6 +1520,8 @@ private:
 #if 0
         assert(distance <= (size_type)kEndOfMark);
         return (std::uint8_t)distance;
+#elif 0
+        return ((distance != (size_type)kEmptyEntry) ? std::uint8_t(distance) : 0);
 #else
         return ((distance <= (size_type)kEndOfMark) ? std::uint8_t(distance) : kEndOfMark);
 #endif
@@ -1520,14 +1531,14 @@ private:
         return (size_type)((std::uintptr_t)this->groups() >> 12);
     }
 
-    inline size_type index_from_hash(hash_code_t hash_code) const noexcept {
+    inline size_type index_for_hash(hash_code_t hash_code) const noexcept {
         if (kUseIndexSalt)
-            return (((size_type)hash_code ^ this->index_salt()) & this->slot_mask());
+            return ((hashers::int_hash_crc32c((size_type)hash_code) ^ this->index_salt()) & this->slot_mask());
         else
-            return ((size_type)hash_code & this->slot_mask());
+            return (hashers::int_hash_crc32c((size_type)hash_code) & this->slot_mask());
     }
 
-    inline size_type index_from_hash(hash_code_t hash_code, size_type slot_mask) const noexcept {
+    inline size_type index_for_hash(hash_code_t hash_code, size_type slot_mask) const noexcept {
         assert(pow2::is_pow2(slot_mask + 1));
         if (kUseIndexSalt)
             return (((size_type)hash_code ^ this->index_salt()) & slot_mask);
@@ -1800,6 +1811,9 @@ private:
         if (index < kGroupWidth) {
             control_type * ctrl_mirror = this->control_at_ex(index + this->slot_capacity());
             ctrl_mirror->setDistance(tag);
+#ifdef _DEBUG
+            ctrl_mirror->setHash(0);
+#endif
             if (index == 0) {
                 assert(control_type::isEmpty(tag));
                 ctrl_mirror->setEndOf();
@@ -1819,6 +1833,9 @@ private:
         control_type * ctrl = this->control_at(index);
         assert(ctrl->isUsed());
         ctrl->setDistance(tag);
+#ifdef _DEBUG
+        ctrl->setHash(0);
+#endif
         this->setUnusedMirrorCtrl(index, tag);
     }
 
@@ -2058,7 +2075,7 @@ private:
         hash_code_t hash_code = this->get_hash(key);
         hash_code_t hash_code_2nd = this->get_second_hash(hash_code);
         std::uint8_t ctrl_hash = this->get_ctrl_hash(hash_code_2nd);
-        size_type slot_index = this->index_from_hash(hash_code);
+        size_type slot_index = this->index_for_hash(hash_code);
         size_type start_slot = slot_index;
         std::uint8_t distance = 0;
         if (kUseUnrollLoop) {
@@ -2122,7 +2139,7 @@ private:
         hash_code_t hash_code = this->get_hash(key);
         hash_code_t hash_code_2nd = this->get_second_hash(hash_code);
         std::uint8_t ctrl_hash = this->get_ctrl_hash(hash_code_2nd);
-        size_type slot_index = this->index_from_hash(hash_code);
+        size_type slot_index = this->index_for_hash(hash_code);
         size_type start_slot = slot_index;
         std::uint8_t distance = 0;
         first_slot = start_slot;
@@ -2200,7 +2217,7 @@ private:
         hash_code_t hash_code = this->get_hash(key);
         hash_code_t hash_code_2nd = this->get_second_hash(hash_code);
         std::uint8_t ctrl_hash = this->get_ctrl_hash(hash_code_2nd);
-        size_type slot_index = this->index_from_hash(hash_code);
+        size_type slot_index = this->index_for_hash(hash_code);
         size_type first_slot = slot_index;
         o_ctrl_hash = ctrl_hash;
 
@@ -2243,7 +2260,7 @@ private:
         hash_code_t hash_code = this->get_hash(key);
         hash_code_t hash_code_2nd = this->get_second_hash(hash_code);
         std::uint8_t ctrl_hash = this->get_ctrl_hash(hash_code_2nd);
-        size_type slot_index = this->index_from_hash(hash_code);
+        size_type slot_index = this->index_for_hash(hash_code);
         size_type first_slot = slot_index;
         size_type last_slot = npos;
         std::uint8_t distance = 0;
@@ -2346,14 +2363,25 @@ private:
         assert(distance > ctrl->distance);
         std::swap(distance,  ctrl->distance);
         std::swap(ctrl_hash, ctrl->hash);
-        this->setUsedMirrorCtrl(target, ctrl_hash, distance);
+        this->setUsedMirrorCtrl(target, ctrl->hash, ctrl->distance);
+        //this->setUnusedCtrl(target, kEmptyEntry);
 
-        slot_type tmp_slot;
+        slot_type to_insert;
+#if 0
         if (kIsCompatibleLayout) {
-            tmp_slot.mutable_value = std::move(this->slot_at(target)->mutable_value);
+            to_insert.mutable_value = mutable_value_type();
         } else {
-            tmp_slot.value = std::move(this->slot_at(target)->value);
+            to_insert.value = value_type();
         }
+        slot_type * target_slot = this->slot_at(target);
+        this->swap_slot(target_slot, &to_insert);
+#else
+        if (kIsCompatibleLayout) {
+            to_insert.mutable_value = std::move(this->slot_at(target)->mutable_value);
+        } else {
+            to_insert.value = std::move(this->slot_at(target)->value);
+        }
+#endif
         if (is_slot_trivial_destructor) {
             this->destroy_mutable_slot(target);
         }
@@ -2367,26 +2395,42 @@ private:
                 slot_type * slot = this->slot_at(slot_index);
                 this->placement_new_slot(slot);
                 if (kIsCompatibleLayout)
-                    this->mutable_allocator_.construct(&slot->mutable_value, std::move(tmp_slot.mutable_value));
+                    this->mutable_allocator_.construct(&slot->mutable_value, std::move(to_insert.mutable_value));
                 else
-                    this->allocator_.construct(&slot->value, std::move(tmp_slot.value));
+                    this->allocator_.construct(&slot->value, std::move(to_insert.value));
+
+                if (is_slot_trivial_destructor) {
+                    this->destroy_mutable_slot(&to_insert);
+                }
                 return false;
-            } else if (distance > ctrl->distance) {
+            } else if ((distance > ctrl->distance) || (distance == kEndOfMark)) {
                 std::swap(distance,  ctrl->distance);
                 std::swap(ctrl_hash, ctrl->hash);
                 this->setUsedMirrorCtrl(slot_index, ctrl_hash, distance);
 
                 slot_type * slot = this->slot_at(slot_index);
-                this->swap_slot(slot, &tmp_slot);
+                this->swap_slot(slot, &to_insert);
             }
 
             if (isRehashing) {
-                if (distance < kEndOfMark) {
-                    distance++;
-                }
+                distance++;
+                distance = (distance <= kEndOfMark) ? distance : kEndOfMark;
             } else {
                 distance++;
-                if (distance >= kEmptyEntry) {
+                if (distance >= kDistLimit) {
+                    ctrl = this->control_at(target);
+                    this->setUsedCtrl(target, ctrl_hash, distance);
+
+                    slot_type * slot = this->slot_at(target);
+                    this->placement_new_slot(slot);
+                    if (kIsCompatibleLayout)
+                        this->mutable_allocator_.construct(&slot->mutable_value, std::move(to_insert.mutable_value));
+                    else
+                        this->allocator_.construct(&slot->value, std::move(to_insert.value));
+
+                    if (is_slot_trivial_destructor) {
+                        this->destroy_mutable_slot(&to_insert);
+                    }
                     return true;
                 }
             }
@@ -2394,6 +2438,11 @@ private:
             slot_index = this->next_index(slot_index);
         } while (slot_index != target);
 
+        this->setUnusedCtrl(target, kEmptyEntry);
+
+        if (is_slot_trivial_destructor) {
+            this->destroy_mutable_slot(&to_insert);
+        }
         return true;
     }
 
@@ -2734,7 +2783,7 @@ private:
         hash_code_t hash_code = this->get_hash(key);
         hash_code_t hash_code_2nd = this->get_second_hash(hash_code);
         std::uint8_t ctrl_hash = this->get_ctrl_hash(hash_code_2nd);
-        size_type slot_index = this->index_from_hash(hash_code);
+        size_type slot_index = this->index_for_hash(hash_code);
         size_type first_slot = slot_index;
         std::uint8_t distance = 0;
         o_ctrl_hash = ctrl_hash;
@@ -2884,7 +2933,7 @@ private:
         hash_code_t hash_code = this->get_hash(key);
         hash_code_t hash_code_2nd = this->get_second_hash(hash_code);
         std::uint8_t ctrl_hash = this->get_ctrl_hash(hash_code_2nd);
-        size_type slot_index = this->index_from_hash(hash_code);
+        size_type slot_index = this->index_for_hash(hash_code);
         size_type start_slot = slot_index;
         std::uint8_t distance = 0;
 
