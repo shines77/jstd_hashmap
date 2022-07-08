@@ -84,7 +84,7 @@
 #define USE_JSTD_DICTIONARY         0
 
 #define USE_STD_UNORDERED_MAP       1
-#define USE_JSTD_FLAT16_HASH_MAP    0
+#define USE_JSTD_FLAT16_HASH_MAP    1
 #define USE_JSTD_ROBIN32_HASH_MAP   1
 #define USE_SKA_FLAT_HASH_MAP       0
 #define USE_SKA_BYTELL_HASH_MAP     0

@@ -143,7 +143,7 @@ public:
     static constexpr float kMaxLoadFactor = 0.8f;
 
     // Must be kMinLoadFactor <= loadFactor <= kMaxLoadFactor
-    static constexpr float kDefaultLoadFactor = 0.5f;
+    static constexpr float kDefaultLoadFactor = 0.75f;
 
     static constexpr size_type kLoadFactorAmplify = 65536;
     static constexpr std::uint32_t kDefaultLoadFactorInt =
@@ -2365,7 +2365,6 @@ private:
         std::swap(distance,  ctrl->distance);
         std::swap(ctrl_hash, ctrl->hash);
         this->setUsedMirrorCtrl(target, ctrl->hash, ctrl->distance);
-        //this->setUnusedCtrl(target, kEmptyEntry);
 
         slot_type to_insert;
 #if 0
