@@ -381,7 +381,7 @@ public:
             __m256i dist_bits  = _mm256_adds_epi16(kDistanceBase, dist_value);
             __m256i low_bits   = _mm256_and_si256(ctrl_bits, kLowMask16);
             __m256i high_bits  = _mm256_srli_epi16(ctrl_bits, 8);
-            __m256i empty_mask = _mm256_cmpeq_epi16(low_bits, empty_bits);
+            __m256i empty_mask = _mm256_cmpeq_epi16(empty_bits, low_bits);
             __m256i dist_mask  = _mm256_cmpgt_epi16(dist_bits, low_bits);
                     empty_mask = _mm256_or_si256(empty_mask, dist_mask);
             __m256i match_mask = _mm256_cmpeq_epi16(high_bits, hash_bits);
@@ -431,10 +431,10 @@ public:
 
         std::uint32_t matchUsed(const_pointer data) const {
             const __m256i kLowMask16 = _mm256_set1_epi16((short)0x00FF);
-            __m256i tag_bits  = _mm256_set1_epi16(kEndOfMark);
+            __m256i tag_bits  = _mm256_set1_epi16(kEmptyEntry);
             __m256i ctrl_bits = _mm256_loadu_si256((const __m256i *)data);
             __m256i low_bits  = _mm256_and_si256(ctrl_bits, kLowMask16);
-            __m256i match_mask = _mm256_cmpgt_epi16(low_bits, tag_bits);
+            __m256i match_mask = _mm256_cmpgt_epi16(tag_bits, low_bits);
             std::uint32_t maskUsed = (std::uint32_t)_mm256_movepi16_mask(match_mask);
             return maskUsed;
         }
@@ -560,7 +560,7 @@ public:
             __m256i dist_bits  = _mm256_adds_epi16(kDistanceBase, dist_value);
             __m256i low_bits   = _mm256_and_si256(ctrl_bits, kLowMask16);
             __m256i high_bits  = _mm256_srli_epi16(ctrl_bits, 8);
-            __m256i empty_mask = _mm256_cmpeq_epi16(low_bits, empty_bits);
+            __m256i empty_mask = _mm256_cmpeq_epi16(empty_bits, low_bits);
             __m256i dist_mask  = _mm256_cmpgt_epi16(dist_bits, low_bits);
                     empty_mask = _mm256_or_si256(empty_mask, dist_mask);
             __m256i match_mask = _mm256_cmpeq_epi16(high_bits, hash_bits);
@@ -1476,7 +1476,7 @@ private:
     }
 
     inline hash_code_t get_hash(const key_type & key) const noexcept {
-        hash_code_t hash_code = static_cast<hash_code_t>(this->hasher_(key));
+        hash_code_t hash_code = static_cast<hash_code_t>(hashers::int_hash_crc32c(this->hasher_(key)));
         return hash_code;
     }
 
