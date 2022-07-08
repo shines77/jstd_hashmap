@@ -143,7 +143,7 @@ public:
     static constexpr float kMaxLoadFactor = 0.8f;
 
     // Must be kMinLoadFactor <= loadFactor <= kMaxLoadFactor
-    static constexpr float kDefaultLoadFactor = 0.75f;
+    static constexpr float kDefaultLoadFactor = 0.5f;
 
     static constexpr size_type kLoadFactorAmplify = 65536;
     static constexpr std::uint32_t kDefaultLoadFactorInt =

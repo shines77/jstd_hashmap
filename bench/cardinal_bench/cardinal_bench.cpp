@@ -535,7 +535,7 @@ void benchmark_SimpleHash_insert_random(std::size_t iters)
 
 void benchmark_all_hashmaps(std::size_t iters)
 {
-#if 0
+#if 1
     benchmark_insert_random<int, int>(iters);
 
     printf("------------------------------------------------------------------------------------\n\n");
