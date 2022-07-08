@@ -233,7 +233,8 @@ namespace hashers {
 static inline
 std::size_t fibonacci_hash(std::size_t value)
 {
-    std::size_t hash_code = (std::size_t)((std::uint64_t(value) * 11400714819323198485ull) >> 32);
+    std::size_t hash_code = static_cast<std::size_t>(
+        (static_cast<std::uint64_t>(value) * 11400714819323198485ull) >> 32);
     return hash_code;
 }
 

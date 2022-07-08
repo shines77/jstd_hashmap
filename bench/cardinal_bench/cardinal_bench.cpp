@@ -535,7 +535,7 @@ void benchmark_SimpleHash_insert_random(std::size_t iters)
 
 void benchmark_all_hashmaps(std::size_t iters)
 {
-#if 1
+#if 0
     benchmark_insert_random<int, int>(iters);
 
     printf("------------------------------------------------------------------------------------\n\n");
@@ -625,6 +625,8 @@ int main(int argc, char * argv[])
 
     printf("------------------------------------------------------------------------------------\n\n");
 
-    //jstd::Console::ReadKey();
+#if defined(_MSC_VER) && defined(_DEBUG)
+    jstd::Console::ReadKey();
+#endif
     return 0;
 }

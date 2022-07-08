@@ -1501,8 +1501,6 @@ private:
 
     inline std::uint8_t get_ctrl_hash(hash_code_t hash_code) const noexcept {
         std::uint8_t ctrl_hash = static_cast<std::uint8_t>(hash_code & kControlHashMask);
-        if (ctrl_hash == std::uint8_t(0x63))
-            ctrl_hash = ctrl_hash;
         return ctrl_hash;
     }
 
@@ -1812,7 +1810,7 @@ private:
             control_type * ctrl_mirror = this->control_at_ex(index + this->slot_capacity());
             ctrl_mirror->setDistance(tag);
 #ifdef _DEBUG
-            ctrl_mirror->setHash(0);
+            //ctrl_mirror->setHash(0);
 #endif
             if (index == 0) {
                 assert(control_type::isEmpty(tag));
@@ -1834,7 +1832,7 @@ private:
         assert(ctrl->isUsed());
         ctrl->setDistance(tag);
 #ifdef _DEBUG
-        ctrl->setHash(0);
+        //ctrl->setHash(0);
 #endif
         this->setUnusedMirrorCtrl(index, tag);
     }
@@ -2291,7 +2289,8 @@ private:
             slot_index = this->next_index(slot_index);
             ctrl = this->control_at(slot_index);
             // Optimize from: (ctrl->isUsed() && (ctrl->distance >= 1))
-            if (likely(std::uint8_t(ctrl->distance + 1) > 1)) {
+            if (likely(ctrl->isUsed() && (ctrl->distance >= 1))) {
+            //if (likely(std::uint8_t(ctrl->distance + 1) > 1)) {
                 if (ctrl->hash == ctrl_hash) {
                     slot_type * slot = this->slot_at(slot_index);
                     if (this->key_equal_(slot->value.first, key)) {
@@ -2334,6 +2333,8 @@ private:
                 break;
             }
             distance += kGroupWidth;
+            if (distance >= (kEmptyEntry - kGroupWidth - 1))
+                distance = distance;
             slot_index = this->slot_next_group(slot_index);
         } while (slot_index != first_slot);
 
@@ -2414,6 +2415,8 @@ private:
 
             if (isRehashing) {
                 distance++;
+                if (distance >= kEndOfMark)
+                    distance = distance;
                 distance = (distance <= kEndOfMark) ? distance : kEndOfMark;
             } else {
                 distance++;
@@ -2817,6 +2820,9 @@ private:
                 o_distance = this->round_dist(index, first_slot);
                 return this->round_index(index);
             }
+            distance += kGroupWidth;
+            if (distance >= (kEmptyEntry - kGroupWidth - 1))
+                distance = distance;
             slot_index = this->slot_next_group(slot_index);
             assert(slot_index != first_slot);
         } while (1);
@@ -2842,6 +2848,7 @@ private:
         } else {
             // Insert to target place
             is_full = this->insert_to_place<true>(target, ctrl_hash, distance);
+            assert(is_full == false);
         }
 
         slot_type * new_slot = this->slot_at(target);
