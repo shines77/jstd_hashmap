@@ -1506,11 +1506,14 @@ private:
         return (index & slot_mask);
     }
 
-    std::uint8_t round_distance(size_type last, size_type first) const {
+    std::uint8_t round_dist(size_type last, size_type first) const {
         size_type distance = (last + this->slot_capacity() - first) & this->slot_mask();
+#if 0
         assert(distance <= (size_type)kEndOfMark);
         return (std::uint8_t)distance;
-        //return ((distance <= (size_type)kEndOfMark) ? std::uint8_t(distance) : kEndOfMark);
+#else
+        return ((distance <= (size_type)kEndOfMark) ? std::uint8_t(distance) : kEndOfMark);
+#endif
     }
 
     inline size_type index_salt() const noexcept {
@@ -2169,7 +2172,7 @@ private:
                 index = this->round_index(index);
                 const slot_type & target = this->get_slot(index);
                 if (this->key_equal_(target.value.first, key)) {
-                    o_distance = this->round_distance(index, start_slot);
+                    o_distance = this->round_dist(index, start_slot);
                     last_slot = index;
                     return index;
                 }
@@ -2178,7 +2181,7 @@ private:
                 size_type pos = BitUtils::bsf32(mask32.maskEmpty);
                 size_type index = group.index(start_index, pos);
                 index = this->round_index(index);
-                o_distance = this->round_distance(index, start_slot);
+                o_distance = this->round_dist(index, start_slot);
                 last_slot = index;
                 return npos;
             }
@@ -2224,7 +2227,7 @@ private:
                 // Found a [EmptyEntry] to insert
                 size_type pos = BitUtils::bsf32(maskEmpty);
                 size_type index = group.index(slot_index, pos);
-                o_distance = this->round_distance(index, first_slot);
+                o_distance = this->round_dist(index, first_slot);
                 return this->round_index(index);
             }
             slot_index = this->slot_next_group(slot_index);
@@ -2304,7 +2307,7 @@ private:
                 index = this->round_index(index);
                 const slot_type & target = this->get_slot(index);
                 if (this->key_equal_(target.value.first, key)) {
-                    o_distance = this->round_distance(index, first_slot);
+                    o_distance = this->round_dist(index, first_slot);
                     return { index, true };
                 }
             }
@@ -2329,14 +2332,15 @@ private:
         size_type pos = BitUtils::bsf32(maskEmpty);
         size_type index = group_type::index(last_slot, pos);
         index = this->round_index(index);
-        distance = this->round_distance(index, first_slot);
+        distance = this->round_dist(index, first_slot);
         o_distance = distance;
         
         return { index, false };
     }
 
+    template <bool isRehashing>
     JSTD_NO_INLINE
-    void insert_to_place(size_type target, std::uint8_t ctrl_hash, std::uint8_t distance) {
+    bool insert_to_place(size_type target, std::uint8_t ctrl_hash, std::uint8_t distance) {
         using std::swap;
         control_type * ctrl = this->control_at(target);
         assert(distance > ctrl->distance);
@@ -2366,7 +2370,7 @@ private:
                     this->mutable_allocator_.construct(&slot->mutable_value, std::move(tmp_slot.mutable_value));
                 else
                     this->allocator_.construct(&slot->value, std::move(tmp_slot.value));
-                return;
+                return false;
             } else if (distance > ctrl->distance) {
                 std::swap(distance,  ctrl->distance);
                 std::swap(ctrl_hash, ctrl->hash);
@@ -2376,10 +2380,21 @@ private:
                 this->swap_slot(slot, &tmp_slot);
             }
 
-            distance++;
+            if (isRehashing) {
+                if (distance < kEndOfMark) {
+                    distance++;
+                }
+            } else {
+                distance++;
+                if (distance >= kEmptyEntry) {
+                    return true;
+                }
+            }
             assert(distance < kEmptyEntry);
             slot_index = this->next_index(slot_index);
-        } while (1);
+        } while (slot_index != target);
+
+        return true;
     }
 
     template <bool AlwaysUpdate>
@@ -2400,7 +2415,11 @@ private:
                 this->setUsedCtrl(target, ctrl_hash, distance);
             } else {
                 // Insert to target place
-                this->insert_to_place(target, ctrl_hash, distance);
+                bool is_full = this->insert_to_place<false>(target, ctrl_hash, distance);
+                if (is_full) {
+                    this->grow_if_necessary();
+                    return this->emplace_impl<AlwaysUpdate>(value);
+                }
             }
 
             slot_type * slot = this->slot_at(target);
@@ -2438,8 +2457,11 @@ private:
                 assert(ctrl->isEmpty());
                 this->setUsedCtrl(target, ctrl_hash, distance);
             } else {
-                // Insert to target place
-                this->insert_to_place(target, ctrl_hash, distance);
+                bool is_full = this->insert_to_place<false>(target, ctrl_hash, distance);
+                if (is_full) {
+                    this->grow_if_necessary();
+                    return this->emplace_impl<AlwaysUpdate>(std::forward<value_type>(value));
+                }
             }
 
             slot_type * slot = this->slot_at(target);
@@ -2490,8 +2512,13 @@ private:
                 assert(ctrl->isEmpty());
                 this->setUsedCtrl(target, ctrl_hash, distance);
             } else {
-                // Insert to target place
-                this->insert_to_place(target, ctrl_hash, distance);
+                bool is_full = this->insert_to_place<false>(target, ctrl_hash, distance);
+                if (is_full) {
+                    this->grow_if_necessary();
+                    return this->emplace_impl<AlwaysUpdate, KeyT, MappedT>(
+                            std::forward<KeyT>(key), std::forward<MappedT>(value)
+                        );
+                }
             }
 
             slot_type * slot = this->slot_at(target);
@@ -2549,7 +2576,13 @@ private:
                 this->setUsedCtrl(target, ctrl_hash, distance);
             } else {
                 // Insert to target place
-                this->insert_to_place(target, ctrl_hash, distance);
+                bool is_full = this->insert_to_place<false>(target, ctrl_hash, distance);
+                if (is_full) {
+                    this->grow_if_necessary();
+                    return this->emplace(std::piecewise_construct,
+                                         std::forward_as_tuple(std::forward<KeyT>(key)),
+                                         std::forward_as_tuple(std::forward<Args>(args)...));
+                }
             }
 
             slot_type * slot = this->slot_at(target);
@@ -2607,7 +2640,13 @@ private:
                 this->setUsedCtrl(target, ctrl_hash, distance);
             } else {
                 // Insert to target place
-                this->insert_to_place(target, ctrl_hash, distance);
+                bool is_full = this->insert_to_place<false>(target, ctrl_hash, distance);
+                if (is_full) {
+                    this->grow_if_necessary();
+                    return this->emplace(std::piecewise_construct,
+                                         std::forward<std::tuple<Ts1...>>(first),
+                                         std::forward<std::tuple<Ts2...>>(second));
+                }
             }
 
             slot_type * slot = this->slot_at(target);
@@ -2663,7 +2702,11 @@ private:
                 this->setUsedCtrl(target, ctrl_hash, distance);
             } else {
                 // Insert to target place
-                this->insert_to_place(target, ctrl_hash, distance);
+                bool is_full = this->insert_to_place<false>(target, ctrl_hash, distance);
+                if (is_full) {
+                    this->grow_if_necessary();
+                    return this->emplace(std::move(value));
+                }
             }
 
             slot_type * slot = this->slot_at(target);
@@ -2722,7 +2765,7 @@ private:
                 // Found a [EmptyEntry] to insert
                 size_type pos = BitUtils::bsf32(maskEmpty);
                 size_type index = group.index(slot_index, pos);
-                o_distance = this->round_distance(index, first_slot);
+                o_distance = this->round_dist(index, first_slot);
                 return this->round_index(index);
             }
             slot_index = this->slot_next_group(slot_index);
@@ -2734,12 +2777,13 @@ private:
     }
 
     // Use in rehash_impl()
-    void move_insert_unique(slot_type * slot) {
+    bool move_insert_unique(slot_type * slot) {
         std::uint8_t distance;
         std::uint8_t ctrl_hash;
         size_type target = this->unique_prepare_insert(slot->value.first,
                                                        ctrl_hash, distance);
         assert(target != npos);
+        bool is_full = false;
 
         control_type * ctrl = this->control_at(target);
         if (ctrl->isEmpty()) {
@@ -2748,7 +2792,7 @@ private:
             this->setUsedCtrl(target, ctrl_hash, distance);
         } else {
             // Insert to target place
-            this->insert_to_place(target, ctrl_hash, distance);
+            is_full = this->insert_to_place<true>(target, ctrl_hash, distance);
         }
 
         slot_type * new_slot = this->slot_at(target);
@@ -2761,6 +2805,7 @@ private:
         }
         this->slot_size_++;
         assert(this->slot_size() <= this->slot_capacity());
+        return is_full;
     }
 
     void insert_unique(const value_type & value) {
@@ -2775,7 +2820,12 @@ private:
             this->setUsedCtrl(target, ctrl_hash, distance);
         } else {
             // Insert to target place
-            this->insert_to_place(target, ctrl_hash, distance);
+            bool is_full = this->insert_to_place<false>(target, ctrl_hash, distance);
+            if (is_full) {
+                this->grow_if_necessary();
+                this->insert_unique(value);
+                return;
+            }
         }
 
         slot_type * slot = this->slot_at(target);
@@ -2801,7 +2851,12 @@ private:
             this->setUsedCtrl(target, ctrl_hash, distance);
         } else {
             // Insert to target place
-            this->insert_to_place(target, ctrl_hash, distance);
+            bool is_full = this->insert_to_place<false>(target, ctrl_hash, distance);
+            if (is_full) {
+                this->grow_if_necessary();
+                this->insert_unique(std::forward<value_type>(value));
+                return;
+            }
         }
 
         slot_type * slot = this->slot_at(target);
