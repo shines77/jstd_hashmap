@@ -614,10 +614,11 @@ public:
 
         std::uint32_t matchUsed(const_pointer data) const {
             const __m256i kLowMask16 = _mm256_set1_epi16((short)0x00FF);
-            __m256i tag_bits  = _mm256_set1_epi16(kEndOfMark);
+            __m256i tag_bits  = _mm256_set1_epi16(kEmptyEntry);
             __m256i ctrl_bits = _mm256_loadu_si256((const __m256i *)data);
             __m256i low_bits  = _mm256_and_si256(ctrl_bits, kLowMask16);
-            __m256i match_mask = _mm256_cmpgt_epi8(low_bits, tag_bits);
+            __m256i match_mask = _mm256_cmpgt_epi16(tag_bits, low_bits);
+                    match_mask = _mm256_srli_epi16(match_mask, 8);
             std::uint32_t maskUsed = (std::uint32_t)_mm256_movemask_epi8(match_mask);
             return maskUsed;
         }
@@ -2349,7 +2350,9 @@ private:
         } else {
             tmp_slot.value = std::move(this->slot_at(target)->value);
         }
-        this->destroy_mutable_slot(target);
+        if (is_slot_trivial_destructor) {
+            this->destroy_mutable_slot(target);
+        }
 
         size_type slot_index = this->next_index(target);
         do {
@@ -2371,10 +2374,10 @@ private:
 
                 slot_type * slot = this->slot_at(slot_index);
                 this->swap_slot(slot, &tmp_slot);
-            } else {
-                distance++;
-                assert(distance < kEmptyEntry);
             }
+
+            distance++;
+            assert(distance < kEmptyEntry);
             slot_index = this->next_index(slot_index);
         } while (1);
     }
