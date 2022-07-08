@@ -230,6 +230,13 @@ See:
 
 namespace hashers {
 
+static inline
+std::size_t fibonacci_hash(std::size_t value)
+{
+    std::size_t hash_code = (std::size_t)((std::uint64_t(value) * 11400714819323198485ull) >> 32);
+    return hash_code;
+}
+
 // This string hash function is from OpenSSL.
 template <typename CharTy>
 static std::uint32_t OpenSSL_Hash(const CharTy * key, std::size_t len)
@@ -1069,6 +1076,6 @@ HashUtils<std::uint64_t>::decodeValue<8U>(const char * data, std::uint32_t missa
     return value;
 }
 
-} // namespace kvdb
+} // namespace jstd
 
 #endif // JSTD_HASH_HASH_H

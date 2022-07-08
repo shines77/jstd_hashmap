@@ -1492,9 +1492,9 @@ private:
 #else
         hash_code_t hash_code;
         if (sizeof(size_type) == 4)
-            hash_code = (hash_code_t)((size_type)value * 2654435761ul);
+            hash_code = (hash_code_t)(((std::uint64_t)value * 2654435761ul) >> 28);
         else
-            hash_code = (hash_code_t)((size_type)value * 14695981039346656037ull);
+            hash_code = (hash_code_t)(((std::uint64_t)value * 14695981039346656037ull) >> 28);
         return hash_code;
 #endif
     }
@@ -1533,17 +1533,17 @@ private:
 
     inline size_type index_for_hash(hash_code_t hash_code) const noexcept {
         if (kUseIndexSalt)
-            return ((hashers::int_hash_crc32c((size_type)hash_code) ^ this->index_salt()) & this->slot_mask());
+            return ((hashers::fibonacci_hash((size_type)hash_code) ^ this->index_salt()) & this->slot_mask());
         else
-            return (hashers::int_hash_crc32c((size_type)hash_code) & this->slot_mask());
+            return  (hashers::fibonacci_hash((size_type)hash_code) & this->slot_mask());
     }
 
     inline size_type index_for_hash(hash_code_t hash_code, size_type slot_mask) const noexcept {
         assert(pow2::is_pow2(slot_mask + 1));
         if (kUseIndexSalt)
-            return (((size_type)hash_code ^ this->index_salt()) & slot_mask);
+            return ((hashers::fibonacci_hash((size_type)hash_code) ^ this->index_salt()) & slot_mask);
         else
-            return ((size_type)hash_code & slot_mask);
+            return  (hashers::fibonacci_hash((size_type)hash_code) & slot_mask);
     }
 
     inline size_type next_index(size_type index) const noexcept {
