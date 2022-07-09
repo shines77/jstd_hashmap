@@ -374,7 +374,7 @@ void run_insert_random(const std::string & name, std::vector<Key> & keys, std::s
 
     jtest::StopWatch sw;
     HashMap hashmap;
-    hashmap.reserve(128);
+    //hashmap.reserve(128);
 
     {
         sw.start();

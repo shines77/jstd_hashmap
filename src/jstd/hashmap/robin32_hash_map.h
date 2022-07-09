@@ -270,10 +270,10 @@ public:
             this->distance = distance;
         }
 
-        void setUsed(std::uint8_t ctrl_hash, std::uint8_t distance) {
+        void setUsed(std::uint8_t distance, std::uint8_t ctrl_hash) {
             assert(distance < kEmptyEntry);
-            this->setHash(ctrl_hash);
             this->setDistance(distance);
+            this->setHash(ctrl_hash);
         }
     };
 #else
@@ -353,10 +353,10 @@ public:
             this->distance = distance;
         }
 
-        void setUsed(std::uint8_t ctrl_hash, std::uint8_t distance) {
+        void setUsed(std::uint8_t distance, std::uint8_t ctrl_hash) {
             assert(distance < kEmptyEntry);
-            this->setHash(ctrl_hash);
             this->setDistance(distance);
+            this->setHash(ctrl_hash);
         }
     };
 #endif
@@ -875,8 +875,8 @@ public:
             return bitmask.isAllUnused(&this->controls[0]);
         }
 
-        static inline size_type pos(size_type position) {
-            return bitmask256_type::bitPos(position);
+        static inline std::uint8_t pos(size_type position) {
+            return (std::uint8_t)bitmask256_type::bitPos(position);
         }
 
         static inline size_type index(size_type index, size_type position) {
@@ -1353,7 +1353,7 @@ public:
         group_type * last_group = this->groups() + this->group_count();
         size_type start_index = 0;
         for (; group != last_group; group++) {
-            std::uint32_t maskUsed = group->matchUsedOrEndOf();
+            std::uint32_t maskUsed = group->matchUsed();
             if (maskUsed != 0) {
                 size_type pos = BitUtils::bsf32(maskUsed);
                 size_type index = group->index(start_index, pos);
@@ -2008,29 +2008,27 @@ private:
         }
     }
 
-#if 0
     JSTD_FORCED_INLINE
-    void setMirrorCtrl(size_type index, std::uint8_t tag, std::uint8_t distance) {
-        if (index < kGroupWidth) {
-            control_byte * ctrl_mirror = this->control_at_ex(index + this->slot_capacity());
-            ctrl_mirror->setHash(ctrl_hash);
-            ctrl_mirror->setDistance(distance);
-            if (index == 0) {
-                if (control_byte::isEmpty(tag)) {
-                    ctrl_mirror->setEndOf();
-                }
-            }
-        }
+    void setUsedCtrl(size_type index, std::uint8_t distance, std::uint8_t ctrl_hash) {        
+        control_type * ctrl = this->control_at(index);
+        ctrl->setUsed(distance, ctrl_hash);
+        this->setUsedMirrorCtrl(index, distance, ctrl_hash);
     }
-#endif
 
     JSTD_FORCED_INLINE
-    void setUsedMirrorCtrl(size_type index, std::uint8_t ctrl_hash, std::uint8_t distance) {
+    void setUnusedCtrl(size_type index, std::uint8_t tag) {
+        control_type * ctrl = this->control_at(index);
+        assert(ctrl->isUsed());
+        ctrl->setDistance(tag);
+        this->setUnusedMirrorCtrl(index, tag);
+    }
+
+    JSTD_FORCED_INLINE
+    void setUsedMirrorCtrl(size_type index, std::uint8_t distance, std::uint8_t ctrl_hash) {
         assert(control_type::isUsed(distance));
         if (index < kGroupWidth) {
             control_type * ctrl_mirror = this->control_at_ex(index + this->slot_capacity());
-            ctrl_mirror->setHash(ctrl_hash);
-            ctrl_mirror->setDistance(distance);
+            ctrl_mirror->setUsed(distance, ctrl_hash);
         }
     }
 
@@ -2039,9 +2037,6 @@ private:
         if (index < kGroupWidth) {
             control_type * ctrl_mirror = this->control_at_ex(index + this->slot_capacity());
             ctrl_mirror->setDistance(tag);
-#ifdef _DEBUG
-            //ctrl_mirror->setHash(0);
-#endif
 #if 0
             if (index == 0) {
                 assert(control_type::isEmpty(tag));
@@ -2049,24 +2044,6 @@ private:
             }
 #endif
         }
-    }
-
-    JSTD_FORCED_INLINE
-    void setUsedCtrl(size_type index, std::uint8_t ctrl_hash, std::uint8_t distance) {        
-        control_type * ctrl = this->control_at(index);
-        ctrl->setUsed(ctrl_hash, distance);
-        this->setUsedMirrorCtrl(index, ctrl_hash, distance);
-    }
-
-    JSTD_FORCED_INLINE
-    void setUnusedCtrl(size_type index, std::uint8_t tag) {
-        control_type * ctrl = this->control_at(index);
-        assert(ctrl->isUsed());
-        ctrl->setDistance(tag);
-#ifdef _DEBUG
-        //ctrl->setHash(0);
-#endif
-        this->setUnusedMirrorCtrl(index, tag);
     }
 
     inline bool need_grow() const {
@@ -2131,6 +2108,7 @@ private:
     }
 
     template <bool AllowShrink, bool AlwaysResize>
+    JSTD_NO_INLINE
     void rehash_impl(size_type new_capacity) {
         new_capacity = this->calc_capacity(new_capacity);
         assert(new_capacity > 0);
@@ -2365,9 +2343,10 @@ private:
         return npos;
     }
 
+#if 0
     JSTD_FORCED_INLINE
     size_type find_impl(const key_type & key, size_type & first_slot, size_type & last_slot,
-                        std::uint8_t & o_ctrl_hash, std::uint8_t & o_distance) const {
+                        std::uint8_t & o_distance, std::uint8_t & o_ctrl_hash) const {
         hash_code_t hash_code = this->get_hash(key);
         hash_code_t hash_code_2nd = this->get_second_hash(hash_code);
         std::uint8_t ctrl_hash = this->get_ctrl_hash(hash_code_2nd);
@@ -2444,8 +2423,8 @@ private:
     }
 
     JSTD_FORCED_INLINE
-    size_type find_first_empty_slot(const key_type & key, std::uint8_t & o_ctrl_hash,
-                                                          std::uint8_t & o_distance) {
+    size_type find_first_empty_slot(const key_type & key, std::uint8_t & o_distance,
+                                                          std::uint8_t & o_ctrl_hash) {
         hash_code_t hash_code = this->get_hash(key);
         hash_code_t hash_code_2nd = this->get_second_hash(hash_code);
         std::uint8_t ctrl_hash = this->get_ctrl_hash(hash_code_2nd);
@@ -2486,10 +2465,12 @@ private:
         o_distance = kEndOfMark;
         return npos;
     }
+#endif
 
     JSTD_NO_INLINE
     std::pair<size_type, bool>
-    find_and_prepare_insert(const key_type & key, std::uint8_t & o_ctrl_hash, std::uint8_t & o_distance) {
+    find_and_prepare_insert(const key_type & key, std::uint8_t & o_distance,
+                                                  std::uint8_t & o_ctrl_hash) {
         hash_code_t hash_code = this->get_hash(key);
         hash_code_t hash_code_2nd = this->get_second_hash(hash_code);
         std::uint8_t ctrl_hash = this->get_ctrl_hash(hash_code_2nd);
@@ -2516,7 +2497,7 @@ private:
                     // The size of slot reach the slot threshold or hashmap is full.
                     this->grow_if_necessary();
 
-                    return this->find_and_prepare_insert(key, o_ctrl_hash, o_distance);
+                    return this->find_and_prepare_insert(key, o_distance, o_ctrl_hash);
                 }
                 o_distance = 0;
                 return { slot_index, false };
@@ -2524,8 +2505,8 @@ private:
             slot_index = this->next_index(slot_index);
             ctrl = this->control_at(slot_index);
             // Optimize from: (ctrl->isUsed() && (ctrl->distance >= 1))
-            if (likely(ctrl->isUsed() && (ctrl->distance >= 1))) {
-            //if (likely(std::uint8_t(ctrl->distance + 1) > 1)) {
+            if (likely(std::uint8_t(ctrl->distance + 1) > 1)) {
+            //if (likely(ctrl->isUsed() && (ctrl->distance >= 1))) {
                 if (ctrl->hash == ctrl_hash) {
                     slot_type * slot = this->slot_at(slot_index);
                     if (this->key_equal_(slot->value.first, key)) {
@@ -2538,7 +2519,7 @@ private:
                     // The size of slot reach the slot threshold or hashmap is full.
                     this->grow_if_necessary();
 
-                    return this->find_and_prepare_insert(key, o_ctrl_hash, o_distance);
+                    return this->find_and_prepare_insert(key, o_distance, o_ctrl_hash);
                 }
                 o_distance = 1;
                 return { slot_index, false };
@@ -2559,7 +2540,7 @@ private:
                 const slot_type & target = this->get_slot(index);
                 if (this->key_equal_(target.value.first, key)) {
                     o_distance = this->round_dist(index, first_slot);
-                    assert(o_distance == (distance + std::uint8_t(group_type::pos(pos))));
+                    assert(o_distance == (distance + group_type::pos(pos)));
                     return { index, true };
                 }
             }
@@ -2578,7 +2559,7 @@ private:
             // The size of slot reach the slot threshold or hashmap is full.
             this->grow_if_necessary();
 
-            return this->find_and_prepare_insert(key, o_ctrl_hash, o_distance);
+            return this->find_and_prepare_insert(key, o_distance, o_ctrl_hash);
         }
 
         // It's a [EmptyEntry], or (distance > ctrl->distance) entry.
@@ -2586,25 +2567,26 @@ private:
         size_type pos = BitUtils::bsf32(maskEmpty);
         size_type index = group_type::index(last_slot, pos);
         o_distance = this->round_dist(index, first_slot);
-        assert(o_distance == (distance + std::uint8_t(group_type::pos(pos))));
+        assert(o_distance == (distance + group_type::pos(pos)));
         index = this->round_index(index);
         return { index, false };
     }
 
     template <bool isRehashing>
     JSTD_NO_INLINE
-    bool insert_to_place(size_type target, std::uint8_t ctrl_hash, std::uint8_t distance) {
+    bool insert_to_place(size_type target, std::uint8_t distance, std::uint8_t ctrl_hash) {
         using std::swap;
         control_type * ctrl = this->control_at(target);
         assert(!ctrl->isEmpty());
         assert(distance > ctrl->distance);
-        this->setUsedMirrorCtrl(target, ctrl_hash, distance);
+        this->setUsedMirrorCtrl(target, distance, ctrl_hash);
         std::swap(distance,  ctrl->distance);
         std::swap(ctrl_hash, ctrl->hash);
-        //this->setUsedMirrorCtrl(target, ctrl->hash, ctrl->distance);
+        //this->setUsedMirrorCtrl(target, ctrl->distance, ctrl->hash);
         distance++;
 
         slot_type to_insert;
+        this->placement_new_slot(&to_insert);
 #if 0
         if (kIsCompatibleLayout) {
             to_insert.mutable_value = mutable_value_type();
@@ -2628,7 +2610,7 @@ private:
         do {
             ctrl = this->control_at(slot_index);
             if (ctrl->isEmpty()) {
-                this->setUsedCtrl(slot_index, ctrl_hash, distance);
+                this->setUsedCtrl(slot_index, distance, ctrl_hash);
 
                 slot_type * slot = this->slot_at(slot_index);
                 this->placement_new_slot(slot);
@@ -2641,8 +2623,8 @@ private:
                     this->destroy_mutable_slot(&to_insert);
                 }
                 return false;
-            } else if ((distance > ctrl->distance) || (distance == (kEndOfMark - 1))) {
-                this->setUsedMirrorCtrl(slot_index, ctrl_hash, distance);
+            } else if ((distance > ctrl->distance) /* || (distance == (kEndOfMark - 1)) */) {
+                this->setUsedMirrorCtrl(slot_index, distance, ctrl_hash);
                 std::swap(distance,  ctrl->distance);
                 std::swap(ctrl_hash, ctrl->hash);
 
@@ -2654,11 +2636,11 @@ private:
                 distance++;
                 if (distance >= kEndOfMark)
                     distance = distance;
-                distance = (distance < kEndOfMark) ? distance : (kEndOfMark - 1);
+                //distance = (distance < kEndOfMark) ? distance : (kEndOfMark - 1);
             } else {
                 distance++;
                 if (distance >= kDistLimit) {
-                    this->insert_tmp_rich_slot(to_insert, target, ctrl_hash, distance);
+                    this->insert_tmp_rich_slot(to_insert, target, distance, ctrl_hash);
                     return true;
                 }
             }
@@ -2666,13 +2648,13 @@ private:
             slot_index = this->next_index(slot_index);
         } while (slot_index != target);
 
-        this->insert_tmp_rich_slot(to_insert, target, ctrl_hash, distance);
+        this->insert_tmp_rich_slot(to_insert, target, distance, ctrl_hash);
         return true;
     }
 
     void insert_tmp_rich_slot(slot_type & to_insert, size_type target,
-                              std::uint8_t ctrl_hash, std::uint8_t distance) {
-        this->setUsedCtrl(target, ctrl_hash, distance);
+                              std::uint8_t distance, std::uint8_t ctrl_hash) {
+        this->setUsedCtrl(target, distance, ctrl_hash);
 
         slot_type * slot = this->slot_at(target);
         this->placement_new_slot(slot);
@@ -2690,7 +2672,7 @@ private:
     std::pair<iterator, bool> emplace_impl(const value_type & value) {
         std::uint8_t distance;
         std::uint8_t ctrl_hash;
-        auto find_info = this->find_and_prepare_insert(value.first, ctrl_hash, distance);
+        auto find_info = this->find_and_prepare_insert(value.first, distance, ctrl_hash);
         size_type target = find_info.first;
         bool is_exists = find_info.second;
         if (!is_exists) {
@@ -2701,10 +2683,10 @@ private:
             if (ctrl->isEmpty()) {
                 // Found [EmptyEntry] to insert
                 assert(ctrl->isEmpty());
-                this->setUsedCtrl(target, ctrl_hash, distance);
+                this->setUsedCtrl(target, distance, ctrl_hash);
             } else {
                 // Insert to target place
-                bool is_full = this->insert_to_place<false>(target, ctrl_hash, distance);
+                bool is_full = this->insert_to_place<false>(target, distance, ctrl_hash);
                 if (is_full) {
                     this->grow_if_necessary();
                     return this->emplace_impl<AlwaysUpdate>(value);
@@ -2733,7 +2715,7 @@ private:
     std::pair<iterator, bool> emplace_impl(value_type && value) {
         std::uint8_t distance;
         std::uint8_t ctrl_hash;
-        auto find_info = this->find_and_prepare_insert(value.first, ctrl_hash, distance);
+        auto find_info = this->find_and_prepare_insert(value.first, distance, ctrl_hash);
         size_type target = find_info.first;
         bool is_exists = find_info.second;
         if (!is_exists) {
@@ -2744,9 +2726,9 @@ private:
             if (ctrl->isEmpty()) {
                 // Found [EmptyEntry] to insert
                 assert(ctrl->isEmpty());
-                this->setUsedCtrl(target, ctrl_hash, distance);
+                this->setUsedCtrl(target, distance, ctrl_hash);
             } else {
-                bool is_full = this->insert_to_place<false>(target, ctrl_hash, distance);
+                bool is_full = this->insert_to_place<false>(target, distance, ctrl_hash);
                 if (is_full) {
                     this->grow_if_necessary();
                     return this->emplace_impl<AlwaysUpdate>(std::forward<value_type>(value));
@@ -2788,7 +2770,7 @@ private:
     std::pair<iterator, bool> emplace_impl(KeyT && key, MappedT && value) {
         std::uint8_t distance;
         std::uint8_t ctrl_hash;
-        auto find_info = this->find_and_prepare_insert(key, ctrl_hash, distance);
+        auto find_info = this->find_and_prepare_insert(key, distance, ctrl_hash);
         size_type target = find_info.first;
         bool is_exists = find_info.second;
         if (!is_exists) {
@@ -2799,9 +2781,9 @@ private:
             if (ctrl->isEmpty()) {
                 // Found [EmptyEntry] to insert
                 assert(ctrl->isEmpty());
-                this->setUsedCtrl(target, ctrl_hash, distance);
+                this->setUsedCtrl(target, distance, ctrl_hash);
             } else {
-                bool is_full = this->insert_to_place<false>(target, ctrl_hash, distance);
+                bool is_full = this->insert_to_place<false>(target, distance, ctrl_hash);
                 if (is_full) {
                     this->grow_if_necessary();
                     return this->emplace_impl<AlwaysUpdate, KeyT, MappedT>(
@@ -2851,7 +2833,7 @@ private:
     std::pair<iterator, bool> emplace_impl(KeyT && key, Args && ... args) {
         std::uint8_t distance;
         std::uint8_t ctrl_hash;
-        auto find_info = this->find_and_prepare_insert(key, ctrl_hash, distance);
+        auto find_info = this->find_and_prepare_insert(key, distance, ctrl_hash);
         size_type target = find_info.first;
         bool is_exists = find_info.second;
         if (!is_exists) {
@@ -2862,10 +2844,10 @@ private:
             if (ctrl->isEmpty()) {
                 // Found [EmptyEntry] to insert
                 assert(ctrl->isEmpty());
-                this->setUsedCtrl(target, ctrl_hash, distance);
+                this->setUsedCtrl(target, distance, ctrl_hash);
             } else {
                 // Insert to target place
-                bool is_full = this->insert_to_place<false>(target, ctrl_hash, distance);
+                bool is_full = this->insert_to_place<false>(target, distance, ctrl_hash);
                 if (is_full) {
                     this->grow_if_necessary();
                     return this->emplace(std::piecewise_construct,
@@ -2915,7 +2897,7 @@ private:
         std::uint8_t distance;
         std::uint8_t ctrl_hash;
         tuple_wrapper2<key_type> key_wrapper(first);
-        auto find_info = this->find_and_prepare_insert(key_wrapper.value(), ctrl_hash, distance);
+        auto find_info = this->find_and_prepare_insert(key_wrapper.value(), distance, ctrl_hash);
         size_type target = find_info.first;
         bool is_exists = find_info.second;
         if (!is_exists) {
@@ -2926,10 +2908,10 @@ private:
             if (ctrl->isEmpty()) {
                 // Found [EmptyEntry] to insert
                 assert(ctrl->isEmpty());
-                this->setUsedCtrl(target, ctrl_hash, distance);
+                this->setUsedCtrl(target, distance, ctrl_hash);
             } else {
                 // Insert to target place
-                bool is_full = this->insert_to_place<false>(target, ctrl_hash, distance);
+                bool is_full = this->insert_to_place<false>(target, distance, ctrl_hash);
                 if (is_full) {
                     this->grow_if_necessary();
                     return this->emplace(std::piecewise_construct,
@@ -2977,7 +2959,7 @@ private:
         std::uint8_t distance;
         std::uint8_t ctrl_hash;
         value_type value(std::forward<First>(first), std::forward<Args>(args)...);
-        auto find_info = this->find_and_prepare_insert(value.first, ctrl_hash, distance);
+        auto find_info = this->find_and_prepare_insert(value.first, distance, ctrl_hash);
         size_type target = find_info.first;
         bool is_exists = find_info.second;
         if (!is_exists) {
@@ -2988,10 +2970,10 @@ private:
             if (ctrl->isEmpty()) {
                 // Found [EmptyEntry] to insert
                 assert(ctrl->isEmpty());
-                this->setUsedCtrl(target, ctrl_hash, distance);
+                this->setUsedCtrl(target, distance, ctrl_hash);
             } else {
                 // Insert to target place
-                bool is_full = this->insert_to_place<false>(target, ctrl_hash, distance);
+                bool is_full = this->insert_to_place<false>(target, distance, ctrl_hash);
                 if (is_full) {
                     this->grow_if_necessary();
                     return this->emplace(std::move(value));
@@ -3018,8 +3000,8 @@ private:
     }
 
     JSTD_FORCED_INLINE
-    size_type unique_prepare_insert(const key_type & key, std::uint8_t & o_ctrl_hash,
-                                                          std::uint8_t & o_distance) {
+    size_type unique_prepare_insert(const key_type & key, std::uint8_t & o_distance,
+                                                          std::uint8_t & o_ctrl_hash) {
         hash_code_t hash_code = this->get_hash(key);
         hash_code_t hash_code_2nd = this->get_second_hash(hash_code);
         std::uint8_t ctrl_hash = this->get_ctrl_hash(hash_code_2nd);
@@ -3038,8 +3020,8 @@ private:
             slot_index = this->next_index(slot_index);
             ctrl = this->control_at(slot_index);
             // Optimize from: (ctrl->isEmpty() || (ctrl->distance < 1))
-            //if (likely(std::uint8_t(ctrl->distance + 1) < 2)) {
-            if (likely(ctrl->isEmpty() || (ctrl->distance < 1))) {
+            if (likely(std::uint8_t(ctrl->distance + 1) < 2)) {
+            //if (likely(ctrl->isEmpty() || (ctrl->distance < 1))) {
                 o_distance = 1;
                 return slot_index;
             }
@@ -3056,7 +3038,7 @@ private:
                 size_type pos = BitUtils::bsf32(maskEmpty);
                 size_type index = group.index(slot_index, pos);
                 o_distance = this->round_dist(index, first_slot);
-                assert(o_distance == (distance + std::uint8_t(group_type::pos(pos))));
+                assert(o_distance == (distance + group_type::pos(pos)));
                 return this->round_index(index);
             }
             distance += kGroupWidth;
@@ -3075,7 +3057,7 @@ private:
         std::uint8_t distance;
         std::uint8_t ctrl_hash;
         size_type target = this->unique_prepare_insert(slot->value.first,
-                                                       ctrl_hash, distance);
+                                                       distance, ctrl_hash);
         assert(target != npos);
         bool is_full = false;
 
@@ -3083,10 +3065,10 @@ private:
         if (ctrl->isEmpty()) {
             // Found [EmptyEntry] to insert
             assert(ctrl->isEmpty());
-            this->setUsedCtrl(target, ctrl_hash, distance);
+            this->setUsedCtrl(target, distance, ctrl_hash);
         } else {
             // Insert to target place
-            is_full = this->insert_to_place<true>(target, ctrl_hash, distance);
+            is_full = this->insert_to_place<true>(target, distance, ctrl_hash);
             assert(is_full == false);
         }
 
@@ -3112,10 +3094,10 @@ private:
         if (ctrl->isEmpty()) {
             // Found [EmptyEntry] to insert
             assert(ctrl->isEmpty());
-            this->setUsedCtrl(target, ctrl_hash, distance);
+            this->setUsedCtrl(target, distance, ctrl_hash);
         } else {
             // Insert to target place
-            bool is_full = this->insert_to_place<false>(target, ctrl_hash, distance);
+            bool is_full = this->insert_to_place<false>(target, distance, ctrl_hash);
             if (is_full) {
                 this->grow_if_necessary();
                 this->insert_unique(value);
@@ -3143,10 +3125,10 @@ private:
         if (ctrl->isEmpty()) {
             // Found [EmptyEntry] to insert
             assert(ctrl->isEmpty());
-            this->setUsedCtrl(target, ctrl_hash, distance);
+            this->setUsedCtrl(target, distance, ctrl_hash);
         } else {
             // Insert to target place
-            bool is_full = this->insert_to_place<false>(target, ctrl_hash, distance);
+            bool is_full = this->insert_to_place<false>(target, distance, ctrl_hash);
             if (is_full) {
                 this->grow_if_necessary();
                 this->insert_unique(std::forward<value_type>(value));
