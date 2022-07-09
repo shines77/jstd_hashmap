@@ -1769,7 +1769,7 @@ private:
 
     inline std::uint8_t get_ctrl_hash(hash_code_t hash_code) const noexcept {
         std::uint8_t ctrl_hash = static_cast<std::uint8_t>(
-                this-this>get_third_hash((size_type)hash_code) & kControlHashMask);
+                this->get_third_hash((size_type)hash_code) & kControlHashMask);
         return ctrl_hash;
     }
 
