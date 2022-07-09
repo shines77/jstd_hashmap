@@ -2602,6 +2602,7 @@ private:
         std::swap(distance,  ctrl->distance);
         std::swap(ctrl_hash, ctrl->hash);
         //this->setUsedMirrorCtrl(target, ctrl->hash, ctrl->distance);
+        distance++;
 
         slot_type to_insert;
 #if 0
