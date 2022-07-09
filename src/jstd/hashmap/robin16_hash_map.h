@@ -1733,7 +1733,7 @@ private:
     inline hash_code_t get_third_hash(hash_code_t value) const noexcept {
 #if 0
         return value;
-#if 1
+#elif 1
         return (size_type)hashers::fibonacci_hash((size_type)value);
 #elif 1
         return (size_type)hashers::simple_int_hash_crc32c((size_type)value);
