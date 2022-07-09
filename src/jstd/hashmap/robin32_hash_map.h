@@ -209,11 +209,11 @@ public:
         ~control_data() = default;
 
         bool isEmpty() const {
-            return (this->distance < kEndOfMark);
+            return (this->distance >= kEndOfMark);
         }
 
         static bool isEmpty(std::uint8_t tag) {
-            return (tag < kEndOfMark);
+            return (tag >= kEndOfMark);
         }
 
         bool isEmptyOnly() const {
