@@ -1714,7 +1714,9 @@ private:
     }
 
     inline hash_code_t get_second_hash(hash_code_t value) const noexcept {
-#if 0
+#if 1
+        return value;
+#elif 1
         return (size_type)hashers::fibonacci_hash((size_type)value);
 #elif 1
         return (size_type)hashers::int_hash_crc32c((size_type)value);
@@ -1725,6 +1727,16 @@ private:
         else
             hash_code = (hash_code_t)(((std::uint64_t)value * 14695981039346656037ull) >> 28);
         return hash_code;
+#endif
+    }
+
+    inline hash_code_t get_third_hash(hash_code_t value) const noexcept {
+#if 0
+        return value;
+#if 1
+        return (size_type)hashers::fibonacci_hash((size_type)value);
+#elif 1
+        return (size_type)hashers::simple_int_hash_crc32c((size_type)value);
 #endif
     }
 
@@ -1756,7 +1768,8 @@ private:
     }
 
     inline std::uint8_t get_ctrl_hash(hash_code_t hash_code) const noexcept {
-        std::uint8_t ctrl_hash = static_cast<std::uint8_t>(hash_code & kControlHashMask);
+        std::uint8_t ctrl_hash = static_cast<std::uint8_t>(
+                this-this>get_third_hash((size_type)hash_code) & kControlHashMask);
         return ctrl_hash;
     }
 
