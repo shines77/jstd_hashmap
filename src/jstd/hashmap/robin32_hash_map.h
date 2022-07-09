@@ -474,7 +474,7 @@ public:
             __m256i dist_value = _mm256_set1_epi16(distance);
             __m256i hash_bits  = _mm256_set1_epi16(ctrl_hash);
             __m256i empty_bits = _mm256_set1_epi16(kEmptyEntry);
-            __m256i dist_bits  = _mm256_add_epi16(kDistanceBase, dist_value);
+            __m256i dist_bits  = _mm256_adds_epi16(kDistanceBase, dist_value);
             __m256i low_bits   = _mm256_and_si256(ctrl_bits, kLowMask16);
             __m256i high_bits  = _mm256_srli_epi16(ctrl_bits, 8);
             __m256i empty_mask = _mm256_cmpeq_epi16(empty_bits, low_bits);
@@ -517,7 +517,7 @@ public:
             __m256i dist_value = _mm256_set1_epi16(distance);
             __m256i empty_bits = _mm256_set1_epi16(kEmptyEntry);
             __m256i low_bits   = _mm256_and_si256(ctrl_bits, kLowMask16);
-            __m256i dist_bits  = _mm256_add_epi16(kDistanceBase, dist_value);
+            __m256i dist_bits  = _mm256_adds_epi16(kDistanceBase, dist_value);
             __m256i empty_mask = _mm256_cmpeq_epi16(low_bits, empty_bits);
             __m256i dist_mask  = _mm256_cmpgt_epi16(dist_bits, low_bits);
             __m256i result_mask = _mm256_or_si256(empty_mask, dist_mask);
@@ -665,7 +665,7 @@ public:
             __m256i dist_value = _mm256_set1_epi16(distance);
             __m256i hash_bits  = _mm256_set1_epi16(ctrl_hash);
             __m256i empty_bits = _mm256_set1_epi16(kEmptyEntry);
-            __m256i dist_bits  = _mm256_add_epi16(kDistanceBase, dist_value);
+            __m256i dist_bits  = _mm256_adds_epi16(kDistanceBase, dist_value);
             __m256i low_bits   = _mm256_and_si256(ctrl_bits, kLowMask16);
             __m256i high_bits  = _mm256_srli_epi16(ctrl_bits, 8);
             __m256i empty_mask = _mm256_cmpeq_epi16(empty_bits, low_bits);
@@ -711,7 +711,7 @@ public:
             __m256i dist_value = _mm256_set1_epi16(distance);
             __m256i empty_bits = _mm256_set1_epi16(kEmptyEntry);
             __m256i low_bits   = _mm256_and_si256(ctrl_bits, kLowMask16);
-            __m256i dist_bits  = _mm256_add_epi16(kDistanceBase, dist_value);
+            __m256i dist_bits  = _mm256_adds_epi16(kDistanceBase, dist_value);
             __m256i empty_mask = _mm256_cmpeq_epi16(low_bits, empty_bits);
             __m256i dist_mask  = _mm256_cmpgt_epi16(dist_bits, low_bits);
             __m256i result_mask = _mm256_or_si256(empty_mask, dist_mask);
@@ -1714,10 +1714,10 @@ private:
     }
 
     inline hash_code_t get_second_hash(hash_code_t value) const noexcept {
-#if 1
-        return value;
+#if 0
+        return (size_type)hashers::fibonacci_hash((size_type)value);
 #elif 1
-        return (size_type)hashers::simple_int_hash_crc32c((size_type)value);
+        return (size_type)hashers::int_hash_crc32c((size_type)value);
 #else
         hash_code_t hash_code;
         if (sizeof(size_type) == 4)
@@ -1726,6 +1726,33 @@ private:
             hash_code = (hash_code_t)(((std::uint64_t)value * 14695981039346656037ull) >> 28);
         return hash_code;
 #endif
+    }
+
+    inline size_type index_salt() const noexcept {
+        return (size_type)((std::uintptr_t)this->groups() >> 12);
+    }
+
+    inline size_type index_for_hash(hash_code_t hash_code) const noexcept {
+        if (kUseIndexSalt)
+            return ((this->get_second_hash((size_type)hash_code) ^ this->index_salt()) & this->slot_mask());
+        else
+            return  (this->get_second_hash((size_type)hash_code) & this->slot_mask());
+    }
+
+    inline size_type index_for_hash(hash_code_t hash_code, size_type slot_mask) const noexcept {
+        assert(pow2::is_pow2(slot_mask + 1));
+        if (kUseIndexSalt)
+            return ((this->get_second_hash((size_type)hash_code) ^ this->index_salt()) & slot_mask);
+        else
+            return  (this->get_second_hash((size_type)hash_code) & slot_mask);
+    }
+
+    inline size_type next_index(size_type index) const noexcept {
+        return ((index + 1) & this->slot_mask());
+    }
+
+    inline size_type next_index(size_type index, size_type slot_mask) const noexcept {
+        return ((index + 1) & slot_mask);
     }
 
     inline std::uint8_t get_ctrl_hash(hash_code_t hash_code) const noexcept {
@@ -1747,39 +1774,10 @@ private:
 #if 1
         assert(distance < (size_type)kEndOfMark);
         return (std::uint8_t)distance;
-#elif 0
-        return ((distance != (size_type)kEmptyEntry) ? std::uint8_t(distance) : 0);
 #else
         assert(distance < (size_type)kEndOfMark);
         return ((distance < (size_type)kEndOfMark) ? std::uint8_t(distance) : (kEndOfMark - 1));
 #endif
-    }
-
-    inline size_type index_salt() const noexcept {
-        return (size_type)((std::uintptr_t)this->groups() >> 12);
-    }
-
-    inline size_type index_for_hash(hash_code_t hash_code) const noexcept {
-        if (kUseIndexSalt)
-            return ((hashers::fibonacci_hash((size_type)hash_code) ^ this->index_salt()) & this->slot_mask());
-        else
-            return  (hashers::fibonacci_hash((size_type)hash_code) & this->slot_mask());
-    }
-
-    inline size_type index_for_hash(hash_code_t hash_code, size_type slot_mask) const noexcept {
-        assert(pow2::is_pow2(slot_mask + 1));
-        if (kUseIndexSalt)
-            return ((hashers::fibonacci_hash((size_type)hash_code) ^ this->index_salt()) & slot_mask);
-        else
-            return  (hashers::fibonacci_hash((size_type)hash_code) & slot_mask);
-    }
-
-    inline size_type next_index(size_type index) const noexcept {
-        return ((index + 1) & this->slot_mask());
-    }
-
-    inline size_type next_index(size_type index, size_type slot_mask) const noexcept {
-        return ((index + 1) & slot_mask);
     }
 
     inline size_type prev_group(size_type group_index) const noexcept {
@@ -2283,8 +2281,7 @@ private:
 
     size_type find_impl(const key_type & key) const {
         hash_code_t hash_code = this->get_hash(key);
-        hash_code_t hash_code_2nd = this->get_second_hash(hash_code);
-        std::uint8_t ctrl_hash = this->get_ctrl_hash(hash_code_2nd);
+        std::uint8_t ctrl_hash = this->get_ctrl_hash(hash_code);
         size_type slot_index = this->index_for_hash(hash_code);
         size_type start_slot = slot_index;
         std::uint8_t distance = 0;
@@ -2348,9 +2345,8 @@ private:
     size_type find_impl(const key_type & key, size_type & first_slot, size_type & last_slot,
                         std::uint8_t & o_distance, std::uint8_t & o_ctrl_hash) const {
         hash_code_t hash_code = this->get_hash(key);
-        hash_code_t hash_code_2nd = this->get_second_hash(hash_code);
-        std::uint8_t ctrl_hash = this->get_ctrl_hash(hash_code_2nd);
         size_type slot_index = this->index_for_hash(hash_code);
+        std::uint8_t ctrl_hash = this->get_ctrl_hash(hash_code);
         size_type start_slot = slot_index;
         std::uint8_t distance = 0;
         first_slot = start_slot;
@@ -2426,9 +2422,8 @@ private:
     size_type find_first_empty_slot(const key_type & key, std::uint8_t & o_distance,
                                                           std::uint8_t & o_ctrl_hash) {
         hash_code_t hash_code = this->get_hash(key);
-        hash_code_t hash_code_2nd = this->get_second_hash(hash_code);
-        std::uint8_t ctrl_hash = this->get_ctrl_hash(hash_code_2nd);
         size_type slot_index = this->index_for_hash(hash_code);
+        std::uint8_t ctrl_hash = this->get_ctrl_hash(hash_code);
         size_type first_slot = slot_index;
         o_ctrl_hash = ctrl_hash;
 
@@ -2472,9 +2467,8 @@ private:
     find_and_prepare_insert(const key_type & key, std::uint8_t & o_distance,
                                                   std::uint8_t & o_ctrl_hash) {
         hash_code_t hash_code = this->get_hash(key);
-        hash_code_t hash_code_2nd = this->get_second_hash(hash_code);
-        std::uint8_t ctrl_hash = this->get_ctrl_hash(hash_code_2nd);
         size_type slot_index = this->index_for_hash(hash_code);
+        std::uint8_t ctrl_hash = this->get_ctrl_hash(hash_code);
         size_type first_slot = slot_index;
         size_type last_slot = npos;
         std::uint8_t distance = 0;
@@ -3003,9 +2997,8 @@ private:
     size_type unique_prepare_insert(const key_type & key, std::uint8_t & o_distance,
                                                           std::uint8_t & o_ctrl_hash) {
         hash_code_t hash_code = this->get_hash(key);
-        hash_code_t hash_code_2nd = this->get_second_hash(hash_code);
-        std::uint8_t ctrl_hash = this->get_ctrl_hash(hash_code_2nd);
         size_type slot_index = this->index_for_hash(hash_code);
+        std::uint8_t ctrl_hash = this->get_ctrl_hash(hash_code);
         size_type first_slot = slot_index;
         std::uint8_t distance = 0;
         o_ctrl_hash = ctrl_hash;
@@ -3159,9 +3152,8 @@ private:
     JSTD_FORCED_INLINE
     size_type find_and_erase(const key_type & key) {
         hash_code_t hash_code = this->get_hash(key);
-        hash_code_t hash_code_2nd = this->get_second_hash(hash_code);
-        std::uint8_t ctrl_hash = this->get_ctrl_hash(hash_code_2nd);
         size_type slot_index = this->index_for_hash(hash_code);
+        std::uint8_t ctrl_hash = this->get_ctrl_hash(hash_code);
         size_type start_slot = slot_index;
         std::uint8_t distance = 0;
 
