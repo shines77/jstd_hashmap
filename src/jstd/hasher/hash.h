@@ -230,6 +230,26 @@ See:
 
 namespace hashers {
 
+//
+// Fibonacci hash
+//
+// See: http://www.javashuo.com/article/p-tklmqgvw-hx.html
+// See: https://zhuanlan.zhihu.com/p/141797134
+// See: https://www.jianshu.com/p/421aa9480e42
+//
+// 2^32 * 0.6180339887 = 2654435769.2829335552
+//
+static inline
+std::size_t fibonacci_hash32(std::size_t value)
+{
+    std::size_t hash_code = static_cast<std::size_t>(
+        (static_cast<std::uint64_t>(value) * 2654435769ul) >> 28);
+    return hash_code;
+}
+
+//
+// 2^64 * 0.6180339887 = 11400714818402800990.5250107392
+//
 static inline
 std::size_t fibonacci_hash(std::size_t value)
 {

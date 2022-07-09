@@ -121,7 +121,7 @@ public:
     typedef robin32_hash_map<Key, Value, Hash, KeyEqual, Allocator>
                                                     this_type;
 
-    static constexpr bool kUseUnrollLoop = true;
+    static constexpr bool kUseUnrollLoop = false;
     static constexpr bool kUseIndexSalt = false;
 
     static constexpr size_type npos = size_type(-1);
@@ -209,10 +209,18 @@ public:
         ~control_data() = default;
 
         bool isEmpty() const {
-            return (this->distance == kEmptyEntry);
+            return (this->distance < kEndOfMark);
         }
 
         static bool isEmpty(std::uint8_t tag) {
+            return (tag < kEndOfMark);
+        }
+
+        bool isEmptyOnly() const {
+            return (this->distance == kEmptyEntry);
+        }
+
+        static bool isEmptyOnly(std::uint8_t tag) const {
             return (tag == kEmptyEntry);
         }
 
@@ -229,19 +237,19 @@ public:
         }
 
         bool isUsed() const {
-            return (this->distance < kEmptyEntry);
+            return (this->distance < kEndOfMark);
         }
 
         static bool isUsed(std::uint8_t tag) {
-            return (tag < kEmptyEntry);
+            return (tag < kEndOfMark);
         }
 
         bool isUnused() const {
-            return (this->distance >= kEmptyEntry);
+            return (this->distance >= kEndOfMark);
         }
 
         static bool isUnused(std::uint8_t tag) {
-            return (tag >= kEmptyEntry);
+            return (tag >= kEndOfMark);
         }
 
         void setHash(std::uint8_t ctrl_hash) {
@@ -555,7 +563,7 @@ public:
             const __m256i kDistanceBase =
                 _mm256_setr_epi16(0x0000, 0x0001, 0x0002, 0x0003, 0x0004, 0x0005, 0x0006, 0x0007,
                                   0x0008, 0x0009, 0x000A, 0x000B, 0x000C, 0x000D, 0x000E, 0x000F);
-            if (distance > 128)
+            if (distance > kDistLimit)
                 distance = distance;
             __m256i ctrl_bits  = _mm256_loadu_si256((const __m256i *)data);
             __m256i dist_value = _mm256_set1_epi16(distance);
@@ -829,7 +837,7 @@ public:
             do {
                 ++(this->ctrl_);
                 ++(this->slot_);
-            } while (ctrl_->isEmpty());
+            } while (ctrl_->isEmptyOnly());
             return *this;
         }
 
