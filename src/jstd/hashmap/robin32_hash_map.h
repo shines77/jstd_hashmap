@@ -220,7 +220,7 @@ public:
             return (this->distance == kEmptyEntry);
         }
 
-        static bool isEmptyOnly(std::uint8_t tag) const {
+        static bool isEmptyOnly(std::uint8_t tag) {
             return (tag == kEmptyEntry);
         }
 
