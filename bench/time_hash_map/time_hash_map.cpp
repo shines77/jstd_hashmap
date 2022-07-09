@@ -83,7 +83,7 @@
 
 #define USE_STD_UNORDERED_MAP       1
 #define USE_JSTD_FLAT16_HASH_MAP    1
-#define USE_JSTD_ROBIN32_HASH_MAP   1
+#define USE_JSTD_ROBIN16_HASH_MAP   1
 
 /* SIMD support features */
 #define JSTD_HAVE_MMX           1
@@ -132,8 +132,8 @@
 #if USE_JSTD_FLAT16_HASH_MAP
 #include <jstd/hashmap/flat16_hash_map.h>
 #endif
-#if USE_JSTD_ROBIN32_HASH_MAP
-#include <jstd/hashmap/robin32_hash_map.h>
+#if USE_JSTD_ROBIN16_HASH_MAP
+#include <jstd/hashmap/robin16_hash_map.h>
 #endif
 #include <jstd/hashmap/hashmap_analyzer.h>
 #include <jstd/hasher/hash_helper.h>
@@ -202,7 +202,7 @@ static const bool FLAGS_test_std_hash_map = false;
 #endif
 static const bool FLAGS_test_std_unordered_map = true;
 static const bool FLAGS_test_jstd_flat16_hash_map = true;
-static const bool FLAGS_test_jstd_robin32_hash_map = true;
+static const bool FLAGS_test_jstd_robin16_hash_map = true;
 static const bool FLAGS_test_map = true;
 
 static const bool FLAGS_test_4_bytes = true;
@@ -1433,13 +1433,13 @@ static void test_all_hashmaps(std::size_t obj_size, std::size_t iters) {
 #endif
 
 #if USE_JSTD_FLAT16_HASH_MAP
-    if (FLAGS_test_jstd_robin32_hash_map) {
-        typedef jstd::robin32_hash_map<HashObj, Value, HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>> robin32_hash_map;
-        measure_hashmap<jstd::robin32_hash_map<HashObj,   Value, HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>,
-                        jstd::robin32_hash_map<HashObj *, Value, HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>
+    if (FLAGS_test_jstd_robin16_hash_map) {
+        typedef jstd::robin16_hash_map<HashObj, Value, HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>> robin16_hash_map;
+        measure_hashmap<jstd::robin16_hash_map<HashObj,   Value, HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>,
+                        jstd::robin16_hash_map<HashObj *, Value, HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>
                         >(
-            "jstd::robin32_hash_map<K, V>", obj_size,
-            sizeof(typename robin32_hash_map::node_type), iters, has_stress_hash_function);
+            "jstd::robin16_hash_map<K, V>", obj_size,
+            sizeof(typename robin16_hash_map::node_type), iters, has_stress_hash_function);
     }
 #endif
 }

@@ -85,7 +85,7 @@
 
 #define USE_STD_UNORDERED_MAP       1
 #define USE_JSTD_FLAT16_HASH_MAP    1
-#define USE_JSTD_ROBIN32_HASH_MAP   1
+#define USE_JSTD_ROBIN16_HASH_MAP   1
 #define USE_SKA_FLAT_HASH_MAP       0
 #define USE_SKA_BYTELL_HASH_MAP     0
 #define USE_ABSL_FLAT_HASH_MAP      0
@@ -127,8 +127,8 @@
 #if USE_JSTD_FLAT16_HASH_MAP
 #include <jstd/hashmap/flat16_hash_map.h>
 #endif
-#if USE_JSTD_ROBIN32_HASH_MAP
-#include <jstd/hashmap/robin32_hash_map.h>
+#if USE_JSTD_ROBIN16_HASH_MAP
+#include <jstd/hashmap/robin16_hash_map.h>
 #endif
 #include <jstd/hashmap/hashmap_analyzer.h>
 #include <jstd/hasher/hash_helper.h>
@@ -414,7 +414,7 @@ void benchmark_insert_random_impl()
     std::string name0, name1, name2;
     name0 = get_hashmap_name<Key, Value>("std::unordered_map<%s, %s>");
     name1 = get_hashmap_name<Key, Value>("jstd::flat16_hash_map<%s, %s>");
-    name2 = get_hashmap_name<Key, Value>("jstd::robin32_hash_map<%s, %s>");
+    name2 = get_hashmap_name<Key, Value>("jstd::robin16_hash_map<%s, %s>");
 
     std::vector<Key> keys;
     generate_random_keys<Key>(keys, DataSize, Cardinal);
@@ -425,8 +425,8 @@ void benchmark_insert_random_impl()
 #if USE_JSTD_FLAT16_HASH_MAP
     run_insert_random<jstd::flat16_hash_map<Key, Value>> (name1, keys, Cardinal);
 #endif
-#if USE_JSTD_ROBIN32_HASH_MAP
-    run_insert_random<jstd::robin32_hash_map<Key, Value>>(name2, keys, Cardinal);
+#if USE_JSTD_ROBIN16_HASH_MAP
+    run_insert_random<jstd::robin16_hash_map<Key, Value>>(name2, keys, Cardinal);
 #endif
 }
 
@@ -477,7 +477,7 @@ void benchmark_SimpleHash_insert_random_impl()
     std::string name0, name1, name2;
     name0 = get_hashmap_name<Key, Value>("std::unordered_map<%s, %s>");
     name1 = get_hashmap_name<Key, Value>("jstd::flat16_hash_map<%s, %s>");
-    name2 = get_hashmap_name<Key, Value>("jstd::robin32_hash_map<%s, %s>");
+    name2 = get_hashmap_name<Key, Value>("jstd::robin16_hash_map<%s, %s>");
 
     std::vector<Key> keys;
     generate_random_keys<Key>(keys, DataSize, Cardinal);
@@ -488,8 +488,8 @@ void benchmark_SimpleHash_insert_random_impl()
 #if USE_JSTD_FLAT16_HASH_MAP
     run_insert_random<jstd::flat16_hash_map<Key, Value, test::SimpleHash<Key>>> (name1, keys, Cardinal);
 #endif
-#if USE_JSTD_ROBIN32_HASH_MAP
-    run_insert_random<jstd::robin32_hash_map<Key, Value, test::SimpleHash<Key>>>(name2, keys, Cardinal);
+#if USE_JSTD_ROBIN16_HASH_MAP
+    run_insert_random<jstd::robin16_hash_map<Key, Value, test::SimpleHash<Key>>>(name2, keys, Cardinal);
 #endif
 }
 
