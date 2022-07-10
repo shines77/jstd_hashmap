@@ -690,6 +690,7 @@ public:
             if (distance > kDistLimit)
                 distance = distance;
             assert(distance < kEmptyEntry);
+            __m256i ctrl_bits  = _mm256_loadu_si256((const __m256i *)data);
             __m256i dist_value = _mm256_set1_epi16(distance);
             __m256i hash_bits  = _mm256_set1_epi16(ctrl_hash);
             __m256i empty_bits = _mm256_set1_epi16(kEmptyEntry);
