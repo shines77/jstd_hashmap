@@ -1895,6 +1895,16 @@ private:
         return (this->controls() + slot_index);
     }
 
+    inline control_type * next_control(size_type & slot_index) noexcept {
+        slot_index = this->next_index(slot_index);
+        return this->control_at(slot_index);
+    }
+
+    inline const control_type * next_control(size_type & slot_index) const noexcept {
+        slot_index = this->next_index(slot_index);
+        return this->control_at(slot_index);
+    }
+
     group_type * group_at(size_type slot_index) noexcept {
         assert(slot_index < this->slot_capacity());
         return (group_type *)(this->control_at(slot_index));
@@ -2142,7 +2152,7 @@ private:
     void create_group(size_type init_capacity) {
         size_type new_capacity;
         if (initialize)
-            new_capacity = calc_capacity(init_capacity);
+            new_capacity = this->calc_capacity(init_capacity);
         else
             new_capacity = init_capacity;
         assert(new_capacity > 0);
@@ -2344,11 +2354,24 @@ private:
             } else {
                 return npos;
             }
+
+            ctrl = this->next_control(slot_index);
+            // Optimization: merging two comparisons
+            if (likely(std::uint8_t(ctrl->distance + 1) > 1)) {
+            //if (likely(ctrl->isUsed() && (ctrl->distance >= 1))) {
+                if (ctrl->hash == ctrl_hash) {
+                    const slot_type * slot = this->slot_at(slot_index);
+                    if (this->key_equal_(slot->value.first, key)) {
+                        return slot_index;
+                    }
+                }
+            } else {
+                return npos;
+            }
             
-            distance = 1;
+            distance = 2;
             do {
-                slot_index = this->next_index(slot_index);
-                ctrl = this->control_at(slot_index);
+                ctrl = this->next_control(slot_index);
                 // Optimization: merging two comparisons
                 if (likely(std::uint8_t(ctrl->distance + 1) > distance)) {
                 //if (likely(ctrl->isUsed() && (ctrl->distance >= distance))) {
@@ -2420,8 +2443,8 @@ private:
             } else {
                 return npos;
             }
-            slot_index = this->next_index(slot_index);
-            ctrl = this->control_at(slot_index);
+
+            ctrl = this->next_control(slot_index);
             if (likely(ctrl->isUsed() && (ctrl->distance >= 1))) {
                 if (ctrl->hash == ctrl_hash) {
                     const slot_type * slot = this->slot_at(slot_index);
@@ -2488,8 +2511,7 @@ private:
                 return slot_index;
             }
 
-            slot_index = this->next_index(slot_index);
-            ctrl = this->control_at(slot_index);
+            ctrl = this->next_control(slot_index);
             if (likely(ctrl->isEmpty())) {
                 o_distance = 1;
                 return slot_index;
@@ -2553,10 +2575,31 @@ private:
                 return { slot_index, false };
             }
 
-            distance = 1;
+            ctrl = this->next_control(slot_index);
+            // Optimization: merging two comparisons
+            if (likely(std::uint8_t(ctrl->distance + 1) > 1)) {
+            //if (likely(ctrl->isUsed() && (ctrl->distance >= 1))) {
+                if (ctrl->hash == ctrl_hash) {
+                    slot_type * slot = this->slot_at(slot_index);
+                    if (this->key_equal_(slot->value.first, key)) {
+                        o_distance = 1;
+                        return { slot_index, true };
+                    }
+                }
+            } else {
+                if (this->need_grow()) {
+                    // The size of slot reach the slot threshold or hashmap is full.
+                    this->grow_if_necessary();
+
+                    return this->find_and_prepare_insert(key, o_distance, o_ctrl_hash);
+                }
+                o_distance = 1;
+                return { slot_index, false };
+            }
+
+            distance = 2;
             do {
-                slot_index = this->next_index(slot_index);
-                ctrl = this->control_at(slot_index);
+                ctrl = this->next_control(slot_index);
                 // Optimization: merging two comparisons
                 if (likely(std::uint8_t(ctrl->distance + 1) > distance)) {
                 //if (likely(ctrl->isUsed() && (ctrl->distance >= distance))) {
@@ -2644,21 +2687,11 @@ private:
 
         slot_type to_insert;
         this->placement_new_slot(&to_insert);
-#if 0
-        if (kIsCompatibleLayout) {
-            to_insert.mutable_value = mutable_value_type();
-        } else {
-            to_insert.value = value_type();
-        }
-        slot_type * target_slot = this->slot_at(target);
-        this->swap_slot(target_slot, &to_insert);
-#else
         if (kIsCompatibleLayout) {
             to_insert.mutable_value = std::move(this->slot_at(target)->mutable_value);
         } else {
             to_insert.value = std::move(this->slot_at(target)->value);
         }
-#endif
         if (is_slot_trivial_destructor) {
             this->destroy_mutable_slot(target);
         }
@@ -3074,8 +3107,7 @@ private:
                 return slot_index;
             }
 
-            slot_index = this->next_index(slot_index);
-            ctrl = this->control_at(slot_index);
+            ctrl = this->next_control(slot_index);
             // Optimization: merging two comparisons
             if (likely(std::uint8_t(ctrl->distance + 1) < 2)) {
             //if (likely(ctrl->isEmpty() || (ctrl->distance < 1))) {
@@ -3083,8 +3115,7 @@ private:
                 return slot_index;
             }
 
-            slot_index = this->next_index(slot_index);
-            ctrl = this->control_at(slot_index);
+            ctrl = this->next_control(slot_index);
             // Optimization: merging two comparisons
             if (likely(std::uint8_t(ctrl->distance + 1) < 3)) {
             //if (likely(ctrl->isEmpty() || (ctrl->distance < 2))) {
@@ -3092,8 +3123,7 @@ private:
                 return slot_index;
             }
 
-            slot_index = this->next_index(slot_index);
-            ctrl = this->control_at(slot_index);
+            ctrl = this->next_control(slot_index);
             // Optimization: merging two comparisons
             if (likely(std::uint8_t(ctrl->distance + 1) < 4)) {
             //if (likely(ctrl->isEmpty() || (ctrl->distance < 3))) {
