@@ -81,8 +81,8 @@
 #include <vector>
 #include <algorithm>
 
-#define USE_STD_UNORDERED_MAP       0
-#define USE_JSTD_FLAT16_HASH_MAP    0
+#define USE_STD_UNORDERED_MAP       1
+#define USE_JSTD_FLAT16_HASH_MAP    1
 #define USE_JSTD_ROBIN16_HASH_MAP   1
 
 /* SIMD support features */
@@ -1363,26 +1363,26 @@ static void measure_hashmap(const char * name, std::size_t obj_size, std::size_t
     }
     if (1) printf("\n");
 
-    if (0) time_map_find_sequential<MapType>(iters);
-    if (0) time_map_find_random<MapType>(iters);
-    if (0) time_map_find_failed<MapType>(iters);
-    if (0) time_map_find_empty<MapType>(iters);
-    if (0) printf("\n");
+    if (1) time_map_find_sequential<MapType>(iters);
+    if (1) time_map_find_random<MapType>(iters);
+    if (1) time_map_find_failed<MapType>(iters);
+    if (1) time_map_find_empty<MapType>(iters);
+    if (1) printf("\n");
 
-    if (0) time_map_insert<MapType>(iters);
-    if (0) time_map_insert_predicted<MapType>(iters);
-    if (0) time_map_insert_replace<MapType>(iters);
-    if (0) printf("\n");
+    if (1) time_map_insert<MapType>(iters);
+    if (1) time_map_insert_predicted<MapType>(iters);
+    if (1) time_map_insert_replace<MapType>(iters);
+    if (1) printf("\n");
 
-    if (0) time_map_emplace<MapType>(iters);
-    if (0) time_map_emplace_predicted<MapType>(iters);
-    if (0) time_map_emplace_replace<MapType>(iters);
-    if (0) printf("\n");
+    if (1) time_map_emplace<MapType>(iters);
+    if (1) time_map_emplace_predicted<MapType>(iters);
+    if (1) time_map_emplace_replace<MapType>(iters);
+    if (1) printf("\n");
 
-    if (0) time_map_operator_at<MapType>(iters);
-    if (0) time_map_operator_at_predicted<MapType>(iters);
-    if (0) time_map_operator_at_replace<MapType>(iters);
-    if (0) printf("\n");
+    if (1) time_map_operator_at<MapType>(iters);
+    if (1) time_map_operator_at_predicted<MapType>(iters);
+    if (1) time_map_operator_at_replace<MapType>(iters);
+    if (1) printf("\n");
 
     if (1) time_map_erase<MapType>(iters);
     if (1) time_map_erase_failed<MapType>(iters);
