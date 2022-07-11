@@ -143,51 +143,6 @@ struct BitUtils {
         return (int)__internal_popcnt64((x & -(int64_t)x) - 1);
     }
 
-#ifdef _MSC_VER
-#pragma warning (push)
-#pragma warning (disable: 4146)
-#endif
-
-    //
-    // The least significant 1 bit (LSB)
-    //
-    static inline uint32_t ls1b32(uint32_t x) {
-        return (x & (uint32_t)-x);
-    }
-
-    static inline uint64_t ls1b64(uint64_t x) {
-        return (x & (uint64_t)-x);
-    }
-
-    static inline size_t ls1b(size_t x) {
-        return (x & (size_t)-x);
-    }
-
-    //
-    // The most significant 1 bit (MSB)
-    //
-    // TODO: ms1b32(), ms1b64(), ms1b()
-    //
-
-    //
-    // Clear the least significant 1 bit (LSB)
-    //
-    static inline uint32_t clearLowBit32(uint32_t x) {
-        return (x & (uint32_t)(x - 1));
-    }
-
-    static inline uint64_t clearLowBit64(uint64_t x) {
-        return (x & (uint64_t)(x - 1));
-    }
-
-    static inline size_t clearLowBit(size_t x) {
-        return (x & (size_t)(x - 1));
-    }
-
-#ifdef _MSC_VER
-#pragma warning (pop)
-#endif
-
 #if (defined(_MSC_VER) && (_MSC_VER >= 1500)) && !defined(__clang__)
 
     static inline
@@ -349,7 +304,7 @@ struct BitUtils {
     }
 #endif // (JSTD_WORD_LEN == 64)
 
-#else
+#else // !(_MSC_VER && _MSC_VER >= 1500)
 
     static inline
     unsigned int bsf32(unsigned int x) {
@@ -376,6 +331,26 @@ struct BitUtils {
     }
 
 #endif // (_MSC_VER && _MSC_VER >= 1500)
+
+    static inline
+    unsigned int countTrailingZeros32(unsigned int x) {
+        return bsf32(x);
+    }
+
+    static inline
+    unsigned int countTrailingZeros64(uint64_t x) {
+        return bsf64(x);
+    }
+
+    static inline
+    unsigned int countLeadingZeros32(unsigned int x) {
+        return (unsigned int)(31u - bsr32(x));
+    }
+
+    static inline
+    unsigned int countLeadingZeros64(uint64_t x) {
+        return (unsigned int)(63u - bsr64(x));
+    }
 
     static inline
     unsigned int popcnt32(unsigned int x) {
@@ -431,6 +406,24 @@ struct BitUtils {
     }
 
     static inline
+    unsigned int countTrailingZeros(size_t x) {
+#if (JSTD_WORD_LEN == 64)
+        return BitUtils::countTrailingZeros64(x);
+#else
+        return BitUtils::countTrailingZeros32(x);
+#endif
+    }
+
+    static inline
+    unsigned int countLeadingZeros(size_t x) {
+#if (JSTD_WORD_LEN == 64)
+        return BitUtils::countLeadingZeros64(x);
+#else
+        return BitUtils::countLeadingZeros32(x);
+#endif
+    }
+
+    static inline
     unsigned int popcnt(size_t x) {
 #if (JSTD_WORD_LEN == 64)
         return BitUtils::popcnt64(x);
@@ -438,6 +431,79 @@ struct BitUtils {
         return BitUtils::popcnt32(x);
 #endif
     }
+
+#ifdef _MSC_VER
+#pragma warning (push)
+#pragma warning (disable: 4146)
+#endif
+
+    //
+    // The least significant 1 bit (LSB)
+    //
+    static inline uint32_t ls1b32(uint32_t x) {
+        return (x & (uint32_t)-x);
+    }
+
+    static inline uint64_t ls1b64(uint64_t x) {
+        return (x & (uint64_t)-x);
+    }
+
+    static inline size_t ls1b(size_t x) {
+        return (x & (size_t)-x);
+    }
+
+    //
+    // The most significant 1 bit (MSB)
+    //
+    static inline uint32_t ms1b32(uint32_t x) {
+        return (x != 0) ? (uint32_t)(1ul << bsr32(x)) : 0;
+    }
+
+    static inline uint64_t ms1b64(uint64_t x) {
+        return (x != 0) ? (uint64_t)(1ull << bsr64(x)) : 0;
+    }
+
+    static inline size_t ms1b(size_t x) {
+        return (x != 0) ? ((size_t)(1u) << bsr(x)) : 0;
+    }
+
+    //
+    // Clear the least significant 1 bit (LSB)
+    //
+    static inline uint32_t clearLowBit32(uint32_t x) {
+        return (x & (uint32_t)(x - 1));
+    }
+
+    static inline uint64_t clearLowBit64(uint64_t x) {
+        return (x & (uint64_t)(x - 1));
+    }
+
+    static inline size_t clearLowBit(size_t x) {
+        return (x & (size_t)(x - 1));
+    }
+
+    //
+    // log2_int()
+    //
+    static inline uint32_t log2_32(uint32_t n) {
+        return (n > 1) ? (uint32_t)(bsr32(n - 1) + 1) : n;
+    }
+
+    static inline uint64_t log2_64(uint64_t n) {
+        return (n > 1) ? (uint64_t)(bsr64(n - 1) + 1) : n;
+    }
+
+    static inline size_t log2_int(size_t n) {
+#if (JSTD_WORD_LEN == 64)
+        return log2_64(n);
+#else
+        return log2_32(n);
+#endif
+    }
+
+#ifdef _MSC_VER
+#pragma warning (pop)
+#endif
 };
 
 } // namespace jstd
