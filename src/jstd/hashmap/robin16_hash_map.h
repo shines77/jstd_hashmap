@@ -1857,7 +1857,7 @@ private:
     }
 
     inline hash_code_t get_third_hash(hash_code_t value) const noexcept {
-#if 0
+#if 1
         return value;
 #elif 1
         return (size_type)hashers::fibonacci_hash((size_type)value);
@@ -1871,18 +1871,26 @@ private:
     }
 
     inline size_type index_for_hash(hash_code_t hash_code) const noexcept {
+#if 1
+        return this->hash_policy_.index_for_hash(hash_code, this->slot_mask());
+#else
         if (kUseIndexSalt)
             return ((this->get_second_hash((size_type)hash_code) ^ this->index_salt()) & this->slot_mask());
         else
             return  (this->get_second_hash((size_type)hash_code) & this->slot_mask());
+#endif
     }
 
     inline size_type index_for_hash(hash_code_t hash_code, size_type slot_mask) const noexcept {
         assert(pow2::is_pow2(slot_mask + 1));
+#if 1
+        return this->hash_policy_.index_for_hash(hash_code, slot_mask);
+#else
         if (kUseIndexSalt)
             return ((this->get_second_hash((size_type)hash_code) ^ this->index_salt()) & slot_mask);
         else
             return  (this->get_second_hash((size_type)hash_code) & slot_mask);
+#endif
     }
 
     inline size_type next_index(size_type index) const noexcept {
@@ -2231,6 +2239,9 @@ private:
             new_capacity = init_capacity;
         assert(new_capacity > 0);
         assert(new_capacity >= kMinimumCapacity);
+
+        auto hash_policy_setting = this->hash_policy_.calc_next_capacity(new_capacity);
+        this->hash_policy_.commit(hash_policy_setting);
 
         size_type group_count = (new_capacity + (kGroupWidth - 1)) / kGroupWidth;
         assert(group_count > 0);
