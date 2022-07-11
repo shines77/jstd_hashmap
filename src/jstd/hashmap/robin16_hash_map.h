@@ -2386,14 +2386,30 @@ private:
     void transfer_slot(slot_type * dest_slot, slot_type * src_slot) {
         if (kIsCompatibleLayout) {
             this->mutable_allocator_.construct(&dest_slot->mutable_value,
-                    std::move(*reinterpret_cast<mutable_value_type *>(&src_slot->mutable_value)));
+                                               std::move(src_slot->mutable_value));
             if (!is_slot_trivial_destructor) {
                 this->destroy_slot(src_slot);
             }
         } else {
-            this->allocator_.construct(&dest_slot->value, std::move(*reinterpret_cast<value_type *>(&src_slot->value)));
+            this->allocator_.construct(&dest_slot->value, std::move(src_slot->value));
             if (!is_slot_trivial_destructor) {
                 this->destroy_slot(src_slot);
+            }
+        }
+    }
+
+    JSTD_FORCED_INLINE
+    void transfer_slot(slot_type * dest_slot, const slot_type * src_slot) {
+        if (kIsCompatibleLayout) {
+            this->mutable_allocator_.construct(&dest_slot->mutable_value,
+                                               src_slot->mutable_value);
+            if (!is_slot_trivial_destructor) {
+                this->destroy_slot(const_cast<slot_type *>(src_slot));
+            }
+        } else {
+            this->allocator_.construct(&dest_slot->value, src_slot->value);
+            if (!is_slot_trivial_destructor) {
+                this->destroy_slot(const_cast<slot_type *>(src_slot));
             }
         }
     }
@@ -3452,9 +3468,9 @@ private:
 
             slot_type * prev_slot = this->slot_at(prev_index);
             slot_type * slot = this->slot_at(slot_index);
-            this->swap_slot(prev_slot, slot);
+            this->transfer_slot(prev_slot, slot);
 
-            prev_index = this->next_index(prev_index);
+            prev_index = slot_index;
             slot_index = this->next_index(slot_index);
         }
 
