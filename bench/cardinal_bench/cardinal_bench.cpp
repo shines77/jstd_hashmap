@@ -370,7 +370,6 @@ void run_insert_random(const std::string & name, std::vector<Key> & keys, std::s
 
     jtest::StopWatch sw;
     HashMap hashmap;
-    //hashmap.reserve(128);
 
     {
         sw.start();
@@ -384,7 +383,7 @@ void run_insert_random(const std::string & name, std::vector<Key> & keys, std::s
         printf("%s: %s\n", __func__, name.c_str());
         printf("hashmap.size() = %u, cardinal = %u, load_factor = %0.3f, time: %0.2f ms\n",
                (uint32_t)hashmap.size(), (uint32_t)cardinal,
-               hashmap.load_factor(), elapsed_time);
+               (double)hashmap.load_factor(), elapsed_time);
     }
 
     {
