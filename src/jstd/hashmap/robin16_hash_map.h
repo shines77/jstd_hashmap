@@ -1292,12 +1292,12 @@ public:
         slots_(nullptr), slot_size_(0), slot_mask_(0),
         slot_threshold_(0), n_mlf_(kDefaultLoadFactorInt),
         n_mlf_rev_(kDefaultLoadFactorRevInt),
-        hasher_(std::move(other.hash_function())),
-        key_equal_(std::move(other.key_eq())),
-        allocator_(std::move(other.get_allocator())),
-        mutable_allocator_(std::move(other.get_mutable_allocator())),
-        slot_allocator_(std::move(other.get_slot_allocator())),
-        mutable_slot_allocator_(std::move(other.get_mutable_slot_allocator())) {
+        hasher_(std::move(other.hash_function_ref())),
+        key_equal_(std::move(other.key_eq_ref())),
+        allocator_(std::move(other.get_allocator_ref())),
+        mutable_allocator_(std::move(other.get_mutable_allocator_ref())),
+        slot_allocator_(std::move(other.get_slot_allocator_ref())),
+        mutable_slot_allocator_(std::move(other.get_mutable_slot_allocator_ref())) {
         // Swap content only
         this->swap_content(other);
     }
@@ -1307,12 +1307,12 @@ public:
         slots_(nullptr), slot_size_(0), slot_mask_(0),
         slot_threshold_(0), n_mlf_(kDefaultLoadFactorInt),
         n_mlf_rev_(kDefaultLoadFactorRevInt),
-        hasher_(std::move(other.hash_function())),
-        key_equal_(std::move(other.key_eq())),
+        hasher_(std::move(other.hash_function_ref())),
+        key_equal_(std::move(other.key_eq_ref())),
         allocator_(alloc),
-        mutable_allocator_(std::move(other.get_mutable_allocator())),
-        slot_allocator_(std::move(other.get_slot_allocator())),
-        mutable_slot_allocator_(std::move(other.get_mutable_slot_allocator())) {
+        mutable_allocator_(std::move(other.get_mutable_allocator_ref())),
+        slot_allocator_(std::move(other.get_slot_allocator_ref())),
+        mutable_slot_allocator_(std::move(other.get_mutable_slot_allocator_ref())) {
         // Swap content only
         this->swap_content(other);
     }
@@ -2800,7 +2800,7 @@ private:
                 //insert_ctrl.distance = (insert_ctrl.distance < kEndOfMark) ? insert_ctrl.distance : (kEndOfMark - 1);
             } else {
                 insert_ctrl.distance++;
-                if (insert_ctrl.distance >= kDistLimit) {
+                if (insert_ctrl.distance > kDistLimit) {
                     this->insert_tmp_rich_slot(to_insert, target, insert_ctrl.value);
                     return true;
                 }
@@ -2847,8 +2847,8 @@ private:
                 this->setUsedCtrl(target, distance, ctrl_hash);
             } else {
                 // Insert to target place
-                bool is_full = this->insert_to_place<false>(target, distance, ctrl_hash);
-                if (is_full) {
+                bool need_grow = this->insert_to_place<false>(target, distance, ctrl_hash);
+                if (need_grow) {
                     this->grow_if_necessary();
                     return this->emplace_impl<AlwaysUpdate>(value);
                 }
@@ -2889,8 +2889,8 @@ private:
                 assert(ctrl->isEmpty());
                 this->setUsedCtrl(target, distance, ctrl_hash);
             } else {
-                bool is_full = this->insert_to_place<false>(target, distance, ctrl_hash);
-                if (is_full) {
+                bool need_grow = this->insert_to_place<false>(target, distance, ctrl_hash);
+                if (need_grow) {
                     this->grow_if_necessary();
                     return this->emplace_impl<AlwaysUpdate>(std::forward<value_type>(value));
                 }
@@ -2944,8 +2944,8 @@ private:
                 assert(ctrl->isEmpty());
                 this->setUsedCtrl(target, distance, ctrl_hash);
             } else {
-                bool is_full = this->insert_to_place<false>(target, distance, ctrl_hash);
-                if (is_full) {
+                bool need_grow = this->insert_to_place<false>(target, distance, ctrl_hash);
+                if (need_grow) {
                     this->grow_if_necessary();
                     return this->emplace_impl<AlwaysUpdate, KeyT, MappedT>(
                             std::forward<KeyT>(key), std::forward<MappedT>(value)
@@ -3008,8 +3008,8 @@ private:
                 this->setUsedCtrl(target, distance, ctrl_hash);
             } else {
                 // Insert to target place
-                bool is_full = this->insert_to_place<false>(target, distance, ctrl_hash);
-                if (is_full) {
+                bool need_grow = this->insert_to_place<false>(target, distance, ctrl_hash);
+                if (need_grow) {
                     this->grow_if_necessary();
                     return this->emplace(std::piecewise_construct,
                                          std::forward_as_tuple(std::forward<KeyT>(key)),
@@ -3072,8 +3072,8 @@ private:
                 this->setUsedCtrl(target, distance, ctrl_hash);
             } else {
                 // Insert to target place
-                bool is_full = this->insert_to_place<false>(target, distance, ctrl_hash);
-                if (is_full) {
+                bool need_grow = this->insert_to_place<false>(target, distance, ctrl_hash);
+                if (need_grow) {
                     this->grow_if_necessary();
                     return this->emplace(std::piecewise_construct,
                                          std::forward<std::tuple<Ts1...>>(first),
@@ -3134,8 +3134,8 @@ private:
                 this->setUsedCtrl(target, distance, ctrl_hash);
             } else {
                 // Insert to target place
-                bool is_full = this->insert_to_place<false>(target, distance, ctrl_hash);
-                if (is_full) {
+                bool need_grow = this->insert_to_place<false>(target, distance, ctrl_hash);
+                if (need_grow) {
                     this->grow_if_necessary();
                     return this->emplace(std::move(value));
                 }
@@ -3236,7 +3236,7 @@ private:
         size_type target = this->unique_prepare_insert(slot->value.first,
                                                        distance, ctrl_hash);
         assert(target != npos);
-        bool is_full = false;
+        bool need_grow = false;
 
         control_type * ctrl = this->control_at(target);
         if (ctrl->isEmpty()) {
@@ -3245,8 +3245,8 @@ private:
             this->setUsedCtrl(target, distance, ctrl_hash);
         } else {
             // Insert to target place
-            is_full = this->insert_to_place<true>(target, distance, ctrl_hash);
-            assert(is_full == false);
+            need_grow = this->insert_to_place<true>(target, distance, ctrl_hash);
+            assert(need_grow == false);
         }
 
         slot_type * new_slot = this->slot_at(target);
@@ -3259,7 +3259,7 @@ private:
         }
         this->slot_size_++;
         assert(this->slot_size() <= this->slot_capacity());
-        return is_full;
+        return need_grow;
     }
 
     void insert_unique(const value_type & value) {
@@ -3274,8 +3274,8 @@ private:
             this->setUsedCtrl(target, distance, ctrl_hash);
         } else {
             // Insert to target place
-            bool is_full = this->insert_to_place<false>(target, distance, ctrl_hash);
-            if (is_full) {
+            bool need_grow = this->insert_to_place<false>(target, distance, ctrl_hash);
+            if (need_grow) {
                 this->grow_if_necessary();
                 this->insert_unique(value);
                 return;
@@ -3305,8 +3305,8 @@ private:
             this->setUsedCtrl(target, distance, ctrl_hash);
         } else {
             // Insert to target place
-            bool is_full = this->insert_to_place<false>(target, distance, ctrl_hash);
-            if (is_full) {
+            bool need_grow = this->insert_to_place<false>(target, distance, ctrl_hash);
+            if (need_grow) {
                 this->grow_if_necessary();
                 this->insert_unique(std::forward<value_type>(value));
                 return;

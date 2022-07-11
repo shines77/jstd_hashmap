@@ -1136,15 +1136,15 @@ public:
         return (index & mask);
     }
 
-    std::uint8_t next_size_over(size_type new_size) const {
-        assert(new_size > 0);
-        assert(pow2::is_pow2(new_size));
+    std::uint8_t calc_next_capacity(size_type & new_capacity) const {
+        assert(new_capacity > 0);
+        assert(pow2::is_pow2(new_capacity));
 #if 1
         // Fast to get log2_int, if the new_size is power of 2.
         // Use bsf(n) has the same effect.
-        return std::uint8_t(BitUtils::bsr(new_size));
+        return std::uint8_t(BitUtils::bsr(new_capacity));
 #else
-        return std::uint8_t(pow2::log2_int<size_type, size_type(2)>(new_size));
+        return std::uint8_t(pow2::log2_int<size_type, size_type(2)>(new_capacity));
 #endif
     }
 
