@@ -1126,6 +1126,10 @@ public:
     fibonacci_hash_policy() noexcept : shift_(28u) {
     }
 
+    fibonacci_hash_policy(const fibonacci_hash_policy & src) noexcept
+        : shift_(src.shift_) {
+    }
+
     ~fibonacci_hash_policy() = default;
 
     size_type index_for_hash(size_type hash, size_type /* mask */) const {

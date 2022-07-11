@@ -96,6 +96,8 @@
 #endif
 #endif // _MSC_VER
 
+#define ROBIN16_USE_HASH_POLICY     0
+
 namespace jstd {
 
 template < typename Key, typename Value,
@@ -1270,6 +1272,7 @@ public:
         slots_(nullptr), slot_size_(0), slot_mask_(0),
         slot_threshold_(0), n_mlf_(kDefaultLoadFactorInt),
         n_mlf_rev_(kDefaultLoadFactorRevInt),
+        hash_policy_(other.hash_policy_ref()),
         hasher_(hasher()), key_equal_(key_equal()),
         allocator_(alloc), mutable_allocator_(alloc),
         slot_allocator_(alloc), mutable_slot_allocator_(alloc) {
@@ -1292,6 +1295,7 @@ public:
         slots_(nullptr), slot_size_(0), slot_mask_(0),
         slot_threshold_(0), n_mlf_(kDefaultLoadFactorInt),
         n_mlf_rev_(kDefaultLoadFactorRevInt),
+        hash_policy_(other.hash_policy_ref()),
         hasher_(std::move(other.hash_function_ref())),
         key_equal_(std::move(other.key_eq_ref())),
         allocator_(std::move(other.get_allocator_ref())),
@@ -1307,6 +1311,7 @@ public:
         slots_(nullptr), slot_size_(0), slot_mask_(0),
         slot_threshold_(0), n_mlf_(kDefaultLoadFactorInt),
         n_mlf_rev_(kDefaultLoadFactorRevInt),
+        hash_policy_(other.hash_policy_ref()),
         hasher_(std::move(other.hash_function_ref())),
         key_equal_(std::move(other.key_eq_ref())),
         allocator_(alloc),
@@ -1326,6 +1331,7 @@ public:
         slots_(nullptr), slot_size_(0), slot_mask_(0),
         slot_threshold_(0), n_mlf_(kDefaultLoadFactorInt),
         n_mlf_rev_(kDefaultLoadFactorRevInt),
+        hash_policy_(),
         hasher_(hash), key_equal_(equal),
         allocator_(alloc), mutable_allocator_(alloc),
         slot_allocator_(alloc), mutable_slot_allocator_(alloc) {
@@ -1857,7 +1863,7 @@ private:
     }
 
     inline hash_code_t get_third_hash(hash_code_t value) const noexcept {
-#if 1
+#if 0
         return value;
 #elif 1
         return (size_type)hashers::fibonacci_hash((size_type)value);
@@ -1871,7 +1877,7 @@ private:
     }
 
     inline size_type index_for_hash(hash_code_t hash_code) const noexcept {
-#if 1
+#if ROBIN16_USE_HASH_POLICY
         return this->hash_policy_.index_for_hash(hash_code, this->slot_mask());
 #else
         if (kUseIndexSalt)
@@ -1883,7 +1889,7 @@ private:
 
     inline size_type index_for_hash(hash_code_t hash_code, size_type slot_mask) const noexcept {
         assert(pow2::is_pow2(slot_mask + 1));
-#if 1
+#if ROBIN16_USE_HASH_POLICY
         return this->hash_policy_.index_for_hash(hash_code, slot_mask);
 #else
         if (kUseIndexSalt)
@@ -2240,8 +2246,10 @@ private:
         assert(new_capacity > 0);
         assert(new_capacity >= kMinimumCapacity);
 
+#if ROBIN16_USE_HASH_POLICY
         auto hash_policy_setting = this->hash_policy_.calc_next_capacity(new_capacity);
         this->hash_policy_.commit(hash_policy_setting);
+#endif
 
         size_type group_count = (new_capacity + (kGroupWidth - 1)) / kGroupWidth;
         assert(group_count > 0);
