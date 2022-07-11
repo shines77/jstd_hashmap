@@ -991,7 +991,7 @@ public:
         };
 
         slot_type() {}
-        ~slot_type() = default;
+        ~slot_type() = delete;
     };
 
     typedef slot_type       mutable_slot_type;
@@ -2109,7 +2109,7 @@ private:
                 assert(control != nullptr);
                 for (size_type index = 0; index <= this->slot_mask(); index++) {
                     if (control->isUsed()) {
-                        this->destroy_mutable_slot(index);
+                        this->destroy_slot(index);
                     }
                     control++;
                 }
@@ -2131,17 +2131,6 @@ private:
 
     JSTD_FORCED_INLINE
     void destroy_slot(slot_type * slot) {
-        this->allocator_.destroy(&slot->value);
-    }
-
-    JSTD_FORCED_INLINE
-    void destroy_mutable_slot(size_type index) {
-        slot_type * slot = this->slot_at(index);
-        this->destroy_mutable_slot(slot);
-    }
-
-    JSTD_FORCED_INLINE
-    void destroy_mutable_slot(slot_type * slot) {
         if (kIsCompatibleLayout) {
             this->mutable_allocator_.destroy(&slot->mutable_value);
         } else {
@@ -2319,7 +2308,7 @@ private:
                     if (likely(control->isUsed())) {
                         this->move_insert_unique(old_slot);
                         if (!is_slot_trivial_destructor) {
-                            this->destroy_mutable_slot(old_slot);
+                            this->destroy_slot(old_slot);
                         }
                     }
                     old_slot++;
@@ -2338,7 +2327,7 @@ private:
                             slot_type * old_slot = old_slots + old_index;
                             this->move_insert_unique(old_slot);
                             if (!is_slot_trivial_destructor) {
-                                this->destroy_mutable_slot(old_slot);
+                                this->destroy_slot(old_slot);
                             }
                         }
                         start_index += kGroupWidth;
@@ -2355,7 +2344,7 @@ private:
                             slot_type * old_slot = old_slots + old_index;
                             this->move_insert_unique(old_slot);
                             if (!is_slot_trivial_destructor) {
-                                this->destroy_mutable_slot(old_slot);
+                                this->destroy_slot(old_slot);
                             }
                         }
                         start_index -= kGroupWidth;
@@ -2368,7 +2357,7 @@ private:
                         if (likely(control->isUsed())) {
                             this->move_insert_unique(old_slot);
                             if (!is_slot_trivial_destructor) {
-                                this->destroy_mutable_slot(old_slot);
+                                this->destroy_slot(old_slot);
                             }
                         }
                         old_slot++;
@@ -2399,7 +2388,7 @@ private:
             this->mutable_allocator_.construct(&dest_slot->mutable_value,
                     std::move(*reinterpret_cast<mutable_value_type *>(&src_slot->mutable_value)));
             if (!is_slot_trivial_destructor) {
-                this->destroy_mutable_slot(src_slot);
+                this->destroy_slot(src_slot);
             }
         } else {
             this->allocator_.construct(&dest_slot->value, std::move(*reinterpret_cast<value_type *>(&src_slot->value)));
@@ -2495,8 +2484,8 @@ private:
                 maskHash = BitUtils::clearLowBit32(maskHash);
                 size_type index = group.index(start_index, pos);
                 this->round_index(index);
-                const slot_type & target = this->get_slot(index);
-                if (this->key_equal_(target.value.first, key)) {
+                const slot_type * target = this->slot_at(index);
+                if (this->key_equal_(target->value.first, key)) {
                     return index;
                 }
             }
@@ -2564,8 +2553,8 @@ private:
                 maskHash = BitUtils::clearLowBit32(maskHash);
                 size_type index = group.index(start_index, pos);
                 index = this->round_index(index);
-                const slot_type & target = this->get_slot(index);
-                if (this->key_equal_(target.value.first, key)) {
+                const slot_type * target = this->slot_at(index);
+                if (this->key_equal_(target->value.first, key)) {
                     o_distance = this->round_dist(index, start_slot);
                     last_slot = index;
                     return index;
@@ -2730,8 +2719,8 @@ private:
                 maskHash = BitUtils::clearLowBit32(maskHash);
                 size_type index = group.index(slot_index, pos);
                 index = this->round_index(index);
-                const slot_type & target = this->get_slot(index);
-                if (this->key_equal_(target.value.first, key)) {
+                const slot_type * target = this->slot_at(index);
+                if (this->key_equal_(target->value.first, key)) {
                     o_distance = this->round_dist(index, first_slot);
                     assert(o_distance == (distance + group_type::pos(pos)));
                     return { index, true };
@@ -2776,40 +2765,31 @@ private:
         std::swap(insert_ctrl.value, ctrl->value);
         insert_ctrl.distance++;
 
-        slot_type to_insert;
-        this->placement_new_slot(&to_insert);
+        alignas(slot_type) unsigned char raw[sizeof(slot_type)];
+        slot_type * to_insert = reinterpret_cast<slot_type *>(&raw);
+        this->placement_new_slot(to_insert);
+        slot_type * target_slot = this->slot_at(target);
         if (kIsCompatibleLayout) {
-            to_insert.mutable_value = std::move(this->slot_at(target)->mutable_value);
+            this->mutable_allocator_.construct(&to_insert->mutable_value, std::move(target_slot->mutable_value));
         } else {
-            to_insert.value = std::move(this->slot_at(target)->value);
+            this->allocator_.construct(&to_insert->value, std::move(target_slot->value));
         }
         if (is_slot_trivial_destructor) {
-            this->destroy_mutable_slot(target);
+            this->destroy_slot(target_slot);
         }
 
         size_type slot_index = this->next_index(target);
         do {
             ctrl = this->control_at(slot_index);
             if (ctrl->isEmpty()) {
-                this->setUsedCtrl(slot_index, insert_ctrl.value);
-
-                slot_type * slot = this->slot_at(slot_index);
-                this->placement_new_slot(slot);
-                if (kIsCompatibleLayout)
-                    this->mutable_allocator_.construct(&slot->mutable_value, std::move(to_insert.mutable_value));
-                else
-                    this->allocator_.construct(&slot->value, std::move(to_insert.value));
-
-                if (is_slot_trivial_destructor) {
-                    this->destroy_mutable_slot(&to_insert);
-                }
+                this->emplace_tmp_rich_slot(to_insert, slot_index, insert_ctrl.value);
                 return false;
             } else if ((insert_ctrl.distance > ctrl->distance) /* || (insert_ctrl.distance == (kEndOfMark - 1)) */) {
                 this->setUsedMirrorCtrl(slot_index, insert_ctrl.value);
                 std::swap(insert_ctrl.value, ctrl->value);
 
                 slot_type * slot = this->slot_at(slot_index);
-                this->swap_slot(&to_insert, slot);
+                this->swap_slot(to_insert, slot);
             }
 
             if (isRehashing) {
@@ -2820,7 +2800,7 @@ private:
             } else {
                 insert_ctrl.distance++;
                 if (insert_ctrl.distance > kDistLimit) {
-                    this->insert_tmp_rich_slot(to_insert, target, insert_ctrl.value);
+                    this->emplace_tmp_rich_slot(to_insert, target, insert_ctrl.value);
                     return true;
                 }
             }
@@ -2828,23 +2808,24 @@ private:
             slot_index = this->next_index(slot_index);
         } while (slot_index != target);
 
-        this->insert_tmp_rich_slot(to_insert, target, insert_ctrl.value);
+        this->emplace_tmp_rich_slot(to_insert, target, insert_ctrl.value);
         return true;
     }
 
-    void insert_tmp_rich_slot(slot_type & to_insert, size_type target,
-                              std::uint16_t dist_and_hash) {
+    JSTD_FORCED_INLINE
+    void emplace_tmp_rich_slot(slot_type * to_insert, size_type target,
+                               std::uint16_t dist_and_hash) {
         this->setUsedCtrl(target, dist_and_hash);
 
         slot_type * slot = this->slot_at(target);
         this->placement_new_slot(slot);
         if (kIsCompatibleLayout)
-            this->mutable_allocator_.construct(&slot->mutable_value, std::move(to_insert.mutable_value));
+            this->mutable_allocator_.construct(&slot->mutable_value, std::move(to_insert->mutable_value));
         else
-            this->allocator_.construct(&slot->value, std::move(to_insert.value));
+            this->allocator_.construct(&slot->value, std::move(to_insert->value));
 
         if (is_slot_trivial_destructor) {
-            this->destroy_mutable_slot(&to_insert);
+            this->destroy_slot(to_insert);
         }
     }
 
@@ -3423,8 +3404,8 @@ private:
                 maskHash = BitUtils::clearLowBit32(maskHash);
                 size_type index = group.index(slot_index, pos);
                 index = this->round_index(index);
-                const slot_type & target = this->get_slot(index);
-                if (this->key_equal_(target.value.first, key)) {
+                const slot_type * target = this->slot_at(index);
+                if (this->key_equal_(target->value.first, key)) {
                     this->erase_slot(index);
                     return 1;
                 }
@@ -3482,7 +3463,7 @@ private:
         assert(prev_ctrl->isUsed());
         this->setUnusedCtrl(prev_index, kEmptySlot);
         // Destroy slot
-        this->destroy_mutable_slot(prev_index);
+        this->destroy_slot(prev_index);
 
         assert(this->slot_size_ > 0);
         this->slot_size_--;
