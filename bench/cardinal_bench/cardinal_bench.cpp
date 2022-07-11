@@ -226,7 +226,7 @@ struct IntegalHash
                                 (std::is_integral<UInt32>::value &&
                                 (sizeof(UInt32) <= 4))>::type * = nullptr>
     result_type operator () (UInt32 value) const noexcept {
-        result_type hash = (result_type)(((std::uint64_t)value * 2654435769ul) >> 28);
+        result_type hash = (result_type)(((std::uint64_t)value * 2654435769ul) >> 14);
         return hash;
     }
 
@@ -454,7 +454,7 @@ void benchmark_insert_random(std::size_t iters)
     static constexpr std::size_t Cardinal6 = 600000 * Factor;
 #endif
 
-    printf("DataSize = %u, std::hash<T>\n\n", (uint32_t)DataSize);
+    printf("DataSize = %u, %s<T>\n\n", (uint32_t)DataSize, PRINT_MACRO(HASH_MAP_FUNCTION));
 
     benchmark_insert_random_impl<Key, Value, DataSize, Cardinal0>();
     printf("-----------------------------------------------------------------------\n\n");
