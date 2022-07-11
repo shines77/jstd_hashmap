@@ -1,6 +1,6 @@
 
-#ifndef JSTD_HASH_HASH_H
-#define JSTD_HASH_HASH_H
+#ifndef JSTD_HASHER_HASH_H
+#define JSTD_HASHER_HASH_H
 
 #if defined(_MSC_VER) && (_MSC_VER >= 1020)
 #pragma once
@@ -19,6 +19,9 @@
 #include <string>
 
 #include "jstd/string/char_traits.h"
+#include "jstd/type_traits.h"
+#include "jstd/support/BitUtils.h"
+#include "jstd/support/Power2.h"
 
 //
 // See: https://sourceforge.net/p/predef/wiki/Architectures/
@@ -1097,6 +1100,63 @@ HashUtils<std::uint64_t>::decodeValue<8U>(const char * data, std::uint32_t missa
     return value;
 }
 
+class fibonacci_hash_policy;
+
+template <typename T, typename = void>
+struct hash_policy_selector
+{
+    typedef fibonacci_hash_policy type;
+};
+
+template <typename T>
+struct hash_policy_selector<T, void_t<typename T::hash_policy>>
+{
+    typedef typename T::hash_policy type;
+};
+
+class fibonacci_hash_policy
+{
+public:
+    typedef std::size_t size_type;
+
+private:
+    std::uint8_t shift_;
+
+public:
+    fibonacci_hash_policy() noexcept : shift_(28u) {
+    }
+
+    ~fibonacci_hash_policy() = default;
+
+    size_type index_for_hash(size_type hash, size_type /* mask */) const {
+        return (size_type)((std::uint64_t)hash * 11400714819323198485ull) >> this->shift_;
+    }
+
+    size_type round_index(size_type index, size_type mask) const {
+        return (index & mask);
+    }
+
+    std::uint8_t next_size_over(size_type new_size) const {
+        assert(new_size > 0);
+        assert(pow2::is_pow2(new_size));
+#if 1
+        // Fast to get log2_int, if the new_size is power of 2.
+        // Use bsf(n) has the same effect.
+        return std::uint8_t(BitUtils::bsr(new_size));
+#else
+        return std::uint8_t(pow2::log2_int<size_type, size_type(2)>(new_size));
+#endif
+    }
+
+    void commit(int8_t shift) {
+        this->shift_ = shift;
+    }
+
+    void reset() {
+        this->shift_ = 28u;
+    }
+};
+
 } // namespace jstd
 
-#endif // JSTD_HASH_HASH_H
+#endif // JSTD_HASHER_HASH_H

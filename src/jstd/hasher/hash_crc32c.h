@@ -10,6 +10,8 @@
 #include "jstd/basic/stdint.h"
 #include "jstd/basic/stdsize.h"
 
+#include "jstd/hasher/hash.h"
+
 #include <assert.h>
 
 // Just for coding in msvc or test, please comment it in the release version.

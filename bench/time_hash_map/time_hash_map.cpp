@@ -1432,7 +1432,7 @@ static void test_all_hashmaps(std::size_t obj_size, std::size_t iters) {
     }
 #endif
 
-#if USE_JSTD_FLAT16_HASH_MAP
+#if USE_JSTD_ROBIN16_HASH_MAP
     if (FLAGS_test_jstd_robin16_hash_map) {
         typedef jstd::robin16_hash_map<HashObj, Value, HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>> robin16_hash_map;
         measure_hashmap<jstd::robin16_hash_map<HashObj,   Value, HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>,

@@ -1588,19 +1588,19 @@ private:
     }
 
     inline size_type prev_group(size_type group_index) const noexcept {
-        return (size_type)(((size_type)group_index + this->group_mask()) & this->group_mask());
+        return ((group_index + this->group_mask()) & this->group_mask());
     }
 
     inline size_type next_group(size_type group_index) const noexcept {
-        return (size_type)((size_type)(group_index + 1) & this->group_mask());
+        return ((group_index + 1) & this->group_mask());
     }
 
     inline size_type slot_prev_group(size_type slot_index) const noexcept {
-        return (size_type)(((size_type)slot_index + this->slot_mask()) & this->slot_mask());
+        return ((slot_index + this->slot_mask()) & this->slot_mask());
     }
 
     inline size_type slot_next_group(size_type slot_index) const noexcept {
-        return (size_type)((size_type)(slot_index + kGroupWidth) & this->slot_mask());
+        return ((slot_index + kGroupWidth) & this->slot_mask());
     }
 
     control_type * control_at(size_type slot_index) noexcept {
