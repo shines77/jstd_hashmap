@@ -1191,9 +1191,9 @@ private:
     size_type       slot_mask_;
 
     size_type       slot_threshold_;
-    hash_policy_t   hash_policy_;
     std::uint32_t   n_mlf_;
     std::uint32_t   n_mlf_rev_;
+    hash_policy_t   hash_policy_;
 
     hasher          hasher_;
     key_equal       key_equal_;
@@ -1490,6 +1490,18 @@ public:
         return this->end();
     }
 
+    hasher hash_function() const {
+        return this->hasher_;
+    }
+
+    key_equal key_eq() const {
+        return this->key_equal_;
+    }
+
+    hash_policy_t hash_policy() const {
+        return this->hash_policy_;
+    }
+
     allocator_type get_allocator() const noexcept {
         return this->allocator_;
     }
@@ -1506,12 +1518,32 @@ public:
         return this->mutable_slot_allocator_;
     }
 
-    hasher hash_function() const {
+    hasher & hash_function_ref() noexcept {
         return this->hasher_;
     }
 
-    key_equal key_eq() const {
+    key_equal & key_eq_ref() noexcept {
         return this->key_equal_;
+    }
+
+    hash_policy_t & hash_policy_ref() noexcept {
+        return this->hash_policy_;
+    }
+
+    allocator_type & get_allocator_ref() noexcept {
+        return this->allocator_;
+    }
+
+    mutable_allocator_type & get_mutable_allocator_ref() noexcept {
+        return this->mutable_allocator_;
+    }
+
+    slot_allocator_type & get_slot_allocator_ref() noexcept {
+        return this->slot_allocator_;
+    }
+
+    mutable_slot_allocator_type & get_mutable_slot_allocator_ref() noexcept {
+        return this->mutable_slot_allocator_;
     }
 
     static const char * name() {
@@ -2723,7 +2755,7 @@ private:
         assert(distance > ctrl->distance);
         this->setUsedMirrorCtrl(target, insert_ctrl.value);
         std::swap(insert_ctrl.value, ctrl->value);
-        distance++;
+        insert_ctrl.distance++;
 
         slot_type to_insert;
         this->placement_new_slot(&to_insert);
@@ -2753,7 +2785,7 @@ private:
                     this->destroy_mutable_slot(&to_insert);
                 }
                 return false;
-            } else if ((distance > ctrl->distance) /* || (distance == (kEndOfMark - 1)) */) {
+            } else if ((insert_ctrl.distance > ctrl->distance) /* || (insert_ctrl.distance == (kEndOfMark - 1)) */) {
                 this->setUsedMirrorCtrl(slot_index, insert_ctrl.value);
                 std::swap(insert_ctrl.value, ctrl->value);
 
@@ -2762,18 +2794,18 @@ private:
             }
 
             if (isRehashing) {
-                distance++;
-                if (distance >= kEndOfMark)
+                insert_ctrl.distance++;
+                if (insert_ctrl.distance >= kEndOfMark)
                     distance = distance;
-                //distance = (distance < kEndOfMark) ? distance : (kEndOfMark - 1);
+                //insert_ctrl.distance = (insert_ctrl.distance < kEndOfMark) ? insert_ctrl.distance : (kEndOfMark - 1);
             } else {
-                distance++;
-                if (distance >= kDistLimit) {
+                insert_ctrl.distance++;
+                if (insert_ctrl.distance >= kDistLimit) {
                     this->insert_tmp_rich_slot(to_insert, target, insert_ctrl.value);
                     return true;
                 }
             }
-            assert(distance < kEmptySlot);
+            assert(insert_ctrl.distance < kEmptySlot);
             slot_index = this->next_index(slot_index);
         } while (slot_index != target);
 
@@ -3414,6 +3446,8 @@ private:
         slot_index = first_index;
         while (slot_index != last_index) {
             control_type * ctrl = this->control_at(slot_index);
+            assert(ctrl->distance > 0);
+            --(ctrl->distance);
             this->setUsedCtrl(prev_index, ctrl->value);
 
             slot_type * prev_slot = this->slot_at(prev_index);
@@ -3445,23 +3479,24 @@ private:
         swap(this->slot_threshold_, other.slot_threshold());
         swap(this->n_mlf_, other.integral_mlf());
         swap(this->n_mlf_rev_, other.integral_mlf_rev());
+        swap(this->hash_policy_, other.hash_policy_ref());
     }
 
     void swap_policy(robin16_hash_map & other) {
         using std::swap;
-        swap(this->hasher_, other.hash_function());
-        swap(this->key_equal_, other.key_eq());
+        swap(this->hasher_, other.hash_function_ref());
+        swap(this->key_equal_, other.key_eq_ref());
         if (std::allocator_traits<allocator_type>::propagate_on_container_swap::value) {
-            swap(this->allocator_, other.get_allocator());
+            swap(this->allocator_, other.get_allocator_ref());
         }
         if (std::allocator_traits<mutable_allocator_type>::propagate_on_container_swap::value) {
-            swap(this->mutable_allocator_, other.get_mutable_allocator());
+            swap(this->mutable_allocator_, other.get_mutable_allocator_ref());
         }
         if (std::allocator_traits<slot_allocator_type>::propagate_on_container_swap::value) {
-            swap(this->slot_allocator_, other.get_slot_allocator());
+            swap(this->slot_allocator_, other.get_slot_allocator_ref());
         }
         if (std::allocator_traits<mutable_slot_allocator_type>::propagate_on_container_swap::value) {
-            swap(this->mutable_slot_allocator_, other.get_mutable_slot_allocator());
+            swap(this->mutable_slot_allocator_, other.get_mutable_slot_allocator_ref());
         }
     }
 
