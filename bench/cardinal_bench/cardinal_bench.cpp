@@ -76,7 +76,6 @@
 #include <memory>
 #include <utility>
 #include <vector>
-#include <unordered_map>
 #include <algorithm>
 #include <cassert>
 
@@ -86,10 +85,6 @@
 #define USE_STD_UNORDERED_MAP       1
 #define USE_JSTD_FLAT16_HASH_MAP    1
 #define USE_JSTD_ROBIN16_HASH_MAP   1
-#define USE_SKA_FLAT_HASH_MAP       0
-#define USE_SKA_BYTELL_HASH_MAP     0
-#define USE_ABSL_FLAT_HASH_MAP      0
-#define USE_ABSL_NODE_HASH_MAP      0
 
 /* SIMD support features */
 #define JSTD_HAVE_MMX           1
@@ -124,6 +119,7 @@
 #include <jstd/basic/stdint.h>
 #include <jstd/basic/inttypes.h>
 
+#include <unordered_map>
 #if USE_JSTD_FLAT16_HASH_MAP
 #include <jstd/hashmap/flat16_hash_map.h>
 #endif
@@ -454,7 +450,7 @@ void benchmark_insert_random(std::size_t iters)
     static constexpr std::size_t Cardinal6 = 600000 * Factor;
 #endif
 
-    printf("DataSize = %u, %s<T>\n\n", (uint32_t)DataSize, PRINT_MACRO(HASH_MAP_FUNCTION));
+    printf("DataSize = %u, std::hash<T>\n\n", (uint32_t)DataSize);
 
     benchmark_insert_random_impl<Key, Value, DataSize, Cardinal0>();
     printf("-----------------------------------------------------------------------\n\n");
