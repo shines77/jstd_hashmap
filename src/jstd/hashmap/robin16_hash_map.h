@@ -2131,10 +2131,12 @@ private:
 
     JSTD_FORCED_INLINE
     void destroy_slot(slot_type * slot) {
-        if (kIsCompatibleLayout) {
-            this->mutable_allocator_.destroy(&slot->mutable_value);
-        } else {
-            this->allocator_.destroy(&slot->value);
+        if (!is_slot_trivial_destructor) {
+            if (kIsCompatibleLayout) {
+                this->mutable_allocator_.destroy(&slot->mutable_value);
+            } else {
+                this->allocator_.destroy(&slot->value);
+            }
         }
     }
 
@@ -3441,24 +3443,66 @@ private:
         assert(to_erase <= this->slot_capacity());
         assert(this->control_at(to_erase)->isUsed());
 
+        size_type prev_index;
         size_type last_index = npos;
         size_type first_index = this->next_index(to_erase);
         size_type slot_index = first_index;
-        do {
-            const group_type & group = this->get_group(slot_index);
-            auto maskEmpty = group.matchEmptyOrZero();
-            if (maskEmpty != 0) {
-                size_type pos = BitUtils::bsf32(maskEmpty);
-                maskEmpty = BitUtils::clearLowBit32(maskEmpty);
-                size_type index = group.index(slot_index, pos);
-                last_index = this->round_index(index);
-                break;
-            }
-            slot_index = this->slot_next_group(slot_index);
-        } while (slot_index != first_index);
+        if (1) {
+            control_type * ctrl = this->control_at(slot_index);
+            if (kUseUnrollLoop) {
+                if (std::uint8_t(ctrl->distance + 1) < 2) {
+                    prev_index = to_erase;
+                    goto ClearSlot;
+                }
 
+                ctrl = this->next_control(slot_index);
+                if (std::uint8_t(ctrl->distance + 1) < 2) {
+                    last_index = slot_index;
+                    goto TransferSlots;
+                }
+
+                ctrl = this->next_control(slot_index);
+                if (std::uint8_t(ctrl->distance + 1) < 2) {
+                    last_index = slot_index;
+                    goto TransferSlots;
+                }
+
+                ctrl = this->next_control(slot_index);
+                if (std::uint8_t(ctrl->distance + 1) < 2) {
+                    last_index = slot_index;
+                    goto TransferSlots;
+                }
+            }
+
+            if (this->slot_capacity() >= kGroupWidth) {
+                do {
+                    const group_type & group = this->get_group(slot_index);
+                    auto maskEmpty = group.matchEmptyOrZero();
+                    if (maskEmpty != 0) {
+                        size_type pos = BitUtils::bsf32(maskEmpty);
+                        maskEmpty = BitUtils::clearLowBit32(maskEmpty);
+                        size_type index = group.index(slot_index, pos);
+                        last_index = this->round_index(index);
+                        break;
+                    }
+                    slot_index = this->slot_next_group(slot_index);
+                } while (slot_index != first_index);
+            } else {
+                while (slot_index != first_index) {
+                    ctrl = this->next_control(slot_index);
+                    if (std::uint8_t(ctrl->distance + 1) < 2) {
+                        last_index = slot_index;
+                        break;
+                    }
+                }
+            }
+
+            goto TransferSlots;
+        }
+
+TransferSlots:
         assert(last_index != npos);
-        size_type prev_index = to_erase;
+        prev_index = to_erase;
         slot_index = first_index;
         while (slot_index != last_index) {
             control_type * ctrl = this->control_at(slot_index);
@@ -3474,6 +3518,7 @@ private:
             slot_index = this->next_index(slot_index);
         }
 
+ClearSlot:
         // Setting to empty ctrl
         control_type * prev_ctrl = this->control_at(prev_index);
         assert(prev_ctrl->isUsed());

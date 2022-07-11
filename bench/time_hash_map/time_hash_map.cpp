@@ -81,8 +81,8 @@
 #include <vector>
 #include <algorithm>
 
-#define USE_STD_UNORDERED_MAP       1
-#define USE_JSTD_FLAT16_HASH_MAP    1
+#define USE_STD_UNORDERED_MAP       0
+#define USE_JSTD_FLAT16_HASH_MAP    0
 #define USE_JSTD_ROBIN16_HASH_MAP   1
 
 /* SIMD support features */
@@ -1391,6 +1391,7 @@ static void measure_hashmap(const char * name, std::size_t obj_size, std::size_t
 
     if (1) printf("\n");
 
+#ifndef _DEBUG
     // This last test is useful only if the map type uses hashing.
     // And it's slow, so use fewer iterations.
     if (is_stress_hash_function) {
@@ -1399,6 +1400,7 @@ static void measure_hashmap(const char * name, std::size_t obj_size, std::size_t
         stress_hash_function<StressMapType>(iters / 4);
         printf("\n");
     }
+#endif
 }
 
 template <typename HashObj, typename Value>
