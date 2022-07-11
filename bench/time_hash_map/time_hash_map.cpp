@@ -81,8 +81,8 @@
 #include <vector>
 #include <algorithm>
 
-#define USE_STD_UNORDERED_MAP       0
-#define USE_JSTD_FLAT16_HASH_MAP    0
+#define USE_STD_UNORDERED_MAP       1
+#define USE_JSTD_FLAT16_HASH_MAP    1
 #define USE_JSTD_ROBIN16_HASH_MAP   1
 
 /* SIMD support features */
@@ -161,7 +161,7 @@
 #ifdef _MSC_VER
 #define HASH_FUNCTION_ID        ID_SIMPLE_HASH
 #else
-#define HASH_FUNCTION_ID        ID_STD_HASH
+#define HASH_FUNCTION_ID        ID_INTEGAL_HASH
 #endif
 
 #if (HASH_FUNCTION_ID == ID_STDEXT_HASH)
@@ -211,7 +211,7 @@ static const bool FLAGS_test_16_bytes = true;
 static const bool FLAGS_test_256_bytes = true;
 
 #ifndef _DEBUG
-static const std::size_t kDefaultIters = 10000000;
+static const std::size_t kDefaultIters = 20000000;
 #else
 static const std::size_t kDefaultIters = 10000;
 #endif
@@ -284,7 +284,7 @@ struct IntegalHash
                                 (std::is_integral<UInt32>::value &&
                                 (sizeof(UInt32) <= 4))>::type * = nullptr>
     result_type operator () (UInt32 value) const noexcept {
-        result_type hash = (result_type)((std::uint32_t)value * 2654435761ul + 16777619ul);
+        result_type hash = (result_type)(((std::uint64_t)value * 2654435769ul) >> 28);
         return hash;
     }
 
@@ -292,7 +292,7 @@ struct IntegalHash
                                 (std::is_integral<UInt64>::value &&
                                 (sizeof(UInt64) > 4 && sizeof(UInt64) <= 8))>::type * = nullptr>
     result_type operator () (UInt64 value) const noexcept {
-        result_type hash = (result_type)((std::uint64_t)value * 14695981039346656037ull + 1099511628211ull);
+        result_type hash = (result_type)(((std::uint64_t)value * 11400714819323198485ull) >> 28);
         return hash;
     }
 
@@ -1504,7 +1504,8 @@ int main(int argc, char * argv[])
 
     if (1) { std_hash_test(); }
 
-    if (1) {
+    if (1)
+    {
         printf("-------------------------- benchmark_all_hashmaps(iters) ---------------------------\n\n");
         benchmark_all_hashmaps(iters);
     }
