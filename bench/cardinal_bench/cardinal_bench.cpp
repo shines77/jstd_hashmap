@@ -557,6 +557,23 @@ void std_hash_test()
 {
     printf("#define HASH_MAP_FUNCTION = %s\n\n", PRINT_MACRO(HASH_MAP_FUNCTION));
 
+    printf("std::hash<std::uint32_t>\n\n");
+    for (std::uint32_t i = 0; i < 8; i++) {
+        std::size_t hash_code = std::hash<std::uint32_t>()(i);
+        printf("key = %3u, hash_code = 0x%08X%08X\n",
+               i, UINT64_High(hash_code), UINT64_Low(hash_code));
+    }
+    printf("\n");
+
+    printf("std::hash<std::uint64_t>\n\n");
+    for (std::uint64_t i = 0; i < 8; i++) {
+        std::size_t hash_code = std::hash<std::uint64_t>()(i);
+        printf("key = %3" PRIu64 ", hash_code = 0x%08X%08X\n",
+               i, UINT64_High(hash_code), UINT64_Low(hash_code));
+    }
+    printf("\n");
+
+#if (HASH_FUNCTION_ID != ID_STD_HASH)
     printf("%s<std::uint32_t>\n\n", PRINT_MACRO(HASH_MAP_FUNCTION));
     for (std::uint32_t i = 0; i < 8; i++) {
         std::size_t hash_code = HASH_MAP_FUNCTION<std::uint32_t>()(i);
@@ -568,10 +585,11 @@ void std_hash_test()
     printf("%s<std::uint64_t>\n\n", PRINT_MACRO(HASH_MAP_FUNCTION));
     for (std::uint64_t i = 0; i < 8; i++) {
         std::size_t hash_code = HASH_MAP_FUNCTION<std::uint64_t>()(i);
-        printf("key = %3" PRIuPTR ", hash_code = 0x%08X%08X\n",
+        printf("key = %3" PRIu64 ", hash_code = 0x%08X%08X\n",
                i, UINT64_High(hash_code), UINT64_Low(hash_code));
     }
     printf("\n");
+#endif
 }
 
 void int_hash_crc32c_test()
