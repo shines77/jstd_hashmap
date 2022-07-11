@@ -159,7 +159,7 @@
 #define ID_INTEGAL_HASH         3   // test::IntegalHash<T>
 
 #ifdef _MSC_VER
-#define HASH_FUNCTION_ID        ID_SIMPLE_HASH
+#define HASH_FUNCTION_ID        ID_INTEGAL_HASH
 #else
 #define HASH_FUNCTION_ID        ID_INTEGAL_HASH
 #endif
@@ -213,7 +213,7 @@ static const bool FLAGS_test_256_bytes = true;
 #ifndef _DEBUG
 static const std::size_t kDefaultIters = 10000000;
 #else
-static const std::size_t kDefaultIters = 10000;
+static const std::size_t kDefaultIters = 1000000;
 #endif
 
 static const std::size_t kInitCapacity = 8;
@@ -1363,26 +1363,26 @@ static void measure_hashmap(const char * name, std::size_t obj_size, std::size_t
     }
     if (1) printf("\n");
 
-    if (1) time_map_find_sequential<MapType>(iters);
-    if (1) time_map_find_random<MapType>(iters);
-    if (1) time_map_find_failed<MapType>(iters);
-    if (1) time_map_find_empty<MapType>(iters);
-    if (1) printf("\n");
+    if (0) time_map_find_sequential<MapType>(iters);
+    if (0) time_map_find_random<MapType>(iters);
+    if (0) time_map_find_failed<MapType>(iters);
+    if (0) time_map_find_empty<MapType>(iters);
+    if (0) printf("\n");
 
-    if (1) time_map_insert<MapType>(iters);
-    if (1) time_map_insert_predicted<MapType>(iters);
-    if (1) time_map_insert_replace<MapType>(iters);
-    if (1) printf("\n");
+    if (0) time_map_insert<MapType>(iters);
+    if (0) time_map_insert_predicted<MapType>(iters);
+    if (0) time_map_insert_replace<MapType>(iters);
+    if (0) printf("\n");
 
-    if (1) time_map_emplace<MapType>(iters);
-    if (1) time_map_emplace_predicted<MapType>(iters);
-    if (1) time_map_emplace_replace<MapType>(iters);
-    if (1) printf("\n");
+    if (0) time_map_emplace<MapType>(iters);
+    if (0) time_map_emplace_predicted<MapType>(iters);
+    if (0) time_map_emplace_replace<MapType>(iters);
+    if (0) printf("\n");
 
-    if (1) time_map_operator_at<MapType>(iters);
-    if (1) time_map_operator_at_predicted<MapType>(iters);
-    if (1) time_map_operator_at_replace<MapType>(iters);
-    if (1) printf("\n");
+    if (0) time_map_operator_at<MapType>(iters);
+    if (0) time_map_operator_at_predicted<MapType>(iters);
+    if (0) time_map_operator_at_replace<MapType>(iters);
+    if (0) printf("\n");
 
     if (1) time_map_erase<MapType>(iters);
     if (1) time_map_erase_failed<MapType>(iters);

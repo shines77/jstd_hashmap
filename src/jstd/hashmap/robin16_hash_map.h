@@ -96,7 +96,7 @@
 #endif
 #endif // _MSC_VER
 
-#define ROBIN16_USE_HASH_POLICY     0
+#define ROBIN16_USE_HASH_POLICY     1
 
 namespace jstd {
 
@@ -1863,7 +1863,7 @@ private:
     }
 
     inline hash_code_t get_third_hash(hash_code_t value) const noexcept {
-#if 0
+#if ROBIN16_USE_HASH_POLICY
         return value;
 #elif 1
         return (size_type)hashers::fibonacci_hash((size_type)value);
@@ -2389,15 +2389,10 @@ private:
         if (kIsCompatibleLayout) {
             this->mutable_allocator_.construct(&dest_slot->mutable_value,
                                                std::move(src_slot->mutable_value));
-            if (!is_slot_trivial_destructor) {
-                this->destroy_slot(src_slot);
-            }
         } else {
             this->allocator_.construct(&dest_slot->value, std::move(src_slot->value));
-            if (!is_slot_trivial_destructor) {
-                this->destroy_slot(src_slot);
-            }
         }
+        this->destroy_slot(src_slot);
     }
 
     JSTD_FORCED_INLINE
@@ -2405,15 +2400,10 @@ private:
         if (kIsCompatibleLayout) {
             this->mutable_allocator_.construct(&dest_slot->mutable_value,
                                                src_slot->mutable_value);
-            if (!is_slot_trivial_destructor) {
-                this->destroy_slot(const_cast<slot_type *>(src_slot));
-            }
         } else {
             this->allocator_.construct(&dest_slot->value, src_slot->value);
-            if (!is_slot_trivial_destructor) {
-                this->destroy_slot(const_cast<slot_type *>(src_slot));
-            }
         }
+        this->destroy_slot(src_slot);
     }
 
     JSTD_FORCED_INLINE
@@ -3507,8 +3497,9 @@ TransferSlots:
         while (slot_index != last_index) {
             control_type * ctrl = this->control_at(slot_index);
             assert(ctrl->distance > 0);
-            --(ctrl->distance);
-            this->setUsedCtrl(prev_index, ctrl->value);
+            std::uint16_t dist_and_hash = ctrl->value;
+            dist_and_hash--;
+            this->setUsedCtrl(prev_index, dist_and_hash);
 
             slot_type * prev_slot = this->slot_at(prev_index);
             slot_type * slot = this->slot_at(slot_index);
