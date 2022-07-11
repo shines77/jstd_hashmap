@@ -211,7 +211,7 @@ static const bool FLAGS_test_16_bytes = true;
 static const bool FLAGS_test_256_bytes = true;
 
 #ifndef _DEBUG
-static const std::size_t kDefaultIters = 20000000;
+static const std::size_t kDefaultIters = 10000000;
 #else
 static const std::size_t kDefaultIters = 10000;
 #endif
