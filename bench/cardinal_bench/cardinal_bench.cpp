@@ -226,7 +226,7 @@ struct IntegalHash
                                 (std::is_integral<UInt32>::value &&
                                 (sizeof(UInt32) <= 4))>::type * = nullptr>
     result_type operator () (UInt32 value) const noexcept {
-        result_type hash = (result_type)(((std::uint64_t)value * 2654435769ul) >> 14);
+        result_type hash = (result_type)(((std::uint64_t)value * 2654435769ul) >> 12);
         return hash;
     }
 
