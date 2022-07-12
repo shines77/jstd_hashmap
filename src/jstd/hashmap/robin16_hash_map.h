@@ -1195,7 +1195,9 @@ private:
     size_type       slot_threshold_;
     std::uint32_t   n_mlf_;
     std::uint32_t   n_mlf_rev_;
+#if ROBIN16_USE_HASH_POLICY
     hash_policy_t   hash_policy_;
+#endif
 
     hasher          hasher_;
     key_equal       key_equal_;
@@ -1272,7 +1274,9 @@ public:
         slots_(nullptr), slot_size_(0), slot_mask_(0),
         slot_threshold_(0), n_mlf_(kDefaultLoadFactorInt),
         n_mlf_rev_(kDefaultLoadFactorRevInt),
+#if ROBIN16_USE_HASH_POLICY
         hash_policy_(other.hash_policy_ref()),
+#endif
         hasher_(hasher()), key_equal_(key_equal()),
         allocator_(alloc), mutable_allocator_(alloc),
         slot_allocator_(alloc), mutable_slot_allocator_(alloc) {
@@ -1295,7 +1299,9 @@ public:
         slots_(nullptr), slot_size_(0), slot_mask_(0),
         slot_threshold_(0), n_mlf_(kDefaultLoadFactorInt),
         n_mlf_rev_(kDefaultLoadFactorRevInt),
+#if ROBIN16_USE_HASH_POLICY
         hash_policy_(other.hash_policy_ref()),
+#endif
         hasher_(std::move(other.hash_function_ref())),
         key_equal_(std::move(other.key_eq_ref())),
         allocator_(std::move(other.get_allocator_ref())),
@@ -1311,7 +1317,9 @@ public:
         slots_(nullptr), slot_size_(0), slot_mask_(0),
         slot_threshold_(0), n_mlf_(kDefaultLoadFactorInt),
         n_mlf_rev_(kDefaultLoadFactorRevInt),
+#if ROBIN16_USE_HASH_POLICY
         hash_policy_(other.hash_policy_ref()),
+#endif
         hasher_(std::move(other.hash_function_ref())),
         key_equal_(std::move(other.key_eq_ref())),
         allocator_(alloc),
@@ -1331,7 +1339,9 @@ public:
         slots_(nullptr), slot_size_(0), slot_mask_(0),
         slot_threshold_(0), n_mlf_(kDefaultLoadFactorInt),
         n_mlf_rev_(kDefaultLoadFactorRevInt),
+#if ROBIN16_USE_HASH_POLICY
         hash_policy_(),
+#endif
         hasher_(hash), key_equal_(equal),
         allocator_(alloc), mutable_allocator_(alloc),
         slot_allocator_(alloc), mutable_slot_allocator_(alloc) {
@@ -1504,9 +1514,11 @@ public:
         return this->key_equal_;
     }
 
+#if ROBIN16_USE_HASH_POLICY
     hash_policy_t hash_policy() const {
         return this->hash_policy_;
     }
+#endif
 
     allocator_type get_allocator() const noexcept {
         return this->allocator_;
@@ -1532,9 +1544,11 @@ public:
         return this->key_equal_;
     }
 
+#if ROBIN16_USE_HASH_POLICY
     hash_policy_t & hash_policy_ref() noexcept {
         return this->hash_policy_;
     }
+#endif
 
     allocator_type & get_allocator_ref() noexcept {
         return this->allocator_;
@@ -3531,7 +3545,9 @@ ClearSlot:
         swap(this->slot_threshold_, other.slot_threshold());
         swap(this->n_mlf_, other.integral_mlf());
         swap(this->n_mlf_rev_, other.integral_mlf_rev());
+#if ROBIN16_USE_HASH_POLICY
         swap(this->hash_policy_, other.hash_policy_ref());
+#endif
     }
 
     void swap_policy(robin16_hash_map & other) {
