@@ -470,7 +470,159 @@ static std::uint32_t DJBHash(const CharTy * key, std::size_t len)
     return hash;
 }
 
-} // namespace hashes
+//////////////////////////////////////////////////////////////////////////////////////
+
+struct _uint128_t
+{
+    uint64_t low;
+    uint64_t high;
+
+    _uint128_t() noexcept : low(0), high(0) {
+    }
+    _uint128_t(uint64_t low, uint64_t high) noexcept : low(low), high(high) {
+    }
+    _uint128_t(const _uint128_t & src) noexcept : low(src.low), high(src.high) {
+    }
+
+    _uint128_t & operator = (const _uint128_t & rhs) {
+        this->low  = rhs.low;
+        this->high = rhs.high;
+        return *this;
+    }
+
+    ~_uint128_t() {}
+};
+
+//
+// product (128) = a (64) * b (64)
+//
+// From: https://stackoverflow.com/questions/25095741/how-can-i-multiply-64-bit-operands-and-get-128-bit-result-portably
+//
+static inline
+_uint128_t uint128_mul(uint64_t multiplicand, uint64_t multiplier)
+{
+    /*
+     * GCC and Clang usually provide __uint128_t on 64-bit targets,
+     * although Clang also defines it on WASM despite having to use
+     * builtins for most purposes - including multiplication.
+     */
+#if defined(__SIZEOF_INT128__) && !defined(__wasm__)
+
+    _uint128_t product128;
+    __uint128_t product = (__uint128_t)multiplicand * multiplier;
+    product128.low  = (uint64_t)(product & 0xFFFFFFFFFFFFFFFFull);
+    product128.high = (uint64_t)(product >> 64);
+    return product128;
+
+#elif defined(_MSC_VER) && (defined(_M_X64) || defined(_M_IX64) || defined(_M_AMD64))
+
+    /* Use the _umul128 intrinsic on MSVC x64 to hint for mulq. */
+    _uint128_t product128;
+    product128.low = _umul128(multiplicand, multiplier, &product128.high);
+    return product128;
+
+#elif defined(__ARM__) || defined(__ARM64__)
+    /*
+     * Fast yet simple grade school multiply that avoids
+     * 64-bit carries with the properties of multiplying by 11
+     * and takes advantage of UMAAL on ARMv6 to only need 4
+     * calculations.
+     */
+    /*******************************************************************
+
+        multiplicand (64) = low0, high0
+        multiplier (64)   = low1, high1
+
+        multiplicand (64) * multiplier (64) =
+
+        |           |             |            |           |
+        |           |             |      high0 * high1     |  product_03
+        |           |       low0  * high1      |           |  product_02
+        |           |       high0 * low1       |           |  product_01
+        |      low0 * low1        |            |           |  product_00
+        |           |             |            |           |
+        0          32            64           96          128
+
+    *******************************************************************/
+    uint32_t low0  = (multiplicand & 0xFFFFFFFF);
+    uint32_t high0 = (multiplicand >> 32);
+    uint32_t low1  = (multiplier & 0xFFFFFFFF);
+    uint32_t high1 = (multiplier >> 32);
+
+    /* First calculate all of the cross products. */
+    uint64_t product_00 = (uint64_t)low0  * low1;
+    uint64_t product_01 = (uint64_t)high0 * low1;
+    uint64_t product_02 = (uint64_t)low0  * high1;
+    uint64_t product_03 = (uint64_t)high0 * high1;
+
+    /* Now add the products together. These will never overflow. */
+    uint64_t middle = product_02 + (uint32_t)(product_00 >> 32) + (uint32_t)(product_01 & 0xFFFFFFFFul);
+    uint64_t low64  = (uint32_t)(product_00 & 0xFFFFFFFFul) | (middle << 32);
+    uint64_t high64 = product_03 + (uint32_t)(product_01 >> 32) + (uint32_t)(middle >> 32);
+    return _uint128_t(low64, high64);
+
+#else // __i386__ or other
+
+    /*******************************************************************
+
+        multiplicand (64) = low0, high0
+        multiplier (64)   = low1, high1
+
+        multiplicand (64) * multiplier (64) =
+
+        |           |             |            |           |
+        |           |             |      high0 * high1     |  product_03
+        |           |       low0  * high1      |           |  product_02
+        |           |       high0 * low1       |           |  product_01
+        |      low0 * low1        |            |           |  product_00
+        |           |             |            |           |
+        0          32            64           96          128
+
+    *******************************************************************/
+    uint32_t low0  = (multiplicand & 0xFFFFFFFF);
+    uint32_t high0 = (multiplicand >> 32);
+    uint32_t low1  = (multiplier & 0xFFFFFFFF);
+    uint32_t high1 = (multiplier >> 32);
+
+    /* First calculate all of the cross products. */
+    uint64_t product_00 = (uint64_t)low0  * low1;
+    uint64_t product_01 = (uint64_t)high0 * low1;
+    uint64_t product_02 = (uint64_t)low0  * high1;
+    uint64_t product_03 = (uint64_t)high0 * high1;
+
+    /* Now add the products together. These will never overflow. */
+    uint64_t middle = product_01 + product_02 + (uint32_t)(product_00 >> 32);
+    uint64_t low64  = (uint32_t)(product_00 & 0xFFFFFFFFul) | (middle << 32);
+    uint64_t high64 = product_03 + (uint32_t)(middle >> 32);
+    return _uint128_t(low64, high64);
+#endif // __i386__
+}
+
+static inline
+std::uint32_t mum_hash32(std::uint32_t multiplicand, std::uint32_t multiplier)
+{
+    std::uint64_t product = std::uint64_t(multiplicand) * multiplier;
+    return (std::uint32_t)(std::uint32_t(product & 0x00000000FFFFFFFFull) ^ std::uint32_t(product >> 32));
+}
+
+static inline
+std::uint64_t mum_hash64(std::uint64_t multiplicand, std::uint64_t multiplier)
+{
+    _uint128_t product = uint128_mul(multiplicand, multiplier);
+    return (product.low ^ product.high);
+}
+
+static inline
+std::size_t mum_hash(std::size_t multiplicand, std::size_t multiplier)
+{
+#if (JSTD_WORD_LEN == 64)
+    return mum_hash64(multiplicand, multiplier);
+#else
+    return mum_hash32(multiplicand, multiplier);
+#endif
+}
+
+} // namespace hashers
 
 //
 // class PrimaryHash
@@ -1100,6 +1252,8 @@ HashUtils<std::uint64_t>::decodeValue<8U>(const char * data, std::uint32_t missa
     return value;
 }
 
+//////////////////////////////////////////////////////////////////////////////////////
+
 class fibonacci_hash_policy;
 
 template <typename T, typename = void>
@@ -1160,6 +1314,8 @@ public:
         this->shift_ = 28u;
     }
 };
+
+//////////////////////////////////////////////////////////////////////////////////////
 
 } // namespace jstd
 

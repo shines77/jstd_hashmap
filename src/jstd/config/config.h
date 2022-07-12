@@ -33,7 +33,7 @@
   #endif
 #endif
 
-#if defined(_M_X64) || defined(_M_AMD64) \
+#if defined(_M_X64) || defined(_M_IX64) || defined(_M_AMD64) \
  || defined(_M_IA64) || defined(__amd64__) || defined(__x86_64__)
   #define JSTD_IS_X86           1
   #define JSTD_IS_X86_64        1

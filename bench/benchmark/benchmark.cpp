@@ -77,6 +77,9 @@
 #include <vector>
 #include <unordered_map>
 
+#define USE_JSTD_HASH_TABLE     0
+#define USE_JSTD_DICTIONARY     0
+
 /* SIMD support features */
 #define JSTD_HAVE_MMX           1
 #define JSTD_HAVE_SSE           1
@@ -106,9 +109,6 @@
 #define STRING_UTILS_LIBC       3
 
 #define STRING_UTILS_MODE       STRING_UTILS_STL
-
-#define USE_JSTD_HASH_TABLE     0
-#define USE_JSTD_DICTIONARY     0
 
 #include <jstd/basic/stddef.h>
 #include <jstd/basic/stdint.h>
