@@ -103,15 +103,22 @@ namespace jstd {
 template < typename Key, typename Value,
            typename Hash = std::hash<typename std::remove_cv<Key>::type>,
            typename KeyEqual = std::equal_to<typename std::remove_cv<Key>::type>,
-           typename Allocator = std::allocator<std::pair<typename std::remove_const<typename std::remove_cv<Key>::type>::type,
+           typename Allocator = std::allocator<std::pair<typename std::add_const<typename std::remove_cv<Key>::type>::type,
                                                          typename std::remove_cv<Value>::type>> >
 class robin16_hash_map {
 public:
     typedef typename std::remove_cv<Key>::type      key_type;
     typedef typename std::remove_cv<Value>::type    mapped_type;
 
-    typedef std::pair<key_type, mapped_type>        value_type;
+    typedef std::pair<const key_type, mapped_type>  value_type;
     typedef std::pair<key_type, mapped_type>        mutable_value_type;
+
+    static constexpr bool kIsCompatibleLayout =
+            std::is_same<value_type, mutable_value_type>::value ||
+            is_compatible_layout<value_type, mutable_value_type>::value;
+
+    typedef typename std::conditional<kIsCompatibleLayout, mutable_value_type, value_type>::type
+                                                    actual_value_type;
 
     typedef Hash                                    hasher;
     typedef KeyEqual                                key_equal;
@@ -167,21 +174,17 @@ public:
                                            std::is_enum<key_type>::value);
 
     static constexpr bool is_slot_trivial_copyable =
-            (std::is_trivially_copyable<value_type>::value ||
+            (std::is_trivially_copyable<actual_value_type>::value ||
             (std::is_trivially_copyable<key_type>::value &&
              std::is_trivially_copyable<mapped_type>::value) ||
             (std::is_scalar<key_type>::value && std::is_scalar<mapped_type>::value));
 
     static constexpr bool is_slot_trivial_destructor =
-            (std::is_trivially_destructible<value_type>::value ||
+            (std::is_trivially_destructible<actual_value_type>::value ||
             (std::is_trivially_destructible<key_type>::value &&
              std::is_trivially_destructible<mapped_type>::value) ||
            ((std::is_arithmetic<key_type>::value || std::is_enum<key_type>::value) &&
             (std::is_arithmetic<mapped_type>::value || std::is_enum<mapped_type>::value)));
-
-    static constexpr bool kIsCompatibleLayout =
-            std::is_same<value_type, mutable_value_type>::value ||
-            is_compatible_layout<value_type, mutable_value_type>::value;
 
     static constexpr std::uint8_t kEmptySlot    = 0b11111111;
     static constexpr std::uint8_t kEndOfMark    = 0b11111110;
@@ -996,6 +999,59 @@ public:
 
     typedef slot_type       mutable_slot_type;
     typedef slot_type       node_type;
+
+    template <typename Alloc, typename T, bool isCompatibleLayout,
+              bool is_noexcept_move = is_noexcept_move_assignable<T>::value>
+    struct swap_pair {
+        static void swap(Alloc & alloc, T & a, T & b, T & tmp) {
+            using std::swap;
+            swap(a, b);
+        }
+    };
+
+    template <typename Alloc, typename T>
+    struct swap_pair<Alloc, T, true, false> {
+        static void swap(Alloc & alloc, T & a, T & b, T & tmp) {
+            alloc.construct(&tmp, std::move(a));
+            alloc.destroy(&a);
+            alloc.construct(&a, std::move(b));
+            alloc.destroy(&b);
+            alloc.construct(&b, std::move(tmp));
+            alloc.destroy(&tmp);
+        }
+    };
+
+    template <typename Alloc, typename T>
+    struct swap_pair<Alloc, T, false, true> {
+        static void swap(Alloc & alloc, T & a, T & b, T & tmp) {
+            typedef typename T::first_type  first_type;
+            typedef typename std::allocator_traits<Alloc>::template rebind_alloc<first_type>
+                                            first_allocator_type;
+            first_allocator_type first_allocator;
+
+            first_allocator.construct(&tmp.first, std::move(a.first));
+            first_allocator.destroy(&a.first);
+            first_allocator.construct(&a.first, std::move(b.first));
+            first_allocator.destroy(&b.first);
+            first_allocator.construct(&b.first, std::move(tmp.first));
+            first_allocator.destroy(&tmp.first);
+
+            using std::swap;
+            swap(a.second, b.second);
+        }
+    };
+
+    template <typename Alloc, typename T>
+    struct swap_pair<Alloc, T, false, false> {
+        static void swap(Alloc & alloc, T & a, T & b, T & tmp) {
+            alloc.construct(&tmp, std::move(a));
+            alloc.destroy(&a);
+            alloc.construct(&a, std::move(b));
+            alloc.destroy(&b);
+            alloc.construct(&b, std::move(tmp));
+            alloc.destroy(&tmp);
+        }
+    };
 
 #if 1
     template <typename ValueType>
@@ -2421,21 +2477,21 @@ private:
     }
 
     JSTD_FORCED_INLINE
-    void swap_slot(size_type slot_index1, size_type slot_index2) {
+    void swap_slot(size_type slot_index1, size_type slot_index2, slot_type * tmp) {
         slot_type * slot1 = this->slot_at(slot_index1);
         slot_type * slot2 = this->slot_at(slot_index2);
-        this->swap_slot(slot1, slot2);
+        this->swap_slot(slot1, slot2, tmp);
     }
 
     JSTD_FORCED_INLINE
-    void swap_slot(slot_type * slot1, slot_type * slot2) {
-        using std::swap;
+    void swap_slot(slot_type * slot1, slot_type * slot2, slot_type * tmp) {
         if (kIsCompatibleLayout) {
-            swap(*reinterpret_cast<mutable_value_type *>(&slot1->mutable_value),
-                 *reinterpret_cast<mutable_value_type *>(&slot2->mutable_value));
+            swap_pair<mutable_allocator_type, mutable_value_type, true>::swap(
+                this->mutable_allocator_,
+                slot1->mutable_value, slot2->mutable_value, tmp->mutable_value);
         } else {
-            swap(*reinterpret_cast<value_type *>(&slot1->value),
-                 *reinterpret_cast<value_type *>(&slot2->value));
+            swap_pair<allocator_type, value_type, false>::swap(
+                this->allocator_, slot1->value, slot2->value, tmp->value);
         }
     }
 
@@ -2788,8 +2844,12 @@ private:
         insert_ctrl.distance++;
 
         alignas(slot_type) unsigned char raw[sizeof(slot_type)];
+        alignas(slot_type) unsigned char tmp_raw[sizeof(slot_type)];
+
         slot_type * to_insert = reinterpret_cast<slot_type *>(&raw);
+        slot_type * tmp_slot  = reinterpret_cast<slot_type *>(&tmp_raw);
         this->placement_new_slot(to_insert);
+        this->placement_new_slot(tmp_slot);
         slot_type * target_slot = this->slot_at(target);
         if (kIsCompatibleLayout) {
             this->mutable_allocator_.construct(&to_insert->mutable_value, std::move(target_slot->mutable_value));
@@ -2811,7 +2871,7 @@ private:
                 std::swap(insert_ctrl.value, ctrl->value);
 
                 slot_type * slot = this->slot_at(slot_index);
-                this->swap_slot(to_insert, slot);
+                this->swap_slot(to_insert, slot, tmp_slot);
             }
 
             if (isRehashing) {

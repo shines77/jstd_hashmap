@@ -253,6 +253,9 @@
     <ClInclude Include="..\..\..\src\jstd\support\BitVec.h">
       <Filter>src\support</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\hashmap\robin_hash_map.h">
+      <Filter>src\hashmap</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\src\jstd\dll_main.cpp">

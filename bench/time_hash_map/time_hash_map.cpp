@@ -81,8 +81,8 @@
 #include <vector>
 #include <algorithm>
 
-#define USE_STD_UNORDERED_MAP       1
-#define USE_JSTD_FLAT16_HASH_MAP    1
+#define USE_STD_UNORDERED_MAP       0
+#define USE_JSTD_FLAT16_HASH_MAP    0
 #define USE_JSTD_ROBIN16_HASH_MAP   1
 
 /* SIMD support features */
@@ -217,7 +217,7 @@ static const bool FLAGS_test_256_bytes = true;
 #ifndef _DEBUG
 static const std::size_t kDefaultIters = 10000000;
 #else
-static const std::size_t kDefaultIters = 100000;
+static const std::size_t kDefaultIters = 10000;
 #endif
 
 static const std::size_t kInitCapacity = 8;
@@ -385,12 +385,13 @@ public:
 
     ~HashObject() = default;
 
-    void operator = (const this_type & that) noexcept {
+    this_type & operator = (const this_type & that) noexcept {
 #if USE_STAT_COUNTER
         g_num_copies++;
 #endif
         this->key_ = that.key_;
         std::memcpy(this->buffer_, that.buffer_, sizeof(char) * kBufLen);
+        return *this;
     }
 
     key_type key() const noexcept {
@@ -465,11 +466,12 @@ public:
 
     ~HashObject() = default;
 
-    void operator = (const this_type & that) noexcept {
+    this_type & operator = (const this_type & that) noexcept {
 #if USE_STAT_COUNTER
         g_num_copies++;
 #endif
         this->key_ = that.key_;
+        return *this;
     }
 
     key_type key() const noexcept {
@@ -537,11 +539,12 @@ public:
         operator = (that);
     }
 
-    void operator = (const this_type & that) noexcept {
+    this_type & operator = (const this_type & that) noexcept {
 #if USE_STAT_COUNTER
         g_num_copies++;
 #endif
         this->key_ = that.key_;
+        return *this;
     }
 
     key_type key() const noexcept {
@@ -695,6 +698,8 @@ struct hash<HashObject<Key, Size, HashSize>> {
 
 #endif
 
+#if 0
+
 namespace std {
 
 // Let the hashtable implementations know it can use an optimized memcpy,
@@ -741,6 +746,8 @@ template <>
 struct is_trivially_destructible< HashObject<std::size_t, 256, 32> > : true_type { };
 
 } // namespace std
+
+#endif
 
 #if 0
 
@@ -1465,7 +1472,7 @@ static void test_all_hashmaps(std::size_t obj_size, std::size_t iters) {
                         jstd::flat16_hash_map<HashObj *, Value, HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>
                         >(
             "jstd::flat16_hash_map<K, V>", obj_size,
-            sizeof(typename flat16_hash_map::node_type), iters, has_stress_hash_function);
+            sizeof(typename flat16_hash_map::value_type), iters, has_stress_hash_function);
     }
 #endif
 
@@ -1476,7 +1483,7 @@ static void test_all_hashmaps(std::size_t obj_size, std::size_t iters) {
                         jstd::robin16_hash_map<HashObj *, Value, HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>
                         >(
             "jstd::robin16_hash_map<K, V>", obj_size,
-            sizeof(typename robin16_hash_map::node_type), iters, has_stress_hash_function);
+            sizeof(typename robin16_hash_map::value_type), iters, has_stress_hash_function);
     }
 #endif
 }
@@ -1544,6 +1551,42 @@ void std_hash_test()
 #endif
 }
 
+void is_noexcept_move_test()
+{
+    static constexpr bool v1_0 = jstd::is_noexcept_move_assignable<HashObject<std::uint32_t, 4, 4>>::value;
+    static constexpr bool v2_0 = jstd::is_noexcept_move_assignable<HashObject<std::size_t, 8, 8>>::value;
+    static constexpr bool v3_0 = jstd::is_noexcept_move_assignable<HashObject<std::size_t, 16, 16>>::value;
+    static constexpr bool v4_0 = jstd::is_noexcept_move_assignable<HashObject<std::size_t, 256, 32>>::value;
+
+    static constexpr bool v1_1 = jstd::is_noexcept_move_assignable<std::pair<HashObject<std::uint32_t, 4, 4>, std::uint32_t>>::value;
+    static constexpr bool v2_1 = jstd::is_noexcept_move_assignable<std::pair<HashObject<std::size_t, 8, 8>, std::size_t>>::value;
+    static constexpr bool v3_1 = jstd::is_noexcept_move_assignable<std::pair<HashObject<std::size_t, 16, 16>, std::size_t>>::value;
+    static constexpr bool v4_1 = jstd::is_noexcept_move_assignable<std::pair<HashObject<std::size_t, 256, 32>, std::size_t>>::value;
+
+    static constexpr bool v1_2 = jstd::is_noexcept_move_assignable<std::pair<const HashObject<std::uint32_t, 4, 4>, std::uint32_t>>::value;
+    static constexpr bool v2_2 = jstd::is_noexcept_move_assignable<std::pair<const HashObject<std::size_t, 8, 8>, std::size_t>>::value;
+    static constexpr bool v3_2 = jstd::is_noexcept_move_assignable<std::pair<const HashObject<std::size_t, 16, 16>, std::size_t>>::value;
+    static constexpr bool v4_2 = jstd::is_noexcept_move_assignable<std::pair<const HashObject<std::size_t, 256, 32>, std::size_t>>::value;
+
+    printf("v1_0 = %s\n", v1_0 ? "true" : "false");
+    printf("v1_0 = %s\n", v1_0 ? "true" : "false");
+    printf("v1_0 = %s\n", v1_0 ? "true" : "false");
+    printf("v1_0 = %s\n", v1_0 ? "true" : "false");
+    printf("\n");
+
+    printf("v1_1 = %s\n", v1_1 ? "true" : "false");
+    printf("v1_1 = %s\n", v1_1 ? "true" : "false");
+    printf("v1_1 = %s\n", v1_1 ? "true" : "false");
+    printf("v1_1 = %s\n", v1_1 ? "true" : "false");
+    printf("\n");
+
+    printf("v1_2 = %s\n", v1_2 ? "true" : "false");
+    printf("v1_2 = %s\n", v1_2 ? "true" : "false");
+    printf("v1_2 = %s\n", v1_2 ? "true" : "false");
+    printf("v1_2 = %s\n", v1_2 ? "true" : "false");
+    printf("\n");
+}
+
 int main(int argc, char * argv[])
 {
     jstd::RandomGen   RandomGen(20200831);
@@ -1558,6 +1601,7 @@ int main(int argc, char * argv[])
     jtest::CPU::warm_up(1000);
 
     if (1) { std_hash_test(); }
+    if (1) { is_noexcept_move_test(); }
 
     if (1)
     {
