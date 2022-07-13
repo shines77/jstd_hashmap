@@ -1027,12 +1027,12 @@ public:
     struct swap_pair<Alloc, T, false, true> {
         typedef typename T::first_type                      first_type;
         typedef typename std::remove_cv<first_type>::type   mutable_first_type;
-        typedef typename std::allocator_traits<Alloc>::template rebind_alloc<mutable_first_type>
+        typedef typename std::allocator_traits<Alloc>::template rebind_alloc<first_type>
                                                             first_allocator_type;
-        static mutable_first_type * mutable_key(T * value) {
+        static first_type * mutable_key(T * value) {
             // Still check for isCompatibleLayout so that we can avoid calling jstd::launder
             // unless necessary because it can interfere with optimizations.
-            return launder(const_cast<mutable_first_type *>(std::addressof(value->first)));
+            return reinterpret_cast<first_type *>(launder(const_cast<mutable_first_type *>(std::addressof(value->first))));
         }
 
         static void swap(Alloc & alloc, T & a, T & b, T & tmp) {

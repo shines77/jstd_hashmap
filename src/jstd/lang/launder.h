@@ -40,7 +40,7 @@ namespace jstd {
  * but that can't be done without specific support from the compiler.
  */
 template <typename T>
-//JSTD_NODISCARD
+JSTD_NODISCARD
 inline
 T * launder(T * p) noexcept
 {

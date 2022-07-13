@@ -277,18 +277,24 @@
 #ifndef JSTD_NORETURN
 #define JSTD_NORETURN   [[noreturn]]
 #endif
+#else
+#define JSTD_NORETURN
 #endif
 
 #if (__has_cpp_attribute(deprecated) >= 201309L) || defined(JSTD_IS_CXX_14)
 #ifndef JSTD_DEPRECATED
 #define JSTD_DEPRECATED [[deprecated]]
 #endif
+#else
+#define JSTD_DEPRECATED
 #endif
 
 #if (__has_cpp_attribute(maybe_unused) >= 201603L) || defined(JSTD_IS_CXX_17)
 #ifndef JSTD_MAYBE_UNUSED
 #define JSTD_MAYBE_UNUSED  [[maybe_unused]]
 #endif
+#else
+#define JSTD_MAYBE_UNUSED
 #endif
 
 //
@@ -298,30 +304,40 @@
 #ifndef JSTD_NODISCARD
 #define JSTD_NODISCARD  [[nodiscard]]
 #endif
+#else
+#define JSTD_NODISCARD
 #endif
 
 #if (__has_cpp_attribute(fallthrough) >= 201603L) || defined(JSTD_IS_CXX_17)
 #ifndef JSTD_FALLTHROUGH
 #define JSTD_FALLTHROUGH  [[fallthrough]]
 #endif
+#else
+#define JSTD_FALLTHROUGH
 #endif
 
 #if (__has_cpp_attribute(likely) >= 201803L) || defined(JSTD_IS_CXX_20)
 #ifndef JSTD_LIKELY
 #define JSTD_LIKELY     [[likely]]
 #endif
+#else
+#define JSTD_LIKELY
 #endif
 
 #if (__has_cpp_attribute(unlikely) >= 201803L) || defined(JSTD_IS_CXX_20)
 #ifndef JSTD_UNLIKELY
 #define JSTD_UNLIKELY   [[unlikely]]
 #endif
+#else
+#define JSTD_UNLIKELY
 #endif
 
 #if (__has_cpp_attribute(no_unique_address) >= 201803L) || defined(JSTD_IS_CXX_20)
 #ifndef JSTD_NO_UNIQUE_ADDRESS
 #define JSTD_NO_UNIQUE_ADDRESS  [[no_unique_address]]
 #endif
+#else
+#define JSTD_NO_UNIQUE_ADDRESS
 #endif
 
 ////////////////////////////////////////////////////////////////////////////////

@@ -81,8 +81,8 @@
 #include <vector>
 #include <algorithm>
 
-#define USE_STD_UNORDERED_MAP       0
-#define USE_JSTD_FLAT16_HASH_MAP    0
+#define USE_STD_UNORDERED_MAP       1
+#define USE_JSTD_FLAT16_HASH_MAP    1
 #define USE_JSTD_ROBIN16_HASH_MAP   1
 
 /* SIMD support features */
