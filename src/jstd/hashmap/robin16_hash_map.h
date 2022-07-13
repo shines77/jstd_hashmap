@@ -1023,18 +1023,24 @@ public:
 
     template <typename Alloc, typename T>
     struct swap_pair<Alloc, T, false, true> {
+        static key_type * mutable_key(value_type * value) {
+            // Still check for kMutableKeys so that we can avoid calling std::launder
+            // unless necessary because it can interfere with optimizations.
+            return launder(const_cast<key_type *>(std::addressof(value->first)));
+        }
+
         static void swap(Alloc & alloc, T & a, T & b, T & tmp) {
             typedef typename T::first_type  first_type;
             typedef typename std::allocator_traits<Alloc>::template rebind_alloc<first_type>
                                             first_allocator_type;
             first_allocator_type first_allocator;
 
-            first_allocator.construct(&tmp.first, std::move(a.first));
-            first_allocator.destroy(&a.first);
-            first_allocator.construct(&a.first, std::move(b.first));
-            first_allocator.destroy(&b.first);
-            first_allocator.construct(&b.first, std::move(tmp.first));
-            first_allocator.destroy(&tmp.first);
+            first_allocator.construct(mutable_key(&tmp), std::move(*mutable_key(&a)));
+            first_allocator.destroy(mutable_key(&a));
+            first_allocator.construct(mutable_key(&a), std::move(*mutable_key(&b)));
+            first_allocator.destroy(mutable_key(&b));
+            first_allocator.construct(mutable_key(&b), std::move(*mutable_key(&tmp)));
+            first_allocator.destroy(mutable_key(&tmp));
 
             using std::swap;
             swap(a.second, b.second);
