@@ -3,7 +3,7 @@
 
 #include <new>
 
-#include "jstd/config/config.h"
+#include "jstd/basic/stddef.h"
 
 #if defined(_WIN32)
 #ifndef WIN32_LEAN_AND_MEAN
@@ -40,13 +40,14 @@ namespace jstd {
  * but that can't be done without specific support from the compiler.
  */
 template <typename T>
-JSTD_NODISCARD
-inline T * launder(T * p) noexcept
+//JSTD_NODISCARD
+static inline
+T * launder(T * p) noexcept
 {
 #if __has_builtin(__builtin_launder) || (__GNUC__ >= 7)
     // The builtin has no unwanted side-effects.
     return __builtin_launder(p);
-#elif __GNUC__
+#elif defined(__GNUC__)
     // This inline assembler block declares that `p` is an input and an output,
     // so the compiler has to assume that it has been changed inside the block.
     __asm__("" : "+r"(p));
@@ -62,12 +63,20 @@ inline T * launder(T * p) noexcept
 }
 
 /* The standard explicitly forbids laundering these */
+static inline
 void launder(void *) = delete;
+
+static inline
 void launder(void const *) = delete;
+
+static inline
 void launder(void volatile *) = delete;
+
+static inline
 void launder(void const volatile *) = delete;
 
 template <typename T, typename... Args>
+static inline
 void launder(T (*)(Args...)) = delete;
 
 } // namespace jstd

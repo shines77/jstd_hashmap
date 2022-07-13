@@ -73,6 +73,7 @@
 #include <nmmintrin.h>
 #include <immintrin.h>
 
+#include "jstd/basic/stddef.h"
 #include "jstd/type_traits.h"
 #include "jstd/iterator.h"
 #include "jstd/utility.h"
@@ -1024,17 +1025,18 @@ public:
 
     template <typename Alloc, typename T>
     struct swap_pair<Alloc, T, false, true> {
-        static key_type * mutable_key(value_type * value) {
-            // Still check for kMutableKeys so that we can avoid calling std::launder
+        typedef typename T::first_type                      first_type;
+        typedef typename std::remove_cv<first_type>::type   mutable_first_type;
+        typedef typename std::allocator_traits<Alloc>::template rebind_alloc<mutable_first_type>
+                                                            first_allocator_type;
+        static mutable_first_type * mutable_key(T * value) {
+            // Still check for isCompatibleLayout so that we can avoid calling jstd::launder
             // unless necessary because it can interfere with optimizations.
-            return launder(const_cast<key_type *>(std::addressof(value->first)));
+            return launder(const_cast<mutable_first_type *>(std::addressof(value->first)));
         }
 
         static void swap(Alloc & alloc, T & a, T & b, T & tmp) {
-            typedef typename T::first_type  first_type;
-            typedef typename std::allocator_traits<Alloc>::template rebind_alloc<first_type>
-                                            first_allocator_type;
-            first_allocator_type first_allocator;
+            mutable_first_type first_allocator;
 
             first_allocator.construct(mutable_key(&tmp), std::move(*mutable_key(&a)));
             first_allocator.destroy(mutable_key(&a));
