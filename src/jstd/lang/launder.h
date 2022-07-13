@@ -41,7 +41,7 @@ namespace jstd {
  */
 template <typename T>
 //JSTD_NODISCARD
-static inline
+inline
 T * launder(T * p) noexcept
 {
 #if __has_builtin(__builtin_launder) || (__GNUC__ >= 7)
@@ -63,20 +63,20 @@ T * launder(T * p) noexcept
 }
 
 /* The standard explicitly forbids laundering these */
-static inline
+inline
 void launder(void *) = delete;
 
-static inline
+inline
 void launder(void const *) = delete;
 
-static inline
+inline
 void launder(void volatile *) = delete;
 
-static inline
+inline
 void launder(void const volatile *) = delete;
 
 template <typename T, typename... Args>
-static inline
+inline
 void launder(T (*)(Args...)) = delete;
 
 } // namespace jstd

@@ -1036,7 +1036,7 @@ public:
         }
 
         static void swap(Alloc & alloc, T & a, T & b, T & tmp) {
-            mutable_first_type first_allocator;
+            first_allocator_type first_allocator;
 
             first_allocator.construct(mutable_key(&tmp), std::move(*mutable_key(&a)));
             first_allocator.destroy(mutable_key(&a));
