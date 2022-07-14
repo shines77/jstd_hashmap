@@ -822,7 +822,6 @@ public:
     StdHashMap(std::size_t initCapacity) : this_type() {
     }
 
-#if 1
     void emplace(const key_type & key, const mapped_type & value) {
         this->operator [](key) = value;
     }
@@ -846,7 +845,6 @@ public:
         key_type key(id);
         this->operator [](key) = std::forward<mapped_type>(value);
     }
-#endif
 
     void rehash(std::size_t newSize) {
         this->resize(newSize);
@@ -934,7 +932,7 @@ void shuffle_vector(Vector & vector, int seed = 0) {
         seed = 20200831;
     jstd::MtRandomGen random_gen(seed);
     for (std::size_t n = vector.size() - 1; n > 0; n--) {
-        std::size_t rnd_idx = random_gen.nextUInt32(static_cast<std::uint32_t>(n));
+        std::size_t rnd_idx = std::size_t(RandomGen.nextUInt32()) % (n + 1);
         std::swap(vector[n], vector[rnd_idx]);
     }
 }
