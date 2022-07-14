@@ -81,6 +81,7 @@
 #include <vector>
 #include <algorithm>
 
+#define USE_STD_HASH_MAP            1
 #define USE_STD_UNORDERED_MAP       1
 #define USE_JSTD_FLAT16_HASH_MAP    1
 #define USE_JSTD_ROBIN16_HASH_MAP   1
@@ -121,13 +122,17 @@
 #include <jstd/basic/stdint.h>
 #include <jstd/basic/inttypes.h>
 
-#include <unordered_map>
+#if USE_STD_HASH_MAP
 #if defined(_MSC_VER)
 #include <hash_map>
 #define STDEXT_HASH_NAMESPACE stdext
 #else
 #include <ext/hash_map>
 #define STDEXT_HASH_NAMESPACE __gnu_cxx
+#endif
+#endif // USE_STD_HASH_MAP
+#if USE_STD_UNORDERED_MAP
+#include <unordered_map>
 #endif
 #if USE_JSTD_FLAT16_HASH_MAP
 #include <jstd/hashmap/flat16_hash_map.h>
@@ -195,9 +200,6 @@
 #endif
 
 #pragma message(PRINT_MACRO_VAR(HASH_MAP_FUNCTION))
-
-static const bool FLAGS_test_sparse_hash_map = true;
-static const bool FLAGS_test_dense_hash_map = true;
 
 #if defined(_MSC_VER)
 static const bool FLAGS_test_std_hash_map = false;
@@ -821,6 +823,14 @@ public:
 
     void emplace(const ident_type & id, mapped_type && value) {
         this->operator [](id) = std::forward<mapped_type>(value);
+    }
+
+    template <typename MappedType, typename std::enable_if<
+                                                !std::is_same<ident_type, MappedType>::value
+                                            >::type * = nullptr>
+    void emplace(const MappedType & id, mapped_type && value) {
+        ident_type key(id);
+        this->operator [](key) = std::forward<mapped_type>(value);
     }
 
     void rehash(std::size_t newSize) {
@@ -1925,12 +1935,14 @@ template <typename HashObj, typename Value>
 static void test_all_hashmaps(std::size_t obj_size, std::size_t iters) {
     const bool has_stress_hash_function = (obj_size <= 8);
 
+#if USE_STD_HASH_MAP
     if (FLAGS_test_std_hash_map) {
         measure_hashmap<StdHashMap<HashObj,   Value, HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>,
                         StdHashMap<HashObj *, Value, HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>
                         >(
             "stdext::hash_map<K, V>", obj_size, 0, iters, has_stress_hash_function);
     }
+#endif
 
 #if USE_STD_UNORDERED_MAP
     if (FLAGS_test_std_unordered_map) {
