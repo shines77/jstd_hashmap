@@ -166,9 +166,9 @@
 #define ID_MUM_HASH             4   // test::MumHash<T>
 
 #ifdef _MSC_VER
-#define HASH_FUNCTION_ID        ID_MUM_HASH
+#define HASH_FUNCTION_ID        ID_SIMPLE_HASH
 #else
-#define HASH_FUNCTION_ID        ID_MUM_HASH
+#define HASH_FUNCTION_ID        ID_SIMPLE_HASH
 #endif
 
 #if (HASH_FUNCTION_ID == ID_STDEXT_HASH)
