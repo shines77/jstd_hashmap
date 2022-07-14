@@ -81,7 +81,7 @@
 #include <vector>
 #include <algorithm>
 
-#define USE_STD_UNORDERED_MAP       0
+#define USE_STD_UNORDERED_MAP       1
 #define USE_JSTD_FLAT16_HASH_MAP    1
 #define USE_JSTD_ROBIN16_HASH_MAP   1
 
@@ -847,33 +847,6 @@ public:
     }
 };
 
-#if 1
-
-// Apply a pseudorandom permutation to the given vector.
-template <typename Vector>
-void shuffle_vector(Vector & vector) {
-    // shuffle
-    //::srand(9);
-    jstd::RandomGen RandomGen(20200831);
-    for (std::size_t n = vector.size(); n >= 2; n--) {
-        std::size_t rnd_idx = std::size_t(RandomGen.nextUInt32()) % n;
-        std::swap(vector[n - 1], vector[rnd_idx]);
-    }
-}
-
-#else
-
-template <typename Vector>
-void shuffle_vector(Vector & vector) {
-    // shuffle
-    for (std::size_t n = vector.size() - 1; n > 0; n--) {
-        std::size_t rnd_idx = jstd::MtRandomGen::nextUInt32(static_cast<std::uint32_t>(n));
-        std::swap(vector[n], vector[rnd_idx]);
-    }
-}
-
-#endif
-
 template <typename Container>
 void print_test_time(std::size_t checksum, double elapsedTime)
 {
@@ -890,20 +863,19 @@ static void report_result(char const * title, double ut, std::size_t iters,
     // Construct heap growth report text if applicable
     char heap[128] = "";
     if (end_memory > start_memory) {
-        snprintf(heap, sizeof(heap), "%7.1f MB",
-                 (end_memory - start_memory) / 1048576.0);
+        snprintf(heap, sizeof(heap), "%7.1f MB", (end_memory - start_memory) / 1048576.0);
     }
 
 #if (USE_STAT_COUNTER == 0)
-    printf("%-25s %8.2f ns  %s\n", title, (ut * 1000000000.0 / iters), heap);
+    printf("%-35s %8.2f ns  %s\n", title, (ut * 1000000000.0 / iters), heap);
 #else
   #if USE_CTOR_COUNTER
-    printf("%-25s %8.2f ns  (%8" PRIuPTR " hashes, %8" PRIuPTR " copies, %8" PRIuPTR " ctor) %s\n",
+    printf("%-35s %8.2f ns  (%8" PRIuPTR " hashes, %8" PRIuPTR " copies, %8" PRIuPTR " ctor) %s\n",
            title, (ut * 1000000000.0 / iters),
            g_num_hashes, g_num_copies, g_num_constructor,
            heap);
   #else
-    printf("%-25s %8.2f ns  (%8" PRIuPTR " hashes, %8" PRIuPTR " copies) %s\n",
+    printf("%-35s %8.2f ns  (%8" PRIuPTR " hashes, %8" PRIuPTR " copies) %s\n",
            title, (ut * 1000000000.0 / iters),
            g_num_hashes, g_num_copies,
            heap);
@@ -912,12 +884,44 @@ static void report_result(char const * title, double ut, std::size_t iters,
     ::fflush(stdout);
 }
 
+#if 0
+
+// Apply a pseudorandom permutation to the given vector.
+template <typename Vector>
+void shuffle_vector(Vector & vector, int seed = 0) {
+    // shuffle
+    //::srand(9);
+    if (seed == 0)
+        seed = 20200831;
+    jstd::RandomGen RandomGen(seed);
+    for (std::size_t n = vector.size(); n >= 2; n--) {
+        std::size_t rnd_idx = std::size_t(RandomGen.nextUInt32()) % n;
+        std::swap(vector[n - 1], vector[rnd_idx]);
+    }
+}
+
+#else
+
+template <typename Vector>
+void shuffle_vector(Vector & vector, int seed = 0) {
+    // shuffle
+    if (seed == 0)
+        seed = 20200831;
+    jstd::MtRandomGen random_gen(seed);
+    for (std::size_t n = vector.size() - 1; n > 0; n--) {
+        std::size_t rnd_idx = random_gen.nextUInt32(static_cast<std::uint32_t>(n));
+        std::swap(vector[n], vector[rnd_idx]);
+    }
+}
+
+#endif
+
 template <class MapType, class Vector>
-static void time_map_find(char const * title, std::size_t iters,
-                          const Vector & indices) {
+static void map_sequential_find(char const * title, std::size_t iters,
+                                const Vector & indices) {
     typedef typename MapType::mapped_type mapped_type;
 
-    MapType hashmap(kInitCapacity);
+    MapType hashmap;
     jtest::StopWatch sw;
     std::size_t r;
     mapped_type i;
@@ -941,38 +945,40 @@ static void time_map_find(char const * title, std::size_t iters,
 }
 
 template <class MapType>
-static void time_map_find_sequential(std::size_t iters) {
+static void map_sequential_find_success(std::size_t iters) {
     typedef typename MapType::mapped_type mapped_type;
 
     mapped_type max_iters = static_cast<mapped_type>(iters);
-    std::vector<mapped_type> v(iters);
+    std::vector<mapped_type> v;
+    v.reserve(iters);
     for (mapped_type i = 0; i < max_iters; i++) {
         v[i] = i + 1;
     }
 
-    time_map_find<MapType>("map_find_sequential", iters, v);
+    map_sequential_find<MapType>("sequential_find_success", iters, v);
 }
 
 template <class MapType>
-static void time_map_find_random(std::size_t iters) {
+static void map_sequential_find_random(std::size_t iters) {
     typedef typename MapType::mapped_type mapped_type;
 
     mapped_type max_iters = static_cast<mapped_type>(iters);
-    std::vector<mapped_type> v(iters);
+    std::vector<mapped_type> v;
+    v.reserve(iters);
     for (mapped_type i = 0; i < max_iters; i++) {
         v[i] = i + 1;
     }
 
     shuffle_vector(v);
 
-    time_map_find<MapType>("map_find_random", iters, v);
+    map_sequential_find<MapType>("sequential_find_random", iters, v);
 }
 
 template <class MapType>
-static void time_map_find_failed(std::size_t iters) {
+static void map_sequential_find_failed(std::size_t iters) {
     typedef typename MapType::mapped_type mapped_type;
 
-    MapType hashmap(kInitCapacity);
+    MapType hashmap;
     jtest::StopWatch sw;
     std::size_t r;
     mapped_type i;
@@ -992,14 +998,14 @@ static void time_map_find_failed(std::size_t iters) {
     double ut = sw.getElapsedSecond();
 
     ::srand(static_cast<unsigned int>(r));   // keep compiler from optimizing away r (we never call rand())
-    report_result("map_find_failed", ut, iters, 0, 0);
+    report_result("sequential_find_failed", ut, iters, 0, 0);
 }
 
 template <class MapType>
-static void time_map_find_empty(std::size_t iters) {
+static void map_sequential_find_empty(std::size_t iters) {
     typedef typename MapType::mapped_type mapped_type;
 
-    MapType hashmap(kInitCapacity);
+    MapType hashmap;
     jtest::StopWatch sw;
     std::size_t r;
     mapped_type i;
@@ -1015,14 +1021,14 @@ static void time_map_find_empty(std::size_t iters) {
     double ut = sw.getElapsedSecond();
 
     ::srand(static_cast<unsigned int>(r));   // keep compiler from optimizing away r (we never call rand())
-    report_result("map_find_empty", ut, iters, 0, 0);
+    report_result("sequential_find_empty", ut, iters, 0, 0);
 }
 
 template <class MapType>
-static void time_map_insert(std::size_t iters) {
+static void map_sequential_insert(std::size_t iters) {
     typedef typename MapType::mapped_type mapped_type;
 
-    MapType hashmap(kInitCapacity);
+    MapType hashmap;
     jtest::StopWatch sw;
 
     mapped_type max_iters = static_cast<mapped_type>(iters);
@@ -1037,14 +1043,14 @@ static void time_map_insert(std::size_t iters) {
 
     double ut = sw.getElapsedSecond();
     const std::size_t finish = CurrentMemoryUsage();
-    report_result("map_insert", ut, iters, start, finish);
+    report_result("sequential_insert", ut, iters, start, finish);
 }
 
 template <class MapType>
-static void time_map_insert_predicted(std::size_t iters) {
+static void map_sequential_insert_predicted(std::size_t iters) {
     typedef typename MapType::mapped_type mapped_type;
 
-    MapType hashmap(kInitCapacity);
+    MapType hashmap;
     jtest::StopWatch sw;
 
     mapped_type max_iters = static_cast<mapped_type>(iters);
@@ -1061,14 +1067,14 @@ static void time_map_insert_predicted(std::size_t iters) {
 
     double ut = sw.getElapsedSecond();
     const std::size_t finish = CurrentMemoryUsage();
-    report_result("map_insert_predicted", ut, iters, start, finish);
+    report_result("sequential_insert_predicted", ut, iters, start, finish);
 }
 
 template <class MapType>
-static void time_map_insert_replace(std::size_t iters) {
+static void map_sequential_insert_replace(std::size_t iters) {
     typedef typename MapType::mapped_type mapped_type;
 
-    MapType hashmap(kInitCapacity);
+    MapType hashmap;
     jtest::StopWatch sw;
 
     mapped_type max_iters = static_cast<mapped_type>(iters);
@@ -1087,14 +1093,14 @@ static void time_map_insert_replace(std::size_t iters) {
 
     double ut = sw.getElapsedSecond();
     const std::size_t finish = CurrentMemoryUsage();
-    report_result("map_insert_replace", ut, iters, start, finish);
+    report_result("sequential_insert_replace", ut, iters, start, finish);
 }
 
 template <class MapType>
-static void time_map_emplace(std::size_t iters) {
+static void map_sequential_emplace(std::size_t iters) {
     typedef typename MapType::mapped_type mapped_type;
 
-    MapType hashmap(kInitCapacity);
+    MapType hashmap;
     jtest::StopWatch sw;
 
     mapped_type max_iters = static_cast<mapped_type>(iters);
@@ -1109,14 +1115,14 @@ static void time_map_emplace(std::size_t iters) {
 
     double ut = sw.getElapsedSecond();
     const std::size_t finish = CurrentMemoryUsage();
-    report_result("map_emplace", ut, iters, start, finish);
+    report_result("sequential_emplace", ut, iters, start, finish);
 }
 
 template <class MapType>
-static void time_map_emplace_predicted(std::size_t iters) {
+static void map_sequential_emplace_predicted(std::size_t iters) {
     typedef typename MapType::mapped_type mapped_type;
 
-    MapType hashmap(kInitCapacity);
+    MapType hashmap;
     jtest::StopWatch sw;
 
     mapped_type max_iters = static_cast<mapped_type>(iters);
@@ -1133,14 +1139,14 @@ static void time_map_emplace_predicted(std::size_t iters) {
 
     double ut = sw.getElapsedSecond();
     const std::size_t finish = CurrentMemoryUsage();
-    report_result("map_emplace_predicted", ut, iters, start, finish);
+    report_result("sequential_emplace_predicted", ut, iters, start, finish);
 }
 
 template <class MapType>
-static void time_map_emplace_replace(std::size_t iters) {
+static void map_sequential_emplace_replace(std::size_t iters) {
     typedef typename MapType::mapped_type mapped_type;
 
-    MapType hashmap(kInitCapacity);
+    MapType hashmap;
     jtest::StopWatch sw;
 
     mapped_type max_iters = static_cast<mapped_type>(iters);
@@ -1159,14 +1165,14 @@ static void time_map_emplace_replace(std::size_t iters) {
 
     double ut = sw.getElapsedSecond();
     const std::size_t finish = CurrentMemoryUsage();
-    report_result("map_emplace_replace", ut, iters, start, finish);
+    report_result("sequential_emplace_replace", ut, iters, start, finish);
 }
 
 template <class MapType>
-static void time_map_operator_at(std::size_t iters) {
+static void map_sequential_operator(std::size_t iters) {
     typedef typename MapType::mapped_type mapped_type;
 
-    MapType hashmap(kInitCapacity);
+    MapType hashmap;
     jtest::StopWatch sw;
 
     mapped_type max_iters = static_cast<mapped_type>(iters);
@@ -1181,14 +1187,14 @@ static void time_map_operator_at(std::size_t iters) {
 
     double ut = sw.getElapsedSecond();
     const std::size_t finish = CurrentMemoryUsage();
-    report_result("map_operator []", ut, iters, start, finish);
+    report_result("sequential operator []", ut, iters, start, finish);
 }
 
 template <class MapType>
-static void time_map_operator_at_predicted(std::size_t iters) {
+static void map_sequential_operator_predicted(std::size_t iters) {
     typedef typename MapType::mapped_type mapped_type;
 
-    MapType hashmap(kInitCapacity);
+    MapType hashmap;
     jtest::StopWatch sw;
 
     mapped_type max_iters = static_cast<mapped_type>(iters);
@@ -1205,14 +1211,14 @@ static void time_map_operator_at_predicted(std::size_t iters) {
 
     double ut = sw.getElapsedSecond();
     const std::size_t finish = CurrentMemoryUsage();
-    report_result("map_operator_predicted []", ut, iters, start, finish);
+    report_result("sequential operator [] predicted", ut, iters, start, finish);
 }
 
 template <class MapType>
-static void time_map_operator_at_replace(std::size_t iters) {
+static void map_sequential_operator_replace(std::size_t iters) {
     typedef typename MapType::mapped_type mapped_type;
 
-    MapType hashmap(kInitCapacity);
+    MapType hashmap;
     jtest::StopWatch sw;
 
     mapped_type max_iters = static_cast<mapped_type>(iters);
@@ -1231,14 +1237,14 @@ static void time_map_operator_at_replace(std::size_t iters) {
 
     double ut = sw.getElapsedSecond();
     const std::size_t finish = CurrentMemoryUsage();
-    report_result("map_operator_replace []", ut, iters, start, finish);
+    report_result("map_sequential operator [] replace", ut, iters, start, finish);
 }
 
 template <class MapType>
-static void time_map_erase(std::size_t iters) {
+static void map_sequential_erase(std::size_t iters) {
     typedef typename MapType::mapped_type mapped_type;
 
-    MapType hashmap(kInitCapacity);
+    MapType hashmap;
     jtest::StopWatch sw;
 
     mapped_type max_iters = static_cast<mapped_type>(iters);
@@ -1257,14 +1263,14 @@ static void time_map_erase(std::size_t iters) {
 
     double ut = sw.getElapsedSecond();
     const std::size_t finish = CurrentMemoryUsage();
-    report_result("map_erase", ut, iters, start, finish);
+    report_result("sequential_erase", ut, iters, start, finish);
 }
 
 template <class MapType>
-static void time_map_erase_failed(std::size_t iters) {
+static void map_sequential_erase_failed(std::size_t iters) {
     typedef typename MapType::mapped_type mapped_type;
 
-    MapType hashmap(kInitCapacity);
+    MapType hashmap;
     jtest::StopWatch sw;
 
     mapped_type max_iters = static_cast<mapped_type>(iters);
@@ -1283,14 +1289,14 @@ static void time_map_erase_failed(std::size_t iters) {
 
     double ut = sw.getElapsedSecond();
     const std::size_t finish = CurrentMemoryUsage();
-    report_result("map_erase_failed", ut, iters, start, finish);
+    report_result("sequential_erase_failed", ut, iters, start, finish);
 }
 
 template <class MapType>
-static void time_map_toggle(std::size_t iters) {
+static void map_sequential_toggle(std::size_t iters) {
     typedef typename MapType::mapped_type mapped_type;
 
-    MapType hashmap(kInitCapacity);
+    MapType hashmap;
     jtest::StopWatch sw;
 
     mapped_type max_iters = static_cast<mapped_type>(iters);
@@ -1306,15 +1312,15 @@ static void time_map_toggle(std::size_t iters) {
 
     double ut = sw.getElapsedSecond();
     const std::size_t finish = CurrentMemoryUsage();
-    report_result("map_toggle", ut, iters, start, finish);
+    report_result("sequential_toggle", ut, iters, start, finish);
 }
 
 template <class MapType>
-static void time_map_iterate(std::size_t iters) {
+static void map_ordinal_iterator(std::size_t iters) {
     typedef typename MapType::mapped_type       mapped_type;
     typedef typename MapType::const_iterator    const_iterator;
 
-    MapType hashmap(kInitCapacity);
+    MapType hashmap;
     jtest::StopWatch sw;
     mapped_type r;
 
@@ -1336,7 +1342,434 @@ static void time_map_iterate(std::size_t iters) {
     double ut = sw.getElapsedSecond();
     const std::size_t finish = CurrentMemoryUsage();
     ::srand(static_cast<unsigned int>(r));   // keep compiler from optimizing away r (we never call rand())
-    report_result("map_iterate", ut, iters, start, finish);
+    report_result("ordinal emplace - iterator", ut, iters, start, finish);
+}
+
+template <class MapType, class Vector>
+static void map_random_find(char const * title, std::size_t iters,
+                            const Vector & indices, const Vector & findIndices) {
+    typedef typename MapType::mapped_type mapped_type;
+
+    MapType hashmap;
+    jtest::StopWatch sw;
+    std::size_t r;
+    mapped_type i;
+    mapped_type max_iters = static_cast<mapped_type>(iters);
+
+    for (i = 0; i < max_iters; i++) {
+        hashmap.emplace(indices[i], i);
+    }
+
+    r = 1;
+    reset_counter();
+    sw.start();
+    for (i = 0; i < max_iters; i++) {
+        r ^= static_cast<std::size_t>(hashmap.find(findIndices[i]) != hashmap.end());
+    }
+    sw.stop();
+    double ut = sw.getElapsedSecond();
+
+    ::srand(static_cast<unsigned int>(r));   // keep compiler from optimizing away r (we never call rand())
+    report_result(title, ut, iters, 0, 0);
+}
+
+template <class MapType, class Vector>
+static void map_random_find_sequential(std::size_t iters, const Vector & indices) {
+    typedef typename MapType::mapped_type mapped_type;
+
+    mapped_type max_iters = static_cast<mapped_type>(iters);
+    std::vector<mapped_type> v(iters);
+    for (mapped_type i = 0; i < max_iters; i++) {
+        v[i] = i + 1;
+    }
+
+    map_random_find<MapType>("random_find_sequential", iters, indices, v);
+}
+
+template <class MapType, class Vector>
+static void map_random_find_random(std::size_t iters, const Vector & indices) {
+    typedef typename MapType::mapped_type mapped_type;
+
+    mapped_type max_iters = static_cast<mapped_type>(iters);
+    std::vector<mapped_type> v(iters);
+    for (mapped_type i = 0; i < max_iters; i++) {
+        v[i] = i + 1;
+    }
+
+    shuffle_vector(v);
+
+    map_random_find<MapType>("random_find_random", iters, indices, v);
+}
+
+template <class MapType, class Vector>
+static void map_random_find_failed(std::size_t iters, const Vector & indices) {
+    typedef typename MapType::mapped_type mapped_type;
+
+    MapType hashmap;
+    jtest::StopWatch sw;
+    std::size_t r;
+    mapped_type i;
+    mapped_type max_iters = static_cast<mapped_type>(iters);
+
+    for (i = 0; i < max_iters; i++) {
+        hashmap.emplace(indices[i], i + 1);
+    }
+
+    r = 1;
+    reset_counter();
+    sw.start();
+    for (i = 0; i < max_iters; i++) {
+        r ^= static_cast<std::size_t>(hashmap.find(indices[i] + max_iters) != hashmap.end());
+    }
+    sw.stop();
+    double ut = sw.getElapsedSecond();
+
+    ::srand(static_cast<unsigned int>(r));   // keep compiler from optimizing away r (we never call rand())
+    report_result("random_find_failed", ut, iters, 0, 0);
+}
+
+template <class MapType, class Vector>
+static void map_random_find_empty(std::size_t iters, const Vector & indices) {
+    typedef typename MapType::mapped_type mapped_type;
+
+    MapType hashmap;
+    jtest::StopWatch sw;
+    std::size_t r;
+    mapped_type i;
+    mapped_type max_iters = static_cast<mapped_type>(iters);
+
+    r = 1;
+    reset_counter();
+    sw.start();
+    for (i = 0; i < max_iters; i++) {
+        r ^= static_cast<std::size_t>(hashmap.find(indices[i]) != hashmap.end());
+    }
+    sw.stop();
+    double ut = sw.getElapsedSecond();
+
+    ::srand(static_cast<unsigned int>(r));   // keep compiler from optimizing away r (we never call rand())
+    report_result("random_find_empty", ut, iters, 0, 0);
+}
+
+template <class MapType, class Vector>
+static void map_random_insert(std::size_t iters, const Vector & indices) {
+    typedef typename MapType::mapped_type mapped_type;
+
+    MapType hashmap;
+    jtest::StopWatch sw;
+
+    mapped_type max_iters = static_cast<mapped_type>(iters);
+    const std::size_t start = CurrentMemoryUsage();
+
+    reset_counter();
+    sw.start();
+    for (mapped_type i = 0; i < max_iters; i++) {
+        hashmap.insert(std::make_pair(indices[i], i));
+    }
+    sw.stop();
+
+    double ut = sw.getElapsedSecond();
+    const std::size_t finish = CurrentMemoryUsage();
+    report_result("random_insert", ut, iters, start, finish);
+}
+
+template <class MapType, class Vector>
+static void map_random_insert_predicted(std::size_t iters, const Vector & indices) {
+    typedef typename MapType::mapped_type mapped_type;
+
+    MapType hashmap;
+    jtest::StopWatch sw;
+
+    mapped_type max_iters = static_cast<mapped_type>(iters);
+    const std::size_t start = CurrentMemoryUsage();
+
+    hashmap.rehash(max_iters);
+
+    reset_counter();
+    sw.start();
+    for (mapped_type i = 0; i < max_iters; i++) {
+        hashmap.insert(std::make_pair(indices[i], i));
+    }
+    sw.stop();
+
+    double ut = sw.getElapsedSecond();
+    const std::size_t finish = CurrentMemoryUsage();
+    report_result("random_insert_predicted", ut, iters, start, finish);
+}
+
+template <class MapType, class Vector>
+static void map_random_insert_replace(std::size_t iters, const Vector & indices) {
+    typedef typename MapType::mapped_type mapped_type;
+
+    MapType hashmap;
+    jtest::StopWatch sw;
+
+    mapped_type max_iters = static_cast<mapped_type>(iters);
+    for (mapped_type i = 0; i < max_iters; i++) {
+        hashmap.insert(std::make_pair(indices[i], i));
+    }
+
+    const std::size_t start = CurrentMemoryUsage();
+
+    reset_counter();
+    sw.start();
+    for (mapped_type i = 0; i < max_iters; i++) {
+        hashmap.insert(std::make_pair(indices[i], i + 1));
+    }
+    sw.stop();
+
+    double ut = sw.getElapsedSecond();
+    const std::size_t finish = CurrentMemoryUsage();
+    report_result("random_insert_replace", ut, iters, start, finish);
+}
+
+template <class MapType, class Vector>
+static void map_random_emplace(std::size_t iters, const Vector & indices) {
+    typedef typename MapType::mapped_type mapped_type;
+
+    MapType hashmap;
+    jtest::StopWatch sw;
+
+    mapped_type max_iters = static_cast<mapped_type>(iters);
+    const std::size_t start = CurrentMemoryUsage();
+
+    reset_counter();
+    sw.start();
+    for (mapped_type i = 0; i < max_iters; i++) {
+        hashmap.emplace(indices[i], i);
+    }
+    sw.stop();
+
+    double ut = sw.getElapsedSecond();
+    const std::size_t finish = CurrentMemoryUsage();
+    report_result("random_emplace", ut, iters, start, finish);
+}
+
+template <class MapType, class Vector>
+static void map_random_emplace_predicted(std::size_t iters, const Vector & indices) {
+    typedef typename MapType::mapped_type mapped_type;
+
+    MapType hashmap;
+    jtest::StopWatch sw;
+
+    mapped_type max_iters = static_cast<mapped_type>(iters);
+    const std::size_t start = CurrentMemoryUsage();
+
+    hashmap.rehash(iters);
+
+    reset_counter();
+    sw.start();
+    for (mapped_type i = 0; i < max_iters; i++) {
+        hashmap.emplace(indices[i], i);
+    }
+    sw.stop();
+
+    double ut = sw.getElapsedSecond();
+    const std::size_t finish = CurrentMemoryUsage();
+    report_result("random_emplace_predicted", ut, iters, start, finish);
+}
+
+template <class MapType, class Vector>
+static void map_random_emplace_replace(std::size_t iters, const Vector & indices) {
+    typedef typename MapType::mapped_type mapped_type;
+
+    MapType hashmap;
+    jtest::StopWatch sw;
+
+    mapped_type max_iters = static_cast<mapped_type>(iters);
+    for (mapped_type i = 0; i < max_iters; i++) {
+        hashmap.emplace(indices[i], i);
+    }
+
+    const std::size_t start = CurrentMemoryUsage();
+
+    reset_counter();
+    sw.start();
+    for (mapped_type i = 0; i < max_iters; i++) {
+        hashmap.emplace(indices[i], i + 2);
+    }
+    sw.stop();
+
+    double ut = sw.getElapsedSecond();
+    const std::size_t finish = CurrentMemoryUsage();
+    report_result("random_emplace_replace", ut, iters, start, finish);
+}
+
+template <class MapType, class Vector>
+static void map_random_operator(std::size_t iters, const Vector & indices) {
+    typedef typename MapType::mapped_type mapped_type;
+
+    MapType hashmap;
+    jtest::StopWatch sw;
+
+    mapped_type max_iters = static_cast<mapped_type>(iters);
+    const std::size_t start = CurrentMemoryUsage();
+
+    reset_counter();
+    sw.start();
+    for (mapped_type i = 0; i < max_iters; i++) {
+        hashmap[indices[i]] = i;
+    }
+    sw.stop();
+
+    double ut = sw.getElapsedSecond();
+    const std::size_t finish = CurrentMemoryUsage();
+    report_result("random_operator []", ut, iters, start, finish);
+}
+
+template <class MapType, class Vector>
+static void map_random_operator_predicted(std::size_t iters, const Vector & indices) {
+    typedef typename MapType::mapped_type mapped_type;
+
+    MapType hashmap;
+    jtest::StopWatch sw;
+
+    mapped_type max_iters = static_cast<mapped_type>(iters);
+    const std::size_t start = CurrentMemoryUsage();
+
+    hashmap.rehash(max_iters);
+
+    reset_counter();
+    sw.start();
+    for (mapped_type i = 0; i < max_iters; i++) {
+        hashmap[indices[i]] = i;
+    }
+    sw.stop();
+
+    double ut = sw.getElapsedSecond();
+    const std::size_t finish = CurrentMemoryUsage();
+    report_result("random_operator [] predicted", ut, iters, start, finish);
+}
+
+template <class MapType, class Vector>
+static void map_random_operator_replace(std::size_t iters, const Vector & indices) {
+    typedef typename MapType::mapped_type mapped_type;
+
+    MapType hashmap;
+    jtest::StopWatch sw;
+
+    mapped_type max_iters = static_cast<mapped_type>(iters);
+    for (mapped_type i = 0; i < max_iters; i++) {
+        hashmap[indices[i]] = i;
+    }
+
+    const std::size_t start = CurrentMemoryUsage();
+
+    reset_counter();
+    sw.start();
+    for (mapped_type i = 0; i < max_iters; i++) {
+        hashmap[indices[i]] = i + 1;
+    }
+    sw.stop();
+
+    double ut = sw.getElapsedSecond();
+    const std::size_t finish = CurrentMemoryUsage();
+    report_result("random_operator [] replace", ut, iters, start, finish);
+}
+
+template <class MapType, class Vector>
+static void map_random_erase(std::size_t iters, const Vector & indices) {
+    typedef typename MapType::mapped_type mapped_type;
+
+    MapType hashmap;
+    jtest::StopWatch sw;
+
+    mapped_type max_iters = static_cast<mapped_type>(iters);
+    for (mapped_type i = 0; i < max_iters; i++) {
+        hashmap.emplace(indices[i], i);
+    }
+
+    const std::size_t start = CurrentMemoryUsage();
+
+    reset_counter();
+    sw.start();
+    for (mapped_type i = 0; i < max_iters; i++) {
+        hashmap.erase(indices[i]);
+    }
+    sw.stop();
+
+    double ut = sw.getElapsedSecond();
+    const std::size_t finish = CurrentMemoryUsage();
+    report_result("random_erase", ut, iters, start, finish);
+}
+
+template <class MapType, class Vector>
+static void map_random_erase_failed(std::size_t iters, const Vector & indices) {
+    typedef typename MapType::mapped_type mapped_type;
+
+    MapType hashmap;
+    jtest::StopWatch sw;
+
+    mapped_type max_iters = static_cast<mapped_type>(iters);
+    for (mapped_type i = 0; i < max_iters; i++) {
+        hashmap.emplace(indices[i], i);
+    }
+
+    const std::size_t start = CurrentMemoryUsage();
+
+    reset_counter();
+    sw.start();
+    for (mapped_type i = 0; i < max_iters; i++) {
+        hashmap.erase(indices[i] + max_iters);
+    }
+    sw.stop();
+
+    double ut = sw.getElapsedSecond();
+    const std::size_t finish = CurrentMemoryUsage();
+    report_result("random_erase_failed", ut, iters, start, finish);
+}
+
+template <class MapType, class Vector>
+static void map_random_toggle(std::size_t iters, const Vector & indices) {
+    typedef typename MapType::mapped_type mapped_type;
+
+    MapType hashmap;
+    jtest::StopWatch sw;
+
+    mapped_type max_iters = static_cast<mapped_type>(iters);
+    const std::size_t start = CurrentMemoryUsage();
+
+    reset_counter();
+    sw.start();
+    for (mapped_type i = 0; i < max_iters; i++) {
+        hashmap.emplace(indices[i], i);
+        hashmap.erase(indices[i]);
+    }
+    sw.stop();
+
+    double ut = sw.getElapsedSecond();
+    const std::size_t finish = CurrentMemoryUsage();
+    report_result("random_toggle", ut, iters, start, finish);
+}
+
+template <class MapType, class Vector>
+static void map_random_iterator(std::size_t iters, const Vector & indices) {
+    typedef typename MapType::mapped_type       mapped_type;
+    typedef typename MapType::const_iterator    const_iterator;
+
+    MapType hashmap;
+    jtest::StopWatch sw;
+    mapped_type r;
+
+    mapped_type max_iters = static_cast<mapped_type>(iters);
+    for (mapped_type i = 0; i < max_iters; i++) {
+        hashmap.emplace(indices[i], i);
+    }
+
+    const std::size_t start = CurrentMemoryUsage();
+
+    r = 1;
+    reset_counter();
+    sw.start();
+    for (const_iterator it = hashmap.begin(), it_end = hashmap.end(); it != it_end; ++it) {
+        r ^= it->second;
+    }
+    sw.stop();
+
+    double ut = sw.getElapsedSecond();
+    const std::size_t finish = CurrentMemoryUsage();
+    ::srand(static_cast<unsigned int>(r));   // keep compiler from optimizing away r (we never call rand())
+    report_result("random emplace - iterator", ut, iters, start, finish);
 }
 
 template <class MapType>
@@ -1405,33 +1838,76 @@ static void measure_hashmap(const char * name, std::size_t obj_size, std::size_t
     }
     if (1) printf("\n");
 
-    if (1) time_map_find_sequential<MapType>(iters);
-    if (1) time_map_find_random<MapType>(iters);
-    if (1) time_map_find_failed<MapType>(iters);
-    if (1) time_map_find_empty<MapType>(iters);
+    //------------------------------------------------------------
+
+    if (1) map_sequential_find_success<MapType>(iters);
+    if (1) map_sequential_find_random<MapType>(iters);
+    if (1) map_sequential_find_failed<MapType>(iters);
+    if (1) map_sequential_find_empty<MapType>(iters);
     if (1) printf("\n");
 
-    if (1) time_map_insert<MapType>(iters);
-    if (1) time_map_insert_predicted<MapType>(iters);
-    if (1) time_map_insert_replace<MapType>(iters);
+    if (1) map_sequential_insert<MapType>(iters);
+    if (1) map_sequential_insert_predicted<MapType>(iters);
+    if (1) map_sequential_insert_replace<MapType>(iters);
     if (1) printf("\n");
 
-    if (1) time_map_emplace<MapType>(iters);
-    if (1) time_map_emplace_predicted<MapType>(iters);
-    if (1) time_map_emplace_replace<MapType>(iters);
+    if (1) map_sequential_emplace<MapType>(iters);
+    if (1) map_sequential_emplace_predicted<MapType>(iters);
+    if (1) map_sequential_emplace_replace<MapType>(iters);
     if (1) printf("\n");
 
-    if (1) time_map_operator_at<MapType>(iters);
-    if (1) time_map_operator_at_predicted<MapType>(iters);
-    if (1) time_map_operator_at_replace<MapType>(iters);
+    if (1) map_sequential_operator<MapType>(iters);
+    if (1) map_sequential_operator_predicted<MapType>(iters);
+    if (1) map_sequential_operator_replace<MapType>(iters);
     if (1) printf("\n");
 
-    if (1) time_map_erase<MapType>(iters);
-    if (1) time_map_erase_failed<MapType>(iters);
-    if (1) time_map_toggle<MapType>(iters);
-    if (1) time_map_iterate<MapType>(iters);
-
+    if (1) map_sequential_erase<MapType>(iters);
+    if (1) map_sequential_erase_failed<MapType>(iters);
+    if (1) map_sequential_toggle<MapType>(iters);
+    if (1) map_ordinal_iterator<MapType>(iters);
     if (1) printf("\n");
+
+    //------------------------------------------------------------
+
+    typedef typename MapType::mapped_type mapped_type;
+    std::vector<mapped_type> rndIndices;
+    rndIndices.reserve(iters);
+    for (mapped_type i = 0; i < iters; i++) {
+        rndIndices.push_back(i);
+    }
+    // Seed = 20220714
+    shuffle_vector(rndIndices, 20220714);
+
+    //------------------------------------------------------------
+
+    if (1) map_random_find_sequential<MapType>(iters, rndIndices);
+    if (1) map_random_find_random<MapType>(iters, rndIndices);
+    if (1) map_random_find_failed<MapType>(iters, rndIndices);
+    if (1) map_random_find_empty<MapType>(iters, rndIndices);
+    if (1) printf("\n");
+
+    if (1) map_random_insert<MapType>(iters, rndIndices);
+    if (1) map_random_insert_predicted<MapType>(iters, rndIndices);
+    if (1) map_random_insert_replace<MapType>(iters, rndIndices);
+    if (1) printf("\n");
+
+    if (1) map_random_emplace<MapType>(iters, rndIndices);
+    if (1) map_random_emplace_predicted<MapType>(iters, rndIndices);
+    if (1) map_random_emplace_replace<MapType>(iters, rndIndices);
+    if (1) printf("\n");
+
+    if (1) map_random_operator<MapType>(iters, rndIndices);
+    if (1) map_random_operator_predicted<MapType>(iters, rndIndices);
+    if (1) map_random_operator_replace<MapType>(iters, rndIndices);
+    if (1) printf("\n");
+
+    if (1) map_random_erase<MapType>(iters, rndIndices);
+    if (1) map_random_erase_failed<MapType>(iters, rndIndices);
+    if (1) map_random_toggle<MapType>(iters, rndIndices);
+    if (1) map_random_iterator<MapType>(iters, rndIndices);
+    if (1) printf("\n");
+
+    //------------------------------------------------------------
 
 #ifndef _DEBUG
     // This last test is useful only if the map type uses hashing.
@@ -1467,23 +1943,19 @@ static void test_all_hashmaps(std::size_t obj_size, std::size_t iters) {
 
 #if USE_JSTD_FLAT16_HASH_MAP
     if (FLAGS_test_jstd_flat16_hash_map) {
-        typedef jstd::flat16_hash_map<HashObj, Value, HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>> flat16_hash_map;
         measure_hashmap<jstd::flat16_hash_map<HashObj,   Value, HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>,
                         jstd::flat16_hash_map<HashObj *, Value, HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>
                         >(
-            "jstd::flat16_hash_map<K, V>", obj_size,
-            sizeof(typename flat16_hash_map::value_type), iters, has_stress_hash_function);
+            "jstd::flat16_hash_map<K, V>", obj_size, 0, iters, has_stress_hash_function);
     }
 #endif
 
 #if USE_JSTD_ROBIN16_HASH_MAP
     if (FLAGS_test_jstd_robin16_hash_map) {
-        typedef jstd::robin16_hash_map<HashObj, Value, HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>> robin16_hash_map;
         measure_hashmap<jstd::robin16_hash_map<HashObj,   Value, HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>,
                         jstd::robin16_hash_map<HashObj *, Value, HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>
                         >(
-            "jstd::robin16_hash_map<K, V>", obj_size,
-            sizeof(typename robin16_hash_map::value_type), iters, has_stress_hash_function);
+            "jstd::robin16_hash_map<K, V>", obj_size, 0, iters, has_stress_hash_function);
     }
 #endif
 }
@@ -1569,21 +2041,21 @@ void is_noexcept_move_test()
     static constexpr bool v4_2 = jstd::is_noexcept_move_assignable<std::pair<const HashObject<std::size_t, 256, 32>, std::size_t>>::value;
 
     printf("v1_0 = %s\n", v1_0 ? "true" : "false");
-    printf("v1_0 = %s\n", v1_0 ? "true" : "false");
-    printf("v1_0 = %s\n", v1_0 ? "true" : "false");
-    printf("v1_0 = %s\n", v1_0 ? "true" : "false");
+    printf("v2_0 = %s\n", v2_0 ? "true" : "false");
+    printf("v3_0 = %s\n", v3_0 ? "true" : "false");
+    printf("v4_0 = %s\n", v4_0 ? "true" : "false");
     printf("\n");
 
     printf("v1_1 = %s\n", v1_1 ? "true" : "false");
-    printf("v1_1 = %s\n", v1_1 ? "true" : "false");
-    printf("v1_1 = %s\n", v1_1 ? "true" : "false");
-    printf("v1_1 = %s\n", v1_1 ? "true" : "false");
+    printf("v2_1 = %s\n", v2_1 ? "true" : "false");
+    printf("v3_1 = %s\n", v3_1 ? "true" : "false");
+    printf("v4_1 = %s\n", v4_1 ? "true" : "false");
     printf("\n");
 
     printf("v1_2 = %s\n", v1_2 ? "true" : "false");
-    printf("v1_2 = %s\n", v1_2 ? "true" : "false");
-    printf("v1_2 = %s\n", v1_2 ? "true" : "false");
-    printf("v1_2 = %s\n", v1_2 ? "true" : "false");
+    printf("v2_2 = %s\n", v2_2 ? "true" : "false");
+    printf("v3_2 = %s\n", v3_2 ? "true" : "false");
+    printf("v4_2 = %s\n", v4_2 ? "true" : "false");
     printf("\n");
 }
 
@@ -1601,7 +2073,7 @@ int main(int argc, char * argv[])
     jtest::CPU::warm_up(1000);
 
     if (1) { std_hash_test(); }
-    if (0) { is_noexcept_move_test(); }
+    if (1) { is_noexcept_move_test(); }
 
     if (1)
     {

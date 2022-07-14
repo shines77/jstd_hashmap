@@ -259,8 +259,8 @@ private:
 };
 
 typedef BasicRandomGenerator<LibcRandom>    RandomGen;
-typedef BasicRandomGenerator<MT19937_32>    Mt32RandomGen;
-typedef BasicRandomGenerator<MT19937_64>    Mt64RandomGen;
+typedef BasicRandomGenerator<MT19937_32>    MtRandomGen32;
+typedef BasicRandomGenerator<MT19937_64>    MtRandomGen64;
 
 #if defined(_M_X64) || defined(_M_AMD64) || defined(_M_IA64) || defined(__amd64__) || defined(__x86_64__) \
  || defined(__aarch64__) || defined(_M_ARM64) || defined(__ARM64__) || defined(__arm64__)
