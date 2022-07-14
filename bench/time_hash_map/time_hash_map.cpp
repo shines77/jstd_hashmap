@@ -918,7 +918,7 @@ void shuffle_vector(Vector & vector, int seed = 0) {
         seed = 20200831;
     jstd::RandomGen RandomGen(seed);
     for (std::size_t n = vector.size(); n >= 2; n--) {
-        std::size_t rnd_idx = std::size_t(RandomGen.nextUInt32()) % n;
+        std::size_t rnd_idx = std::size_t(jstd::RandomGen::nextUInt32()) % n;
         std::swap(vector[n - 1], vector[rnd_idx]);
     }
 }
@@ -931,9 +931,9 @@ void shuffle_vector(Vector & vector, int seed = 0) {
     if (seed == 0)
         seed = 20200831;
     jstd::MtRandomGen mtRandomGen(seed);
-    for (std::size_t n = vector.size() - 1; n > 0; n--) {
-        std::size_t rnd_idx = std::size_t(mtRandomGen.nextUInt32()) % (n + 1);
-        std::swap(vector[n], vector[rnd_idx]);
+    for (std::size_t n = vector.size(); n >= 2; n--) {
+        std::size_t rnd_idx = std::size_t(jstd::MtRandomGen::nextUInt()) % n;
+        std::swap(vector[n - 1], vector[rnd_idx]);
     }
 }
 
