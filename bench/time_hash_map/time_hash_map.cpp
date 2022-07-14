@@ -1863,11 +1863,30 @@ static void measure_hashmap(const char * name, std::size_t obj_size, std::size_t
 
     //------------------------------------------------------------
 
+    typedef typename MapType::mapped_type mapped_type;
+    std::vector<mapped_type> rndIndices;
+    rndIndices.reserve(iters);
+    for (mapped_type i = 0; i < iters; i++) {
+        rndIndices.push_back(i);
+    }
+    // Seed = 20220714
+    shuffle_vector(rndIndices, 20220714);
+
+    //------------------------------------------------------------
+
     if (1) map_sequential_find_success<MapType>(iters);
     if (1) map_sequential_find_random<MapType>(iters);
     if (1) map_sequential_find_failed<MapType>(iters);
     if (1) map_sequential_find_empty<MapType>(iters);
     if (1) printf("\n");
+
+    if (1) map_random_find_sequential<MapType>(iters, rndIndices);
+    if (1) map_random_find_random<MapType>(iters, rndIndices);
+    if (1) map_random_find_failed<MapType>(iters, rndIndices);
+    if (1) map_random_find_empty<MapType>(iters, rndIndices);
+    if (1) printf("\n");
+
+    //------------------------------------------------------------
 
     if (1) map_sequential_insert<MapType>(iters);
     if (1) map_sequential_insert_predicted<MapType>(iters);
@@ -1884,30 +1903,7 @@ static void measure_hashmap(const char * name, std::size_t obj_size, std::size_t
     if (1) map_sequential_operator_replace<MapType>(iters);
     if (1) printf("\n");
 
-    if (1) map_sequential_erase<MapType>(iters);
-    if (1) map_sequential_erase_failed<MapType>(iters);
-    if (1) map_sequential_toggle<MapType>(iters);
-    if (1) map_sequential_iterator<MapType>(iters);
-    if (1) printf("\n");
-
     //------------------------------------------------------------
-
-    typedef typename MapType::mapped_type mapped_type;
-    std::vector<mapped_type> rndIndices;
-    rndIndices.reserve(iters);
-    for (mapped_type i = 0; i < iters; i++) {
-        rndIndices.push_back(i);
-    }
-    // Seed = 20220714
-    shuffle_vector(rndIndices, 20220714);
-
-    //------------------------------------------------------------
-
-    if (1) map_random_find_sequential<MapType>(iters, rndIndices);
-    if (1) map_random_find_random<MapType>(iters, rndIndices);
-    if (1) map_random_find_failed<MapType>(iters, rndIndices);
-    if (1) map_random_find_empty<MapType>(iters, rndIndices);
-    if (1) printf("\n");
 
     if (1) map_random_insert<MapType>(iters, rndIndices);
     if (1) map_random_insert_predicted<MapType>(iters, rndIndices);
@@ -1922,6 +1918,14 @@ static void measure_hashmap(const char * name, std::size_t obj_size, std::size_t
     if (1) map_random_operator<MapType>(iters, rndIndices);
     if (1) map_random_operator_predicted<MapType>(iters, rndIndices);
     if (1) map_random_operator_replace<MapType>(iters, rndIndices);
+    if (1) printf("\n");
+
+    //------------------------------------------------------------
+
+    if (1) map_sequential_erase<MapType>(iters);
+    if (1) map_sequential_erase_failed<MapType>(iters);
+    if (1) map_sequential_toggle<MapType>(iters);
+    if (1) map_sequential_iterator<MapType>(iters);
     if (1) printf("\n");
 
     if (1) map_random_erase<MapType>(iters, rndIndices);
