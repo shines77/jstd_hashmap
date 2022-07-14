@@ -822,6 +822,7 @@ public:
     StdHashMap(std::size_t initCapacity) : this_type() {
     }
 
+#if 1
     void emplace(const key_type & key, const mapped_type & value) {
         this->operator [](key) = value;
     }
@@ -830,15 +831,22 @@ public:
         this->operator [](key) = std::forward<mapped_type>(value);
     }
 
-    void emplace(const ident_type & id, const mapped_type & value) {
+    template <typename IdentType, typename std::enable_if<
+                                                !std::is_same<key_type, IdentType>::value
+                                            >::type * = nullptr>
+    void emplace(const IdentType & id, const mapped_type & value) {
         key_type key(id);
         this->operator [](key) = value;
     }
 
-    void emplace(const ident_type & id, mapped_type && value) {
+    template <typename IdentType, typename std::enable_if<
+                                                !std::is_same<key_type, IdentType>::value
+                                            >::type * = nullptr>
+    void emplace(const IdentType & id, mapped_type && value) {
         key_type key(id);
         this->operator [](key) = std::forward<mapped_type>(value);
     }
+#endif
 
     void rehash(std::size_t newSize) {
         this->resize(newSize);
