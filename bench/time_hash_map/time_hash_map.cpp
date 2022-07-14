@@ -814,6 +814,7 @@ template <typename Key, typename Value, typename Hasher>
 class StdHashMap : public STDEXT_HASH_NAMESPACE::hash_map<Key, Value, Hasher> {
 public:
     typedef STDEXT_HASH_NAMESPACE::hash_map<Key, Value, Hasher> this_type;
+    typedef Key                                         key_type;
     typedef Value                                       mapped_type;
     typedef typename get_ident_type<Key>::ident_type    ident_type;
 
@@ -821,15 +822,21 @@ public:
     StdHashMap(std::size_t initCapacity) : this_type() {
     }
 
-    void emplace(const ident_type & id, mapped_type && value) {
-        this->operator [](id) = std::forward<mapped_type>(value);
+    void emplace(const key_type & key, const mapped_type & value) {
+        this->operator [](key) = value;
     }
 
-    template <typename MappedType, typename std::enable_if<
-                                                !std::is_same<ident_type, MappedType>::value
-                                            >::type * = nullptr>
-    void emplace(const MappedType & id, mapped_type && value) {
-        ident_type key(id);
+    void emplace(const key_type & key, mapped_type && value) {
+        this->operator [](key) = std::forward<mapped_type>(value);
+    }
+
+    void emplace(const ident_type & id, const mapped_type & value) {
+        key_type key(id);
+        this->operator [](key) = value;
+    }
+
+    void emplace(const ident_type & id, mapped_type && value) {
+        key_type key(id);
         this->operator [](key) = std::forward<mapped_type>(value);
     }
 
