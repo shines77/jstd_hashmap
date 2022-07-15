@@ -50,7 +50,6 @@
 #pragma once
 
 #include <memory.h>
-#include <math.h>
 #include <assert.h>
 
 #include <cstdint>

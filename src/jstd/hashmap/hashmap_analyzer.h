@@ -12,7 +12,6 @@
 #include "jstd/basic/inttypes.h"
 
 #include <stdio.h>
-#include <math.h>
 #include <assert.h>
 
 #include <cstdint>
