@@ -1409,8 +1409,8 @@ uint64_t get_range_u32(uint64_t num)
 
 void IntegalHash_test()
 {
-    jstd::v1::hashers::IntegalHash<std::uint32_t> integalHasher32;
-    jstd::v1::hashers::IntegalHash<std::uint64_t> integalHasher64;
+    jstd::v1::hashes::IntegalHash<std::uint32_t> integalHasher32;
+    jstd::v1::hashes::IntegalHash<std::uint64_t> integalHasher64;
 
     printf("hash::IntegalHash(uint32_t) sequential\n\n");
     for (std::uint32_t i = 0; i < 16; i++) {

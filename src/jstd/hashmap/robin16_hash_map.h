@@ -78,7 +78,7 @@
 #include "jstd/iterator.h"
 #include "jstd/utility.h"
 #include "jstd/lang/launder.h"
-#include "jstd/hasher/hash.h"
+#include "jstd/hasher/hashes.h"
 #include "jstd/hasher/hash_crc32c.h"
 #include "jstd/support/BitUtils.h"
 #include "jstd/support/Power2.h"
@@ -1928,9 +1928,9 @@ private:
 #if 1
         return value;
 #elif 1
-        return (size_type)hashers::fibonacci_hash((size_type)value);
+        return (size_type)hashes::fibonacci_hash((size_type)value);
 #elif 1
-        return (size_type)hashers::int_hash_crc32c((size_type)value);
+        return (size_type)hashes::int_hash_crc32c((size_type)value);
 #else
         hash_code_t hash_code;
         if (sizeof(size_type) == 4)
@@ -1945,9 +1945,9 @@ private:
 #if ROBIN16_USE_HASH_POLICY
         return value;
 #elif 1
-        return (size_type)hashers::fibonacci_hash((size_type)value);
+        return (size_type)hashes::fibonacci_hash((size_type)value);
 #elif 1
-        return (size_type)hashers::simple_int_hash_crc32c((size_type)value);
+        return (size_type)hashes::simple_int_hash_crc32c((size_type)value);
 #endif
     }
 

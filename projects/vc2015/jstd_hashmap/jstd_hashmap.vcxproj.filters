@@ -199,9 +199,6 @@
     <ClInclude Include="..\..\..\src\jstd\hasher\fnv1a.h">
       <Filter>src\hasher</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\src\jstd\hasher\hash.h">
-      <Filter>src\hasher</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\..\src\jstd\hasher\hash_crc32c.h">
       <Filter>src\hasher</Filter>
     </ClInclude>
@@ -255,6 +252,9 @@
     </ClInclude>
     <ClInclude Include="..\..\..\src\jstd\hashmap\robin_hash_map.h">
       <Filter>src\hashmap</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\hasher\hashes.h">
+      <Filter>src\hasher</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

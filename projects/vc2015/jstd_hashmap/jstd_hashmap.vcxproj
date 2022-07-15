@@ -35,7 +35,7 @@
     <ClInclude Include="..\..\..\src\jstd\basic\vld_def.h" />
     <ClInclude Include="..\..\..\src\jstd\config\config.h" />
     <ClInclude Include="..\..\..\src\jstd\hasher\fnv1a.h" />
-    <ClInclude Include="..\..\..\src\jstd\hasher\hash.h" />
+    <ClInclude Include="..\..\..\src\jstd\hasher\hashes.h" />
     <ClInclude Include="..\..\..\src\jstd\hasher\hash_crc32c.h" />
     <ClInclude Include="..\..\..\src\jstd\hasher\hash_helper.h" />
     <ClInclude Include="..\..\..\src\jstd\hasher\sha1.h" />

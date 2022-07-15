@@ -101,7 +101,7 @@ std::size_t align_to(std::size_t size, std::size_t alignment)
     return size;
 }
 
-namespace hashers {
+namespace hashes {
 
 static inline
 std::uint32_t Integal_hash1_u32(std::uint32_t value)
@@ -150,7 +150,7 @@ struct IntegalHash
     }
 };
 
-} // namespace hashers
+} // namespace hashes
 
 template < typename Key, typename Value,
            typename Hash = std::hash<Key>,

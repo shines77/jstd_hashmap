@@ -1536,7 +1536,7 @@ private:
 
     inline hash_code_t get_second_hash(hash_code_t value) const noexcept {
 #if 1
-        return (size_type)hashers::simple_int_hash_crc32c((size_type)value);
+        return (size_type)hashes::simple_int_hash_crc32c((size_type)value);
 #else
         hash_code_t hash_code;
         if (sizeof(size_type) == 4)

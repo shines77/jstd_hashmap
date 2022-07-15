@@ -10,7 +10,7 @@
 #include "jstd/basic/stdint.h"
 #include "jstd/basic/stdsize.h"
 
-#include "jstd/hasher/hash.h"
+#include "jstd/hasher/hashes.h"
 
 #include <assert.h>
 
@@ -38,7 +38,7 @@
 #include <arm_neon.h>
 #endif
 
-#include "jstd/hasher/hash.h"
+#include "jstd/hasher/hashes.h"
 
 #if defined(WIN64) || defined(_WIN64) || defined(_M_X64) || defined(_M_AMD64) \
  || defined(__amd64__) || defined(__x86_64__) || defined(__LP64__)
@@ -58,7 +58,7 @@
 //
 
 namespace jstd {
-namespace hashers {
+namespace hashes {
 
 static const uint32_t kInitPrime32 = 0x165667C5UL;
 
@@ -243,7 +243,7 @@ static uint32_t hash_crc32c(const char * data, size_t length)
     return intel_hash_crc32c_x86(data, length);
   #endif
 #else
-    return hashers::Times31(data, length);
+    return hashes::Times31(data, length);
 #endif
 }
 
@@ -256,7 +256,7 @@ static size_t int_hash_crc32c(size_t value)
     return intel_int_hash_crc32c_x86(value);
   #endif
 #else
-    return hashers::Times31(value, sizeof(value));
+    return hashes::Times31(value, sizeof(value));
 #endif
 }
 
@@ -265,11 +265,11 @@ static size_t simple_int_hash_crc32c(size_t value)
 #ifdef __SSE4_2__
     return intel_simple_int_hash_crc32c(value);
 #else
-    return hashers::Times31(value, sizeof(value));
+    return hashes::Times31(value, sizeof(value));
 #endif
 }
 
-} // namespace hashers
+} // namespace hashes
 } // namespace jstd
 
 #endif // JSTD_HASHER_HASH_CRC32C_H

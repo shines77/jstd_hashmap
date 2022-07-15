@@ -119,7 +119,7 @@ static bool kLittleEndian = true;
 
 } // namespace port
 
-namespace hashers {
+namespace hashes {
 
 template <typename CharTy>
 static inline
@@ -236,7 +236,7 @@ See:
 
  **************************************************************************/
 
-namespace hashers {
+namespace hashes {
 
 //
 // Fibonacci hash
@@ -627,7 +627,7 @@ std::size_t mum_hash(std::size_t multiplicand, std::size_t multiplier)
 #endif
 }
 
-} // namespace hashers
+} // namespace hashes
 
 //
 // class PrimaryHash
@@ -1166,7 +1166,7 @@ public:
 
     hash_type secondaryHash(const char * key, std::size_t len) const {
         //return static_cast<hash_type>(hashes::OpenSSL_Hash(key, len));
-        return static_cast<hash_type>(hashers::Times31(key, len));
+        return static_cast<hash_type>(hashes::Times31(key, len));
     }
 
     /*
@@ -1182,7 +1182,7 @@ public:
 
 
     hash_type OpenSSLHash(const char * key, std::size_t len) const {
-        return static_cast<hash_type>(hashers::OpenSSL_Hash(key, len));
+        return static_cast<hash_type>(hashes::OpenSSL_Hash(key, len));
     }
 };
 
