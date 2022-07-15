@@ -81,6 +81,9 @@
 #include <vector>
 #include <algorithm>
 
+#define USE_JSTD_HASH_TABLE         0
+#define USE_JSTD_DICTIONARY         0
+
 #define USE_STD_HASH_MAP            1
 #define USE_STD_UNORDERED_MAP       1
 #define USE_JSTD_FLAT16_HASH_MAP    1
@@ -115,9 +118,6 @@
 
 #define STRING_UTILS_MODE       STRING_UTILS_STL
 
-#define USE_JSTD_HASH_TABLE     0
-#define USE_JSTD_DICTIONARY     0
-
 #include <jstd/basic/stddef.h>
 #include <jstd/basic/stdint.h>
 #include <jstd/basic/inttypes.h>
@@ -131,9 +131,11 @@
 #define STDEXT_HASH_NAMESPACE __gnu_cxx
 #endif
 #endif // USE_STD_HASH_MAP
+
 #if USE_STD_UNORDERED_MAP
 #include <unordered_map>
 #endif
+
 #if USE_JSTD_FLAT16_HASH_MAP
 #include <jstd/hashmap/flat16_hash_map.h>
 #endif
@@ -211,18 +213,18 @@ static const bool FLAGS_test_jstd_flat16_hash_map = true;
 static const bool FLAGS_test_jstd_robin16_hash_map = true;
 static const bool FLAGS_test_map = true;
 
-static const bool FLAGS_test_4_bytes = true;
-static const bool FLAGS_test_8_bytes = true;
-static const bool FLAGS_test_16_bytes = true;
-static const bool FLAGS_test_256_bytes = true;
+static constexpr bool FLAGS_test_4_bytes = true;
+static constexpr bool FLAGS_test_8_bytes = true;
+static constexpr bool FLAGS_test_16_bytes = true;
+static constexpr bool FLAGS_test_256_bytes = true;
 
 #ifndef _DEBUG
-static const std::size_t kDefaultIters = 10000000;
+static constexpr std::size_t kDefaultIters = 10000000;
 #else
-static const std::size_t kDefaultIters = 10000;
+static constexpr std::size_t kDefaultIters = 10000;
 #endif
 
-static const std::size_t kInitCapacity = 8;
+static constexpr std::size_t kInitCapacity = 8;
 
 // Returns the number of hashes that have been done since the last
 // call to NumHashesSinceLastCall().  This is shared across all
@@ -540,6 +542,8 @@ public:
     HashObject(const this_type & that) noexcept {
         operator = (that);
     }
+
+    ~HashObject() = default;
 
     this_type & operator = (const this_type & that) noexcept {
 #if USE_STAT_COUNTER
