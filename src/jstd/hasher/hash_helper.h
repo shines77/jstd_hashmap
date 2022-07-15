@@ -210,7 +210,7 @@ struct string_hash_helper {
 template <>
 struct hash_helper<const char *, std::uint32_t, HashFunc_CRC32C> {
     static std::uint32_t getHashCode(const char * data, size_t length) {
-        return hasher::hash_crc32c(data, length);
+        return hashes::hash_crc32c(data, length);
     }
 };
 ****************************************************************************/
