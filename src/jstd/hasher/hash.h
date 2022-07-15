@@ -23,6 +23,11 @@
 #include "jstd/support/BitUtils.h"
 #include "jstd/support/Power2.h"
 
+#if defined(_MSC_VER) && (defined(_M_X64) || defined(_M_IX64) || defined(_M_AMD64))
+  #include <intrin.h>
+  #pragma intrinsic(_umul128)
+#endif
+
 //
 // See: https://sourceforge.net/p/predef/wiki/Architectures/
 //
@@ -269,7 +274,7 @@ static std::uint32_t OpenSSL_Hash(const CharTy * key, std::size_t len)
 
     const UCharTy * src = (const UCharTy *)key;
     const UCharTy * end = src + len;
-    
+
     const UCharTy * limit = src + (len & std::size_t(~(std::size_t)1U));
 
     std::uint32_t hash = 0;
