@@ -781,6 +781,8 @@ struct has_trivial_destructor< HashObject<std::uint64_t, Size, HashSize> > : tru
 
 #endif
 
+#if USE_STD_HASH_MAP
+
 #if defined(_MSC_VER)
 
 template <typename Key, typename Value, typename Hasher>
@@ -858,6 +860,10 @@ public:
 
 #endif // _MSC_VER
 
+#endif // USE_STD_HASH_MAP
+
+#if USE_STD_UNORDERED_MAP
+
 template <typename Key, typename Value, typename Hasher>
 class StdUnorderedMap : public std::unordered_map<Key, Value, Hasher> {
 public:
@@ -872,6 +878,8 @@ public:
         this->rehash(newSize);
     }
 };
+
+#endif // USE_STD_UNORDERED_MAP
 
 template <typename Container>
 void print_test_time(std::size_t checksum, double elapsedTime)
@@ -975,8 +983,7 @@ static void map_sequential_find_success(std::size_t iters) {
     typedef typename MapType::mapped_type mapped_type;
 
     mapped_type max_iters = static_cast<mapped_type>(iters);
-    std::vector<mapped_type> v;
-    v.reserve(iters);
+    std::vector<mapped_type> v(iters);
     for (mapped_type i = 0; i < max_iters; i++) {
         v[i] = i + 1;
     }
@@ -989,8 +996,7 @@ static void map_sequential_find_random(std::size_t iters) {
     typedef typename MapType::mapped_type mapped_type;
 
     mapped_type max_iters = static_cast<mapped_type>(iters);
-    std::vector<mapped_type> v;
-    v.reserve(iters);
+    std::vector<mapped_type> v(iters);
     for (mapped_type i = 0; i < max_iters; i++) {
         v[i] = i + 1;
     }
