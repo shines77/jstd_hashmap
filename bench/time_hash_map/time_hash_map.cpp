@@ -1340,7 +1340,7 @@ static void map_sequential_toggle(std::size_t iters) {
 }
 
 template <class MapType>
-static void map_sequential_iterator(std::size_t iters) {
+static void map_sequential_iterate(std::size_t iters) {
     typedef typename MapType::mapped_type       mapped_type;
     typedef typename MapType::const_iterator    const_iterator;
 
@@ -1366,7 +1366,7 @@ static void map_sequential_iterator(std::size_t iters) {
     double ut = sw.getElapsedSecond();
     const std::size_t finish = CurrentMemoryUsage();
     ::srand(static_cast<unsigned int>(r));   // keep compiler from optimizing away r (we never call rand())
-    report_result("sequential_emplace - iterator", ut, iters, start, finish);
+    report_result("sequential_emplace - iterate", ut, iters, start, finish);
 }
 
 template <class MapType, class Vector>
@@ -1767,7 +1767,7 @@ static void map_random_toggle(std::size_t iters, const Vector & indices) {
 }
 
 template <class MapType, class Vector>
-static void map_random_iterator(std::size_t iters, const Vector & indices) {
+static void map_random_iterate(std::size_t iters, const Vector & indices) {
     typedef typename MapType::mapped_type       mapped_type;
     typedef typename MapType::const_iterator    const_iterator;
 
@@ -1793,7 +1793,7 @@ static void map_random_iterator(std::size_t iters, const Vector & indices) {
     double ut = sw.getElapsedSecond();
     const std::size_t finish = CurrentMemoryUsage();
     ::srand(static_cast<unsigned int>(r));   // keep compiler from optimizing away r (we never call rand())
-    report_result("random_emplace - iterator", ut, iters, start, finish);
+    report_result("random_emplace - iterate", ut, iters, start, finish);
 }
 
 template <class MapType>
@@ -1926,13 +1926,13 @@ static void measure_hashmap(const char * name, std::size_t obj_size, std::size_t
     if (1) map_sequential_erase<MapType>(iters);
     if (1) map_sequential_erase_failed<MapType>(iters);
     if (1) map_sequential_toggle<MapType>(iters);
-    if (1) map_sequential_iterator<MapType>(iters);
+    if (1) map_sequential_iterate<MapType>(iters);
     if (1) printf("\n");
 
     if (1) map_random_erase<MapType>(iters, rndIndices);
     if (1) map_random_erase_failed<MapType>(iters, rndIndices);
     if (1) map_random_toggle<MapType>(iters, rndIndices);
-    if (1) map_random_iterator<MapType>(iters, rndIndices);
+    if (1) map_random_iterate<MapType>(iters, rndIndices);
     if (1) printf("\n");
 
     //------------------------------------------------------------
