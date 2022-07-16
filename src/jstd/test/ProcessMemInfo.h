@@ -98,25 +98,32 @@ int get_mem_info(std::string & str_mem_size)
     ::snprintf(filename, sizeof(filename), "/proc/%d/status", pid);
 
     std::ifstream ifs;
-    ifs.open(filename, std::ios::in);
-    if (!ifs.is_open()) {
-        std::cout << "open " << filename << " error!" << std::endl << std::endl;
-        return (-1);
-    }
-
-    char buf[512];
-    char mem_size[64];
-    char mem_unit[64];
-
-    while (ifs.getline(buf, sizeof(buf) - 1)) {
-        if (::strncmp(buf, "VmRSS:", 6) == 0) {
-            ::sscanf(buf + 6, "%s%s", mem_size, mem_unit);
-            str_mem_size = std::string(mem_size) + " " + std::string(mem_unit);
-            break;
+    try {
+        ifs.open(filename, std::ios::in);
+        if (!ifs.is_open()) {
+            std::cout << "open " << filename << " error!" << std::endl << std::endl;
+            return (-1);
         }
-    }
 
-    ifs.close();
+        char buf[512];
+        char mem_size[64];
+        char mem_unit[64];
+
+        while (!ifs.eof()) {
+            buf[0] = '\0';
+            ifs.getline(buf, sizeof(buf) - 1);
+            if (::strncmp(buf, "VmRSS:", 6) == 0) {
+                ::sscanf(buf + 6, "%s%s", mem_size, mem_unit);
+                str_mem_size = std::string(mem_size) + " " + std::string(mem_unit);
+                break;
+            }
+        }
+
+        ifs.close();
+    } catch (const std::exception & ex) {
+        std::cerr << "Exception: " << exception.what() << std::endl;
+        ifs.close();
+    }
     return 0;
 }
 
@@ -129,31 +136,38 @@ std::size_t GetCurrentMemoryUsage()
     ::snprintf(filename, sizeof(filename), "/proc/%d/status", pid);
 
     std::ifstream ifs;
-    ifs.open(filename, std::ios::in);
-    if (!ifs.is_open()) {
-        std::cout << "open " << filename << " error!" << std::endl << std::endl;
-        return 0;
-    }
-
-    std::size_t memory_usage = 0;
-    char buf[512];
-    char mem_size[64];
-    char mem_unit[64];
-
-    while (ifs.getline(buf, sizeof(buf) - 1)) {
-        if (::strncmp(buf, "VmRSS:", 6) == 0) {
-            ::sscanf(buf + 6, "%s %s", mem_size, mem_unit);
-            std::size_t memory_usage = static_cast<std::size_t>(::atoll(mem_size));
-            std::string memory_uint = mem_unit;
-            if (memory_uint == "kB" || memory_uint == "KB")
-                memory_usage *= 1024;
-            else if (memory_uint == "mB" || memory_uint == "MB")
-                memory_usage *= (1024 * 1024);
-            break;
+    try {
+        ifs.open(filename, std::ios::in);
+        if (!ifs.is_open()) {
+            std::cout << "open " << filename << " error!" << std::endl << std::endl;
+            return 0;
         }
-    }
 
-    ifs.close();
+        std::size_t memory_usage = 0;
+        char buf[512];
+        char mem_size[64];
+        char mem_unit[64];
+
+        while (!ifs.eof()) {
+            buf[0] = '\0';
+            ifs.getline(buf, sizeof(buf) - 1);
+            if (::strncmp(buf, "VmRSS:", 6) == 0) {
+                ::sscanf(buf + 6, "%s %s", mem_size, mem_unit);
+                std::size_t memory_usage = static_cast<std::size_t>(::atoll(mem_size));
+                std::string memory_uint = mem_unit;
+                if (memory_uint == "kB" || memory_uint == "KB")
+                    memory_usage *= 1024;
+                else if (memory_uint == "mB" || memory_uint == "MB")
+                    memory_usage *= (1024 * 1024);
+                break;
+            }
+        }
+
+        ifs.close();
+    } catch (const std::exception & ex) {
+        std::cerr << "Exception: " << exception.what() << std::endl;
+        ifs.close();
+    }
     return memory_usage;
 }
 
