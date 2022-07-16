@@ -654,6 +654,4 @@ typedef StopWatchExBase< defaultStopWatchImpl<double> > getTickCountStopWatchEx;
 
 } // namespace jtest
 
-#undef __COMPILER_BARRIER
-
 #endif // JSTD_TEST_STOPWATCH_H
