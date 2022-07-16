@@ -68,10 +68,10 @@ size_t getReadRSS()
     struct psinfo psinfo;
     int fd = -1;
     if ((fd = open("/proc/self/psinfo", O_RDONLY)) == -1)
-        return (size_t)0L;		/* Can't open? */
+        return (size_t)0L;      /* Can't open? */
     if (read(fd, &psinfo, sizeof(psinfo)) != sizeof(psinfo)) {
         close(fd);
-        return (size_t)0L;		/* Can't read? */
+        return (size_t)0L;      /* Can't read? */
     }
     close(fd);
     return (size_t)(psinfo.pr_rssize * 1024L);
@@ -88,7 +88,7 @@ size_t getReadRSS()
 
 #else
     /* Unknown OS */
-    return (size_t)0L;			/* Unsupported. */
+    return (size_t)0L;          /* Unsupported. */
 #endif
 }
 
@@ -112,7 +112,7 @@ size_t getCurrentRSS()
     struct mach_task_basic_info info;
     mach_msg_type_number_t infoCount = MACH_TASK_BASIC_INFO_COUNT;
     if (task_info(mach_task_self(), MACH_TASK_BASIC_INFO, (task_info_t)&info, &infoCount) != KERN_SUCCESS)
-        return (size_t)0L;		/* Can't access? */
+        return (size_t)0L;      /* Can't access? */
     return (size_t)info.resident_size;
 
 #elif defined(__linux__) || defined(__linux) || defined(linux) || defined(__gnu_linux__)
@@ -120,17 +120,17 @@ size_t getCurrentRSS()
     long rss = 0L;
     FILE * fp = NULL;
     if ((fp = fopen("/proc/self/statm", "r")) == NULL)
-        return (size_t)0L;		/* Can't open? */
+        return (size_t)0L;      /* Can't open? */
     if (fscanf(fp, "%*s%ld", &rss) != 1) {
         fclose(fp);
-        return (size_t)0L;		/* Can't read? */
+        return (size_t)0L;      /* Can't read? */
     }
     fclose(fp);
     return (size_t)rss * (size_t)sysconf(_SC_PAGESIZE);
 
 #else
     /* AIX, BSD, Solaris, and Unknown OS */
-    return (size_t)0L;			/* Unsupported. */
+    return (size_t)0L;          /* Unsupported. */
 #endif
 }
 
