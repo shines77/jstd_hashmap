@@ -2806,4 +2806,20 @@ private:
     }
 };
 
+template <class Key, class Value, class Hash, class KeyEqual, class Alloc, class Pred>
+typename flat16_hash_map<Key, Value, Hash, KeyEqual, Alloc>::size_type
+inline
+erase_if(flat16_hash_map<Key, Value, Hash, KeyEqual, Alloc> & hash_map, Pred pred)
+{
+    auto old_size = hash_map.size();
+    for (auto it = hash_map.begin(), last = hash_map.end(); it != last; ) {
+        if (pred(*it)) {
+            it = hash_map.erase(it);
+        } else {
+            ++it;
+        }
+    }
+    return (old_size - hash_map.size());
+}
+
 } // namespace jstd

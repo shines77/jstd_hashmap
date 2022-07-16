@@ -158,7 +158,9 @@ public:
     // Must be kMinLoadFactor <= loadFactor <= kMaxLoadFactor
     static constexpr float kDefaultLoadFactor = 0.5f;
 
+    // Don't modify this value at will
     static constexpr size_type kLoadFactorAmplify = 65536;
+
     static constexpr std::uint32_t kDefaultLoadFactorInt =
             std::uint32_t(kDefaultLoadFactor * kLoadFactorAmplify);
     static constexpr std::uint32_t kDefaultLoadFactorRevInt =
@@ -2167,7 +2169,7 @@ private:
         if (this->groups_ != nullptr) {
             if (!finitial) {
                 for (size_type group_index = 0; group_index <= this->group_mask(); group_index++) {
-                    group_type * group = this->group_at(group_index);
+                    group_type * group = this->physical_group_at(group_index);
                     group->clear();
                 }
             }
@@ -3641,5 +3643,21 @@ ClearSlot:
         this->swap_policy(other);
     }
 };
+
+template <class Key, class Value, class Hash, class KeyEqual, class Alloc, class Pred>
+typename robin16_hash_map<Key, Value, Hash, KeyEqual, Alloc>::size_type
+inline
+erase_if(robin16_hash_map<Key, Value, Hash, KeyEqual, Alloc> & hash_map, Pred pred)
+{
+    auto old_size = hash_map.size();
+    for (auto it = hash_map.begin(), last = hash_map.end(); it != last; ) {
+        if (pred(*it)) {
+            it = hash_map.erase(it);
+        } else {
+            ++it;
+        }
+    }
+    return (old_size - hash_map.size());
+}
 
 } // namespace jstd
