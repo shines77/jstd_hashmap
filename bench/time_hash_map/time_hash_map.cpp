@@ -83,7 +83,7 @@
 #define USE_JSTD_HASH_TABLE         0
 #define USE_JSTD_DICTIONARY         0
 
-#define USE_STD_HASH_MAP            1
+#define USE_STD_HASH_MAP            0
 #define USE_STD_UNORDERED_MAP       1
 #define USE_JSTD_FLAT16_HASH_MAP    1
 #define USE_JSTD_ROBIN16_HASH_MAP   1
@@ -152,8 +152,6 @@
 #include <jstd/test/CPUWarmUp.h>
 #include <jstd/test/ProcessMemInfo.h>
 #include <jstd/test/ReadRss.h>
-
-#include "BenchmarkResult.h"
 
 #define USE_STAT_COUNTER        1
 
@@ -1740,7 +1738,7 @@ static void map_random_operator_predicted(std::size_t iters, const Vector & indi
     MapType hashmap;
     jtest::StopWatch sw;
 
-    mapped_type max_iters = static_cast<mapped_type>(iters);    
+    mapped_type max_iters = static_cast<mapped_type>(iters);
 
     hashmap.rehash(max_iters);
 
