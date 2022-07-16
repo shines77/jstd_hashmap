@@ -57,7 +57,7 @@ size_t getReadRSS()
 {
 #if defined(_WIN32) || defined(WIN32) || defined(OS_WINDOWS) || defined(_WINDOWS_)
     /* Windows */
-    PROCESS_MEMORY_COUNTERS pmc;
+    PROCESS_MEMORY_COUNTERS pmc = { 0 };
     if (GetProcessMemoryInfo(GetCurrentProcess(), &pmc, sizeof(pmc)))
         return (size_t)pmc.PeakWorkingSetSize;
     else
@@ -88,6 +88,7 @@ size_t getReadRSS()
 
 #else
     /* Unknown OS */
+    #error "Cannot supported getPeakRSS() or getCurrentRSS() for an unknown OS."
     return (size_t)0L;          /* Unsupported. */
 #endif
 }
@@ -130,6 +131,7 @@ size_t getCurrentRSS()
 
 #else
     /* AIX, BSD, Solaris, and Unknown OS */
+    #error "Cannot supported getPeakRSS() or getCurrentRSS() for an unknown OS."
     return (size_t)0L;          /* Unsupported. */
 #endif
 }

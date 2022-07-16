@@ -888,10 +888,14 @@ void print_test_time(std::size_t checksum, double elapsedTime)
 static void report_result(char const * title, double ut, std::size_t iters,
                           size_t start_memory, size_t end_memory) {
     // Construct heap growth report text if applicable
-    char heap[128] = "";
+    char heap[128];
+    heap[0] = '\0';
     if (end_memory > start_memory) {
-        snprintf(heap, sizeof(heap), "%7.1f MB", (double)(end_memory - start_memory) / 1048576.0);
+        //snprintf(heap, sizeof(heap), "%7.1f MB", (double)(end_memory - start_memory) / 1048576.0);
     }
+    snprintf(heap, sizeof(heap), "%7.1f MB - %7.1f MB",
+             (double)start_memory / 1048576.0,
+             (double)end_memory / 1048576.0);
 
 #if (USE_STAT_COUNTER == 0)
     printf("%-35s %8.2f ns  %s\n", title, (ut * 1000000000.0 / iters), heap);

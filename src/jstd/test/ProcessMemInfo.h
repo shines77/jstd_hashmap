@@ -97,12 +97,12 @@ int get_mem_info(std::string & str_mem_size)
     pid_t pid = getpid();
 
     char filename[128];
-    ::snprintf(filename, sizeof(filename), "/proc/%d/status", pid);
+    ::snprintf(filename, sizeof(filename) - 1, "/proc/self/status");
 
     std::ifstream ifs;
     try {
         ifs.open(filename, std::ios::in);
-        if (!ifs.is_open()) {
+        if (!ifs.good()) {
             std::cout << "open " << filename << " error!" << std::endl << std::endl;
             return (-1);
         }
@@ -135,13 +135,13 @@ std::size_t GetCurrentMemoryUsage()
     pid_t pid = getpid();
 
     char filename[128];
-    ::snprintf(filename, sizeof(filename), "/proc/%d/status", pid);
+    ::snprintf(filename, sizeof(filename) - 1, "/proc/self/status");
 
     std::size_t memory_usage = 0;
     std::ifstream ifs;
     try {
         ifs.open(filename, std::ios::in);
-        if (!ifs.is_open()) {
+        if (!ifs.good()) {
             std::cout << "open " << filename << " error!" << std::endl << std::endl;
             return 0;
         }
