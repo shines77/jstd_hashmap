@@ -31,6 +31,8 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <cexcept>
+#include <stdexcept>
 
 namespace jtest {
 
@@ -121,7 +123,7 @@ int get_mem_info(std::string & str_mem_size)
 
         ifs.close();
     } catch (const std::exception & ex) {
-        std::cerr << "Exception: " << exception.what() << std::endl;
+        std::cerr << "Exception: " << ex.what() << std::endl;
         ifs.close();
     }
     return 0;
@@ -165,7 +167,7 @@ std::size_t GetCurrentMemoryUsage()
 
         ifs.close();
     } catch (const std::exception & ex) {
-        std::cerr << "Exception: " << exception.what() << std::endl;
+        std::cerr << "Exception: " << ex.what() << std::endl;
         ifs.close();
     }
     return memory_usage;
