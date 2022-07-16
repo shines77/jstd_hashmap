@@ -137,6 +137,7 @@ std::size_t GetCurrentMemoryUsage()
     char filename[128];
     ::snprintf(filename, sizeof(filename), "/proc/%d/status", pid);
 
+    std::size_t memory_usage = 0;
     std::ifstream ifs;
     try {
         ifs.open(filename, std::ios::in);
@@ -145,7 +146,6 @@ std::size_t GetCurrentMemoryUsage()
             return 0;
         }
 
-        std::size_t memory_usage = 0;
         char buf[512];
         char mem_size[64];
         char mem_unit[64];
