@@ -255,7 +255,7 @@ void reset_counter()
 static inline
 std::size_t CurrentMemoryUsage()
 {
-    return jtest::GetCurrentMemoryUsage();
+    return jtest::getCurrentRSS();
 }
 
 namespace test {
