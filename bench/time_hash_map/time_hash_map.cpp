@@ -895,11 +895,15 @@ static void report_result(char const * title, double ut, std::size_t iters,
         snprintf(heap, sizeof(heap), "%7.1f MB", (double)(end_memory - start_memory) / 1048576.0);
     }
 #else
-    if (start_memory != end_memory) {
-        snprintf(heap, sizeof(heap), "%7.1f MB - %7.1f MB",
+    if (start_memory > end_memory) {
+        snprintf(heap, sizeof(heap), "%7.1f MB  (+ %0.1f MB)",
                  (double)start_memory / 1048576.0,
-                 (double)end_memory / 1048576.0);
-    } else if (start_memory != 0) {
+                 (double)(end_memory - start_memory) / 1048576.0);
+    } else if (start_memory < end_memory) {
+        snprintf(heap, sizeof(heap), "%7.1f MB  (- %0.1f MB)",
+                 (double)start_memory / 1048576.0,
+                 (double)(start_memory - end_memory) / 1048576.0);
+    } else if ((start_memory == end_memory) && (start_memory != 0)) {
         snprintf(heap, sizeof(heap), "%7.1f MB", (double)start_memory / 1048576.0);
     }
 #endif
