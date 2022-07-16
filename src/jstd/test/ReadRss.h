@@ -88,7 +88,6 @@ size_t getReadRSS()
 
 #else
     /* Unknown OS */
-    #error "Cannot supported getPeakRSS() or getCurrentRSS() for an unknown OS."
     return (size_t)0L;          /* Unsupported. */
 #endif
 }
@@ -131,7 +130,6 @@ size_t getCurrentRSS()
 
 #else
     /* AIX, BSD, Solaris, and Unknown OS */
-    #error "Cannot supported getPeakRSS() or getCurrentRSS() for an unknown OS."
     return (size_t)0L;          /* Unsupported. */
 #endif
 }
