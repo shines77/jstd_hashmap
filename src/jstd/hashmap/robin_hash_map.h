@@ -69,9 +69,6 @@
 #include <type_traits>
 #include <stdexcept>
 
-#include <nmmintrin.h>
-#include <immintrin.h>
-
 #include "jstd/basic/stddef.h"
 #include "jstd/type_traits.h"
 #include "jstd/iterator.h"
@@ -1034,7 +1031,7 @@ public:
 
     private:
         ctrl_type * ctrl_;
-        slot_type *    slot_;
+        slot_type * slot_;
 
     public:
         basic_iterator() noexcept : ctrl_(nullptr), slot_(nullptr) {
@@ -1107,7 +1104,7 @@ public:
                                         mutable_slot_allocator_type;
 
 private:
-    ctrl_type *  ctrls_;
+    ctrl_type *     ctrls_;
     slot_type *     slots_;
     size_type       slot_size_;
     size_type       slot_mask_;

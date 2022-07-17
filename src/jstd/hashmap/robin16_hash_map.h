@@ -69,9 +69,6 @@
 #include <type_traits>
 #include <stdexcept>
 
-#include <nmmintrin.h>
-#include <immintrin.h>
-
 #include "jstd/basic/stddef.h"
 #include "jstd/type_traits.h"
 #include "jstd/iterator.h"

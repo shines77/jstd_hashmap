@@ -68,9 +68,6 @@
 #include <type_traits>
 #include <stdexcept>
 
-#include <nmmintrin.h>
-#include <immintrin.h>
-
 #include "jstd/type_traits.h"
 #include "jstd/utility.h"
 #include "jstd/support/BitUtils.h"

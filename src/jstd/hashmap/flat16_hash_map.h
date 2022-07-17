@@ -69,12 +69,10 @@
 #include <type_traits>
 #include <stdexcept>
 
-#include <nmmintrin.h>
-#include <immintrin.h>
-
 #include "jstd/type_traits.h"
 #include "jstd/iterator.h"
 #include "jstd/utility.h"
+#include "jstd/hasher/hashes.h"
 #include "jstd/hasher/hash_crc32c.h"
 #include "jstd/support/BitUtils.h"
 #include "jstd/support/Power2.h"
