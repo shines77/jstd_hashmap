@@ -1158,6 +1158,16 @@ void std_hash_test()
     }
     printf("\n");
 
+#if !defined(_MSC_VER)
+    std::size_t diff = 0;
+    for (std::size_t i = 0; i < 1024 * 1024; i++) {
+        std::size_t hash_code = std::hash<std::size_t>()(i);
+        if (hash_code != i)
+            diff++;
+    }
+    printf("std::hash<std::size_t>[0, 1048576]: diff = %" PRIu64 "\n\n", diff);
+#endif
+
 #if (HASH_FUNCTION_ID != ID_STD_HASH)
     printf("%s<std::uint32_t>\n\n", PRINT_MACRO(HASH_MAP_FUNCTION));
     for (std::uint32_t i = 0; i < 8; i++) {
