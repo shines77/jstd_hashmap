@@ -199,6 +199,9 @@ public:
     static constexpr std::uint32_t kFullMask16  = 0x0000FFFFul;
     static constexpr std::uint32_t kFullMask32  = 0xFFFFFFFFul;
 
+    static constexpr std::uint32_t kFullMask32_Half  = 0x55555555ul;
+    static constexpr std::uint32_t kFullMask32_Half2 = 0xAAAAAAAAul;
+
     static constexpr std::uint64_t kEmptySlot64  = 0xFFFFFFFFFFFFFFFFull;
     static constexpr std::uint64_t kEndOfMark64  = 0xFEFEFEFEFEFEFEFEull;
     static constexpr std::uint64_t kUnusedMask64 = 0x8080808080808080ull;
@@ -834,8 +837,8 @@ public:
 
         std::uint32_t matchUsed(const_pointer data) const {
             const __m256i kLowMask16 = _mm256_set1_epi16((short)0x00FF);
-            __m256i tag_bits  = _mm256_set1_epi16(kEndOfMark);
             __m256i ctrl_bits = _mm256_loadu_si256((const __m256i *)data);
+            __m256i tag_bits  = _mm256_set1_epi16(kEndOfMark);
             __m256i low_bits  = _mm256_and_si256(ctrl_bits, kLowMask16);
             __m256i match_mask = _mm256_cmpgt_epi16(tag_bits, low_bits);
                     match_mask = _mm256_srli_epi16(match_mask, 8);
@@ -864,7 +867,7 @@ public:
         }
 
         bool isAllEmpty(const_pointer data) const {
-            return (this->matchEmpty(data) == kFullMask32);
+            return (this->matchEmpty(data) == kFullMask32_Half);
         }
 
         bool isAllUsed(const_pointer data) const {
@@ -872,7 +875,7 @@ public:
         }
 
         bool isAllUnused(const_pointer data) const {
-            return (this->matchUnused(data) == kFullMask32);
+            return (this->matchUnused(data) == kFullMask32_Half);
         }
 
         static inline size_type bitPos(size_type pos) {
