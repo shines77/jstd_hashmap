@@ -31,8 +31,8 @@ static void map_sequential_find(char const * title, std::size_t iters,
     // keep compiler from optimizing away r (we never call rand())
     ::srand(static_cast<unsigned int>(r));
 
-    double mlf = hashmap.max_load_factor();
-    report_result(title, ut, mlf, iters, 0, 0);
+    double lf = hashmap.load_factor();
+    report_result(title, ut, lf, iters, 0, 0);
 }
 
 template <class MapType>
@@ -89,8 +89,8 @@ static void map_sequential_find_failed(std::size_t iters) {
     // keep compiler from optimizing away r (we never call rand())
     ::srand(static_cast<unsigned int>(r));
 
-    double mlf = hashmap.max_load_factor();
-    report_result("sequential_find_failed", ut, mlf, iters, 0, 0);
+    double lf = hashmap.load_factor();
+    report_result("sequential_find_failed", ut, lf, iters, 0, 0);
 }
 
 template <class MapType>
@@ -115,8 +115,8 @@ static void map_sequential_find_empty(std::size_t iters) {
     // keep compiler from optimizing away r (we never call rand())
     ::srand(static_cast<unsigned int>(r));
 
-    double mlf = hashmap.max_load_factor();
-    report_result("sequential_find_empty", ut, mlf, iters, 0, 0);
+    double lf = hashmap.load_factor();
+    report_result("sequential_find_empty", ut, lf, iters, 0, 0);
 }
 
 template <class MapType>
@@ -145,8 +145,8 @@ static void map_sequential_insert(std::size_t iters) {
     // Ensure the HashMap is not destructed
     ::srand(static_cast<unsigned int>(hashmap.size()));
 
-    double mlf = hashmap.max_load_factor();
-    report_result("sequential_insert", ut, mlf, iters, start, finish);
+    double lf = hashmap.load_factor();
+    report_result("sequential_insert", ut, lf, iters, start, finish);
 }
 
 template <class MapType>
@@ -177,8 +177,8 @@ static void map_sequential_insert_predicted(std::size_t iters) {
     // Ensure the HashMap is not destructed
     ::srand(static_cast<unsigned int>(hashmap.size()));
 
-    double mlf = hashmap.max_load_factor();
-    report_result("sequential_insert_predicted", ut, mlf, iters, start, finish);
+    double lf = hashmap.load_factor();
+    report_result("sequential_insert_predicted", ut, lf, iters, start, finish);
 }
 
 template <class MapType>
@@ -210,8 +210,8 @@ static void map_sequential_insert_replace(std::size_t iters) {
     // Ensure the HashMap is not destructed
     ::srand(static_cast<unsigned int>(hashmap.size()));
 
-    double mlf = hashmap.max_load_factor();
-    report_result("sequential_insert_replace", ut, mlf, iters, start, finish);
+    double lf = hashmap.load_factor();
+    report_result("sequential_insert_replace", ut, lf, iters, start, finish);
 }
 
 template <class MapType>
@@ -240,8 +240,8 @@ static void map_sequential_emplace(std::size_t iters) {
     // Ensure the HashMap is not destructed
     ::srand(static_cast<unsigned int>(hashmap.size()));
 
-    double mlf = hashmap.max_load_factor();
-    report_result("sequential_emplace", ut, mlf, iters, start, finish);
+    double lf = hashmap.load_factor();
+    report_result("sequential_emplace", ut, lf, iters, start, finish);
 }
 
 template <class MapType>
@@ -272,8 +272,8 @@ static void map_sequential_emplace_predicted(std::size_t iters) {
     // Ensure the HashMap is not destructed
     ::srand(static_cast<unsigned int>(hashmap.size()));
 
-    double mlf = hashmap.max_load_factor();
-    report_result("sequential_emplace_predicted", ut, mlf, iters, start, finish);
+    double lf = hashmap.load_factor();
+    report_result("sequential_emplace_predicted", ut, lf, iters, start, finish);
 }
 
 template <class MapType>
@@ -305,8 +305,8 @@ static void map_sequential_emplace_replace(std::size_t iters) {
     // Ensure the HashMap is not destructed
     ::srand(static_cast<unsigned int>(hashmap.size()));
 
-    double mlf = hashmap.max_load_factor();
-    report_result("sequential_emplace_replace", ut, mlf, iters, start, finish);
+    double lf = hashmap.load_factor();
+    report_result("sequential_emplace_replace", ut, lf, iters, start, finish);
 }
 
 template <class MapType>
@@ -335,8 +335,8 @@ static void map_sequential_operator(std::size_t iters) {
     // Ensure the HashMap is not destructed
     ::srand(static_cast<unsigned int>(hashmap.size()));
 
-    double mlf = hashmap.max_load_factor();
-    report_result("sequential_operator []", ut, mlf, iters, start, finish);
+    double lf = hashmap.load_factor();
+    report_result("sequential_operator []", ut, lf, iters, start, finish);
 }
 
 template <class MapType>
@@ -367,8 +367,8 @@ static void map_sequential_operator_predicted(std::size_t iters) {
     // Ensure the HashMap is not destructed
     ::srand(static_cast<unsigned int>(hashmap.size()));
 
-    double mlf = hashmap.max_load_factor();
-    report_result("sequential_operator [] predicted", ut, mlf, iters, start, finish);
+    double lf = hashmap.load_factor();
+    report_result("sequential_operator [] predicted", ut, lf, iters, start, finish);
 }
 
 template <class MapType>
@@ -400,8 +400,8 @@ static void map_sequential_operator_replace(std::size_t iters) {
     // Ensure the HashMap is not destructed
     ::srand(static_cast<unsigned int>(hashmap.size()));
 
-    double mlf = hashmap.max_load_factor();
-    report_result("sequential_operator [] replace", ut, mlf, iters, start, finish);
+    double lf = hashmap.load_factor();
+    report_result("sequential_operator [] replace", ut, lf, iters, start, finish);
 }
 
 template <class MapType>
@@ -433,8 +433,8 @@ static void map_sequential_erase(std::size_t iters) {
     // Ensure the HashMap is not destructed
     ::srand(static_cast<unsigned int>(hashmap.size()));
 
-    double mlf = hashmap.max_load_factor();
-    report_result("sequential_erase", ut, mlf, iters, start, finish);
+    double lf = hashmap.load_factor();
+    report_result("sequential_erase", ut, lf, iters, start, finish);
 }
 
 template <class MapType>
@@ -466,8 +466,8 @@ static void map_sequential_erase_failed(std::size_t iters) {
     // Ensure the HashMap is not destructed
     ::srand(static_cast<unsigned int>(hashmap.size()));
 
-    double mlf = hashmap.max_load_factor();
-    report_result("sequential_erase_failed", ut, mlf, iters, start, finish);
+    double lf = hashmap.load_factor();
+    report_result("sequential_erase_failed", ut, lf, iters, start, finish);
 }
 
 template <class MapType>
@@ -497,8 +497,8 @@ static void map_sequential_toggle(std::size_t iters) {
     // Ensure the HashMap is not destructed
     ::srand(static_cast<unsigned int>(hashmap.size()));
 
-    double mlf = hashmap.max_load_factor();
-    report_result("sequential_toggle", ut, mlf, iters, start, finish);
+    double lf = hashmap.load_factor();
+    report_result("sequential_toggle", ut, lf, iters, start, finish);
 }
 
 template <class MapType>
@@ -536,8 +536,8 @@ static void map_sequential_iterate(std::size_t iters) {
     // Ensure the HashMap is not destructed
     ::srand(static_cast<unsigned int>(hashmap.size()));
 
-    double mlf = hashmap.max_load_factor();
-    report_result("sequential_emplace - iterate", ut, mlf, iters, start, finish);
+    double lf = hashmap.load_factor();
+    report_result("sequential_emplace - iterate", ut, lf, iters, start, finish);
 }
 
 template <class MapType, class Vector>
@@ -567,8 +567,8 @@ static void map_random_find(char const * title, std::size_t iters,
     // keep compiler from optimizing away r (we never call rand())
     ::srand(static_cast<unsigned int>(r));
 
-    double mlf = hashmap.max_load_factor();
-    report_result(title, ut, mlf, iters, 0, 0);
+    double lf = hashmap.load_factor();
+    report_result(title, ut, lf, iters, 0, 0);
 }
 
 template <class MapType, class Vector>
@@ -625,8 +625,8 @@ static void map_random_find_failed(std::size_t iters, const Vector & indices) {
     // keep compiler from optimizing away r (we never call rand())
     ::srand(static_cast<unsigned int>(r));
 
-    double mlf = hashmap.max_load_factor();
-    report_result("random_find_failed", ut, mlf, iters, 0, 0);
+    double lf = hashmap.load_factor();
+    report_result("random_find_failed", ut, lf, iters, 0, 0);
 }
 
 template <class MapType, class Vector>
@@ -651,8 +651,8 @@ static void map_random_find_empty(std::size_t iters, const Vector & indices) {
     // keep compiler from optimizing away r (we never call rand())
     ::srand(static_cast<unsigned int>(r));
 
-    double mlf = hashmap.max_load_factor();
-    report_result("random_find_empty", ut, mlf, iters, 0, 0);
+    double lf = hashmap.load_factor();
+    report_result("random_find_empty", ut, lf, iters, 0, 0);
 }
 
 template <class MapType, class Vector>
@@ -681,8 +681,8 @@ static void map_random_insert(std::size_t iters, const Vector & indices) {
     // Ensure the HashMap is not destructed
     ::srand(static_cast<unsigned int>(hashmap.size()));
 
-    double mlf = hashmap.max_load_factor();
-    report_result("random_insert", ut, mlf, iters, start, finish);
+    double lf = hashmap.load_factor();
+    report_result("random_insert", ut, lf, iters, start, finish);
 }
 
 template <class MapType, class Vector>
@@ -713,8 +713,8 @@ static void map_random_insert_predicted(std::size_t iters, const Vector & indice
     // Ensure the HashMap is not destructed
     ::srand(static_cast<unsigned int>(hashmap.size()));
 
-    double mlf = hashmap.max_load_factor();
-    report_result("random_insert_predicted", ut, mlf, iters, start, finish);
+    double lf = hashmap.load_factor();
+    report_result("random_insert_predicted", ut, lf, iters, start, finish);
 }
 
 template <class MapType, class Vector>
@@ -746,8 +746,8 @@ static void map_random_insert_replace(std::size_t iters, const Vector & indices)
     // Ensure the HashMap is not destructed
     ::srand(static_cast<unsigned int>(hashmap.size()));
 
-    double mlf = hashmap.max_load_factor();
-    report_result("random_insert_replace", ut, mlf, iters, start, finish);
+    double lf = hashmap.load_factor();
+    report_result("random_insert_replace", ut, lf, iters, start, finish);
 }
 
 template <class MapType, class Vector>
@@ -776,8 +776,8 @@ static void map_random_emplace(std::size_t iters, const Vector & indices) {
     // Ensure the HashMap is not destructed
     ::srand(static_cast<unsigned int>(hashmap.size()));
 
-    double mlf = hashmap.max_load_factor();
-    report_result("random_emplace", ut, mlf, iters, start, finish);
+    double lf = hashmap.load_factor();
+    report_result("random_emplace", ut, lf, iters, start, finish);
 }
 
 template <class MapType, class Vector>
@@ -808,8 +808,8 @@ static void map_random_emplace_predicted(std::size_t iters, const Vector & indic
     // Ensure the HashMap is not destructed
     ::srand(static_cast<unsigned int>(hashmap.size()));
 
-    double mlf = hashmap.max_load_factor();
-    report_result("random_emplace_predicted", ut, mlf, iters, start, finish);
+    double lf = hashmap.load_factor();
+    report_result("random_emplace_predicted", ut, lf, iters, start, finish);
 }
 
 template <class MapType, class Vector>
@@ -841,8 +841,8 @@ static void map_random_emplace_replace(std::size_t iters, const Vector & indices
     // Ensure the HashMap is not destructed
     ::srand(static_cast<unsigned int>(hashmap.size()));
 
-    double mlf = hashmap.max_load_factor();
-    report_result("random_emplace_replace", ut, mlf, iters, start, finish);
+    double lf = hashmap.load_factor();
+    report_result("random_emplace_replace", ut, lf, iters, start, finish);
 }
 
 template <class MapType, class Vector>
@@ -871,8 +871,8 @@ static void map_random_operator(std::size_t iters, const Vector & indices) {
     // Ensure the HashMap is not destructed
     ::srand(static_cast<unsigned int>(hashmap.size()));
 
-    double mlf = hashmap.max_load_factor();
-    report_result("random_operator []", ut, mlf, iters, start, finish);
+    double lf = hashmap.load_factor();
+    report_result("random_operator []", ut, lf, iters, start, finish);
 }
 
 template <class MapType, class Vector>
@@ -903,8 +903,8 @@ static void map_random_operator_predicted(std::size_t iters, const Vector & indi
     // Ensure the HashMap is not destructed
     ::srand(static_cast<unsigned int>(hashmap.size()));
 
-    double mlf = hashmap.max_load_factor();
-    report_result("random_operator [] predicted", ut, mlf, iters, start, finish);
+    double lf = hashmap.load_factor();
+    report_result("random_operator [] predicted", ut, lf, iters, start, finish);
 }
 
 template <class MapType, class Vector>
@@ -936,8 +936,8 @@ static void map_random_operator_replace(std::size_t iters, const Vector & indice
     // Ensure the HashMap is not destructed
     ::srand(static_cast<unsigned int>(hashmap.size()));
 
-    double mlf = hashmap.max_load_factor();
-    report_result("random_operator [] replace", ut, mlf, iters, start, finish);
+    double lf = hashmap.load_factor();
+    report_result("random_operator [] replace", ut, lf, iters, start, finish);
 }
 
 template <class MapType, class Vector>
@@ -969,8 +969,8 @@ static void map_random_erase(std::size_t iters, const Vector & indices) {
     // Ensure the HashMap is not destructed
     ::srand(static_cast<unsigned int>(hashmap.size()));
 
-    double mlf = hashmap.max_load_factor();
-    report_result("random_erase", ut, mlf, iters, start, finish);
+    double lf = hashmap.load_factor();
+    report_result("random_erase", ut, lf, iters, start, finish);
 }
 
 template <class MapType, class Vector>
@@ -1002,8 +1002,8 @@ static void map_random_erase_failed(std::size_t iters, const Vector & indices) {
     // Ensure the HashMap is not destructed
     ::srand(static_cast<unsigned int>(hashmap.size()));
 
-    double mlf = hashmap.max_load_factor();
-    report_result("random_erase_failed", ut, mlf, iters, start, finish);
+    double lf = hashmap.load_factor();
+    report_result("random_erase_failed", ut, lf, iters, start, finish);
 }
 
 template <class MapType, class Vector>
@@ -1033,8 +1033,8 @@ static void map_random_toggle(std::size_t iters, const Vector & indices) {
     // Ensure the HashMap is not destructed
     ::srand(static_cast<unsigned int>(hashmap.size()));
 
-    double mlf = hashmap.max_load_factor();
-    report_result("random_toggle", ut, mlf, iters, start, finish);
+    double lf = hashmap.load_factor();
+    report_result("random_toggle", ut, lf, iters, start, finish);
 }
 
 template <class MapType, class Vector>
@@ -1072,8 +1072,8 @@ static void map_random_iterate(std::size_t iters, const Vector & indices) {
     // Ensure the HashMap is not destructed
     ::srand(static_cast<unsigned int>(hashmap.size()));
 
-    double mlf = hashmap.max_load_factor();
-    report_result("random_emplace - iterate", ut, mlf, iters, start, finish);
+    double lf = hashmap.load_factor();
+    report_result("random_emplace - iterate", ut, lf, iters, start, finish);
 }
 
 template <class MapType>
