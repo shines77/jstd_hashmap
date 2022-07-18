@@ -131,8 +131,14 @@ public:
     typedef robin_hash_map<Key, Value, Hash, KeyEqual, Allocator>
                                                     this_type;
 
-    static constexpr bool kUseUnrollLoop = true;
     static constexpr bool kUseIndexSalt = false;
+
+    enum {
+        UnrollLoopDisable,
+        UnrollLoopMode8,
+        UnrollLoopMode16
+    };
+    static constexpr bool kUnrollLoopMode = UnrollLoopMode16;
 
     static constexpr size_type npos = size_type(-1);
 
@@ -186,11 +192,11 @@ public:
            ((std::is_arithmetic<key_type>::value || std::is_enum<key_type>::value) &&
             (std::is_arithmetic<mapped_type>::value || std::is_enum<mapped_type>::value)));
 
-    static constexpr std::uint8_t kEmptySlot    = 0b11111111;
-    static constexpr std::uint8_t kEndOfMark    = 0b11111110;
-    static constexpr std::uint8_t kUnusedMask   = 0b10000000;
-    static constexpr std::uint8_t kHash2Mask    = 0b11111111;
-    static constexpr std::uint8_t kDistLimit    = 0b10000000;
+    static constexpr std::uint8_t kEmptySlot     = 0b11111111;
+    static constexpr std::uint8_t kEndOfMark     = 0b11111110;
+    static constexpr std::uint8_t kUnusedMask    = 0b10000000;
+    static constexpr std::uint8_t kHash2Mask     = 0b11111111;
+    static constexpr std::uint8_t kDistLimit     = 0b10000000;
 
     static constexpr std::uint16_t kEmptySlot16  = kEmptySlot << 8;
     static constexpr std::uint16_t kEndOfMark16  = kEndOfMark << 8;
@@ -198,8 +204,10 @@ public:
     static constexpr std::uint16_t kHash2Mask16  = kHash2Mask << 8;
     static constexpr std::uint16_t kDistLimit16  = kDistLimit << 8;
 
-    static constexpr std::uint32_t kFullMask16  = 0x0000FFFFul;
-    static constexpr std::uint32_t kFullMask32  = 0xFFFFFFFFul;
+    static constexpr std::uint16_t kDistInc16    = std::uint16_t(0x0100);
+
+    static constexpr std::uint32_t kFullMask16   = 0x0000FFFFul;
+    static constexpr std::uint32_t kFullMask32   = 0xFFFFFFFFul;
     static constexpr std::uint32_t kFullMask32_Half  = 0x55555555ul;
     static constexpr std::uint32_t kFullMask32_Half2 = 0xAAAAAAAAul;
 
@@ -2159,8 +2167,8 @@ private:
             new_groups[new_group_count].template fillAll16<kEndOfMark>();
         }
 
-        slot_type * slots = slot_allocator_.allocate(new_capacity);
-        this->slots_ = slots;
+        slot_type * new_slots = this->slot_allocator_.allocate(new_capacity);
+        this->slots_ = new_slots;
         if (initialize) {
             assert(this->slot_size_ == 0);
         } else {
@@ -2304,7 +2312,42 @@ private:
         size_type slot_index = this->index_for_hash(hash_code);
         size_type start_slot = slot_index;
         std::uint8_t distance = 0;
-        if (kUseUnrollLoop) {
+        std::uint16_t dist_and_hash = ctrl_hash;
+        if (kUnrollLoopMode == UnrollLoopMode16) {
+            const ctrl_type * ctrl = this->control_at(slot_index);
+            if (likely(ctrl->value == dist_and_hash)) {
+                const slot_type * slot = this->slot_at(slot_index);
+                if (this->key_equal_(slot->value.first, key)) {
+                    return slot_index;
+                }
+            }
+
+            ctrl++;
+            dist_and_hash += kDistInc16;
+
+            if (likely(ctrl->value == dist_and_hash)) {
+                const slot_type * slot = this->slot_at(slot_index);
+                if (this->key_equal_(slot->value.first, key)) {
+                    return slot_index;
+                }
+            }
+
+            ctrl++;
+            dist_and_hash += kDistInc16;
+
+            do {
+                if (likely(ctrl->value == dist_and_hash)) {
+                    const slot_type * slot = this->slot_at(slot_index);
+                    if (this->key_equal_(slot->value.first, key)) {
+                        return slot_index;
+                    }
+                }
+                ctrl++;
+                dist_and_hash += kDistInc16;
+            } while (ctrl->value >= dist_and_hash);
+
+            return npos;
+        } else if (kUnrollLoopMode == UnrollLoopMode8) {
             const ctrl_type * ctrl = this->control_at(slot_index);
             // Optimize from: (ctrl->isUsed() && (ctrl->distance >= 0))
             if (likely(ctrl->isUsed())) {
@@ -2345,19 +2388,19 @@ private:
                         }
                     }
                     distance++;
-                    if (distance >= 4)
+                    if (ctrl->dist < distance)
                         break;
                 } else {
-                    return npos;
+                    break;
                 }
             } while (1);
 
-            slot_index = this->next_index(slot_index);
+            return npos;
         }
 
         do {
             const group_type & group = this->get_group(slot_index);
-            auto mask32 = group.matchHashAndDistance(ctrl_hash, distance);
+            auto mask32 = group.matchHashAndDistance(dist_and_hash);
             std::uint32_t maskHash = mask32.maskHash;
             size_type start_index = slot_index;
             while (maskHash != 0) {
@@ -2373,135 +2416,12 @@ private:
             if (mask32.maskEmpty != 0) {
                 return npos;
             }
-            distance += kGroupWidth;
+            dist_and_hash += kGroupWidth * kDistInc16;
             slot_index = this->slot_next_group(slot_index);
         } while (slot_index != start_slot);
 
         return npos;
     }
-
-#if 0
-    JSTD_FORCED_INLINE
-    size_type find_impl(const key_type & key, size_type & first_slot, size_type & last_slot,
-                        std::uint8_t & o_distance, std::uint8_t & o_ctrl_hash) const {
-        hash_code_t hash_code = this->get_hash(key);
-        size_type slot_index = this->index_for_hash(hash_code);
-        std::uint8_t ctrl_hash = this->get_ctrl_hash(hash_code);
-        size_type start_slot = slot_index;
-        std::uint8_t distance = 0;
-        first_slot = start_slot;
-        o_ctrl_hash = ctrl_hash;
-
-        if (kUseUnrollLoop) {
-            const ctrl_type * ctrl = this->control_at(slot_index);
-            if (likely(ctrl->isUsed() && (ctrl->distance >= 0))) {
-                if (ctrl->hash == ctrl_hash) {
-                    const slot_type * slot = this->slot_at(slot_index);
-                    if (this->key_equal_(slot->value.first, key)) {
-                        o_distance = 0;
-                        last_slot = slot_index;
-                        return slot_index;
-                    }
-                }
-            } else {
-                return npos;
-            }
-
-            ctrl = this->next_control(slot_index);
-            if (likely(ctrl->isUsed() && (ctrl->distance >= 1))) {
-                if (ctrl->hash == ctrl_hash) {
-                    const slot_type * slot = this->slot_at(slot_index);
-                    if (this->key_equal_(slot->value.first, key)) {
-                        o_distance = 1;
-                        last_slot = slot_index;
-                        return slot_index;
-                    }
-                }
-            } else {
-                return npos;
-            }
-            distance = 2;
-            slot_index = this->next_index(slot_index);
-        }
-
-        do {
-            const group_type & group = this->get_group(slot_index);
-            auto mask32 = group.matchHashAndDistance(ctrl_hash, distance);
-            std::uint32_t maskHash = mask32.maskHash;
-            size_type start_index = slot_index;
-            while (maskHash != 0) {
-                size_type pos = BitUtils::bsf32(maskHash);
-                maskHash = BitUtils::clearLowBit32(maskHash);
-                size_type index = group.index(start_index, pos);
-                index = this->round_index(index);
-                const slot_type * target = this->slot_at(index);
-                if (this->key_equal_(target->value.first, key)) {
-                    o_distance = this->round_dist(index, start_slot);
-                    last_slot = index;
-                    return index;
-                }
-            }
-            if (mask32.maskEmpty != 0) {
-                size_type pos = BitUtils::bsf32(mask32.maskEmpty);
-                size_type index = group.index(start_index, pos);
-                index = this->round_index(index);
-                o_distance = this->round_dist(index, start_slot);
-                last_slot = index;
-                return npos;
-            }
-            distance += kGroupWidth;
-            slot_index = this->slot_next_group(slot_index);
-        } while (slot_index != start_slot);
-
-        o_distance = kEndOfMark;
-        last_slot = npos;
-        return npos;
-    }
-
-    JSTD_FORCED_INLINE
-    size_type find_first_empty_slot(const key_type & key, std::uint8_t & o_distance,
-                                                          std::uint8_t & o_ctrl_hash) {
-        hash_code_t hash_code = this->get_hash(key);
-        size_type slot_index = this->index_for_hash(hash_code);
-        std::uint8_t ctrl_hash = this->get_ctrl_hash(hash_code);
-        size_type first_slot = slot_index;
-        o_ctrl_hash = ctrl_hash;
-
-        if (1) {
-            const ctrl_type * ctrl = this->control_at(slot_index);
-            if (likely(ctrl->isEmpty())) {
-                o_distance = 0;
-                return slot_index;
-            }
-
-            ctrl = this->next_control(slot_index);
-            if (likely(ctrl->isEmpty())) {
-                o_distance = 1;
-                return slot_index;
-            }
-
-            slot_index = this->next_index(slot_index);
-        }
-
-        // Find the first empty slot and insert
-        do {
-            const group_type & group = this->get_group(slot_index);
-            std::uint32_t maskEmpty = group.matchEmpty();
-            if (maskEmpty != 0) {
-                // Found a [EmptyEntry] to insert
-                size_type pos = BitUtils::bsf32(maskEmpty);
-                size_type index = group.index(slot_index, pos);
-                o_distance = this->round_dist(index, first_slot);
-                return this->round_index(index);
-            }
-            slot_index = this->slot_next_group(slot_index);
-            assert(slot_index != first_slot);
-        } while (1);
-
-        o_distance = kEndOfMark;
-        return npos;
-    }
-#endif
 
     JSTD_NO_INLINE
     std::pair<size_type, bool>
@@ -2516,7 +2436,7 @@ private:
         std::uint32_t maskEmpty;
         o_ctrl_hash = ctrl_hash;
 
-        if (kUseUnrollLoop) {
+        if (kUnrollLoopMode == UnrollLoopMode8) {
             ctrl_type * ctrl = this->control_at(slot_index);
             // Optimize from: (ctrl->isUsed() && (ctrl->distance >= 0))
             if (likely(ctrl->isUsed())) {
@@ -3053,7 +2973,7 @@ private:
         std::uint8_t distance = 0;
         o_ctrl_hash = ctrl_hash;
 
-        if (kUseUnrollLoop) {
+        if (kUnrollLoopMode == UnrollLoopMode8) {
             const ctrl_type * ctrl = this->control_at(slot_index);
             // Optimize from: (ctrl->isEmpty() || (ctrl->distance < 0))
             if (likely(ctrl->isEmpty())) {
@@ -3224,7 +3144,7 @@ private:
         size_type start_slot = slot_index;
         std::uint8_t distance = 0;
 
-        if (kUseUnrollLoop) {
+        if (kUnrollLoopMode == UnrollLoopMode8) {
             ctrl_type * ctrl = this->control_at(slot_index);
             // Optimize from: (ctrl->isUsed() && (ctrl->distance >= 0))
             if (likely(ctrl->isUsed())) {
@@ -3314,7 +3234,7 @@ private:
         size_type slot_index = first_index;
         if (1) {
             ctrl_type * ctrl = this->control_at(slot_index);
-            if (kUseUnrollLoop) {
+            if (kUnrollLoopMode == UnrollLoopMode8) {
                 if (std::uint8_t(ctrl->dist + 1) < 2) {
                     prev_index = to_erase;
                     goto ClearSlot;
