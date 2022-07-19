@@ -3355,8 +3355,9 @@ private:
     }
 
     void insert_unique(const value_type & value) {
+        std::uint8_t distance;
         std::uint8_t ctrl_hash;
-        size_type target = this->unique_prepare_insert(value.first, ctrl_hash);
+        size_type target = this->unique_prepare_insert(value.first, distance, ctrl_hash);
         assert(target != npos);
 
         control_type * ctrl = this->control_at(target);
@@ -3386,8 +3387,9 @@ private:
     }
 
     void insert_unique(value_type && value) {
+        std::uint8_t distance;
         std::uint8_t ctrl_hash;
-        size_type target = this->unique_prepare_insert(value.first, ctrl_hash);
+        size_type target = this->unique_prepare_insert(value.first, distance, ctrl_hash);
         assert(target != npos);
 
         control_type * ctrl = this->control_at(target);

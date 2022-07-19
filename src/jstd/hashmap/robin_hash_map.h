@@ -138,7 +138,7 @@ public:
         UnrollMode8,
         UnrollMode16
     };
-    static constexpr bool kUnrollMode = UnrollMode16;
+    static constexpr int kUnrollMode = UnrollMode16;
 
     static constexpr size_type npos = size_type(-1);
 
@@ -239,6 +239,10 @@ public:
 
         ~ctrl_data() = default;
 
+        static std::uint16_t make(std::uint8_t dist, std::uint8_t hash) {
+            return std::uint16_t((std::uint16_t(dist) << 8) | hash);
+        }
+
         bool isEmpty() const {
             return (this->dist == kEmptySlot);
         }
@@ -300,7 +304,7 @@ public:
         }
 
         void setUsed(std::uint8_t dist, std::uint8_t hash) {
-            assert(distance < kEmptySlot);
+            assert(dist < kEmptySlot);
             this->setHash(hash);
             this->setDist(dist);
         }
@@ -538,7 +542,7 @@ public:
         typedef std::uint32_t bitmask_type;
 
         __m256i _mm256_setones_si256() const {
-            __m256i tmp;
+            __m256i tmp = _mm256_setzero_si256();
             return _mm256_cmpeq_epi16(tmp, tmp);
         }
 
@@ -2561,8 +2565,9 @@ private:
                 index = this->round_index(index);
                 const slot_type * target = this->slot_at(index);
                 if (this->key_equal_(target->value.first, key)) {
-                    o_distance = this->round_dist(index, first_slot);
-                    assert(o_distance == (distance + group_type::pos(pos)));
+                    distance = this->round_dist(index, first_slot);
+                    assert(distance == (distance + group_type::pos(pos)));
+                    o_dist_and_hash = ctrl_type::make(distance, ctrl_hash);
                     return { index, true };
                 }
             }
@@ -2586,8 +2591,9 @@ private:
         assert(maskEmpty != 0);
         size_type pos = BitUtils::bsf32(maskEmpty);
         size_type index = group_type::index(last_slot, pos);
-        o_distance = this->round_dist(index, first_slot);
-        assert(o_distance == (distance + group_type::pos(pos)));
+        distance = this->round_dist(index, first_slot);
+        assert(distance == (distance + group_type::pos(pos)));
+        o_dist_and_hash = ctrl_type::make(distance, ctrl_hash);
         index = this->round_index(index);
         return { index, false };
     }
@@ -2634,12 +2640,11 @@ private:
 
             if (isRehashing) {
                 insert_ctrl.dist++;
-                if (insert_ctrl.dist >= kEndOfMark)
-                    distance = distance;
+                assert(insert_ctrl.dist < kEndOfMark);
                 //insert_ctrl.distance = (insert_ctrl.distance < kEndOfMark) ? insert_ctrl.distance : (kEndOfMark - 1);
             } else {
                 insert_ctrl.dist++;
-                if (insert_ctrl.dist > kDistLimit) {
+                if (insert_ctrl.dist >= kDistLimit) {
                     this->emplace_tmp_rich_slot(to_insert, target, insert_ctrl.value);
                     return true;
                 }
@@ -2995,20 +3000,19 @@ private:
     }
 
     JSTD_FORCED_INLINE
-    size_type unique_prepare_insert(const key_type & key, std::uint8_t & o_distance,
-                                                          std::uint8_t & o_ctrl_hash) {
+    size_type unique_prepare_insert(const key_type & key, ctrl_type & o_ctrl) {
         hash_code_t hash_code = this->get_hash(key);
         size_type slot_index = this->index_for_hash(hash_code);
         std::uint8_t ctrl_hash = this->get_ctrl_hash(hash_code);
         size_type first_slot = slot_index;
         std::uint8_t distance = 0;
-        o_ctrl_hash = ctrl_hash;
+        o_ctrl.hash = ctrl_hash;
 
         if (kUnrollMode == UnrollMode8) {
             const ctrl_type * ctrl = this->control_at(slot_index);
             // Optimize from: (ctrl->isEmpty() || (ctrl->distance < 0))
             if (likely(ctrl->isEmpty())) {
-                o_distance = 0;
+                o_ctrl.dist = 0;
                 return slot_index;
             }
 
@@ -3016,7 +3020,7 @@ private:
             // Optimization: merging two comparisons
             if (likely(std::uint8_t(ctrl->dist + 1) < 2)) {
             //if (likely(ctrl->isEmpty() || (ctrl->distance < 1))) {
-                o_distance = 1;
+                o_ctrl.dist = 1;
                 return slot_index;
             }
 
@@ -3024,7 +3028,7 @@ private:
             // Optimization: merging two comparisons
             if (likely(std::uint8_t(ctrl->dist + 1) < 3)) {
             //if (likely(ctrl->isEmpty() || (ctrl->distance < 2))) {
-                o_distance = 2;
+                o_ctrl.dist = 2;
                 return slot_index;
             }
 
@@ -3032,7 +3036,7 @@ private:
             // Optimization: merging two comparisons
             if (likely(std::uint8_t(ctrl->dist + 1) < 4)) {
             //if (likely(ctrl->isEmpty() || (ctrl->distance < 3))) {
-                o_distance = 3;
+                o_ctrl.dist = 3;
                 return slot_index;
             }
 
@@ -3048,27 +3052,23 @@ private:
                 // Found a [EmptyEntry] to insert
                 size_type pos = BitUtils::bsf32(maskEmpty);
                 size_type index = group.index(slot_index, pos);
-                o_distance = this->round_dist(index, first_slot);
-                assert(o_distance == (distance + group_type::pos(pos)));
+                o_ctrl.dist = this->round_dist(index, first_slot);
+                assert(o_ctrl.dist == (distance + group_type::pos(pos)));
                 return this->round_index(index);
             }
             distance += kGroupWidth;
-            if (distance >= (kEmptySlot - kGroupWidth - 1))
-                distance = distance;
             slot_index = this->slot_next_group(slot_index);
             assert(slot_index != first_slot);
         } while (1);
 
-        o_distance = kEndOfMark;
+        o_ctrl.dist = kEndOfMark;
         return npos;
     }
 
     // Use in rehash_impl()
     bool move_insert_unique(slot_type * slot) {
-        std::uint8_t distance;
-        std::uint8_t ctrl_hash;
-        size_type target = this->unique_prepare_insert(slot->value.first,
-                                                       distance, ctrl_hash);
+        ctrl_type insert_ctrl;
+        size_type target = this->unique_prepare_insert(slot->value.first, insert_ctrl);
         assert(target != npos);
         bool need_grow = false;
 
@@ -3076,10 +3076,10 @@ private:
         if (ctrl->isEmpty()) {
             // Found [EmptyEntry] to insert
             assert(ctrl->isEmpty());
-            this->setUsedCtrl(target, distance, ctrl_hash);
+            this->setUsedCtrl(target, insert_ctrl.value);
         } else {
             // Insert to target place
-            need_grow = this->insert_to_place<true>(target, distance, ctrl_hash);
+            need_grow = this->insert_to_place<true>(target, insert_ctrl.value);
             assert(need_grow == false);
         }
 
@@ -3097,18 +3097,18 @@ private:
     }
 
     void insert_unique(const value_type & value) {
-        std::uint8_t ctrl_hash;
-        size_type target = this->unique_prepare_insert(value.first, ctrl_hash);
+        ctrl_type insert_ctrl;
+        size_type target = this->unique_prepare_insert(value.first, insert_ctrl);
         assert(target != npos);
 
         ctrl_type * ctrl = this->control_at(target);
         if (ctrl->isEmpty()) {
             // Found [EmptyEntry] to insert
             assert(ctrl->isEmpty());
-            this->setUsedCtrl(target, distance, ctrl_hash);
+            this->setUsedCtrl(target, insert_ctrl.value);
         } else {
             // Insert to target place
-            bool need_grow = this->insert_to_place<false>(target, distance, ctrl_hash);
+            bool need_grow = this->insert_to_place<false>(target, insert_ctrl.value);
             if (need_grow) {
                 this->grow_if_necessary();
                 this->insert_unique(value);
@@ -3128,18 +3128,18 @@ private:
     }
 
     void insert_unique(value_type && value) {
-        std::uint8_t ctrl_hash;
-        size_type target = this->unique_prepare_insert(value.first, ctrl_hash);
+        ctrl_type insert_ctrl;
+        size_type target = this->unique_prepare_insert(value.first, insert_ctrl);
         assert(target != npos);
 
         ctrl_type * ctrl = this->control_at(target);
         if (ctrl->isEmpty()) {
             // Found [EmptyEntry] to insert
             assert(ctrl->isEmpty());
-            this->setUsedCtrl(target, distance, ctrl_hash);
+            this->setUsedCtrl(target, insert_ctrl.value);
         } else {
             // Insert to target place
-            bool need_grow = this->insert_to_place<false>(target, distance, ctrl_hash);
+            bool need_grow = this->insert_to_place<false>(target, insert_ctrl.value);
             if (need_grow) {
                 this->grow_if_necessary();
                 this->insert_unique(std::forward<value_type>(value));
@@ -3174,6 +3174,7 @@ private:
         std::uint8_t ctrl_hash = this->get_ctrl_hash(hash_code);
         size_type start_slot = slot_index;
         std::uint8_t distance = 0;
+        std::uint16_t dist_and_hash = ctrl_hash;
 
         if (kUnrollMode == UnrollMode8) {
             ctrl_type * ctrl = this->control_at(slot_index);
@@ -3231,7 +3232,7 @@ private:
 
         do {
             const group_type & group = this->get_group(slot_index);
-            auto mask32 = group.matchHashAndDistance(ctrl_hash, distance);
+            auto mask32 = group.matchHashAndDistance(dist_and_hash);
             std::uint32_t maskHash = mask32.maskHash;
             while (maskHash != 0) {
                 size_type pos = BitUtils::bsf32(maskHash);
@@ -3247,7 +3248,7 @@ private:
             if (mask32.maskEmpty != 0) {
                 return 0;
             }
-            distance += kGroupWidth;
+            dist_and_hash += kGroupWidth * kDistInc16;
             slot_index = this->slot_next_group(slot_index);
         } while (slot_index != start_slot);
 
