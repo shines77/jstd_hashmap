@@ -222,7 +222,7 @@ public:
                 std::uint8_t hash;
                 std::uint8_t dist;
             };
-            std::int16_t value;
+            std::int16_t  value;
             std::uint16_t uvalue;
         };
 
@@ -254,11 +254,11 @@ public:
         }
 
         bool isEmpty() const {
-            return (this->dist == kEmptySlot);
+            return this->isUnused();
         }
 
         static bool isEmpty(std::uint8_t tag) {
-            return (tag == kEmptySlot);
+            return this->isUnused(tag);
         }
 
         bool isEmptyOnly() const {
@@ -282,19 +282,19 @@ public:
         }
 
         bool isUsed() const {
-            return (this->dist < kEmptySlot);
+            return (this->value >= 0);
         }
 
         static bool isUsed(std::uint8_t tag) {
-            return (tag < kEmptySlot);
+            return (std::int8_t(tag) >= 0);
         }
 
         bool isUnused() const {
-            return (this->dist >= kEmptySlot);
+            return (this->value < 0);
         }
 
         static bool isUnused(std::uint8_t tag) {
-            return (tag >= kEmptySlot);
+            return (std::int8_t(tag) < 0);
         }
 
         void setHash(std::uint8_t ctrl_hash) {
@@ -448,6 +448,10 @@ public:
 #else
             return this->matchLowTag(data, ctrl_hash);
 #endif
+        }
+
+        std::uint32_t matchEmpty(const_pointer data) const {
+            return this->matchUnused(data);
         }
 
         std::uint32_t matchEmptyOnly(const_pointer data) const {
@@ -665,6 +669,10 @@ public:
 #endif
         }
 
+        std::uint32_t matchEmpty(const_pointer data) const {
+            return this->matchUnused(data);
+        }
+
         std::uint32_t matchEmptyOnly(const_pointer data) const {
             if (kEmptySlot == 0b11111111) {
                 __m256i ctrl_bits  = _mm256_loadu_si256((const __m256i *)data);
@@ -852,6 +860,10 @@ public:
 
         bitmask_type matchHash(std::uint8_t ctrl_hash) const {
             return bitmask.matchHash(&this->ctrls[0], ctrl_hash);
+        }
+
+        bitmask_type matchEmpty() const {
+            return bitmask.matchEmpty(&this->ctrls[0]);
         }
 
         bitmask_type matchEmptyOnly() const {
@@ -2707,7 +2719,7 @@ private:
         size_type slot_index = this->next_index(target);
         do {
             ctrl = this->control_at(slot_index);
-            if (ctrl->isEmpty()) {
+            if (ctrl->isEmptyOnly()) {
                 this->emplace_tmp_rich_slot(to_insert, slot_index, insert_ctrl.value);
                 return false;
             } else if ((insert_ctrl.dist > ctrl->dist) /* || (insert_ctrl.distance == (kEndOfMark - 1)) */) {
