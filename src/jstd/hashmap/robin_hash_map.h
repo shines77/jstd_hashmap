@@ -192,19 +192,20 @@ public:
            ((std::is_arithmetic<key_type>::value || std::is_enum<key_type>::value) &&
             (std::is_arithmetic<mapped_type>::value || std::is_enum<mapped_type>::value)));
 
-    static constexpr std::uint8_t kEmptySlot     = 0b11111111;
-    static constexpr std::uint8_t kEndOfMark     = 0b11111110;
-    static constexpr std::uint8_t kUnusedMask    = 0b10000000;
-    static constexpr std::uint8_t kHash2Mask     = 0b11111111;
-    static constexpr std::uint8_t kDistLimit     = 0b10000000;
+    static constexpr std::uint8_t kEmptySlot    = 0b11111111;
+    static constexpr std::uint8_t kEndOfMark    = 0b11111110;
+    static constexpr std::uint8_t kUnusedMask   = 0b10000000;
+    static constexpr std::uint8_t kHash2Mask    = 0b11111111;
+    static constexpr std::uint8_t kDistLimit    = 0b10000000;
 
-    static constexpr std::uint16_t kEmptySlot16  = kEmptySlot << 8;
-    static constexpr std::uint16_t kEndOfMark16  = kEndOfMark << 8;
-    static constexpr std::uint16_t kUnusedMask16 = kUnusedMask << 8;
-    static constexpr std::uint16_t kHash2Mask16  = kHash2Mask << 8;
-    static constexpr std::uint16_t kDistLimit16  = kDistLimit << 8;
+    static constexpr std::int16_t kEmptySlot16  = std::int16_t(std::uint16_t(kEmptySlot)  << 8);
+    static constexpr std::int16_t kEndOfMark16  = std::int16_t(std::uint16_t(kEndOfMark)  << 8);
+    static constexpr std::int16_t kUnusedMask16 = std::int16_t(std::uint16_t(kUnusedMask) << 8);
+    static constexpr std::int16_t kHash2Mask16  = std::int16_t(std::uint16_t(kHash2Mask)  << 8);
+    static constexpr std::int16_t kDistLimit16  = std::int16_t(std::uint16_t(kDistLimit)  << 8);
 
-    static constexpr std::uint16_t kDistInc16    = std::uint16_t(0x0100);
+    static constexpr std::int16_t kDistInc16    = std::int16_t(0x0100);
+    static constexpr std::uint16_t kDistInc16u  = std::uint16_t(0x0100);
 
     static constexpr std::uint32_t kFullMask16   = 0x0000FFFFul;
     static constexpr std::uint32_t kFullMask32   = 0xFFFFFFFFul;
@@ -244,7 +245,11 @@ public:
 
         ~ctrl_data() = default;
 
-        static std::uint16_t make(std::uint8_t dist, std::uint8_t hash) {
+        static std::int16_t make(std::uint8_t dist, std::uint8_t hash) {
+            return std::int16_t((std::uint16_t(dist) << 8) | hash);
+        }
+
+        static std::uint16_t makeu(std::uint8_t dist, std::uint8_t hash) {
             return std::uint16_t((std::uint16_t(dist) << 8) | hash);
         }
 
@@ -391,20 +396,20 @@ public:
             _mm256_storeu_si256((__m256i *)data, zero_bits);
         }
 
-        template <std::uint16_t ControlTag>
+        template <std::int16_t ControlTag>
         void fillAll16(pointer data) {
-            const __m256i tag_bits = _mm256_set1_epi16(ControlTag);
+            const __m256i tag_bits = _mm256_set1_epi16((short)ControlTag);
             _mm256_storeu_si256((__m256i *)data, tag_bits);
         }
 
-        __m256i matchControlTag256(const_pointer data, std::uint16_t ctrl_tag) const {
+        __m256i matchTag256(const_pointer data, std::int16_t ctrl_tag) const {
             __m256i ctrl_bits  = _mm256_loadu_si256((const __m256i *)data);
             __m256i tag_bits   = _mm256_set1_epi16(ctrl_tag);
             __m256i match_mask = _mm256_cmpeq_epi16(ctrl_bits, tag_bits);
             return match_mask;
         }
 
-        std::uint32_t matchControlTag(const_pointer data, std::uint16_t ctrl_tag) const {
+        std::uint32_t matchTag(const_pointer data, std::int16_t ctrl_tag) const {
             __m256i ctrl_bits  = _mm256_loadu_si256((const __m256i *)data);
             __m256i tag_bits   = _mm256_set1_epi16(ctrl_tag);
             __m256i match_mask = _mm256_cmpeq_epi16(ctrl_bits, tag_bits);
@@ -412,7 +417,7 @@ public:
             return mask;
         }
 
-        std::uint32_t matchLowControlTag(const_pointer data, std::uint8_t ctrl_tag) const {
+        std::uint32_t matchLowTag(const_pointer data, std::uint8_t ctrl_tag) const {
             __m256i ctrl_bits  = _mm256_loadu_si256((const __m256i *)data);
             __m256i tag_bits   = _mm256_set1_epi16(ctrl_tag);
             __m256i ones_bits  = _mm256_setones_si256();
@@ -423,7 +428,7 @@ public:
             return mask;
         }
 
-        std::uint32_t matchHighControlTag(const_pointer data, std::uint8_t ctrl_tag) const {
+        std::uint32_t matchHighTag(const_pointer data, std::uint8_t ctrl_tag) const {
             __m256i ctrl_bits  = _mm256_loadu_si256((const __m256i *)data);
             __m256i tag_bits   = _mm256_set1_epi16(ctrl_tag);
             __m256i high_bits  = _mm256_srli_epi16(ctrl_bits, 8);
@@ -441,11 +446,11 @@ public:
             std::uint32_t mask = (std::uint32_t)_mm256_movepi16_mask(match_mask);
             return mask;
 #else
-            return this->matchLowControlTag(data, ctrl_hash);
+            return this->matchLowTag(data, ctrl_hash);
 #endif
         }
 
-        std::uint32_t matchEmpty(const_pointer data) const {
+        std::uint32_t matchEmptyOnly(const_pointer data) const {
             if (kEmptySlot == 0b11111111) {
                 __m256i ctrl_bits  = _mm256_loadu_si256((const __m256i *)data);
                 __m256i ones_bits  = _mm256_setones_si256();
@@ -453,59 +458,11 @@ public:
                 std::uint32_t mask = (std::uint32_t)_mm256_movepi16_mask(match_mask);
                 return mask;
             } else {
-                return this->matchHighControlTag(data, kEmptySlot);
+                return this->matchHighTag(data, kEmptySlot);
             }
         }
 
-        MatchMask2<std::uint32_t>
-        matchHashAndDistance(const_pointer data, std::uint16_t dist_and_hash) const {
-            const __m256i kDistanceBase =
-                _mm256_setr_epi16(0x0000, 0x0100, 0x0200, 0x0300, 0x0400, 0x0500, 0x0600, 0x0700,
-                                  0x0800, 0x0900, 0x0A00, 0x0B00, 0x0C00, 0x0D00, 0x0E00, 0x0F00);
-            assert(dist_and_hash < kDistLimit16);
-            __m256i ctrl_bits   = _mm256_loadu_si256((const __m256i *)data);
-            __m256i dist_0_hash = _mm256_set1_epi16(dist_and_hash);
-            __m256i zero_bits   = _mm256_setzero_si256();
-            __m256i dist_1_hash = _mm256_adds_epi16(dist_0_hash, kDistanceBase);
-            __m256i match_mask  = _mm256_cmpeq_epi16(ctrl_bits, dist_0_hash);
-            __m256i empty_mask  = _mm256_cmpgt_epi16(zero_bits, dist_1_hash);
-            __m256i result_mask = _mm256_andnot_si256(empty_mask, match_mask);
-            std::uint32_t maskEmpty = (std::uint32_t)_mm256_movepi16_mask(empty_mask);
-            std::uint32_t maskHash  = (std::uint32_t)_mm256_movepi16_mask(result_mask);
-            return { maskEmpty, maskHash };
-        }
-
-        MatchMask2<std::uint32_t>
-        matchHashAndDistFast(const_pointer data, std::uint16_t dist_and_hash) const {
-            return matchHashAndDistance(data, dist_and_hash);
-        }
-
-        std::uint32_t matchEmptyOrZero(const_pointer data) const {
-            __m256i ctrl_bits   = _mm256_loadu_si256((const __m256i *)data);
-            __m256i zero_bits   = _mm256_setzero_si256();
-            __m256i empty_mask  = _mm256_cmpgt_epi16(zero_bits, ctrl_bits);
-            __m256i zero_mask   = _mm256_cmpeq_epi16(zero_bits, ctrl_bits);
-            __m256i result_mask = _mm256_or_si256(empty_mask, zero_mask);
-            std::uint32_t maskEmpty = (std::uint32_t)_mm256_movepi16_mask(result_mask);
-            return maskEmpty;
-        }
-
-        std::uint32_t matchEmptyAndDistance(const_pointer data, std::uint8_t distance) const {
-            const __m256i kDistanceBase =
-                _mm256_setr_epi16(0x0000, 0x0100, 0x0200, 0x0300, 0x0400, 0x0500, 0x0600, 0x0700,
-                                  0x0800, 0x0900, 0x0A00, 0x0B00, 0x0C00, 0x0D00, 0x0E00, 0x0F00);
-            assert(distance < kDistLimit);
-            std::uint16_t dist_and_hash = std::uint16_t(distance) << 8;
-            __m256i ctrl_bits   = _mm256_loadu_si256((const __m256i *)data);
-            __m256i dist_0_hash = _mm256_set1_epi16((short)dist_and_hash);
-            __m256i zero_bits   = _mm256_setzero_si256();
-            __m256i dist_1_hash = _mm256_adds_epi16(dist_0_hash, kDistanceBase);
-            __m256i empty_mask  = _mm256_cmpgt_epi16(zero_bits, dist_1_hash);
-            std::uint32_t maskEmpty = (std::uint32_t)_mm256_movepi16_mask(result_mask);
-            return maskEmpty;
-        }
-
-        std::uint32_t matchUsed(const_pointer data) const {
+        std::uint32_t matchNonEmpty(const_pointer data) const {
             if (kEmptySlot == 0b11111111) {
                 __m256i ctrl_bits  = _mm256_loadu_si256((const __m256i *)data);
                 __m256i ones_bits  = _mm256_setones_si256();
@@ -524,8 +481,68 @@ public:
             }
         }
 
+        std::uint32_t matchUsed(const_pointer data) const {
+            __m256i ctrl_bits  = _mm256_loadu_si256((const __m256i *)data);
+            __m256i ones_bits  = _mm256_setones_si256();
+            __m256i match_mask = _mm256_cmpgt_epi16(ctrl_bits, ones_bits);
+            std::uint32_t maskUsed = (std::uint32_t)_mm256_movepi16_mask(match_mask);
+            return maskUsed;
+        }
+
         std::uint32_t matchUnused(const_pointer data) const {
-            return this->matchEmpty(data);
+            __m256i ctrl_bits  = _mm256_loadu_si256((const __m256i *)data);
+            __m256i zero_bits  = _mm256_setzero_si256();
+            __m256i match_mask = _mm256_cmpgt_epi16(zero_bits, ctrl_bits);
+            std::uint32_t maskUsed = (std::uint32_t)_mm256_movepi16_mask(match_mask);
+            return maskUsed;
+        }
+
+        MatchMask2<std::uint32_t>
+        matchHashAndDistance(const_pointer data, std::int16_t dist_and_hash) const {
+            const __m256i kDistanceBase =
+                _mm256_setr_epi16(0x0000, 0x0100, 0x0200, 0x0300, 0x0400, 0x0500, 0x0600, 0x0700,
+                                  0x0800, 0x0900, 0x0A00, 0x0B00, 0x0C00, 0x0D00, 0x0E00, 0x0F00);
+            assert(dist_and_hash < kDistLimit16);
+            __m256i ctrl_bits   = _mm256_loadu_si256((const __m256i *)data);
+            __m256i dist_0_hash = _mm256_set1_epi16(dist_and_hash);
+            __m256i zero_bits   = _mm256_setzero_si256();
+            __m256i dist_1_hash = _mm256_adds_epi16(dist_0_hash, kDistanceBase);
+            __m256i match_mask  = _mm256_cmpeq_epi16(ctrl_bits, dist_0_hash);
+            __m256i empty_mask  = _mm256_cmpgt_epi16(zero_bits, dist_1_hash);
+            __m256i result_mask = _mm256_andnot_si256(empty_mask, match_mask);
+            std::uint32_t maskEmpty = (std::uint32_t)_mm256_movepi16_mask(empty_mask);
+            std::uint32_t maskHash  = (std::uint32_t)_mm256_movepi16_mask(result_mask);
+            return { maskEmpty, maskHash };
+        }
+
+        MatchMask2<std::uint32_t>
+        matchHashAndDistFast(const_pointer data, std::int16_t dist_and_hash) const {
+            return matchHashAndDistance(data, dist_and_hash);
+        }
+
+        std::uint32_t matchEmptyOrZero(const_pointer data) const {
+            __m256i ctrl_bits   = _mm256_loadu_si256((const __m256i *)data);
+            __m256i zero_bits   = _mm256_setzero_si256();
+            __m256i empty_mask  = _mm256_cmpgt_epi16(zero_bits, ctrl_bits);
+            __m256i zero_mask   = _mm256_cmpeq_epi16(zero_bits, ctrl_bits);
+            __m256i result_mask = _mm256_or_si256(empty_mask, zero_mask);
+            std::uint32_t maskEmpty = (std::uint32_t)_mm256_movepi16_mask(result_mask);
+            return maskEmpty;
+        }
+
+        std::uint32_t matchEmptyAndDistance(const_pointer data, std::uint8_t distance) const {
+            const __m256i kDistanceBase =
+                _mm256_setr_epi16(0x0000, 0x0100, 0x0200, 0x0300, 0x0400, 0x0500, 0x0600, 0x0700,
+                                  0x0800, 0x0900, 0x0A00, 0x0B00, 0x0C00, 0x0D00, 0x0E00, 0x0F00);
+            assert(distance < kDistLimit);
+            std::int16_t dist_and_hash = std::uint16_t(distance) << 8;
+            __m256i ctrl_bits   = _mm256_loadu_si256((const __m256i *)data);
+            __m256i dist_0_hash = _mm256_set1_epi16((short)dist_and_hash);
+            __m256i zero_bits   = _mm256_setzero_si256();
+            __m256i dist_1_hash = _mm256_adds_epi16(dist_0_hash, kDistanceBase);
+            __m256i empty_mask  = _mm256_cmpgt_epi16(zero_bits, dist_1_hash);
+            std::uint32_t maskEmpty = (std::uint32_t)_mm256_movepi16_mask(result_mask);
+            return maskEmpty;
         }
 
         bool hasAnyMatch(const_pointer data, std::uint8_t ctrl_hash) const {
@@ -533,7 +550,7 @@ public:
         }
 
         bool hasAnyEmpty(const_pointer data) const {
-            return (this->matchEmpty(data) != 0);
+            return (this->matchEmptyOnly(data) != 0);
         }
 
         bool hasAnyUsed(const_pointer data) const {
@@ -545,7 +562,7 @@ public:
         }
 
         bool isAllEmpty(const_pointer data) const {
-            return (this->matchEmpty(data) == kFullMask16);
+            return (this->matchEmptyOnly(data) == kFullMask16);
         }
 
         bool isAllUsed(const_pointer data) const {
@@ -553,7 +570,7 @@ public:
         }
 
         bool isAllUnused(const_pointer data) const {
-            return (this->matchUnused(data) == kFullMask16);
+            return (this->matchUsed(data) == 0);
         }
 
         static inline size_type bitPos(size_type pos) {
@@ -597,14 +614,14 @@ public:
             _mm256_storeu_si256((__m256i *)data, tag_bits);
         }
 
-        __m256i matchControlTag256(const_pointer data, std::uint16_t ctrl_tag) const {
+        __m256i matchTag256(const_pointer data, std::uint16_t ctrl_tag) const {
             __m256i ctrl_bits  = _mm256_loadu_si256((const __m256i *)data);
             __m256i tag_bits   = _mm256_set1_epi16((short)ctrl_tag);
             __m256i match_mask = _mm256_cmpeq_epi16(ctrl_bits, tag_bits);
             return match_mask;
         }
 
-        std::uint32_t matchControlTag(const_pointer data, std::uint16_t ctrl_tag) const {
+        std::uint32_t matchTag(const_pointer data, std::uint16_t ctrl_tag) const {
             __m256i ctrl_bits  = _mm256_loadu_si256((const __m256i *)data);
             __m256i tag_bits   = _mm256_set1_epi16(ctrl_tag);
             __m256i match_mask = _mm256_cmpeq_epi16(ctrl_bits, tag_bits);
@@ -613,7 +630,7 @@ public:
             return mask;
         }
 
-        std::uint32_t matchLowControlTag(const_pointer data, std::uint8_t ctrl_tag) const {
+        std::uint32_t matchLowTag(const_pointer data, std::uint8_t ctrl_tag) const {
             __m256i ctrl_bits  = _mm256_loadu_si256((const __m256i *)data);
             __m256i tag_bits   = _mm256_set1_epi16(ctrl_tag);
             __m256i ones_bits  = _mm256_setones_si256();
@@ -625,7 +642,7 @@ public:
             return mask;
         }
 
-        std::uint32_t matchHighControlTag(const_pointer data, std::uint8_t ctrl_tag) const {
+        std::uint32_t matchHighTag(const_pointer data, std::uint8_t ctrl_tag) const {
             __m256i ctrl_bits  = _mm256_loadu_si256((const __m256i *)data);
             __m256i tag_bits   = _mm256_set1_epi16(ctrl_tag);
             __m256i high_bits  = _mm256_srli_epi16(ctrl_bits, 8);
@@ -644,11 +661,11 @@ public:
             std::uint32_t mask = (std::uint32_t)_mm256_movemask_epi8(match_mask);
             return mask;
 #else
-            return this->matchLowControlTag(data, ctrl_hash);
+            return this->matchLowTag(data, ctrl_hash);
 #endif
         }
 
-        std::uint32_t matchEmpty(const_pointer data) const {
+        std::uint32_t matchEmptyOnly(const_pointer data) const {
             if (kEmptySlot == 0b11111111) {
                 __m256i ctrl_bits  = _mm256_loadu_si256((const __m256i *)data);
                 __m256i ones_bits  = _mm256_setones_si256();
@@ -657,12 +674,51 @@ public:
                 std::uint32_t mask = (std::uint32_t)_mm256_movemask_epi8(match_mask);
                 return mask;
             } else {
-                return this->matchHighControlTag(data, kEmptySlot);
+                return this->matchHighTag(data, kEmptySlot);
             }
         }
 
+        std::uint32_t matchNonEmpty(const_pointer data) const {
+            if (kEmptySlot == 0b11111111) {
+                __m256i ctrl_bits  = _mm256_loadu_si256((const __m256i *)data);
+                __m256i ones_bits  = _mm256_setones_si256();
+                __m256i match_mask = _mm256_cmpeq_epi8(ones_bits, ctrl_bits);
+                        match_mask = _mm256_andnot_si256(match_mask, ones_bits);
+                        match_mask = _mm256_srli_epi16(match_mask, 8);
+                std::uint32_t maskUsed = (std::uint32_t)_mm256_movemask_epi8(match_mask);
+                return maskUsed;
+            } else {
+                __m256i ctrl_bits  = _mm256_loadu_si256((const __m256i *)data);
+                __m256i tag_bits   = _mm256_set1_epi16(kEmptySlot16);
+                __m256i ones_bits  = _mm256_setones_si256();
+                __m256i match_mask = _mm256_cmpeq_epi8(tag_bits, ctrl_bits);
+                        match_mask = _mm256_andnot_si256(match_mask, ones_bits);
+                        match_mask = _mm256_srli_epi16(match_mask, 8);
+                std::uint32_t maskUsed = (std::uint32_t)_mm256_movemask_epi8(match_mask);
+                return maskUsed;
+            }
+        }
+
+        std::uint32_t matchUsed(const_pointer data) const {
+            __m256i ctrl_bits  = _mm256_loadu_si256((const __m256i *)data);
+            __m256i ones_bits  = _mm256_setones_si256();
+            __m256i match_mask = _mm256_cmpgt_epi16(ctrl_bits, ones_bits);
+                    match_mask = _mm256_srli_epi16(match_mask, 8);
+            std::uint32_t maskUsed = (std::uint32_t)_mm256_movemask_epi8(match_mask);
+            return maskUsed;
+        }
+
+        std::uint32_t matchUnused(const_pointer data) const {
+            __m256i ctrl_bits  = _mm256_loadu_si256((const __m256i *)data);
+            __m256i zero_bits  = _mm256_setzero_si256();
+            __m256i match_mask = _mm256_cmpgt_epi16(zero_bits, ctrl_bits);
+                    match_mask = _mm256_srli_epi16(match_mask, 8);
+            std::uint32_t maskUsed = (std::uint32_t)_mm256_movemask_epi8(match_mask);
+            return maskUsed;
+        }
+
         MatchMask2<std::uint32_t>
-        matchHashAndDistance(const_pointer data, std::uint16_t dist_and_hash) const {
+        matchHashAndDistance(const_pointer data, std::int16_t dist_and_hash) const {
             const __m256i kDistanceBase =
                 _mm256_setr_epi16(0x0000, 0x0100, 0x0200, 0x0300, 0x0400, 0x0500, 0x0600, 0x0700,
                                   0x0800, 0x0900, 0x0A00, 0x0B00, 0x0C00, 0x0D00, 0x0E00, 0x0F00);
@@ -682,7 +738,7 @@ public:
         }
 
         MatchMask2<std::uint32_t>
-        matchHashAndDistFast(const_pointer data, std::uint16_t dist_and_hash) const {
+        matchHashAndDistFast(const_pointer data, std::int16_t dist_and_hash) const {
             const __m256i kDistanceBase =
                 _mm256_setr_epi16(0x0000, 0x0100, 0x0200, 0x0300, 0x0400, 0x0500, 0x0600, 0x0700,
                                   0x0800, 0x0900, 0x0A00, 0x0B00, 0x0C00, 0x0D00, 0x0E00, 0x0F00);
@@ -715,7 +771,7 @@ public:
                 _mm256_setr_epi16(0x0000, 0x0100, 0x0200, 0x0300, 0x0400, 0x0500, 0x0600, 0x0700,
                                   0x0800, 0x0900, 0x0A00, 0x0B00, 0x0C00, 0x0D00, 0x0E00, 0x0F00);
             assert(distance < kDistLimit);
-            std::uint16_t dist_and_hash = std::uint16_t(distance) << 8;
+            std::int16_t dist_and_hash = std::uint16_t(distance) << 8;
             __m256i ctrl_bits   = _mm256_loadu_si256((const __m256i *)data);
             __m256i dist_0_hash = _mm256_set1_epi16((short)dist_and_hash);
             __m256i zero_bits   = _mm256_setzero_si256();
@@ -726,37 +782,12 @@ public:
             return maskEmpty;
         }
 
-        std::uint32_t matchUsed(const_pointer data) const {
-            if (kEmptySlot == 0b11111111) {
-                __m256i ctrl_bits  = _mm256_loadu_si256((const __m256i *)data);
-                __m256i ones_bits  = _mm256_setones_si256();
-                __m256i match_mask = _mm256_cmpeq_epi8(ones_bits, ctrl_bits);
-                        match_mask = _mm256_andnot_si256(match_mask, ones_bits);
-                        match_mask = _mm256_srli_epi16(match_mask, 8);
-                std::uint32_t maskUsed = (std::uint32_t)_mm256_movemask_epi8(match_mask);
-                return maskUsed;
-            } else {
-                __m256i ctrl_bits  = _mm256_loadu_si256((const __m256i *)data);
-                __m256i tag_bits   = _mm256_set1_epi16(kEmptySlot16);
-                __m256i ones_bits  = _mm256_setones_si256();
-                __m256i match_mask = _mm256_cmpeq_epi8(tag_bits, ctrl_bits);
-                        match_mask = _mm256_andnot_si256(match_mask, ones_bits);
-                        match_mask = _mm256_srli_epi16(match_mask, 8);
-                std::uint32_t maskUsed = (std::uint32_t)_mm256_movemask_epi8(match_mask);
-                return maskUsed;
-            }
-        }
-
-        std::uint32_t matchUnused(const_pointer data) const {
-            return this->matchEmpty(data);
-        }
-
         bool hasAnyMatch(const_pointer data, std::uint8_t ctrl_hash) const {
             return (this->matchHash(data, ctrl_hash) != 0);
         }
 
         bool hasAnyEmpty(const_pointer data) const {
-            return (this->matchEmpty(data) != 0);
+            return (this->matchEmptyOnly(data) != 0);
         }
 
         bool hasAnyUsed(const_pointer data) const {
@@ -768,7 +799,7 @@ public:
         }
 
         bool isAllEmpty(const_pointer data) const {
-            return (this->matchEmpty(data) == kFullMask32_Half);
+            return (this->matchEmptyOnly(data) == kFullMask32_Half);
         }
 
         bool isAllUsed(const_pointer data) const {
@@ -776,7 +807,7 @@ public:
         }
 
         bool isAllUnused(const_pointer data) const {
-            return (this->matchUnused(data) == kFullMask32_Half);
+            return (this->matchUsed(data) == 0);
         }
 
         static inline size_type bitPos(size_type pos) {
@@ -810,34 +841,25 @@ public:
             bitmask.clear(&this->ctrls[0]);
         }
 
-        template <std::uint16_t ControlTag>
+        template <std::int16_t ControlTag>
         void fillAll16() {
             bitmask.template fillAll16<ControlTag>(&this->ctrls[0]);
         }
 
-        bitmask_type matchControlTag(std::uint16_t ctrl_tag) const {
-            return bitmask.matchControlTag(&this->ctrls[0], ctrl_tag);
+        bitmask_type matchTag(std::int16_t ctrl_tag) const {
+            return bitmask.matchTag(&this->ctrls[0], ctrl_tag);
         }
 
         bitmask_type matchHash(std::uint8_t ctrl_hash) const {
             return bitmask.matchHash(&this->ctrls[0], ctrl_hash);
         }
 
-        MatchMask2<bitmask_type>
-        matchHashAndDistance(std::uint16_t dist_and_hash) const {
-            return bitmask.matchHashAndDistance(&this->ctrls[0], dist_and_hash);
+        bitmask_type matchEmptyOnly() const {
+            return bitmask.matchEmptyOnly(&this->ctrls[0]);
         }
 
-        bitmask_type matchEmpty() const {
-            return bitmask.matchEmpty(&this->ctrls[0]);
-        }
-
-        bitmask_type matchEmptyOrZero() const {
-            return bitmask.matchEmptyOrZero(&this->ctrls[0]);
-        }
-
-        bitmask_type matchEmptyAndDistance(std::uint8_t distance) const {
-            return bitmask.matchEmptyAndDistance(&this->ctrls[0], distance);
+        bitmask_type matchNonEmpty() const {
+            return bitmask.matchNonEmpty(&this->ctrls[0]);
         }
 
         bitmask_type matchUsed() const {
@@ -846,6 +868,19 @@ public:
 
         bitmask_type matchUnused() const {
             return bitmask.matchUnused(&this->ctrls[0]);
+        }
+
+        MatchMask2<bitmask_type>
+        matchHashAndDistance(std::int16_t dist_and_hash) const {
+            return bitmask.matchHashAndDistance(&this->ctrls[0], dist_and_hash);
+        }
+
+        bitmask_type matchEmptyOrZero() const {
+            return bitmask.matchEmptyOrZero(&this->ctrls[0]);
+        }
+
+        bitmask_type matchEmptyAndDistance(std::uint8_t distance) const {
+            return bitmask.matchEmptyAndDistance(&this->ctrls[0], distance);
         }
 
         bool hasAnyMatch(std::uint8_t ctrl_hash) const {
@@ -1008,11 +1043,11 @@ public:
 
         basic_iterator & operator ++ () {
             const ctrl_type * ctrl = this->owner_->control_at(this->index_);
-            size_type max_index = this->owner_->slot_mask();
+            size_type max_index = this->owner_->slot_max_capacity();
             do {
                 ++(this->index_);
                 ++ctrl;
-            } while (ctrl->isEmptyOnly() && (this->index_ <= max_index));
+            } while (ctrl->isEmptyOnly() && (this->index_ < max_index));
             return *this;
         }
 
@@ -1356,7 +1391,9 @@ public:
     }
 
     size_type group_mask() const { return (this->slot_mask() / kGroupWidth); }
-    size_type group_count() const { return (this->slot_capacity() / kGroupWidth); }
+    size_type group_count() const {
+        return ((this->slot_max_capacity() + kGroupWidth - 1) / kGroupWidth);
+    }
     size_type group_capacity() const { return (this->group_count() + 1); }
 
     slot_type * slots() { return this->slots_; }
@@ -1371,6 +1408,9 @@ public:
     }
 
     size_type max_lookups() const { return this->max_lookups_; }
+    size_type slot_max_capacity() const {
+        return (this->slot_capacity() + this->max_lookups());
+    }
 
     constexpr size_type bucket_count() const {
         return this->slot_size_;
@@ -1888,10 +1928,12 @@ private:
     }
 
     inline size_type next_index(size_type index) const noexcept {
+        assert(index < this->slot_max_capacity());
         return (index + 1);
     }
 
     inline size_type next_index(size_type index, size_type slot_mask) const noexcept {
+        assert(index < this->slot_max_capacity());
         return (index + 1);
     }
 
@@ -1930,20 +1972,20 @@ private:
     }
 
     inline size_type slot_prev_group(size_type slot_index) const noexcept {
-        return ((slot_index + this->slot_mask()) & this->slot_mask());
+        return (slot_index - kGroupWidth);
     }
 
     inline size_type slot_next_group(size_type slot_index) const noexcept {
-        return ((slot_index + kGroupWidth) & this->slot_mask());
+        return (slot_index + kGroupWidth);
     }
 
     ctrl_type * control_at(size_type slot_index) noexcept {
-        assert(slot_index <= this->slot_capacity());
+        assert(slot_index < this->slot_max_capacity());
         return (this->ctrls() + ssize_type(slot_index));
     }
 
     const ctrl_type * control_at(size_type slot_index) const noexcept {
-        assert(slot_index <= this->slot_capacity());
+        assert(slot_index < this->slot_max_capacity());
         return (this->ctrls() + ssize_type(slot_index));
     }
 
@@ -1958,12 +2000,12 @@ private:
     }
 
     group_type * group_at(size_type slot_index) noexcept {
-        assert(slot_index < this->slot_capacity());
+        assert(slot_index < this->slot_max_capacity());
         return (group_type *)(this->control_at(slot_index));
     }
 
     const group_type * group_at(size_type slot_index) const noexcept {
-        assert(slot_index < this->slot_capacity());
+        assert(slot_index < this->slot_max_capacity());
         return (const group_type *)(this->control_at(slot_index));
     }
 
@@ -1978,34 +2020,34 @@ private:
     }
 
     slot_type * slot_at(size_type slot_index) noexcept {
-        assert(slot_index <= this->slot_capacity());
+        assert(slot_index < this->slot_max_capacity());
         return (this->slots() + ssize_type(slot_index));
     }
 
     const slot_type * slot_at(size_type slot_index) const noexcept {
-        assert(slot_index <= this->slot_capacity());
+        assert(slot_index < this->slot_max_capacity());
         return (this->slots() + ssize_type(slot_index));
     }
 
     ctrl_type & get_control(size_type slot_index) {
-        assert(slot_index < this->slot_capacity());
+        assert(slot_index < this->slot_max_capacity());
         ctrl_type * ctrls = this->ctrls();
         return ctrls[slot_index];
     }
 
     const ctrl_type & get_control(size_type slot_index) const {
-        assert(slot_index < this->slot_capacity());
+        assert(slot_index < this->slot_max_capacity());
         ctrl_type * ctrls = this->ctrls();
         return ctrls[slot_index];
     }
 
     group_type & get_group(size_type slot_index) {
-        assert(slot_index < this->slot_capacity());
+        assert(slot_index < this->slot_max_capacity());
         return *this->group_at(slot_index);
     }
 
     const group_type & get_group(size_type slot_index) const {
-        assert(slot_index < this->slot_capacity());
+        assert(slot_index < this->slot_max_capacity());
         return *this->group_at(slot_index);
     }
 
@@ -2020,12 +2062,12 @@ private:
     }
 
     slot_type & get_slot(size_type slot_index) {
-        assert(slot_index < this->slot_capacity());
+        assert(slot_index < this->slot_max_capacity());
         return this->slots_[slot_index];
     }
 
     const slot_type & get_slot(size_type slot_index) const {
-        assert(slot_index < this->slot_capacity());
+        assert(slot_index < this->slot_max_capacity());
         return this->slots_[slot_index];
     }
 
@@ -2132,7 +2174,7 @@ private:
     }
 
     JSTD_FORCED_INLINE
-    void setUsedCtrl(size_type index, std::uint16_t dist_and_hash) {
+    void setUsedCtrl(size_type index, std::int16_t dist_and_hash) {
         ctrl_type * ctrl = this->control_at(index);
         ctrl->setValue(dist_and_hash);
     }
@@ -2165,9 +2207,9 @@ private:
 #if 1
         // Fast to get log2_int, if the new_size is power of 2.
         // Use bsf(n) has the same effect.
-        return size_type(64u - BitUtils::bsr(new_capacity));
+        return size_type(BitUtils::bsr(new_capacity));
 #else
-        return size_type(64u - pow2::log2_int<size_type, size_type(2)>(new_capacity));
+        return size_type(pow2::log2_int<size_type, size_type(2)>(new_capacity));
 #endif
     }
 
@@ -2191,10 +2233,11 @@ private:
 #if ROBIN_USE_HASH_POLICY
         auto hash_policy_setting = this->hash_policy_.calc_next_capacity(new_capacity);
         this->hash_policy_.commit(hash_policy_setting);
-        new_max_lookups = hash_policy_setting * 2;
+        new_max_lookups = hash_policy_setting;
 #else
         new_max_lookups = this->calc_next_capacity(new_capacity);
 #endif
+        new_max_lookups = (std::min)(new_max_lookups * 4, size_type(kDistLimit));
         this->max_lookups_ = new_max_lookups;
 
         size_type new_ctrl_capacity = new_capacity + new_max_lookups;
@@ -2207,20 +2250,20 @@ private:
         this->max_lookups_ = new_max_lookups;
 
         group_type * new_groups = reinterpret_cast<group_type *>(new_ctrls);
-        for (size_type index = 0; index < new_group_count; index++) {
-            new_groups[index].template fillAll16<kEmptySlot>();
+        for (size_type index = 0; index <= new_group_count; index++) {
+            new_groups[index].template fillAll16<kEmptySlot16>();
         }
         if (new_capacity >= kGroupWidth) {
-            new_groups[new_group_count].template fillAll16<kEmptySlot>();
+            //new_groups[new_group_count].template fillAll16<kEmptySlot16>();
         } else {
             assert(new_capacity < kGroupWidth);
-            group_type * tail_group = (group_type *)((char *)new_groups + new_capacity * 2 * sizeof(ctrl_type));
-            (*tail_group).template fillAll16<kEndOfMark>();
+            group_type * tail_group = (group_type *)((char *)new_groups + new_ctrl_capacity * sizeof(ctrl_type));
+            (*tail_group).template fillAll16<kEndOfMark16>();
 
-            new_groups[new_group_count].template fillAll16<kEndOfMark>();
+            new_groups[new_group_count].template fillAll16<kEndOfMark16>();
         }
 
-        slot_type * new_slots = this->slot_allocator_.allocate(new_capacity);
+        slot_type * new_slots = this->slot_allocator_.allocate(new_ctrl_capacity);
         this->slots_ = new_slots;
         if (initialize) {
             assert(this->slot_size_ == 0);
@@ -2252,7 +2295,7 @@ private:
             slot_type * old_slots = this->slots();
             size_type old_slot_size = this->slot_size();
             size_type old_slot_mask = this->slot_mask();
-            size_type old_slot_capacity = this->slot_capacity();
+            size_type old_slot_capacity = this->slot_max_capacity();
 
             this->create_slots<false>(new_capacity);
 
@@ -2365,7 +2408,7 @@ private:
         size_type slot_index = this->index_for_hash(hash_code);
         size_type start_slot = slot_index;
         std::uint8_t distance = 0;
-        std::uint16_t dist_and_hash = ctrl_hash;
+        std::int16_t dist_and_hash = ctrl_hash;
         if (kUnrollMode == UnrollMode16) {
             const ctrl_type * ctrl = this->control_at(slot_index);
             if (likely(ctrl->value == dist_and_hash)) {
@@ -2478,14 +2521,14 @@ private:
 
     JSTD_NO_INLINE
     std::pair<size_type, bool>
-    find_and_prepare_insert(const key_type & key, std::uint16_t & o_dist_and_hash) {
+    find_and_prepare_insert(const key_type & key, std::int16_t & o_dist_and_hash) {
         hash_code_t hash_code = this->get_hash(key);
         size_type slot_index = this->index_for_hash(hash_code);
         std::uint8_t ctrl_hash = this->get_ctrl_hash(hash_code);
         size_type first_slot = slot_index;
         size_type last_slot = npos;
         std::uint8_t distance = 0;
-        std::uint16_t dist_and_hash = ctrl_hash;
+        std::int16_t dist_and_hash = ctrl_hash;
         std::uint32_t maskEmpty;
 
         if (kUnrollMode == UnrollMode16) {
@@ -2636,7 +2679,7 @@ private:
 
     template <bool isRehashing>
     JSTD_NO_INLINE
-    bool insert_to_place(size_type target, std::uint16_t dist_and_hash) {
+    bool insert_to_place(size_type target, std::int16_t dist_and_hash) {
         ctrl_type insert_ctrl(dist_and_hash);
         ctrl_type * ctrl = this->control_at(target);
         assert(!ctrl->isEmpty());
@@ -2695,7 +2738,7 @@ private:
 
     JSTD_FORCED_INLINE
     void emplace_tmp_rich_slot(slot_type * to_insert, size_type target,
-                               std::uint16_t dist_and_hash) {
+                               std::int16_t dist_and_hash) {
         this->setUsedCtrl(target, dist_and_hash);
 
         slot_type * slot = this->slot_at(target);
@@ -2712,7 +2755,7 @@ private:
 
     template <bool AlwaysUpdate>
     std::pair<iterator, bool> emplace_impl(const value_type & value) {
-        std::uint16_t dist_and_hash;
+        std::int16_t dist_and_hash;
         auto find_info = this->find_and_prepare_insert(value.first, dist_and_hash);
         size_type target = find_info.first;
         bool is_exists = find_info.second;
@@ -2754,7 +2797,7 @@ private:
 
     template <bool AlwaysUpdate>
     std::pair<iterator, bool> emplace_impl(value_type && value) {
-        std::uint16_t dist_and_hash;
+        std::int16_t dist_and_hash;
         auto find_info = this->find_and_prepare_insert(value.first, dist_and_hash);
         size_type target = find_info.first;
         bool is_exists = find_info.second;
@@ -2808,7 +2851,7 @@ private:
               (jstd::is_same_ex<MappedT, mapped_type>::value ||
                std::is_constructible<mapped_type, MappedT &&>::value)>::type * = nullptr>
     std::pair<iterator, bool> emplace_impl(KeyT && key, MappedT && value) {
-        std::uint16_t dist_and_hash;
+        std::int16_t dist_and_hash;
         auto find_info = this->find_and_prepare_insert(key, dist_and_hash);
         size_type target = find_info.first;
         bool is_exists = find_info.second;
@@ -2870,7 +2913,7 @@ private:
                std::is_constructible<key_type, KeyT &&>::value)>::type * = nullptr,
               typename ... Args>
     std::pair<iterator, bool> emplace_impl(KeyT && key, Args && ... args) {
-        std::uint16_t dist_and_hash;
+        std::int16_t dist_and_hash;
         auto find_info = this->find_and_prepare_insert(key, dist_and_hash);
         size_type target = find_info.first;
         bool is_exists = find_info.second;
@@ -2932,7 +2975,7 @@ private:
     std::pair<iterator, bool> emplace_impl(PieceWise && hint,
                                            std::tuple<Ts1...> && first,
                                            std::tuple<Ts2...> && second) {
-        std::uint16_t dist_and_hash;
+        std::int16_t dist_and_hash;
         tuple_wrapper2<key_type> key_wrapper(first);
         auto find_info = this->find_and_prepare_insert(key_wrapper.value(), dist_and_hash);
         size_type target = find_info.first;
@@ -2993,7 +3036,7 @@ private:
                !std::is_constructible<key_type, First &&>::value)>::type * = nullptr,
               typename ... Args>
     std::pair<iterator, bool> emplace_impl(First && first, Args && ... args) {
-        std::uint16_t dist_and_hash;
+        std::int16_t dist_and_hash;
         value_type value(std::forward<First>(first), std::forward<Args>(args)...);
         auto find_info = this->find_and_prepare_insert(value.first, dist_and_hash);
         size_type target = find_info.first;
@@ -3044,7 +3087,7 @@ private:
         std::uint8_t distance = 0;
         o_ctrl.hash = ctrl_hash;
 
-        if (kUnrollMode == UnrollMode8) {
+        if (kUnrollMode == UnrollMode16 || kUnrollMode == UnrollMode8) {
             const ctrl_type * ctrl = this->control_at(slot_index);
             // Optimize from: (ctrl->isEmpty() || (ctrl->distance < 0))
             if (likely(ctrl->isEmpty())) {
@@ -3210,9 +3253,9 @@ private:
         std::uint8_t ctrl_hash = this->get_ctrl_hash(hash_code);
         size_type start_slot = slot_index;
         std::uint8_t distance = 0;
-        std::uint16_t dist_and_hash = ctrl_hash;
+        std::int16_t dist_and_hash = ctrl_hash;
 
-        if (kUnrollMode == UnrollMode8) {
+        if (kUnrollMode == UnrollMode16 || kUnrollMode == UnrollMode8) {
             ctrl_type * ctrl = this->control_at(slot_index);
             // Optimize from: (ctrl->isUsed() && (ctrl->distance >= 0))
             if (likely(ctrl->isUsed())) {
@@ -3302,7 +3345,7 @@ private:
         size_type slot_index = first_index;
         if (1) {
             ctrl_type * ctrl = this->control_at(slot_index);
-            if (kUnrollMode == UnrollMode8) {
+            if (kUnrollMode == UnrollMode16 || kUnrollMode == UnrollMode8) {
                 if (std::uint8_t(ctrl->dist + 1) < 2) {
                     prev_index = to_erase;
                     goto ClearSlot;
@@ -3360,7 +3403,7 @@ TransferSlots:
         while (slot_index != last_index) {
             ctrl_type * ctrl = this->control_at(slot_index);
             assert(ctrl->dist > 0);
-            std::uint16_t dist_and_hash = ctrl->value;
+            std::int16_t dist_and_hash = ctrl->value;
             dist_and_hash--;
             this->setUsedCtrl(prev_index, dist_and_hash);
 

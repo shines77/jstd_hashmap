@@ -83,11 +83,19 @@
 #define USE_JSTD_HASH_TABLE         0
 #define USE_JSTD_DICTIONARY         0
 
+#ifndef _DEBUG
 #define USE_STD_HASH_MAP            0
 #define USE_STD_UNORDERED_MAP       1
 #define USE_JSTD_FLAT16_HASH_MAP    1
 #define USE_JSTD_ROBIN16_HASH_MAP   1
 #define USE_JSTD_ROBIN_HASH_MAP     1
+#else
+#define USE_STD_HASH_MAP            0
+#define USE_STD_UNORDERED_MAP       0
+#define USE_JSTD_FLAT16_HASH_MAP    0
+#define USE_JSTD_ROBIN16_HASH_MAP   0
+#define USE_JSTD_ROBIN_HASH_MAP     1
+#endif // _DEBUG
 
 /* SIMD support features */
 #define JSTD_HAVE_MMX           1
