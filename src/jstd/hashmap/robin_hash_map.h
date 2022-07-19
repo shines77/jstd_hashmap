@@ -277,6 +277,14 @@ public:
             return !ctrl_data::isEmpty(tag);
         }
 
+        bool isEmptyOrZero() const {
+#if 0
+            return (std::int8_t(this->dist) <= 0);
+#else
+            return (this->value < std::int16_t(0x0100));
+#endif
+        }
+
         bool isEndOf() const {
             return (this->dist == kEndOfMark);
         }
@@ -2416,11 +2424,12 @@ private:
 
     size_type find_impl(const key_type & key) const {
         hash_code_t hash_code = this->get_hash(key);
-        std::uint8_t ctrl_hash = this->get_ctrl_hash(hash_code);
         size_type slot_index = this->index_for_hash(hash_code);
+        std::uint8_t ctrl_hash = this->get_ctrl_hash(hash_code);
         size_type start_slot = slot_index;
         std::uint8_t distance = 0;
         std::int16_t dist_and_hash = ctrl_hash;
+
         if (kUnrollMode == UnrollMode16) {
             const ctrl_type * ctrl = this->control_at(slot_index);
             if (likely(ctrl->value == dist_and_hash)) {
@@ -2434,6 +2443,7 @@ private:
             dist_and_hash += kDistInc16;
 
             if (likely(ctrl->value == dist_and_hash)) {
+                slot_index++;
                 const slot_type * slot = this->slot_at(slot_index);
                 if (this->key_equal_(slot->value.first, key)) {
                     return slot_index;
@@ -2445,6 +2455,7 @@ private:
 
             do {
                 if (likely(ctrl->value == dist_and_hash)) {
+                    slot_index = this->index_of(ctrl);
                     const slot_type * slot = this->slot_at(slot_index);
                     if (this->key_equal_(slot->value.first, key)) {
                         return slot_index;
@@ -2469,7 +2480,9 @@ private:
                 return npos;
             }
 
-            ctrl = this->next_control(slot_index);
+            ctrl++;
+            slot_index++;
+
             // Optimization: merging two comparisons
             if (likely(std::uint8_t(ctrl->dist + 1) > 1)) {
             //if (likely(ctrl->isUsed() && (ctrl->distance >= 1))) {
@@ -2483,9 +2496,11 @@ private:
                 return npos;
             }
 
+            ctrl++;
+            slot_index++;
             distance = 2;
+
             do {
-                ctrl = this->next_control(slot_index);
                 // Optimization: merging two comparisons
                 if (likely(std::uint8_t(ctrl->dist + 1) > distance)) {
                 //if (likely(ctrl->isUsed() && (ctrl->distance >= distance))) {
@@ -2495,6 +2510,9 @@ private:
                             return slot_index;
                         }
                     }
+
+                    slot_index++;
+                    ctrl++;
                     distance++;
                     if (ctrl->dist < distance)
                         break;
@@ -3267,7 +3285,46 @@ private:
         std::uint8_t distance = 0;
         std::int16_t dist_and_hash = ctrl_hash;
 
-        if (kUnrollMode == UnrollMode16 || kUnrollMode == UnrollMode8) {
+        if (kUnrollMode == UnrollMode16) {
+            ctrl_type * ctrl = this->control_at(slot_index);
+            if (likely(ctrl->value == dist_and_hash)) {
+                const slot_type * slot = this->slot_at(slot_index);
+                if (this->key_equal_(slot->value.first, key)) {
+                    this->erase_slot(slot_index);
+                    return 1;
+                }
+            }
+
+            ctrl++;
+            dist_and_hash += kDistInc16;
+
+            if (likely(ctrl->value == dist_and_hash)) {
+                slot_index++;
+                const slot_type * slot = this->slot_at(slot_index);
+                if (this->key_equal_(slot->value.first, key)) {
+                    this->erase_slot(slot_index);
+                    return 1;
+                }
+            }
+
+            ctrl++;
+            dist_and_hash += kDistInc16;
+
+            do {
+                if (likely(ctrl->value == dist_and_hash)) {
+                    slot_index = this->index_of(ctrl);
+                    const slot_type * slot = this->slot_at(slot_index);
+                    if (this->key_equal_(slot->value.first, key)) {
+                        this->erase_slot(slot_index);
+                        return 1;
+                    }
+                }
+                ctrl++;
+                dist_and_hash += kDistInc16;
+            } while (ctrl->value >= dist_and_hash);
+
+            return 0;
+        } else if (kUnrollMode == UnrollMode8) {
             ctrl_type * ctrl = this->control_at(slot_index);
             // Optimize from: (ctrl->isUsed() && (ctrl->distance >= 0))
             if (likely(ctrl->isUsed())) {
@@ -3282,7 +3339,9 @@ private:
                 return 0;
             }
 
-            ctrl = this->next_control(slot_index);
+            ctrl++;
+            slot_index++;
+
             // Optimization: merging two comparisons
             if (likely(std::uint8_t(ctrl->dist + 1) > 1)) {
             //if (likely(ctrl->isUsed() && (ctrl->distance >= 1))) {
@@ -3297,9 +3356,11 @@ private:
                 return 0;
             }
 
+            ctrl++;
+            slot_index++;
             distance = 2;
+
             do {
-                ctrl = this->next_control(slot_index);
                 // Optimization: merging two comparisons
                 if (likely(std::uint8_t(ctrl->dist + 1) > distance)) {
                 //if (likely(ctrl->isUsed() && (ctrl->distance >= distance))) {
@@ -3310,15 +3371,18 @@ private:
                             return 1;
                         }
                     }
+
+                    slot_index++;
+                    ctrl++;
                     distance++;
-                    if (distance >= 4)
+                    if (ctrl->dist < distance)
                         break;
                 } else {
                     return 0;
                 }
             } while (1);
 
-            slot_index = this->next_index(slot_index);
+            return 0;
         }
 
         do {
@@ -3350,36 +3414,77 @@ private:
     void erase_slot(size_type to_erase) {
         assert(to_erase <= this->slot_capacity());
         assert(this->control_at(to_erase)->isUsed());
-
         size_type prev_index;
         size_type last_index = npos;
         size_type first_index = this->next_index(to_erase);
         size_type slot_index = first_index;
+
         if (1) {
             ctrl_type * ctrl = this->control_at(slot_index);
-            if (kUnrollMode == UnrollMode16 || kUnrollMode == UnrollMode8) {
+            if (kUnrollMode == UnrollMode16) {
+                if (ctrl->isEmptyOrZero()) {
+                    prev_index = to_erase;
+                    goto ClearSlot;
+                }
+
+                ctrl++;
+                slot_index++;
+
+                if (ctrl->isEmptyOrZero()) {
+                    last_index = slot_index;
+                    goto TransferSlots;
+                }
+
+                ctrl++;
+                slot_index++;
+
+                if (ctrl->isEmptyOrZero()) {
+                    last_index = slot_index;
+                    goto TransferSlots;
+                }
+
+                ctrl++;
+                slot_index++;
+
+                if (ctrl->isEmptyOrZero()) {
+                    last_index = slot_index;
+                    goto TransferSlots;
+                }
+
+                ctrl++;
+                slot_index++;
+            } else if (kUnrollMode == UnrollMode8) {
                 if (std::uint8_t(ctrl->dist + 1) < 2) {
                     prev_index = to_erase;
                     goto ClearSlot;
                 }
 
-                ctrl = this->next_control(slot_index);
+                ctrl++;
+                slot_index++;
+
                 if (std::uint8_t(ctrl->dist + 1) < 2) {
                     last_index = slot_index;
                     goto TransferSlots;
                 }
 
-                ctrl = this->next_control(slot_index);
+                ctrl++;
+                slot_index++;
+
                 if (std::uint8_t(ctrl->dist + 1) < 2) {
                     last_index = slot_index;
                     goto TransferSlots;
                 }
 
-                ctrl = this->next_control(slot_index);
+                ctrl++;
+                slot_index++;
+
                 if (std::uint8_t(ctrl->dist + 1) < 2) {
                     last_index = slot_index;
                     goto TransferSlots;
                 }
+
+                ctrl++;
+                slot_index++;
             }
 
             if (this->slot_capacity() >= kGroupWidth) {
@@ -3397,8 +3502,9 @@ private:
                 } while (slot_index != first_index);
             } else {
                 while (slot_index != first_index) {
-                    ctrl = this->next_control(slot_index);
-                    if (std::uint8_t(ctrl->dist + 1) < 2) {
+                    ctrl++;
+                    slot_index++;
+                    if (ctrl->isEmptyOrZero()) {
                         last_index = slot_index;
                         break;
                     }
