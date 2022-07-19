@@ -1492,7 +1492,6 @@ public:
 
     iterator begin() {
 #if 1
-        assert(!(this->control_at(this->slot_capacity())->isEmptyOnly()));
         group_type * group = this->groups();
         group_type * last_group = this->groups() + this->group_count();
         size_type start_index = 0;
@@ -1506,7 +1505,7 @@ public:
             start_index += kGroupWidth;
         }
 
-        return this->iterator_at(this->slot_capacity());
+        return this->end();
 #else
         ctrl_type * ctrl = this->ctrls();
         size_type index;
@@ -1529,11 +1528,11 @@ public:
     }
 
     iterator end() {
-        return this->iterator_at(this->slot_capacity());
+        return this->iterator_at(this->slot_max_capacity());
     }
 
     const_iterator end() const {
-        return this->iterator_at(this->slot_capacity());
+        return this->iterator_at(this->slot_max_capacity());
     }
 
     const_iterator cend() const {
@@ -2257,7 +2256,10 @@ private:
 #else
         new_max_lookups = this->calc_next_capacity(new_capacity);
 #endif
-        new_max_lookups = (std::min)(new_max_lookups * 4, size_type(kDistLimit));
+        if (new_max_lookups < 16)
+            new_max_lookups = new_max_lookups * 2;
+        else
+            new_max_lookups = (std::min)(new_max_lookups * 4, size_type(kDistLimit));
         this->max_lookups_ = new_max_lookups;
 
         size_type new_ctrl_capacity = new_capacity + new_max_lookups;
