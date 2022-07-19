@@ -221,7 +221,8 @@ public:
                 std::uint8_t hash;
                 std::uint8_t dist;
             };
-            std::uint16_t value;
+            std::int16_t value;
+            std::uint16_t uvalue;
         };
 
         static constexpr std::uint8_t kMinUnusedSlot = cmin(kEmptySlot, kEndOfMark);
@@ -229,8 +230,12 @@ public:
         ctrl_data() noexcept : value(0) {
         }
 
-        explicit ctrl_data(std::uint16_t value) noexcept
+        explicit ctrl_data(std::int16_t value) noexcept
             : value(value) {
+        }
+
+        explicit ctrl_data(std::uint16_t value) noexcept
+            : uvalue(value) {
         }
 
         ctrl_data(std::uint8_t hash, std::uint8_t dist) noexcept
@@ -309,8 +314,12 @@ public:
             this->setDist(dist);
         }
 
-        void setValue(std::uint16_t dist_and_hash) {
+        void setValue(std::int16_t dist_and_hash) {
             this->value = dist_and_hash;
+        }
+
+        void setValue(std::uint16_t dist_and_hash) {
+            this->uvalue = dist_and_hash;
         }
     };
 
@@ -2123,15 +2132,15 @@ private:
     }
 
     JSTD_FORCED_INLINE
-    void setUsedCtrl(size_type index, std::uint8_t distance, std::uint8_t ctrl_hash) {
-        ctrl_type * ctrl = this->control_at(index);
-        ctrl->setUsed(distance, ctrl_hash);
-    }
-
-    JSTD_FORCED_INLINE
     void setUsedCtrl(size_type index, std::uint16_t dist_and_hash) {
         ctrl_type * ctrl = this->control_at(index);
         ctrl->setValue(dist_and_hash);
+    }
+
+    JSTD_FORCED_INLINE
+    void setUsedCtrl(size_type index, std::uint8_t distance, std::uint8_t ctrl_hash) {
+        ctrl_type * ctrl = this->control_at(index);
+        ctrl->setUsed(distance, ctrl_hash);
     }
 
     JSTD_FORCED_INLINE
