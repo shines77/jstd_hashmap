@@ -443,10 +443,11 @@ void run_insert_random(const std::string & name, std::vector<Key> & keys, std::s
 template <typename Key, typename Value, std::size_t DataSize, std::size_t Cardinal>
 void benchmark_insert_random_impl()
 {
-    std::string name0, name1, name2;
+    std::string name0, name1, name2, name3;
     name0 = get_hashmap_name<Key, Value>("std::unordered_map<%s, %s>");
     name1 = get_hashmap_name<Key, Value>("jstd::flat16_hash_map<%s, %s>");
     name2 = get_hashmap_name<Key, Value>("jstd::robin16_hash_map<%s, %s>");
+    name3 = get_hashmap_name<Key, Value>("jstd::robin_hash_map<%s, %s>");
 
     std::vector<Key> keys;
     generate_random_keys<Key>(keys, DataSize, Cardinal);
@@ -461,7 +462,7 @@ void benchmark_insert_random_impl()
     run_insert_random<jstd::robin16_hash_map<Key, Value>>(name2, keys, Cardinal);
 #endif
 #if USE_JSTD_ROBIN_HASH_MAP
-    run_insert_random<jstd::robin_hash_map<Key, Value>>  (name2, keys, Cardinal);
+    run_insert_random<jstd::robin_hash_map<Key, Value>>  (name3, keys, Cardinal);
 #endif
 }
 
@@ -509,10 +510,11 @@ void benchmark_insert_random(std::size_t iters)
 template <typename Key, typename Value, std::size_t DataSize, std::size_t Cardinal>
 void benchmark_MumHash_insert_random_impl()
 {
-    std::string name0, name1, name2;
+    std::string name0, name1, name2, name3;
     name0 = get_hashmap_name<Key, Value>("std::unordered_map<%s, %s>");
     name1 = get_hashmap_name<Key, Value>("jstd::flat16_hash_map<%s, %s>");
     name2 = get_hashmap_name<Key, Value>("jstd::robin16_hash_map<%s, %s>");
+    name3 = get_hashmap_name<Key, Value>("jstd::robin_hash_map<%s, %s>");
 
     std::vector<Key> keys;
     generate_random_keys<Key>(keys, DataSize, Cardinal);
@@ -527,7 +529,7 @@ void benchmark_MumHash_insert_random_impl()
     run_insert_random<jstd::robin16_hash_map<Key, Value, test::MumHash<Key>>>(name2, keys, Cardinal);
 #endif
 #if USE_JSTD_ROBIN_HASH_MAP
-    run_insert_random<jstd::robin_hash_map<Key, Value, test::MumHash<Key>>>  (name2, keys, Cardinal);
+    run_insert_random<jstd::robin_hash_map<Key, Value, test::MumHash<Key>>>  (name3, keys, Cardinal);
 #endif
 }
 
