@@ -258,7 +258,7 @@ public:
         }
 
         static bool isEmpty(std::uint8_t tag) {
-            return this->isUnused(tag);
+            return ctrl_data::isUnused(tag);
         }
 
         bool isEmptyOnly() const {
