@@ -425,9 +425,10 @@ public:
 
         std::uint32_t matchHash(const_pointer data, std::uint8_t ctrl_hash) const {
 #if 1
-            __m256i tag_bits   = _mm256_set1_epi16(ctrl_tag);
+            __m256i hash_bits  = _mm256_set1_epi16(ctrl_hash);
             __m256i ctrl_bits  = _mm256_loadu_si256((const __m256i *)data);
-            __m256i match_mask = _mm256_cmpeq_epi8(ctrl_bits, tag_bits);
+            __m256i match_mask = _mm256_cmpeq_epi8(ctrl_bits, hash_bits);
+                    match_mask = _mm256_slli_epi16(match_mask, 8);
             std::uint32_t mask = (std::uint32_t)_mm256_movepi16_mask(match_mask);
             return mask;
 #else
@@ -627,9 +628,9 @@ public:
 
         std::uint32_t matchHash(const_pointer data, std::uint8_t ctrl_hash) const {
 #if 1
-            __m256i tag_bits   = _mm256_set1_epi16(ctrl_tag);
+            __m256i hash_bits  = _mm256_set1_epi16(ctrl_hash);
             __m256i ctrl_bits  = _mm256_loadu_si256((const __m256i *)data);
-            __m256i match_mask = _mm256_cmpeq_epi8(ctrl_bits, tag_bits);
+            __m256i match_mask = _mm256_cmpeq_epi8(ctrl_bits, hash_bits);
                     match_mask = _mm256_slli_epi16(match_mask, 8);
             std::uint32_t mask = (std::uint32_t)_mm256_movemask_epi8(match_mask);
             return mask;
