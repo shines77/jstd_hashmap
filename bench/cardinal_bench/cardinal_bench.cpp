@@ -81,9 +81,17 @@
 #define USE_JSTD_HASH_TABLE         0
 #define USE_JSTD_DICTIONARY         0
 
+#ifndef _DEBUG
 #define USE_STD_UNORDERED_MAP       1
 #define USE_JSTD_FLAT16_HASH_MAP    1
 #define USE_JSTD_ROBIN16_HASH_MAP   1
+#define USE_JSTD_ROBIN_HASH_MAP     1
+#else
+#define USE_STD_UNORDERED_MAP       0
+#define USE_JSTD_FLAT16_HASH_MAP    0
+#define USE_JSTD_ROBIN16_HASH_MAP   0
+#define USE_JSTD_ROBIN_HASH_MAP     1
+#endif // _DEBUG
 
 /* SIMD support features */
 #define JSTD_HAVE_MMX           1
@@ -124,6 +132,9 @@
 #endif
 #if USE_JSTD_ROBIN16_HASH_MAP
 #include <jstd/hashmap/robin16_hash_map.h>
+#endif
+#if USE_JSTD_ROBIN_HASH_MAP
+#include <jstd/hashmap/robin_hash_map.h>
 #endif
 #include <jstd/hashmap/hashmap_analyzer.h>
 #include <jstd/hasher/hashes.h>
@@ -449,6 +460,9 @@ void benchmark_insert_random_impl()
 #if USE_JSTD_ROBIN16_HASH_MAP
     run_insert_random<jstd::robin16_hash_map<Key, Value>>(name2, keys, Cardinal);
 #endif
+#if USE_JSTD_ROBIN_HASH_MAP
+    run_insert_random<jstd::robin_hash_map<Key, Value>>  (name2, keys, Cardinal);
+#endif
 }
 
 template <typename Key, typename Value>
@@ -511,6 +525,9 @@ void benchmark_MumHash_insert_random_impl()
 #endif
 #if USE_JSTD_ROBIN16_HASH_MAP
     run_insert_random<jstd::robin16_hash_map<Key, Value, test::MumHash<Key>>>(name2, keys, Cardinal);
+#endif
+#if USE_JSTD_ROBIN_HASH_MAP
+    run_insert_random<jstd::robin_hash_map<Key, Value, test::MumHash<Key>>>  (name2, keys, Cardinal);
 #endif
 }
 
