@@ -251,7 +251,7 @@ static inline
 std::size_t fibonacci_hash32(std::size_t value)
 {
     std::size_t hash_code = static_cast<std::size_t>(
-        (static_cast<std::uint64_t>(value) * 2654435769ul) >> 28);
+        (static_cast<std::uint64_t>(value) * 2654435769ul) >> 12);
     return hash_code;
 }
 

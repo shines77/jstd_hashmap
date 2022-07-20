@@ -228,7 +228,7 @@ public:
 
         static constexpr std::uint8_t kMinUnusedSlot = cmin(kEmptySlot, kEndOfMark);
 
-        ctrl_data() noexcept : value(0) {
+        ctrl_data() noexcept {
         }
 
         explicit ctrl_data(std::int16_t value) noexcept
@@ -1928,7 +1928,7 @@ private:
 #else
         hash_code_t hash_code;
         if (sizeof(size_type) == 4)
-            hash_code = (hash_code_t)(((std::uint64_t)value * 2654435761ul) >> 28);
+            hash_code = (hash_code_t)(((std::uint64_t)value * 2654435761ul) >> 12);
         else
             hash_code = (hash_code_t)(((std::uint64_t)value * 14695981039346656037ull) >> 28);
         return hash_code;
@@ -1938,7 +1938,7 @@ private:
     inline hash_code_t get_third_hash(hash_code_t value) const noexcept {
 #if ROBIN_USE_HASH_POLICY
         return value;
-#elif 1
+#elif 0
         return (size_type)hashes::mum_hash64((std::uint64_t)value, 11400714819323198485ull);
 #elif 1
         return (size_type)hashes::fibonacci_hash((size_type)value);

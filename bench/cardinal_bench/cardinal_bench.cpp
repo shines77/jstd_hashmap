@@ -89,7 +89,7 @@
 #else
 #define USE_STD_UNORDERED_MAP       0
 #define USE_JSTD_FLAT16_HASH_MAP    0
-#define USE_JSTD_ROBIN16_HASH_MAP   0
+#define USE_JSTD_ROBIN16_HASH_MAP   1
 #define USE_JSTD_ROBIN_HASH_MAP     1
 #endif // _DEBUG
 
@@ -367,13 +367,13 @@ std::string formatMsTime(double fMillisec) {
         snprintf(time_buf, sizeof(time_buf), "%7.2f Sec", fMillisec / 1000.0);
     }
     else if (fMillisec >= 1.0 * 1.0) {
-        snprintf(time_buf, sizeof(time_buf), "%7.2f ms ", fMillisec);
+        snprintf(time_buf, sizeof(time_buf), "%7.2f ms", fMillisec);
     }
     else if (fMillisec >= 0.001 * 10.0) {
-        snprintf(time_buf, sizeof(time_buf), "%7.2f us ", fMillisec * 1000.0);
+        snprintf(time_buf, sizeof(time_buf), "%7.2f us", fMillisec * 1000.0);
     }
     else {
-        snprintf(time_buf, sizeof(time_buf), "%7.2f ns ", fMillisec * 1000000.0);
+        snprintf(time_buf, sizeof(time_buf), "%7.2f ns", fMillisec * 1000000.0);
     }
 
     return std::string(time_buf);
