@@ -2286,7 +2286,7 @@ private:
 #if ROBIN_USE_HASH_POLICY
         auto hash_policy_setting = this->hash_policy_.calc_next_capacity(new_capacity);
         this->hash_policy_.commit(hash_policy_setting);
-        new_max_lookups = hash_policy_setting;
+        new_max_lookups = size_type(64 - hash_policy_setting);
 #else
         new_max_lookups = this->calc_next_capacity(new_capacity);
 #endif
