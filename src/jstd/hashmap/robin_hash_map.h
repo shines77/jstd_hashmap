@@ -2489,7 +2489,7 @@ private:
             ctrl++;
             dist_and_hash.incDist();
 
-            do {
+            while (ctrl->dist >= dist_and_hash.dist) {
                 if (likely(ctrl->value == dist_and_hash.value)) {
                     slot_index = this->index_of(ctrl);
                     const slot_type * slot = this->slot_at(slot_index);
@@ -2499,11 +2499,12 @@ private:
                 }
                 ctrl++;
                 dist_and_hash.incDist();
-            } while (ctrl->dist >= dist_and_hash.dist);
+            }
 
             return npos;
         } else if (kUnrollMode == UnrollMode8) {
             const ctrl_type * ctrl = this->ctrl_at(slot_index);
+
             // Optimize from: (ctrl->isUsed() && (ctrl->dist >= 0))
             if (likely(ctrl->isUsed())) {
                 if (ctrl->hash == ctrl_hash) {
@@ -2553,7 +2554,7 @@ private:
                 } else {
                     break;
                 }
-            } while (ctrl->dist >= distance);
+            } while (1);
 
             return npos;
         }
@@ -2569,7 +2570,7 @@ private:
                 size_type pos = BitUtils::bsf32(maskHash);
                 maskHash = BitUtils::clearLowBit32(maskHash);
                 size_type index = group.index(start_index, pos);
-                this->round_index(index);
+                index = this->round_index(index);
                 const slot_type * target = this->slot_at(index);
                 if (this->key_equal_(target->value.first, key)) {
                     return index;
