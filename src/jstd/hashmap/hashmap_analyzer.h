@@ -16,7 +16,9 @@
 
 #include <cstdint>
 #include <cstddef>
+#include <cmath>
 #include <string>
+#include <vector>
 
 #include "jstd/type_traits.h"
 #include "jstd/string/string_utils.h"
@@ -31,6 +33,7 @@ public:
     typedef typename Container::key_type        key_type;
     typedef typename Container::mapped_type     mapped_type;
 
+    typedef typename Container::iterator        iterator;
     typedef typename Container::const_iterator  const_iterator;
     typedef typename Container::hasher          hasher;
 
@@ -201,7 +204,7 @@ private:
         }
 
         std_errors /= (double)bucket_capacity;
-        return ::sqrt(std_errors);
+        return std::sqrt(std_errors);
     }
 
     double calc_std_errors() const {
@@ -226,7 +229,7 @@ private:
         }
 
         std_errors /= (double)entry_capacity;
-        return ::sqrt(std_errors);
+        return std::sqrt(std_errors);
     }
 
     double calc_coverage_rate() const {
