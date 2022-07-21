@@ -2571,7 +2571,7 @@ private:
                 size_type pos = BitUtils::bsf32(maskHash);
                 maskHash = BitUtils::clearLowBit32(maskHash);
                 size_type index = group.index(start_index, pos);
-                this->round_index(index);
+                index = this->round_index(index);
                 const slot_type * target = this->slot_at(index);
                 if (this->key_equal_(target->value.first, key)) {
                     return index;
