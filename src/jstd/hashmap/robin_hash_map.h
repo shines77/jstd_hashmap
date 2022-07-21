@@ -577,7 +577,7 @@ public:
             __m256i zero_bits   = _mm256_setzero_si256();
             __m256i dist_1_hash = _mm256_adds_epi16(dist_0_hash, kDistanceBase);
             __m256i empty_mask  = _mm256_cmpgt_epi16(zero_bits, dist_1_hash);
-            std::uint32_t maskEmpty = (std::uint32_t)_mm256_movepi16_mask(result_mask);
+            std::uint32_t maskEmpty = (std::uint32_t)_mm256_movepi16_mask(empty_mask);
             return maskEmpty;
         }
 
