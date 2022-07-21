@@ -1260,11 +1260,12 @@ HashUtils<std::uint64_t>::decodeValue<8U>(const char * data, std::uint32_t missa
 //////////////////////////////////////////////////////////////////////////////////////
 
 class fibonacci_hash_policy;
+class mum_hash_policy;
 
 template <typename T, typename = void>
 struct hash_policy_selector
 {
-    typedef fibonacci_hash_policy type;
+    typedef mum_hash_policy type;
 };
 
 template <typename T>
@@ -1293,6 +1294,53 @@ public:
 
     size_type index_for_hash(size_type hash, size_type /* mask */) const {
         return (size_type)((std::uint64_t)hash * 11400714819323198485ull) >> this->shift_;
+    }
+
+    size_type round_index(size_type index, size_type mask) const {
+        return (index & mask);
+    }
+
+    std::uint8_t calc_next_capacity(size_type & new_capacity) const {
+        assert(new_capacity > 1);
+        assert(pow2::is_pow2(new_capacity));
+#if 1
+        // Fast to get log2_int, if the new_size is power of 2.
+        // Use bsf(n) has the same effect.
+        return std::uint8_t(64u - BitUtils::bsr(new_capacity));
+#else
+        return std::uint8_t(64u - pow2::log2_int<size_type, size_type(2)>(new_capacity));
+#endif
+    }
+
+    void commit(std::uint8_t shift) {
+        this->shift_ = shift;
+    }
+
+    void reset() {
+        this->shift_ = 28u;
+    }
+};
+
+class mum_hash_policy
+{
+public:
+    typedef std::size_t size_type;
+
+private:
+    std::uint8_t shift_;
+
+public:
+    mum_hash_policy() noexcept : shift_(28u) {
+    }
+
+    mum_hash_policy(const mum_hash_policy & src) noexcept
+        : shift_(src.shift_) {
+    }
+
+    ~mum_hash_policy() = default;
+
+    size_type index_for_hash(size_type hash, size_type /* mask */) const {
+        return (size_type)(hashes::mum_hash64((std::uint64_t)hash, 11400714819323198485ull) >> this->shift_);
     }
 
     size_type round_index(size_type index, size_type mask) const {
