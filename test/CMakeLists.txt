@@ -3,7 +3,7 @@
 ## power2_test
 ##
 set(POWER2_TEST_SOURCE_FILES
-    ../test/power2_test.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/power2_test.cpp
 )
 
 add_executable(power2_test ${POWER2_TEST_SOURCE_FILES})
@@ -26,8 +26,7 @@ PUBLIC
 
 target_include_directories(power2_test
 PUBLIC
-    "${PROJECT_SOURCE_DIR}/test"
-    "${PROJECT_SOURCE_DIR}"
+    "${CMAKE_CURRENT_LIST_DIR}"
     ${EXTRA_INCLUDES}
 )
 
@@ -35,7 +34,7 @@ PUBLIC
 ## class_trivial
 ##
 set(CLASS_TRIVIAL_SOURCE_FILES
-    ../test/class_trivial.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/class_trivial.cpp
 )
 
 add_executable(class_trivial ${CLASS_TRIVIAL_SOURCE_FILES})
@@ -58,8 +57,7 @@ PUBLIC
 
 target_include_directories(class_trivial
 PUBLIC
-    "${PROJECT_SOURCE_DIR}/test"
-    "${PROJECT_SOURCE_DIR}"
+    "${CMAKE_CURRENT_LIST_DIR}"
     ${EXTRA_INCLUDES}
 )
 
@@ -67,7 +65,7 @@ PUBLIC
 ## feature_test
 ##
 set(FEATURE_TEST_SOURCE_FILES
-    ../test/feature_test.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/feature_test.cpp
 )
 
 add_executable(feature_test ${FEATURE_TEST_SOURCE_FILES})
@@ -90,7 +88,6 @@ PUBLIC
 
 target_include_directories(feature_test
 PUBLIC
-    "${PROJECT_SOURCE_DIR}/test"
-    "${PROJECT_SOURCE_DIR}"
+    "${CMAKE_CURRENT_LIST_DIR}"
     ${EXTRA_INCLUDES}
 )
