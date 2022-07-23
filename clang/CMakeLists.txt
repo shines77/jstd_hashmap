@@ -27,18 +27,31 @@ message(STATUS "  project: ${PROJECT_NAME}, version: ${PROJECT_VERSION_STRING}")
 message(STATUS "-----------------------------------------------")
 message("")
 
-configure_file("${PROJECT_SOURCE_DIR}/../src/jstd/version.h.in" "${PROJECT_SOURCE_DIR}/../src/jstd/version.h")
+set(CMAKE_SOURCE_DIR    "${CMAKE_SOURCE_DIR}/../")
+set(CMAKE_BINARY_DIR    "${CMAKE_BINARY_DIR}")
+set(PROJECT_SOURCE_DIR  "${PROJECT_BINARY_DIR}/../")
+set(PROJECT_BINARY_DIR  "${PROJECT_BINARY_DIR}")
 
-set(CMAKE_ALLOW_LOOSE_LOOP_CONSTRUCTS ON)
-set(CMAKE_VERBOSE_MAKEFILE ON)
-
-message(STATUS "----------------- Build Env -------------------")
+message(STATUS "------------------ Build Env -------------------")
 message(STATUS "CMAKE_SOURCE_DIR   : ${CMAKE_SOURCE_DIR}")
 message(STATUS "CMAKE_BINARY_DIR   : ${CMAKE_BINARY_DIR}")
 message(STATUS "PROJECT_SOURCE_DIR : ${PROJECT_SOURCE_DIR}")
 message(STATUS "PROJECT_BINARY_DIR : ${PROJECT_BINARY_DIR}")
-message(STATUS "-----------------------------------------------")
+message(STATUS "------------------------------------------------")
 message("")
+
+message(STATUS "------------------ Current Build Env -------------------")
+message(STATUS "CMAKE_CURRENT_SOURCE_DIR   : ${CMAKE_CURRENT_SOURCE_DIR}")
+message(STATUS "CMAKE_CURRENT_BINARY_DIR   : ${CMAKE_CURRENT_BINARY_DIR}")
+message(STATUS "PROJECT_CURRENT_SOURCE_DIR : ${PROJECT_CURRENT_SOURCE_DIR}")
+message(STATUS "PROJECT_CURRENT_BINARY_DIR : ${PROJECT_CURRENT_BINARY_DIR}")
+message(STATUS "--------------------------------------------------------")
+message("")
+
+configure_file("${PROJECT_SOURCE_DIR}/src/jstd/version.h.in" "${PROJECT_SOURCE_DIR}/src/jstd/version.h")
+
+set(CMAKE_ALLOW_LOOSE_LOOP_CONSTRUCTS ON)
+set(CMAKE_VERBOSE_MAKEFILE ON)
 
 ##
 ## See: https://blog.csdn.net/u012487272/article/details/12882283
@@ -68,7 +81,7 @@ message(STATUS "CMAKE_RUNTIME_OUTPUT_DIRECTORY    : ${CMAKE_RUNTIME_OUTPUT_DIREC
 message(STATUS "-----------------------------------------------")
 message("")
 
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/../cmake")
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 
 ## include(CMakeASM_NASMInformation)
 include(DetectCPUArchitectures)
@@ -310,7 +323,7 @@ endif()
 
 add_library(jstd STATIC ${JSTD_SOURCE_FILES})
 set(EXTRA_LIBS ${EXTRA_LIBS} jstd)
-set(EXTRA_INCLUDES ${EXTRA_INCLUDES} "${PROJECT_SOURCE_DIR}/../src")
+set(EXTRA_INCLUDES ${EXTRA_INCLUDES} "${PROJECT_SOURCE_DIR}/src")
 
 add_custom_target(debug
     COMMAND ${CMAKE_COMMAND} -DCMAKE_BUILD_TYPE=Debug ${CMAKE_SOURCE_DIR}
@@ -324,6 +337,6 @@ add_custom_target(release
     COMMENT "Switch CMAKE_BUILD_TYPE to Release"
 )
 
-add_subdirectory(../bench)
+add_subdirectory("${CMAKE_SOURCE_DIR}/bench")
 
-add_subdirectory(../test)
+add_subdirectory("${CMAKE_SOURCE_DIR}/test")

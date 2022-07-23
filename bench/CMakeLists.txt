@@ -26,8 +26,8 @@ PUBLIC
 
 target_include_directories(benchmark
 PUBLIC
-    "${PROJECT_BINARY_DIR}/bench/benchmark"
-    "${PROJECT_BINARY_DIR}"
+    "${PROJECT_SOURCE_DIR}/bench/benchmark"
+    "${PROJECT_SOURCE_DIR}"
     ${EXTRA_INCLUDES}
 )
 
@@ -58,8 +58,8 @@ PUBLIC
 
 target_include_directories(time_hash_map
 PUBLIC
-    "${PROJECT_BINARY_DIR}/bench/time_hash_map"
-    "${PROJECT_BINARY_DIR}"
+    "${PROJECT_SOURCE_DIR}/bench/time_hash_map"
+    "${PROJECT_SOURCE_DIR}"
     ${EXTRA_INCLUDES}
 )
 
@@ -90,8 +90,8 @@ PUBLIC
 
 target_include_directories(cardinal_bench
 PUBLIC
-    "${PROJECT_BINARY_DIR}/bench/cardinal_bench"
-    "${PROJECT_BINARY_DIR}"
+    "${PROJECT_SOURCE_DIR}/bench/cardinal_bench"
+    "${PROJECT_SOURCE_DIR}"
     ${EXTRA_INCLUDES}
 )
 
@@ -122,8 +122,8 @@ PUBLIC
 
 target_include_directories(cardinal_bench_v1
 PUBLIC
-    "${PROJECT_BINARY_DIR}/bench/cardinal_bench_v1"
-    "${PROJECT_BINARY_DIR}"
+    "${PROJECT_SOURCE_DIR}/bench/cardinal_bench_v1"
+    "${PROJECT_SOURCE_DIR}"
     ${EXTRA_INCLUDES}
 )
 
@@ -154,7 +154,7 @@ PUBLIC
 
 target_include_directories(cardinal_bench_v2
 PUBLIC
-    "${PROJECT_BINARY_DIR}/bench/cardinal_bench_v2"
-    "${PROJECT_BINARY_DIR}"
+    "${PROJECT_SOURCE_DIR}/bench/cardinal_bench_v2"
+    "${PROJECT_SOURCE_DIR}"
     ${EXTRA_INCLUDES}
 )

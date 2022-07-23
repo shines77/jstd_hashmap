@@ -26,8 +26,8 @@ PUBLIC
 
 target_include_directories(power2_test
 PUBLIC
-    "${PROJECT_BINARY_DIR}/test"
-    "${PROJECT_BINARY_DIR}"
+    "${PROJECT_SOURCE_DIR}/test"
+    "${PROJECT_SOURCE_DIR}"
     ${EXTRA_INCLUDES}
 )
 
@@ -58,8 +58,8 @@ PUBLIC
 
 target_include_directories(class_trivial
 PUBLIC
-    "${PROJECT_BINARY_DIR}/test"
-    "${PROJECT_BINARY_DIR}"
+    "${PROJECT_SOURCE_DIR}/test"
+    "${PROJECT_SOURCE_DIR}"
     ${EXTRA_INCLUDES}
 )
 
@@ -90,7 +90,7 @@ PUBLIC
 
 target_include_directories(feature_test
 PUBLIC
-    "${PROJECT_BINARY_DIR}/test"
-    "${PROJECT_BINARY_DIR}"
+    "${PROJECT_SOURCE_DIR}/test"
+    "${PROJECT_SOURCE_DIR}"
     ${EXTRA_INCLUDES}
 )

@@ -27,18 +27,26 @@ message(STATUS "  project: ${PROJECT_NAME}, version: ${PROJECT_VERSION_STRING}")
 message(STATUS "-----------------------------------------------")
 message("")
 
-configure_file("${PROJECT_SOURCE_DIR}/src/jstd/version.h.in" "${PROJECT_SOURCE_DIR}/src/jstd/version.h")
-
-set(CMAKE_ALLOW_LOOSE_LOOP_CONSTRUCTS ON)
-set(CMAKE_VERBOSE_MAKEFILE ON)
-
-message(STATUS "----------------- Build Env -------------------")
+message(STATUS "------------------ Build Env -------------------")
 message(STATUS "CMAKE_SOURCE_DIR   : ${CMAKE_SOURCE_DIR}")
 message(STATUS "CMAKE_BINARY_DIR   : ${CMAKE_BINARY_DIR}")
 message(STATUS "PROJECT_SOURCE_DIR : ${PROJECT_SOURCE_DIR}")
 message(STATUS "PROJECT_BINARY_DIR : ${PROJECT_BINARY_DIR}")
-message(STATUS "-----------------------------------------------")
+message(STATUS "------------------------------------------------")
 message("")
+
+message(STATUS "------------------ Current Build Env -------------------")
+message(STATUS "CMAKE_CURRENT_SOURCE_DIR   : ${CMAKE_CURRENT_SOURCE_DIR}")
+message(STATUS "CMAKE_CURRENT_BINARY_DIR   : ${CMAKE_CURRENT_BINARY_DIR}")
+message(STATUS "PROJECT_CURRENT_SOURCE_DIR : ${PROJECT_CURRENT_SOURCE_DIR}")
+message(STATUS "PROJECT_CURRENT_BINARY_DIR : ${PROJECT_CURRENT_BINARY_DIR}")
+message(STATUS "--------------------------------------------------------")
+message("")
+
+configure_file("${PROJECT_SOURCE_DIR}/src/jstd/version.h.in" "${PROJECT_SOURCE_DIR}/src/jstd/version.h")
+
+set(CMAKE_ALLOW_LOOSE_LOOP_CONSTRUCTS ON)
+set(CMAKE_VERBOSE_MAKEFILE ON)
 
 ##
 ## See: https://blog.csdn.net/u012487272/article/details/12882283
