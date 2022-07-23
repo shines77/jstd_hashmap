@@ -411,8 +411,6 @@ void run_insert_random(const std::string & name, std::vector<Key> & keys, std::s
     {
         sw.start();
         for (std::size_t i = 0; i < keys.size(); i++) {
-            if (cardinal == 0x000ea600 && keys[i] == 0x0000d77e)
-                i = i;
             hashmap.insert(std::make_pair(keys[i], mapped_type(i)));
         }
         sw.stop();
@@ -429,8 +427,6 @@ void run_insert_random(const std::string & name, std::vector<Key> & keys, std::s
         std::size_t check_sum = 0;
         sw.start();
         for (std::size_t i = 0; i < keys.size(); i++) {
-            if (cardinal == 0x000ea600 && keys[i] == 0x0000d77e)
-                i = i;
             auto iter = hashmap.find(keys[i]);
             check_sum += iter->second;
         }

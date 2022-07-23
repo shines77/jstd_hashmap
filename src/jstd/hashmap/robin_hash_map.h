@@ -1462,7 +1462,7 @@ public:
         return this->slot_size_;
     }
 
-    constexpr size_type bucket(const key_type & key) const {
+    size_type bucket(const key_type & key) const {
         size_type index = this->find_impl(key);
         return index;
     }
