@@ -849,6 +849,30 @@ static inline uint32_t mm_cvtsi128_si16(__m128i m128)
 
 }; // AVX512 Wrapper
 
+#if defined(__SSE2__) || defined(__SSE3__) || defined(__SSSE3__) || defined(__SSE4A__)
+
+static inline
+__m128i _mm_setones_si128()
+{
+    __m128i ones{};
+    ones = _mm_cmpeq_epi16(ones, ones);
+    return ones;
+}
+
+#endif // __SSE2__
+
+#if defined(__AVX__) || defined(__AVX2__)
+
+static inline
+__m256i _mm256_setones_si256()
+{
+    __m256i ones{};
+    ones = _mm256_cmpeq_epi16(ones, ones);
+    return ones;
+}
+
+#endif // __AVX__
+
 } // namespace jstd
 
 #if defined(__GNUC__) && !defined(__clang__)

@@ -413,12 +413,6 @@ public:
 
         typedef std::uint32_t bitmask_type;
 
-        __m256i _mm256_setones_si256() const {
-            __m256i ones{};
-            ones = _mm256_cmpeq_epi16(ones, ones);
-            return ones;
-        }
-
         void clear(pointer data) {
             this->template fillAll16<kEmptySlot16>(data);
         }
@@ -646,12 +640,6 @@ public:
         typedef const T &   const_reference;
 
         typedef std::uint32_t bitmask_type;
-
-        __m256i _mm256_setones_si256() const {
-            __m256i ones{};
-            ones = _mm256_cmpeq_epi16(ones, ones);
-            return ones;
-        }
 
         void clear(pointer data) {
             this->template fillAll16<kEmptySlot16>(data);
