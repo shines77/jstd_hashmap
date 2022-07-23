@@ -724,7 +724,6 @@ constexpr typename std::iterator_traits<It>::difference_type
 namespace detail {
  
 template <typename Iter>
-constexpr // required since C++17
 typename std::iterator_traits<Iter>::difference_type 
 do_distance(Iter first, Iter last, std::input_iterator_tag)
 {
@@ -737,7 +736,6 @@ do_distance(Iter first, Iter last, std::input_iterator_tag)
 }
  
 template <typename Iter>
-constexpr // required since C++17
 typename std::iterator_traits<Iter>::difference_type 
 do_distance(Iter first, Iter last, std::random_access_iterator_tag)
 {
@@ -747,7 +745,6 @@ do_distance(Iter first, Iter last, std::random_access_iterator_tag)
 } // namespace detail
  
 template <typename Iter>
-constexpr // since C++17
 typename std::iterator_traits<Iter>::difference_type 
 distance(Iter first, Iter last)
 {
