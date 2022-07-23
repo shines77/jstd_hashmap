@@ -166,6 +166,7 @@ message(STATUS "CMAKE_BUILD_TYPE         : ${CMAKE_BUILD_TYPE}")
 message(STATUS "CMAKE_CL_ARCH            : ${CMAKE_CL_ARCH}")
 message(STATUS "CMAKE_PLATFORM_ARCH      : ${CMAKE_PLATFORM_ARCH}")
 message(STATUS "CMAKE_CPU_ARCHITECTURES  : ${CMAKE_CPU_ARCHITECTURES}")
+message(STATUS "CMAKE_IPO_SUPPORTED      : ${ipo_supported}")
 message(STATUS "-----------------------------------------------")
 message("")
 
