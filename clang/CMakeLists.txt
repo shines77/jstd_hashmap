@@ -337,6 +337,6 @@ add_custom_target(release
     COMMENT "Switch CMAKE_BUILD_TYPE to Release"
 )
 
-add_subdirectory("../bench", "${CMAKE_CURRENT_BINARY_DIR}/bench")
+add_subdirectory("../bench", "${CMAKE_CURRENT_BINARY_DIR}")
 
-add_subdirectory("../test", "${CMAKE_CURRENT_BINARY_DIR}/test")
+add_subdirectory("../test", "${CMAKE_CURRENT_BINARY_DIR}")
