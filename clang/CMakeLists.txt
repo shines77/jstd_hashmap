@@ -27,7 +27,7 @@ message(STATUS "  project: ${PROJECT_NAME}, version: ${PROJECT_VERSION_STRING}")
 message(STATUS "-----------------------------------------------")
 message("")
 
-configure_file("${PROJECT_SOURCE_DIR}/src/jstd/version.h.in" "${PROJECT_SOURCE_DIR}/src/jstd/version.h")
+configure_file("${PROJECT_SOURCE_DIR}/../src/jstd/version.h.in" "${PROJECT_SOURCE_DIR}/../src/jstd/version.h")
 
 set(CMAKE_ALLOW_LOOSE_LOOP_CONSTRUCTS ON)
 set(CMAKE_VERBOSE_MAKEFILE ON)
@@ -151,15 +151,15 @@ message(STATUS "CMAKE_BUILD_TYPE         : ${CMAKE_BUILD_TYPE}")
 message(STATUS "CMAKE_CL_ARCH            : ${CMAKE_CL_ARCH}")
 message(STATUS "CMAKE_PLATFORM_ARCH      : ${CMAKE_PLATFORM_ARCH}")
 message(STATUS "CMAKE_CPU_ARCHITECTURES  : ${CMAKE_CPU_ARCHITECTURES}")
-message(STATUS "CMAKE_IPO_SUPPORTED      : ${ipo_supported}")
 message(STATUS "-----------------------------------------------")
 message("")
 
 if (NOT MSVC)
     ## For C_FLAGS
     ## -mmmx -msse -msse2 -msse3 -mssse3 -msse4 -msse4a -msse4.1 -msse4.2 -mavx -mavx2 -mavx512vl -mavx512f
+    set(CMAKE_C_COMPILER                "/usr/bin/clang")
     set(CMAKE_C_FLAGS_DEFAULT           "${CMAKE_C_FLAGS} -std=c99 -march=native -finput-charset=utf-8 -fPIC")
-    set(CMAKE_C_FLAGS_RELEASE           "${CMAKE_C_FLAGS_DEFAULT} -O3 -DNDEBUG")
+    set(CMAKE_C_FLAGS_RELEASE           "${CMAKE_C_FLAGS_DEFAULT} -O4 -DNDEBUG")
     set(CMAKE_C_FLAGS_DEBUG             "${CMAKE_C_FLAGS_DEFAULT} -g -pg -D_DEBUG")
     set(CMAKE_C_FLAGS_MINSIZEREL        "${CMAKE_C_FLAGS_DEFAULT} -Os -DNDEBUG")
     set(CMAKE_C_FLAGS_RELWITHDEBINFO    "${CMAKE_C_FLAGS_DEFAULT} -O2 -g")
@@ -168,11 +168,41 @@ if (NOT MSVC)
     ## -Wall -Werror -Wextra -Wno-format -Wno-unused-function
     ## -mmmx -msse -msse2 -msse3 -mssse3 -msse4 -msse4a -msse4.1 -msse4.2 -mavx -mavx2 -mavx512vl -mavx512f
     # -fexec-charset=gbk -finput-charset=gbk
-    set(CMAKE_CXX_FLAGS_DEFAULT         "${CMAKE_CXX_FLAGS} -std=c++11 -march=native -finput-charset=utf-8 -fPIC")
-    set(CMAKE_CXX_FLAGS_RELEASE         "${CMAKE_CXX_FLAGS_DEFAULT} -O3 -DNDEBUG")
+    set(CMAKE_CXX_COMPILER              "/usr/bin/clang++")
+    set(CMAKE_CXX_FLAGS_DEFAULT         "${CMAKE_CXX_FLAGS} -std=c++11 -stdlib=libstdc++ -march=native -finput-charset=utf-8 -fPIC")
+    set(CMAKE_CXX_FLAGS_RELEASE         "${CMAKE_CXX_FLAGS_DEFAULT} -O4 -DNDEBUG")
     set(CMAKE_CXX_FLAGS_DEBUG           "${CMAKE_CXX_FLAGS_DEFAULT} -g -pg -D_DEBUG")
     set(CMAKE_CXX_FLAGS_MINSIZEREL      "${CMAKE_CXX_FLAGS_DEFAULT} -Os -DNDEBUG")
     set(CMAKE_CXX_FLAGS_RELWITHDEBINFO  "${CMAKE_CXX_FLAGS_DEFAULT} -O2 -g")
+
+    set(CMAKE_AR        "/usr/bin/llvm-ar")
+    set(CMAKE_LINKER    "/usr/bin/llvm-link")
+    set(CMAKE_NM        "/usr/bin/llvm-nm")
+    set(CMAKE_OBJDUMP   "/usr/bin/llvm-objdump")
+    set(CMAKE_RANLIB    "/usr/bin/llvm-ranlib")
+
+    set(CMAKE_EXE_LINKER_FLAGS "-lstdc++")
+
+    ##
+    ## See: https://cloud.tencent.com/developer/ask/101584
+    ##
+    ## "/usr/bin/c++", "/usr/bin/g++", "/usr/bin/clang++"
+    message("  CMAKE_C_COMPILER:   ${CMAKE_C_COMPILER}")
+    message("  CMAKE_CXX_COMPILER: ${CMAKE_CXX_COMPILER}")
+    if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
+        # using Clang
+        if (CONAN_LIBCXX STREQUAL "libstdc++11")
+            add_definitions(-D_GLIBCXX_USE_CXX11_ABI=1)
+        elseif (CONAN_LIBCXX STREQUAL "libstdc++")
+            add_definitions(-D_GLIBCXX_USE_CXX11_ABI=0)
+        endif()
+    elseif ("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
+        # using GCC
+    elseif ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Intel")
+        # using Intel C++
+    elseif ("${CMAKE_CXX_COMPILER_ID}" MATCHES "MSVC")
+        # using Visual Studio C++
+    endif()
 
     ## -faligned-new: GCC >= 7.1, CLANG >= 4.0
     ## See: https://trac.wildfiregames.com/ticket/5139
@@ -233,12 +263,12 @@ else()
     set(EXTRA_LIBS ${EXTRA_LIBS} ${CMAKE_THREAD_LIBS_INIT})
 endif()
 
-include_directories(include)
-include_directories(src)
-include_directories(test)
+include_directories(../include)
+include_directories(../src)
+include_directories(../test)
 
 set(JSTD_SOURCE_FILES
-    src/jstd/dll_main.cpp
+    ../src/jstd/dll_main.cpp
 )
 
 # add_subdirectory(main EXCLUDE_FROM_ALL src/main/asm)
@@ -251,16 +281,16 @@ if ("amd64" STREQUAL "${CMAKE_CPU_ARCHITECTURES}" OR
     "x64" STREQUAL "${CMAKE_CPU_ARCHITECTURES}" OR
     "${CMAKE_PLATFORM_ARCH}" STREQUAL "Arch64")
     set(UTF8_ENCODING_SOURCE_FILES ${UTF8_ENCODING_SOURCE_FILES}
-        src/jstd/asm/asmlib.h
-        src/jstd/asm/InstructionSet_x64.asm
-        src/jstd/asm/utf8_decode_sse41_x64.asm
+        ../src/jstd/asm/asmlib.h
+        ../src/jstd/asm/InstructionSet_x64.asm
+        ../src/jstd/asm/utf8_decode_sse41_x64.asm
     )
 elseif ("x86" STREQUAL "${CMAKE_CPU_ARCHITECTURES}" OR
     "${CMAKE_PLATFORM_ARCH}" STREQUAL "Arch32")
     set(UTF8_ENCODING_SOURCE_FILES ${UTF8_ENCODING_SOURCE_FILES}
-        src/jstd/asm/asmlib.h
-        src/jstd/asm/InstructionSet_x86.asm
-        src/jstd/asm/utf8_decode_sse41_x86.asm
+        ../src/jstd/asm/asmlib.h
+        ../src/jstd/asm/InstructionSet_x86.asm
+        ../src/jstd/asm/utf8_decode_sse41_x86.asm
     )
 else()
     message("This platform does not support our asm code.")
@@ -277,7 +307,7 @@ endif()
 
 add_library(jstd STATIC ${JSTD_SOURCE_FILES})
 set(EXTRA_LIBS ${EXTRA_LIBS} jstd)
-set(EXTRA_INCLUDES ${EXTRA_INCLUDES} "${PROJECT_SOURCE_DIR}/src")
+set(EXTRA_INCLUDES ${EXTRA_INCLUDES} "${PROJECT_SOURCE_DIR}/../src")
 
 add_custom_target(debug
     COMMAND ${CMAKE_COMMAND} -DCMAKE_BUILD_TYPE=Debug ${CMAKE_SOURCE_DIR}
@@ -291,6 +321,6 @@ add_custom_target(release
     COMMENT "Switch CMAKE_BUILD_TYPE to Release"
 )
 
-add_subdirectory(./bench)
+add_subdirectory(../bench)
 
-add_subdirectory(./test)
+add_subdirectory(../test)
