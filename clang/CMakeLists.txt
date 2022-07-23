@@ -43,8 +43,8 @@ message("")
 message(STATUS "------------------ Current Build Env -------------------")
 message(STATUS "CMAKE_CURRENT_SOURCE_DIR   : ${CMAKE_CURRENT_SOURCE_DIR}")
 message(STATUS "CMAKE_CURRENT_BINARY_DIR   : ${CMAKE_CURRENT_BINARY_DIR}")
-message(STATUS "PROJECT_CURRENT_SOURCE_DIR : ${PROJECT_CURRENT_SOURCE_DIR}")
-message(STATUS "PROJECT_CURRENT_BINARY_DIR : ${PROJECT_CURRENT_BINARY_DIR}")
+message(STATUS "CURRENT_PROJECT_SOURCE_DIR : ${CURRENT_PROJECT_SOURCE_DIR}")
+message(STATUS "CURRENT_PROJECT_BINARY_DIR : ${CURRENT_PROJECT_BINARY_DIR}")
 message(STATUS "--------------------------------------------------------")
 message("")
 
@@ -337,6 +337,6 @@ add_custom_target(release
     COMMENT "Switch CMAKE_BUILD_TYPE to Release"
 )
 
-add_subdirectory("${CMAKE_SOURCE_DIR}/bench")
+add_subdirectory("../bench", "${CMAKE_CURRENT_BINARY_DIR}/bench")
 
-add_subdirectory("${CMAKE_SOURCE_DIR}/test")
+add_subdirectory("../test", "${CMAKE_CURRENT_BINARY_DIR}/test")
