@@ -130,6 +130,7 @@ GetCompilerToolset(CMAKE_C_TOOLSET   "c")
 GetCompilerToolset(CMAKE_CXX_TOOLSET "cxx")
 
 set(ipo_supported NO)
+set(CMakeIPOEnable FALSE)
 
 if (CMAKE_VERSION VERSION_GREATER_EQUAL "3.9")
     ##
@@ -147,7 +148,8 @@ if (CMAKE_VERSION VERSION_GREATER_EQUAL "3.9")
     check_ipo_supported(RESULT ipo_supported OUTPUT error)
 
     if (ipo_supported)
-        set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+        ## set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+        set(CMakeIPOEnable TRUE)
     else()
         message(STATUS "IPO/LTO is not supported: <${error}>")
     endif()
@@ -174,7 +176,11 @@ if (NOT MSVC)
     ## For C_FLAGS
     ## -mmmx -msse -msse2 -msse3 -mssse3 -msse4 -msse4a -msse4.1 -msse4.2 -mavx -mavx2 -mavx512vl -mavx512f
     set(CMAKE_C_COMPILER                "/usr/bin/clang")
-    set(CMAKE_C_FLAGS_DEFAULT           "${CMAKE_C_FLAGS} -std=c99 -march=native -finput-charset=utf-8 -fPIC")
+    if (CMakeIPOEnable)
+        set(CMAKE_C_FLAGS_DEFAULT       "${CMAKE_C_FLAGS} -std=c99 -march=native -finput-charset=utf-8 -flto=thin -fPIC")
+    else()
+        set(CMAKE_C_FLAGS_DEFAULT       "${CMAKE_C_FLAGS} -std=c99 -march=native -finput-charset=utf-8 -fPIC")
+    endif()
     set(CMAKE_C_FLAGS_RELEASE           "${CMAKE_C_FLAGS_DEFAULT} -O4 -DNDEBUG")
     set(CMAKE_C_FLAGS_DEBUG             "${CMAKE_C_FLAGS_DEFAULT} -g -pg -D_DEBUG")
     set(CMAKE_C_FLAGS_MINSIZEREL        "${CMAKE_C_FLAGS_DEFAULT} -Os -DNDEBUG")
@@ -185,7 +191,11 @@ if (NOT MSVC)
     ## -mmmx -msse -msse2 -msse3 -mssse3 -msse4 -msse4a -msse4.1 -msse4.2 -mavx -mavx2 -mavx512vl -mavx512f
     # -fexec-charset=gbk -finput-charset=gbk
     set(CMAKE_CXX_COMPILER              "/usr/bin/clang++")
-    set(CMAKE_CXX_FLAGS_DEFAULT         "${CMAKE_CXX_FLAGS} -std=c++11 -stdlib=libstdc++ -march=native -finput-charset=utf-8 -fPIC")
+    if (CMakeIPOEnable)
+        set(CMAKE_CXX_FLAGS_DEFAULT     "${CMAKE_CXX_FLAGS} -std=c++11 -stdlib=libstdc++ -march=native -finput-charset=utf-8 -flto=thin -fPIC")
+    else()
+        set(CMAKE_CXX_FLAGS_DEFAULT     "${CMAKE_CXX_FLAGS} -std=c++11 -stdlib=libstdc++ -march=native -finput-charset=utf-8 -fPIC")
+    endif()
     set(CMAKE_CXX_FLAGS_RELEASE         "${CMAKE_CXX_FLAGS_DEFAULT} -O4 -DNDEBUG")
     set(CMAKE_CXX_FLAGS_DEBUG           "${CMAKE_CXX_FLAGS_DEFAULT} -g -pg -D_DEBUG")
     set(CMAKE_CXX_FLAGS_MINSIZEREL      "${CMAKE_CXX_FLAGS_DEFAULT} -Os -DNDEBUG")
