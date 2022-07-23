@@ -807,7 +807,7 @@ public:
             __m256i match_mask  = _mm256_cmpeq_epi16(dist_1_hash, ctrl_bits);
             if (_mm256_test_all_zeros(match_mask, match_mask) == 0) {
                 // match_mask is not all zeros
-                __m256i dist_bits  = _mm256_and_si256(dist_1_hash, kLowMask16);
+                __m256i dist_bits  = _mm256_and_si256(dist_1_hash, low_mask);
                 __m256i empty_mask = _mm256_cmpeq_epi16(empty_bits, low_bits);
                 __m256i dist_mask  = _mm256_cmpgt_epi16(dist_bits, low_bits);
                         empty_mask = _mm256_or_si256(empty_mask, dist_mask);
@@ -817,7 +817,7 @@ public:
                 return { maskHash, 0 };
             } else {
                 // match_mask is all zeros
-                __m256i dist_bits  = _mm256_and_si256(dist_1_hash, kLowMask16);
+                __m256i dist_bits  = _mm256_and_si256(dist_1_hash, low_mask);
                 __m256i empty_mask = _mm256_cmpeq_epi16(empty_bits, low_bits);
                 __m256i dist_mask  = _mm256_cmpgt_epi16(dist_bits, low_bits);
                         empty_mask = _mm256_or_si256(empty_mask, dist_mask);
