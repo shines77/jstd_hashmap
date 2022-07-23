@@ -173,7 +173,7 @@ function(check_ipo_supported)
 
   # Save policy setting for condition in _ipo_run_language_check.
   cmake_policy(GET CMP0138 ipo_CMP0138
-    PARENT_SCOPE # undocumented, do not use outside of CMake
+    ## PARENT_SCOPE # undocumented, do not use outside of CMake
     )
 
   set(optional)

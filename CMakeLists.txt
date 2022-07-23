@@ -124,7 +124,9 @@ if (CMAKE_VERSION VERSION_GREATER_EQUAL "3.9")
     ## Supported INTERPROCEDURAL_OPTIMIZATION since CMake 3.9, support for Visual Studio generators since CMake 3.13.
     ##
     cmake_policy(SET CMP0069 NEW)
-    cmake_policy(SET CMP0138 OLD)
+    if (CMAKE_VERSION VERSION_GREATER_EQUAL "3.24")
+        cmake_policy(SET CMP0138 NEW)
+    endif()
 
     ##
     ## https://stackoverflow.com/questions/31355692/how-do-i-enable-link-time-optimization-lto-with-cmake

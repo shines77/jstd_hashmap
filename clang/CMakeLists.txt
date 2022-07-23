@@ -47,10 +47,10 @@ message("")
 # set(EXECUTABLE_OUTPUT_PATH ${CMAKE_BINARY_DIR}/bin)
 # set(LIBRARY_OUTPUT_PATH ${CMAKE_BINARY_DIR}/lib)
 
-set(CMAKE_EXECUTABLE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+set(CMAKE_EXECUTABLE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 
 ## Configuration value are DEBUG, RELEASE, MINSIZEREL and RELWITHDEBINFO.
 
@@ -68,7 +68,7 @@ message(STATUS "CMAKE_RUNTIME_OUTPUT_DIRECTORY    : ${CMAKE_RUNTIME_OUTPUT_DIREC
 message(STATUS "-----------------------------------------------")
 message("")
 
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/../cmake")
 
 ## include(CMakeASM_NASMInformation)
 include(DetectCPUArchitectures)
@@ -124,7 +124,9 @@ if (CMAKE_VERSION VERSION_GREATER_EQUAL "3.9")
     ## Supported INTERPROCEDURAL_OPTIMIZATION since CMake 3.9, support for Visual Studio generators since CMake 3.13.
     ##
     cmake_policy(SET CMP0069 NEW)
-    cmake_policy(SET CMP0138 OLD)
+    if (CMAKE_VERSION VERSION_GREATER_EQUAL "3.24")
+        cmake_policy(SET CMP0138 NEW)
+    endif()
 
     ##
     ## https://stackoverflow.com/questions/31355692/how-do-i-enable-link-time-optimization-lto-with-cmake
