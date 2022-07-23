@@ -148,7 +148,7 @@ if (CMAKE_VERSION VERSION_GREATER_EQUAL "3.9")
     check_ipo_supported(RESULT ipo_supported OUTPUT error)
 
     if (ipo_supported)
-        set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+        ## set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
         set(CMakeIPOEnable FALSE)
     else()
         message(STATUS "IPO/LTO is not supported: <${error}>")
