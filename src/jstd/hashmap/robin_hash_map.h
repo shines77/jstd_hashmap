@@ -547,11 +547,6 @@ public:
             return { maskEmpty, maskHash };
         }
 
-        MatchMask2<std::uint32_t>
-        matchHashAndDistFast(const_pointer data, std::int16_t dist_and_hash) const {
-            return matchHashAndDistance(data, dist_and_hash);
-        }
-
         std::uint32_t matchEmptyOrZero(const_pointer data) const {
             __m256i ctrl_bits   = _mm256_loadu_si256((const __m256i *)data);
             __m256i zero_bits   = _mm256_setzero_si256();
@@ -785,26 +780,6 @@ public:
             return { maskEmpty, maskHash };
         }
 
-        MatchMask2<std::uint32_t>
-        matchHashAndDistFast(const_pointer data, std::int16_t dist_and_hash) const {
-            const __m256i kDistanceBase =
-                _mm256_setr_epi16(0x0000, 0x0100, 0x0200, 0x0300, 0x0400, 0x0500, 0x0600, 0x0700,
-                                  0x0800, 0x0900, 0x0A00, 0x0B00, 0x0C00, 0x0D00, 0x0E00, 0x0F00);
-            assert(dist_and_hash <= kMaxDist16);
-            __m256i dist_0_hash = _mm256_set1_epi16(dist_and_hash);
-            __m256i ctrl_bits   = _mm256_loadu_si256((const __m256i *)data);
-            __m256i ones_bits   = _mm256_setones_si256();
-            __m256i high_mask   = _mm256_slli_epi16(ones_bits, 8);
-            __m256i dist_1_hash = _mm256_adds_epi16(dist_0_hash, kDistanceBase);
-            __m256i dist_and_0  = _mm256_and_si256(dist_1_hash, high_mask);
-            __m256i empty_mask  = _mm256_cmpgt_epi16(dist_and_0, ctrl_bits);
-            __m256i match_mask  = _mm256_cmpeq_epi16(dist_1_hash, ctrl_bits);
-            __m256i result_mask = _mm256_andnot_si256(empty_mask, match_mask);
-            std::uint32_t maskEmpty = (std::uint32_t)_mm256_movemask_epi8(empty_mask);
-            std::uint32_t maskHash  = (std::uint32_t)_mm256_movemask_epi8(result_mask);
-            return { maskEmpty, maskHash };
-        }
-
         std::uint32_t matchEmptyOrZero(const_pointer data) const {
             __m256i ctrl_bits   = _mm256_loadu_si256((const __m256i *)data);
             __m256i zero_bits   = _mm256_setzero_si256();
@@ -827,7 +802,7 @@ public:
             __m256i dist_and_0  = _mm256_slli_epi16(dist_0, 8);
             __m256i dist_bits   = _mm256_adds_epi16(dist_and_0, kDistanceBase);
             __m256i result_mask = _mm256_cmpgt_epi16(dist_bits, ctrl_bits);
-                    result_mask = _mm256_srli_epi16(result_mask, 8);
+            //      result_mask = _mm256_srli_epi16(result_mask, 8);
             std::uint32_t maskEmpty = (std::uint32_t)_mm256_movemask_epi8(result_mask);
             return maskEmpty;
 #else
@@ -843,7 +818,7 @@ public:
             __m256i empty_mask  = _mm256_cmpgt_epi16(zero_bits, ctrl_bits);
             __m256i dist_mask   = _mm256_cmpgt_epi16(dist_bits, ctrl_dist);
             __m256i result_mask = _mm256_or_si256(empty_mask, dist_mask);
-                    result_mask = _mm256_srli_epi16(result_mask, 8);
+            //      result_mask = _mm256_srli_epi16(result_mask, 8);
             std::uint32_t maskEmpty = (std::uint32_t)_mm256_movemask_epi8(result_mask);
             return maskEmpty;
 #endif
@@ -2597,7 +2572,6 @@ private:
                 size_type pos = BitUtils::bsf32(maskHash);
                 maskHash = BitUtils::clearLowBit32(maskHash);
                 size_type index = group.index(start_index, pos);
-                index = this->round_index(index);
                 const slot_type * target = this->slot_at(index);
                 if (this->key_equal_(target->value.first, key)) {
                     return index;
@@ -2746,11 +2720,10 @@ private:
                 size_type pos = BitUtils::bsf32(maskHash);
                 maskHash = BitUtils::clearLowBit32(maskHash);
                 size_type index = group.index(slot_index, pos);
-                index = this->round_index(index);
                 const slot_type * target = this->slot_at(index);
                 if (this->key_equal_(target->value.first, key)) {
                     distance = this->round_dist(index, first_slot);
-                    assert(distance == (distance + group_type::pos(pos)));
+                    assert(distance == (dist_and_hash.dist + group_type::pos(pos)));
                     o_dist_and_hash.setValue(distance, ctrl_hash);
                     return { index, true };
                 }
@@ -2778,7 +2751,6 @@ private:
         std::int8_t o_distance = this->round_dist(index, first_slot);
         assert(o_distance == (distance + group_type::pos(pos)));
         o_dist_and_hash.setValue(o_distance, ctrl_hash);
-        index = this->round_index(index);
         return { index, false };
     }
 
@@ -3296,7 +3268,7 @@ private:
                 size_type index = group.index(slot_index, pos);
                 o_ctrl.dist = this->round_dist(index, first_slot);
                 assert(o_ctrl.dist == (distance + group_type::pos(pos)));
-                return this->round_index(index);
+                return index;
             }
             distance += kGroupWidth;
             slot_index = this->slot_next_group(slot_index);
@@ -3529,7 +3501,6 @@ private:
                 size_type pos = BitUtils::bsf32(maskHash);
                 maskHash = BitUtils::clearLowBit32(maskHash);
                 size_type index = group.index(slot_index, pos);
-                index = this->round_index(index);
                 const slot_type * target = this->slot_at(index);
                 if (this->key_equal_(target->value.first, key)) {
                     this->erase_slot(index);

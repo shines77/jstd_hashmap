@@ -464,38 +464,62 @@ public:
             _mm256_storeu_si256((__m256i *)data, tag_bits);
         }
 
-        __m256i matchControlTag256(const_pointer data, std::uint16_t control_tag) const {
-            __m256i ctrl_bits = _mm256_loadu_si256((const __m256i *)data);
-            __m256i tag_bits  = _mm256_set1_epi16(control_tag);
+        __m256i matchTag256(const_pointer data, std::uint16_t ctrl_tag) const {
+            __m256i ctrl_bits  = _mm256_loadu_si256((const __m256i *)data);
+            __m256i tag_bits   = _mm256_set1_epi16(ctrl_tag);
             __m256i match_mask = _mm256_cmpeq_epi16(ctrl_bits, tag_bits);
             return match_mask;
         }
 
-        std::uint32_t matchControlTag(const_pointer data, std::uint16_t control_tag) const {
-            __m256i ctrl_bits = _mm256_loadu_si256((const __m256i *)data);
-            __m256i tag_bits  = _mm256_set1_epi16(control_tag);
+        std::uint32_t matchTag(const_pointer data, std::uint16_t ctrl_tag) const {
+            __m256i ctrl_bits  = _mm256_loadu_si256((const __m256i *)data);
+            __m256i tag_bits   = _mm256_set1_epi16(ctrl_tag);
             __m256i match_mask = _mm256_cmpeq_epi16(ctrl_bits, tag_bits);
             std::uint32_t mask = (std::uint32_t)_mm256_movepi16_mask(match_mask);
             return mask;
         }
 
-        std::uint32_t matchLowControlTag(const_pointer data, std::uint8_t control_tag) const {
-            const __m256i kLowMask16 = _mm256_set1_epi16((short)0x00FF);
+        std::uint32_t matchLowTag(const_pointer data, std::uint8_t ctrl_tag) const {
             __m256i ctrl_bits  = _mm256_loadu_si256((const __m256i *)data);
-            __m256i tag_bits   = _mm256_set1_epi16(control_tag);
-            __m256i low_bits   = _mm256_and_si256(ctrl_bits, kLowMask16);
-            __m256i match_mask = _mm256_cmpeq_epi16(low_bits, tag_bits);
+            __m256i tag_bits   = _mm256_set1_epi16(ctrl_tag);
+            __m256i ones_bits  = _mm256_setones_si256();
+            __m256i low_mask   = _mm256_srli_epi16(ones_bits, 8);
+            __m256i low_bits   = _mm256_and_si256(ctrl_bits, low_mask);
+            __m256i match_mask = _mm256_cmpeq_epi16(tag_bits, low_bits);
             std::uint32_t mask = (std::uint32_t)_mm256_movepi16_mask(match_mask);
             return mask;
         }
 
-        std::uint32_t matchHighControlTag(const_pointer data, std::uint8_t control_tag) const {
+        std::uint32_t matchHighTag(const_pointer data, std::uint8_t ctrl_tag) const {
             __m256i ctrl_bits  = _mm256_loadu_si256((const __m256i *)data);
-            __m256i tag_bits   = _mm256_set1_epi16(control_tag);
+            __m256i tag_bits   = _mm256_set1_epi16(ctrl_tag);
             __m256i high_bits  = _mm256_srli_epi16(ctrl_bits, 8);
-            __m256i match_mask = _mm256_cmpeq_epi16(high_bits, tag_bits);
+            __m256i match_mask = _mm256_cmpeq_epi16(tag_bits, high_bits);
             std::uint32_t mask = (std::uint32_t)_mm256_movepi16_mask(match_mask);
             return mask;
+        }
+
+        std::uint32_t matchHash(const_pointer data, std::uint8_t ctrl_hash) const {
+            return this->matchHighTag(data, ctrl_hash);
+        }
+
+        std::uint32_t matchEmpty(const_pointer data) const {
+            return this->matchLowTag(data, kEmptySlot);
+        }
+
+        std::uint32_t matchUsed(const_pointer data) const {
+            __m256i ctrl_bits  = _mm256_loadu_si256((const __m256i *)data);
+            __m256i tag_bits   = _mm256_set1_epi16(kEndOfMark);
+            __m256i ones_bits  = _mm256_setones_si256();
+            __m256i low_mask   = _mm256_srli_epi16(ones_bits, 8);
+            __m256i low_bits   = _mm256_and_si256(ctrl_bits, low_mask);
+            __m256i match_mask = _mm256_cmpgt_epi16(tag_bits, low_bits);
+            std::uint32_t maskUsed = (std::uint32_t)_mm256_movepi16_mask(match_mask);
+            return maskUsed;
+        }
+
+        std::uint32_t matchUnused(const_pointer data) const {
+            return this->matchEmpty(data);
         }
 
         MatchMask2<std::uint32_t>
@@ -522,25 +546,54 @@ public:
             return { maskHash, maskEmpty };
         }
 
-        std::uint32_t matchHash(const_pointer data, std::uint8_t ctrl_hash) const {
-            return this->matchHighControlTag(data, ctrl_hash);
-        }
-
-        std::uint32_t matchEmpty(const_pointer data) const {
-            return this->matchLowControlTag(data, kEmptySlot);
-        }
-
         std::uint32_t matchEmptyOrZero(const_pointer data) const {
-            const __m256i kLowMask16 = _mm256_set1_epi16((short)0x00FF);
-            __m256i ctrl_bits  = _mm256_loadu_si256((const __m256i *)data);
-            __m256i empty_bits = _mm256_set1_epi16(kEmptySlot);
-            __m256i zero_bits  = _mm256_setzero_si256();
-            __m256i low_bits   = _mm256_and_si256(ctrl_bits, kLowMask16);
-            __m256i empty_mask = _mm256_cmpeq_epi16(low_bits, empty_bits);
-            __m256i zero_mask  = _mm256_cmpeq_epi16(low_bits, zero_bits);
-            __m256i result_mask = _mm256_or_si256(empty_mask, zero_mask);
-            std::uint32_t maskEmpty = (std::uint32_t)_mm256_movepi16_mask(result_mask);
-            return maskEmpty;
+            if (kEmptySlot == 0b11111111) {
+                __m256i ctrl_bits  = _mm256_loadu_si256((const __m256i *)data);
+                __m256i ones_bits  = _mm256_setones_si256();
+                __m256i low_mask   = _mm256_srli_epi16(ones_bits, 8);
+                __m256i empty_bits = low_mask;
+                __m256i zero_bits  = _mm256_setzero_si256();
+                __m256i low_bits   = _mm256_and_si256(ctrl_bits, low_mask);
+                __m256i empty_mask = _mm256_cmpeq_epi16(low_bits, empty_bits);
+                __m256i zero_mask  = _mm256_cmpeq_epi16(low_bits, zero_bits);
+                __m256i result_mask = _mm256_or_si256(empty_mask, zero_mask);
+                std::uint32_t maskEmpty = (std::uint32_t)_mm256_movepi16_mask(result_mask);
+                return maskEmpty;
+            } else {
+                __m256i ctrl_bits  = _mm256_loadu_si256((const __m256i *)data);
+                __m256i empty_bits = _mm256_set1_epi16(kEmptySlot);
+                __m256i ones_bits  = _mm256_setones_si256();
+                __m256i low_mask   = _mm256_srli_epi16(ones_bits, 8);
+                __m256i zero_bits  = _mm256_setzero_si256();
+                __m256i low_bits   = _mm256_and_si256(ctrl_bits, low_mask);
+                __m256i empty_mask = _mm256_cmpeq_epi16(low_bits, empty_bits);
+                __m256i zero_mask  = _mm256_cmpeq_epi16(low_bits, zero_bits);
+                __m256i result_mask = _mm256_or_si256(empty_mask, zero_mask);
+                std::uint32_t maskEmpty = (std::uint32_t)_mm256_movepi16_mask(result_mask);
+                return maskEmpty;
+            }
+        }
+
+        std::uint32_t matchUsedOrEndOf(const_pointer data) const {
+            if (kEmptySlot == 0b11111111) {
+                __m256i ctrl_bits  = _mm256_loadu_si256((const __m256i *)data);
+                __m256i ones_bits  = _mm256_setones_si256();
+                __m256i low_mask   = _mm256_srli_epi16(ones_bits, 8);
+                __m256i empty_bits = low_mask;
+                __m256i low_bits   = _mm256_and_si256(ctrl_bits, low_mask);
+                __m256i match_mask = _mm256_cmpgt_epi16(empty_bits, low_bits);
+                std::uint32_t maskUsed = (std::uint32_t)_mm256_movepi16_mask(match_mask);
+                return maskUsed;
+            } else {
+                __m256i ctrl_bits  = _mm256_loadu_si256((const __m256i *)data);
+                __m256i empty_bits = _mm256_set1_epi16(kEmptySlot);
+                __m256i ones_bits  = _mm256_setones_si256();
+                __m256i low_mask   = _mm256_srli_epi16(ones_bits, 8);
+                __m256i low_bits   = _mm256_and_si256(ctrl_bits, low_mask);
+                __m256i match_mask = _mm256_cmpgt_epi16(empty_bits, low_bits);
+                std::uint32_t maskUsed = (std::uint32_t)_mm256_movepi16_mask(match_mask);
+                return maskUsed;
+            }
         }
 
         std::uint32_t matchEmptyAndDistance(const_pointer data, std::uint8_t distance) const {
@@ -575,32 +628,6 @@ public:
                 std::uint32_t maskEmpty = (std::uint32_t)_mm256_movepi16_mask(result_mask);
                 return maskEmpty;
             }
-        }
-
-        std::uint32_t matchUsedOrEndOf(const_pointer data) const {
-            __m256i ctrl_bits = _mm256_loadu_si256((const __m256i *)data);
-            __m256i tag_bits  = _mm256_set1_epi16(kEmptySlot);
-            __m256i ones_bits = _mm256_setones_si256();
-            __m256i low_mask  = _mm256_srli_epi16(ones_bits, 8);
-            __m256i low_bits  = _mm256_and_si256(ctrl_bits, low_mask);
-            __m256i match_mask = _mm256_cmpgt_epi16(tag_bits, low_bits);
-            std::uint32_t maskUsed = (std::uint32_t)_mm256_movepi16_mask(match_mask);
-            return maskUsed;
-        }
-
-        std::uint32_t matchUsed(const_pointer data) const {
-            __m256i ctrl_bits = _mm256_loadu_si256((const __m256i *)data);
-            __m256i tag_bits  = _mm256_set1_epi16(kEndOfMark);
-            __m256i ones_bits = _mm256_setones_si256();
-            __m256i low_mask  = _mm256_srli_epi16(ones_bits, 8);
-            __m256i low_bits  = _mm256_and_si256(ctrl_bits, low_mask);
-            __m256i match_mask = _mm256_cmpgt_epi16(tag_bits, low_bits);
-            std::uint32_t maskUsed = (std::uint32_t)_mm256_movepi16_mask(match_mask);
-            return maskUsed;
-        }
-
-        std::uint32_t matchUnused(const_pointer data) const {
-            return this->matchEmpty(data);
         }
 
         bool hasAnyMatch(const_pointer data, std::uint8_t ctrl_hash) const {
@@ -666,49 +693,70 @@ public:
             _mm256_storeu_si256((__m256i *)data, tag_bits);
         }
 
-        __m256i matchControlTag256(const_pointer data, std::uint8_t control_tag) const {
+        __m256i matchTag256(const_pointer data, std::uint8_t ctrl_tag) const {
             __m256i ctrl_bits = _mm256_loadu_si256((const __m256i *)data);
-            __m256i tag_bits  = _mm256_set1_epi16(control_tag);
+            __m256i tag_bits  = _mm256_set1_epi16(ctrl_tag);
             __m256i match_mask = _mm256_cmpeq_epi16(ctrl_bits, tag_bits);
             return match_mask;
         }
 
-        std::uint32_t matchControlTag(const_pointer data, std::uint16_t control_tag) const {
-            const __m256i zero_bits = _mm256_setzero_si256();
-            __m256i ctrl_bits = _mm256_loadu_si256((const __m256i *)data);
-            __m256i tag_bits  = _mm256_set1_epi16(control_tag);
+        std::uint32_t matchTag(const_pointer data, std::uint16_t ctrl_tag) const {
+            __m256i ctrl_bits  = _mm256_loadu_si256((const __m256i *)data);
+            __m256i tag_bits   = _mm256_set1_epi16(ctrl_tag);
             __m256i match_mask = _mm256_cmpeq_epi16(ctrl_bits, tag_bits);
                     match_mask = _mm256_srli_epi16(match_mask, 8);
             std::uint32_t mask = (std::uint32_t)_mm256_movemask_epi8(match_mask);
             return mask;
         }
 
-        std::uint32_t matchLowControlTag(const_pointer data, std::uint8_t control_tag) const {
-            const __m256i zero_bits = _mm256_setzero_si256();
-            const __m256i kLowMask16 = _mm256_set1_epi16((short)0x00FF);
+        std::uint32_t matchLowTag(const_pointer data, std::uint8_t ctrl_tag) const {
             __m256i ctrl_bits  = _mm256_loadu_si256((const __m256i *)data);
-            __m256i tag_bits   = _mm256_set1_epi16(control_tag);
-            __m256i low_bits   = _mm256_and_si256(ctrl_bits, kLowMask16);
-            __m256i match_mask = _mm256_cmpeq_epi16(low_bits, tag_bits);
+            __m256i tag_bits   = _mm256_set1_epi16(ctrl_tag);
+            __m256i ones_bits  = _mm256_setones_si256();
+            __m256i low_mask   = _mm256_srli_epi16(ones_bits, 8);
+            __m256i low_bits   = _mm256_and_si256(ctrl_bits, low_mask);
+            __m256i match_mask = _mm256_cmpeq_epi16(tag_bits, low_bits);
                     match_mask = _mm256_srli_epi16(match_mask, 8);
             std::uint32_t mask = (std::uint32_t)_mm256_movemask_epi8(match_mask);
             return mask;
         }
 
-        std::uint32_t matchHighControlTag(const_pointer data, std::uint8_t control_tag) const {
-            const __m256i zero_bits = _mm256_setzero_si256();
+        std::uint32_t matchHighTag(const_pointer data, std::uint8_t ctrl_tag) const {
             __m256i ctrl_bits  = _mm256_loadu_si256((const __m256i *)data);
-            __m256i tag_bits   = _mm256_set1_epi16(control_tag);
+            __m256i tag_bits   = _mm256_set1_epi16(ctrl_tag);
             __m256i high_bits  = _mm256_srli_epi16(ctrl_bits, 8);
-            __m256i match_mask = _mm256_cmpeq_epi16(high_bits, tag_bits);
+            __m256i match_mask = _mm256_cmpeq_epi16(tag_bits, high_bits);
                     match_mask = _mm256_srli_epi16(match_mask, 8);
             std::uint32_t mask = (std::uint32_t)_mm256_movemask_epi8(match_mask);
             return mask;
+        }
+
+        std::uint32_t matchHash(const_pointer data, std::uint8_t ctrl_hash) const {
+            return this->matchHighTag(data, ctrl_hash);
+        }
+
+        std::uint32_t matchEmpty(const_pointer data) const {
+            return this->matchLowTag(data, kEmptySlot);
+        }
+
+        std::uint32_t matchUsed(const_pointer data) const {
+            __m256i ctrl_bits  = _mm256_loadu_si256((const __m256i *)data);
+            __m256i tag_bits   = _mm256_set1_epi16(kEndOfMark);
+            __m256i ones_bits  = _mm256_setones_si256();
+            __m256i low_mask   = _mm256_srli_epi16(ones_bits, 8);
+            __m256i low_bits   = _mm256_and_si256(ctrl_bits, low_mask);
+            __m256i match_mask = _mm256_cmpgt_epi16(tag_bits, low_bits);
+                    match_mask = _mm256_srli_epi16(match_mask, 8);
+            std::uint32_t maskUsed = (std::uint32_t)_mm256_movemask_epi8(match_mask);
+            return maskUsed;
+        }
+
+        std::uint32_t matchUnused(const_pointer data) const {
+            return this->matchEmpty(data);
         }
 
         MatchMask2<std::uint32_t>
         matchHashAndDistance(const_pointer data, std::uint8_t ctrl_hash, std::uint8_t distance) const {
-            const __m256i kLowMask16 = _mm256_set1_epi16((short)0x00FF);
             const __m256i kDistanceBase =
                 _mm256_setr_epi16(0x0000, 0x0001, 0x0002, 0x0003, 0x0004, 0x0005, 0x0006, 0x0007,
                                   0x0008, 0x0009, 0x000A, 0x000B, 0x000C, 0x000D, 0x000E, 0x000F);
@@ -718,11 +766,13 @@ public:
 #endif
             assert(distance < kEmptySlot);
             __m256i ctrl_bits  = _mm256_loadu_si256((const __m256i *)data);
+            __m256i empty_bits = _mm256_set1_epi16(kEmptySlot);
             __m256i dist_value = _mm256_set1_epi16(distance);
             __m256i hash_bits  = _mm256_set1_epi16(ctrl_hash);
-            __m256i empty_bits = _mm256_set1_epi16(kEmptySlot);
-            __m256i dist_bits  = _mm256_adds_epi16(kDistanceBase, dist_value);
-            __m256i low_bits   = _mm256_and_si256(ctrl_bits, kLowMask16);
+            __m256i ones_bits  = _mm256_setones_si256();
+            __m256i low_mask   = _mm256_srli_epi16(ones_bits, 8);
+            __m256i dist_bits  = _mm256_adds_epi16(dist_value, kDistanceBase);
+            __m256i low_bits   = _mm256_and_si256(ctrl_bits, low_mask);
             __m256i high_bits  = _mm256_srli_epi16(ctrl_bits, 8);
             __m256i empty_mask = _mm256_cmpeq_epi16(empty_bits, low_bits);
             __m256i dist_mask  = _mm256_cmpgt_epi16(dist_bits, low_bits);
@@ -737,8 +787,7 @@ public:
         }
 
         MatchMask2<std::uint32_t>
-        matchHashAndDistFast(const_pointer data, std::uint8_t ctrl_hash, std::uint8_t distance) const {
-            const __m256i kLowMask16 = _mm256_set1_epi16((short)0x00FF);
+        matchHashAndDistFast2(const_pointer data, std::uint8_t ctrl_hash, std::uint8_t distance) const {
             const __m256i kDistanceBase =
                 _mm256_setr_epi16(0x0000, 0x0001, 0x0002, 0x0003, 0x0004, 0x0005, 0x0006, 0x0007,
                                   0x0008, 0x0009, 0x000A, 0x000B, 0x000C, 0x000D, 0x000E, 0x000F);
@@ -747,38 +796,13 @@ public:
                 distance = distance;
 #endif
             assert(distance < kEmptySlot);
-            __m256i ctrl_bits  = _mm256_loadu_si256((const __m256i *)data);
-            __m256i dist_value = _mm256_set1_epi16(distance);
-            __m256i hash_bits  = _mm256_set1_epi16(ctrl_hash);
-            __m256i empty_bits = _mm256_set1_epi16(kEmptySlot);
-            __m256i dist_bits  = _mm256_adds_epi16(kDistanceBase, dist_value);
-            __m256i low_bits   = _mm256_and_si256(ctrl_bits, kLowMask16);
-            __m256i high_bits  = _mm256_srli_epi16(ctrl_bits, 8);
-            __m256i empty_mask = _mm256_cmpeq_epi16(empty_bits, low_bits);
-            __m256i dist_mask  = _mm256_cmpgt_epi16(dist_bits, low_bits);
-                    empty_mask = _mm256_or_si256(empty_mask, dist_mask);
-            __m256i match_mask = _mm256_cmpeq_epi16(high_bits, hash_bits);
-            __m256i result_mask = _mm256_andnot_si256(empty_mask, match_mask);
-                    result_mask = _mm256_srli_epi16(result_mask, 8);
-            std::uint32_t maskEmpty = (std::uint32_t)_mm256_movemask_epi8(empty_mask);
-            std::uint32_t maskHash  = (std::uint32_t)_mm256_movemask_epi8(result_mask);
-            return { maskHash, maskEmpty };
-        }
-
-        MatchMask2<std::uint32_t>
-        matchHashAndDistFast2(const_pointer data, std::uint8_t ctrl_hash, std::uint8_t distance) const {
-            const __m256i kLowMask16 = _mm256_set1_epi16((short)0x00FF);
-            const __m256i kDistanceBase =
-                _mm256_setr_epi16(0x0000, 0x0001, 0x0002, 0x0003, 0x0004, 0x0005, 0x0006, 0x0007,
-                                  0x0008, 0x0009, 0x000A, 0x000B, 0x000C, 0x000D, 0x000E, 0x000F);
-            if (distance > kDistLimit)
-                distance = distance;
-            assert(distance < kEmptySlot);
             std::uint16_t dist_and_hash = (ctrl_hash << 8) | distance;
             __m256i ctrl_bits   = _mm256_loadu_si256((const __m256i *)data);
-            __m256i dist_0_hash = _mm256_set1_epi16((short)dist_and_hash);
             __m256i empty_bits  = _mm256_set1_epi16(kEmptySlot);
-            __m256i low_bits    = _mm256_and_si256(ctrl_bits, kLowMask16);
+            __m256i dist_0_hash = _mm256_set1_epi16((short)dist_and_hash);
+            __m256i ones_bits   = _mm256_setones_si256();
+            __m256i low_mask    = _mm256_srli_epi16(ones_bits, 8);
+            __m256i low_bits    = _mm256_and_si256(ctrl_bits, low_mask);
             __m256i dist_1_hash = _mm256_adds_epi16(dist_0_hash, kDistanceBase);
             __m256i match_mask  = _mm256_cmpeq_epi16(dist_1_hash, ctrl_bits);
             if (_mm256_test_all_zeros(match_mask, match_mask) == 0) {
@@ -802,26 +826,58 @@ public:
             }
         }
 
-        std::uint32_t matchHash(const_pointer data, std::uint8_t ctrl_hash) const {
-            return this->matchHighControlTag(data, ctrl_hash);
-        }
-
-        std::uint32_t matchEmpty(const_pointer data) const {
-            return this->matchLowControlTag(data, kEmptySlot);
-        }
-
         std::uint32_t matchEmptyOrZero(const_pointer data) const {
-            const __m256i kLowMask16 = _mm256_set1_epi16((short)0x00FF);
-            __m256i ctrl_bits  = _mm256_loadu_si256((const __m256i *)data);
-            __m256i empty_bits = _mm256_set1_epi16(kEmptySlot);
-            __m256i zero_bits  = _mm256_setzero_si256();
-            __m256i low_bits   = _mm256_and_si256(ctrl_bits, kLowMask16);
-            __m256i empty_mask = _mm256_cmpeq_epi16(low_bits, empty_bits);
-            __m256i zero_mask  = _mm256_cmpeq_epi16(low_bits, zero_bits);
-            __m256i result_mask = _mm256_or_si256(empty_mask, zero_mask);
-                    result_mask = _mm256_srli_epi16(result_mask, 8);
-            std::uint32_t maskEmpty = (std::uint32_t)_mm256_movemask_epi8(result_mask);
-            return maskEmpty;
+            if (kEmptySlot == 0b11111111) {
+                __m256i ctrl_bits  = _mm256_loadu_si256((const __m256i *)data);
+                __m256i ones_bits  = _mm256_setones_si256();
+                __m256i low_mask   = _mm256_srli_epi16(ones_bits, 8);
+                __m256i empty_bits = low_mask;
+                __m256i zero_bits  = _mm256_setzero_si256();
+                __m256i low_bits   = _mm256_and_si256(ctrl_bits, low_mask);
+                __m256i empty_mask = _mm256_cmpeq_epi16(low_bits, empty_bits);
+                __m256i zero_mask  = _mm256_cmpeq_epi16(low_bits, zero_bits);
+                __m256i result_mask = _mm256_or_si256(empty_mask, zero_mask);
+                        result_mask = _mm256_srli_epi16(result_mask, 8);
+                std::uint32_t maskEmpty = (std::uint32_t)_mm256_movemask_epi8(result_mask);
+                return maskEmpty;
+            } else {
+                __m256i ctrl_bits  = _mm256_loadu_si256((const __m256i *)data);
+                __m256i empty_bits = _mm256_set1_epi16(kEmptySlot);
+                __m256i ones_bits  = _mm256_setones_si256();
+                __m256i low_mask   = _mm256_srli_epi16(ones_bits, 8);
+                __m256i zero_bits  = _mm256_setzero_si256();
+                __m256i low_bits   = _mm256_and_si256(ctrl_bits, low_mask);
+                __m256i empty_mask = _mm256_cmpeq_epi16(low_bits, empty_bits);
+                __m256i zero_mask  = _mm256_cmpeq_epi16(low_bits, zero_bits);
+                __m256i result_mask = _mm256_or_si256(empty_mask, zero_mask);
+                        result_mask = _mm256_srli_epi16(result_mask, 8);
+                std::uint32_t maskEmpty = (std::uint32_t)_mm256_movemask_epi8(result_mask);
+                return maskEmpty;
+            }
+        }
+
+        std::uint32_t matchUsedOrEndOf(const_pointer data) const {
+            if (kEmptySlot == 0b11111111) {
+                __m256i ctrl_bits  = _mm256_loadu_si256((const __m256i *)data);
+                __m256i ones_bits  = _mm256_setones_si256();
+                __m256i low_mask   = _mm256_srli_epi16(ones_bits, 8);
+                __m256i empty_bits = low_mask;
+                __m256i low_bits   = _mm256_and_si256(ctrl_bits, low_mask);
+                __m256i match_mask = _mm256_cmpgt_epi16(empty_bits, low_bits);
+                        match_mask = _mm256_srli_epi16(match_mask, 8);
+                std::uint32_t maskUsed = (std::uint32_t)_mm256_movemask_epi8(match_mask);
+                return maskUsed;
+            } else {
+                __m256i ctrl_bits  = _mm256_loadu_si256((const __m256i *)data);
+                __m256i empty_bits = _mm256_set1_epi16(kEmptySlot);
+                __m256i ones_bits  = _mm256_setones_si256();
+                __m256i low_mask   = _mm256_srli_epi16(ones_bits, 8);
+                __m256i low_bits   = _mm256_and_si256(ctrl_bits, low_mask);
+                __m256i match_mask = _mm256_cmpgt_epi16(empty_bits, low_bits);
+                        match_mask = _mm256_srli_epi16(match_mask, 8);
+                std::uint32_t maskUsed = (std::uint32_t)_mm256_movemask_epi8(match_mask);
+                return maskUsed;
+            }
         }
 
         std::uint32_t matchEmptyAndDistance(const_pointer data, std::uint8_t distance) const {
@@ -840,7 +896,7 @@ public:
                 __m256i empty_mask = _mm256_cmpeq_epi16(ctrl_dist, empty_bits);
                 __m256i dist_mask  = _mm256_cmpgt_epi16(dist_bits, ctrl_dist);
                 __m256i result_mask = _mm256_or_si256(empty_mask, dist_mask);
-                        result_mask = _mm256_srli_epi16(result_mask, 8);
+                //        result_mask = _mm256_srli_epi16(result_mask, 8);
                 std::uint32_t maskEmpty = (std::uint32_t)_mm256_movemask_epi8(result_mask);
                 return maskEmpty;
             } else {
@@ -854,38 +910,10 @@ public:
                 __m256i empty_mask = _mm256_cmpeq_epi16(ctrl_dist, empty_bits);
                 __m256i dist_mask  = _mm256_cmpgt_epi16(dist_bits, ctrl_dist);
                 __m256i result_mask = _mm256_or_si256(empty_mask, dist_mask);
-                        result_mask = _mm256_srli_epi16(result_mask, 8);
+                //        result_mask = _mm256_srli_epi16(result_mask, 8);
                 std::uint32_t maskEmpty = (std::uint32_t)_mm256_movemask_epi8(result_mask);
                 return maskEmpty;
             }
-        }
-
-        std::uint32_t matchUsedOrEndOf(const_pointer data) const {
-            __m256i ctrl_bits = _mm256_loadu_si256((const __m256i *)data);
-            __m256i tag_bits  = _mm256_set1_epi16(kEmptySlot);
-            __m256i ones_bits = _mm256_setones_si256();
-            __m256i low_mask  = _mm256_srli_epi16(ones_bits, 8);
-            __m256i low_bits  = _mm256_and_si256(ctrl_bits, low_mask);
-            __m256i match_mask = _mm256_cmpgt_epi16(tag_bits, low_bits);
-                    match_mask = _mm256_srli_epi16(match_mask, 8);
-            std::uint32_t maskUsed = (std::uint32_t)_mm256_movemask_epi8(match_mask);
-            return maskUsed;
-        }
-
-        std::uint32_t matchUsed(const_pointer data) const {
-            __m256i ctrl_bits = _mm256_loadu_si256((const __m256i *)data);
-            __m256i tag_bits  = _mm256_set1_epi16(kEndOfMark);
-            __m256i ones_bits = _mm256_setones_si256();
-            __m256i low_mask  = _mm256_srli_epi16(ones_bits, 8);
-            __m256i low_bits  = _mm256_and_si256(ctrl_bits, low_mask);
-            __m256i match_mask = _mm256_cmpgt_epi16(tag_bits, low_bits);
-                    match_mask = _mm256_srli_epi16(match_mask, 8);
-            std::uint32_t maskUsed = (std::uint32_t)_mm256_movemask_epi8(match_mask);
-            return maskUsed;
-        }
-
-        std::uint32_t matchUnused(const_pointer data) const {
-            return this->matchEmpty(data);
         }
 
         bool hasAnyMatch(const_pointer data, std::uint8_t ctrl_hash) const {
@@ -952,8 +980,8 @@ public:
             bitmask.template fillAll16<ControlTag>(&this->controls[0]);
         }
 
-        bitmask_type matchControlTag(std::uint8_t control_tag) const {
-            return bitmask.matchControlTag(&this->controls[0], control_tag);
+        bitmask_type matchTag(std::uint8_t ctrl_tag) const {
+            return bitmask.matchTag(&this->controls[0], ctrl_tag);
         }
 
         bitmask_type matchHash(std::uint8_t ctrl_hash) const {
