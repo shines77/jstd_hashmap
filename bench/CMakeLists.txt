@@ -130,11 +130,11 @@ PUBLIC
 ##
 ## cardinal_bench_v2
 ##
-set(CARDINAL_BENCH_V1_SOURCE_FILES
+set(CARDINAL_BENCH_V2_SOURCE_FILES
     ${CMAKE_CURRENT_LIST_DIR}/cardinal_bench_v2/cardinal_bench.cpp
 )
 
-add_executable(cardinal_bench_v2 ${CARDINAL_BENCH_V1_SOURCE_FILES})
+add_executable(cardinal_bench_v2 ${CARDINAL_BENCH_V2_SOURCE_FILES})
 
 if (NOT MSVC)
     # For gcc or clang warning setting
