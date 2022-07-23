@@ -95,6 +95,8 @@ PUBLIC
     ${EXTRA_INCLUDES}
 )
 
+if (0)
+
 ##
 ## cardinal_bench_v1
 ##
@@ -158,3 +160,5 @@ PUBLIC
     "${CMAKE_CURRENT_LIST_DIR}/../src"
     ${EXTRA_INCLUDES}
 )
+
+endif()
