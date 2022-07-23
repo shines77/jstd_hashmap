@@ -320,8 +320,8 @@ endif()
 ##     set(EXTRA_INCLUDES ${EXTRA_INCLUDES} "${PROJECT_SOURCE_DIR}/src")
 ## endif()
 
-add_library(jstd STATIC ${JSTD_SOURCE_FILES})
-set(EXTRA_LIBS ${EXTRA_LIBS} jstd)
+## add_library(jstd STATIC ${JSTD_SOURCE_FILES})
+## set(EXTRA_LIBS ${EXTRA_LIBS} jstd)
 set(EXTRA_INCLUDES ${EXTRA_INCLUDES} "${PROJECT_SOURCE_DIR}/src")
 
 add_custom_target(debug

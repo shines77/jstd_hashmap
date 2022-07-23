@@ -27,6 +27,7 @@ PUBLIC
 target_include_directories(power2_test
 PUBLIC
     "${CMAKE_CURRENT_LIST_DIR}"
+    "${CMAKE_CURRENT_LIST_DIR}/../src"
     ${EXTRA_INCLUDES}
 )
 
@@ -58,6 +59,7 @@ PUBLIC
 target_include_directories(class_trivial
 PUBLIC
     "${CMAKE_CURRENT_LIST_DIR}"
+    "${CMAKE_CURRENT_LIST_DIR}/../src"
     ${EXTRA_INCLUDES}
 )
 
@@ -89,5 +91,6 @@ PUBLIC
 target_include_directories(feature_test
 PUBLIC
     "${CMAKE_CURRENT_LIST_DIR}"
+    "${CMAKE_CURRENT_LIST_DIR}/../src"
     ${EXTRA_INCLUDES}
 )

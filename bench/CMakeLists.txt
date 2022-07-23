@@ -27,6 +27,7 @@ PUBLIC
 target_include_directories(benchmark
 PUBLIC
     "${CMAKE_CURRENT_LIST_DIR}/benchmark"
+    "${CMAKE_CURRENT_LIST_DIR}/../src"
     ${EXTRA_INCLUDES}
 )
 
@@ -58,6 +59,7 @@ PUBLIC
 target_include_directories(time_hash_map
 PUBLIC
     "${CMAKE_CURRENT_LIST_DIR}/time_hash_map"
+    "${CMAKE_CURRENT_LIST_DIR}/../src"
     ${EXTRA_INCLUDES}
 )
 
@@ -89,6 +91,7 @@ PUBLIC
 target_include_directories(cardinal_bench
 PUBLIC
     "${CMAKE_CURRENT_LIST_DIR}/cardinal_bench"
+    "${CMAKE_CURRENT_LIST_DIR}/../src"
     ${EXTRA_INCLUDES}
 )
 
@@ -120,6 +123,7 @@ PUBLIC
 target_include_directories(cardinal_bench_v1
 PUBLIC
     "${CMAKE_CURRENT_LIST_DIR}/cardinal_bench_v1"
+    "${CMAKE_CURRENT_LIST_DIR}/../src"
     ${EXTRA_INCLUDES}
 )
 
@@ -151,5 +155,6 @@ PUBLIC
 target_include_directories(cardinal_bench_v2
 PUBLIC
     "${CMAKE_CURRENT_LIST_DIR}/cardinal_bench_v2"
+    "${CMAKE_CURRENT_LIST_DIR}/../src"
     ${EXTRA_INCLUDES}
 )

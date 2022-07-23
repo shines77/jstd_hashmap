@@ -285,8 +285,8 @@ endif()
 ##     set(EXTRA_INCLUDES ${EXTRA_INCLUDES} "${PROJECT_SOURCE_DIR}/src")
 ## endif()
 
-add_library(jstd STATIC ${JSTD_SOURCE_FILES})
-set(EXTRA_LIBS ${EXTRA_LIBS} jstd)
+## add_library(jstd STATIC ${JSTD_SOURCE_FILES})
+## set(EXTRA_LIBS ${EXTRA_LIBS} jstd)
 set(EXTRA_INCLUDES ${EXTRA_INCLUDES} "${PROJECT_SOURCE_DIR}/src")
 
 add_custom_target(debug
@@ -301,6 +301,6 @@ add_custom_target(release
     COMMENT "Switch CMAKE_BUILD_TYPE to Release"
 )
 
-add_subdirectory(./bench)
+add_subdirectory(bench)
 
-add_subdirectory(./test)
+add_subdirectory(test)
