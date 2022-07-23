@@ -171,9 +171,9 @@ if (NOT MSVC)
     ## For C_FLAGS
     ## -mmmx -msse -msse2 -msse3 -mssse3 -msse4 -msse4a -msse4.1 -msse4.2 -mavx -mavx2 -mavx512vl -mavx512f
     if (CMakeIPOEnable)
-        set(CMAKE_C_FLAGS_DEFAULT       "${CMAKE_C_FLAGS} -std=c99 -march=native -finput-charset=utf-8 -fPIC")
+        set(CMAKE_C_FLAGS_DEFAULT       "${CMAKE_C_FLAGS} -std=c99 -march=native -finput-charset=utf-8 -flto -ffat-lto-objects -fPIC")
     else()
-        set(CMAKE_C_FLAGS_DEFAULT       "${CMAKE_C_FLAGS} -std=c99 -march=native -finput-charset=utf-8 -flto -ffat-lto-files -fPIC")
+        set(CMAKE_C_FLAGS_DEFAULT       "${CMAKE_C_FLAGS} -std=c99 -march=native -finput-charset=utf-8 -fPIC")
     endif()
     set(CMAKE_C_FLAGS_RELEASE           "${CMAKE_C_FLAGS_DEFAULT} -O3 -DNDEBUG")
     set(CMAKE_C_FLAGS_DEBUG             "${CMAKE_C_FLAGS_DEFAULT} -g -pg -D_DEBUG")
@@ -185,7 +185,7 @@ if (NOT MSVC)
     ## -mmmx -msse -msse2 -msse3 -mssse3 -msse4 -msse4a -msse4.1 -msse4.2 -mavx -mavx2 -mavx512vl -mavx512f
     # -fexec-charset=gbk -finput-charset=gbk
     if (CMakeIPOEnable)
-        set(CMAKE_CXX_FLAGS_DEFAULT     "${CMAKE_CXX_FLAGS} -std=c++11 -march=native -finput-charset=utf-8 -flto -ffat-lto-files -fPIC")
+        set(CMAKE_CXX_FLAGS_DEFAULT     "${CMAKE_CXX_FLAGS} -std=c++11 -march=native -finput-charset=utf-8 -flto -ffat-lto-objects -fPIC")
     else()
         set(CMAKE_CXX_FLAGS_DEFAULT     "${CMAKE_CXX_FLAGS} -std=c++11 -march=native -finput-charset=utf-8 -fPIC")
     endif()
@@ -193,6 +193,12 @@ if (NOT MSVC)
     set(CMAKE_CXX_FLAGS_DEBUG           "${CMAKE_CXX_FLAGS_DEFAULT} -g -pg -D_DEBUG")
     set(CMAKE_CXX_FLAGS_MINSIZEREL      "${CMAKE_CXX_FLAGS_DEFAULT} -Os -DNDEBUG")
     set(CMAKE_CXX_FLAGS_RELWITHDEBINFO  "${CMAKE_CXX_FLAGS_DEFAULT} -O2 -g")
+
+    set(CMAKE_AR        "/usr/bin/gcc-ar")
+    set(CMAKE_LINKER    "/usr/bin/ld")
+    set(CMAKE_NM        "/usr/bin/gcc-nm")
+    set(CMAKE_OBJDUMP   "/usr/bin/objdump")
+    set(CMAKE_RANLIB    "/usr/bin/gcc-ranlib")
 
     ## -faligned-new: GCC >= 7.1, CLANG >= 4.0
     ## See: https://trac.wildfiregames.com/ticket/5139
