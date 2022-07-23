@@ -539,12 +539,14 @@ public:
                 _mm256_setr_epi16(0x0000, 0x0100, 0x0200, 0x0300, 0x0400, 0x0500, 0x0600, 0x0700,
                                   0x0800, 0x0900, 0x0A00, 0x0B00, 0x0C00, 0x0D00, 0x0E00, 0x0F00);
             assert(dist_and_hash <= kMaxDist16);
-            __m256i ctrl_bits   = _mm256_loadu_si256((const __m256i *)data);
             __m256i dist_0_hash = _mm256_set1_epi16(dist_and_hash);
-            __m256i zero_bits   = _mm256_setzero_si256();
+            __m256i ctrl_bits   = _mm256_loadu_si256((const __m256i *)data);
+            __m256i ones_bits   = _mm256_setones_si256();
+            __m256i high_mask   = _mm256_slli_epi16(ones_bits, 8);
             __m256i dist_1_hash = _mm256_adds_epi16(dist_0_hash, kDistanceBase);
-            __m256i match_mask  = _mm256_cmpeq_epi16(ctrl_bits, dist_0_hash);
-            __m256i empty_mask  = _mm256_cmpgt_epi16(zero_bits, dist_1_hash);
+            __m256i dist_and_0  = _mm256_and_si256(dist_1_hash, high_mask);
+            __m256i empty_mask  = _mm256_cmpgt_epi16(dist_and_0, ctrl_bits);
+            __m256i match_mask  = _mm256_cmpeq_epi16(dist_1_hash, ctrl_bits);
             __m256i result_mask = _mm256_andnot_si256(empty_mask, match_mask);
             std::uint32_t maskEmpty = (std::uint32_t)_mm256_movepi16_mask(empty_mask);
             std::uint32_t maskHash  = (std::uint32_t)_mm256_movepi16_mask(result_mask);
@@ -567,18 +569,34 @@ public:
         }
 
         std::uint32_t matchEmptyAndDistance(const_pointer data, std::int8_t distance) const {
+#if 1
             const __m256i kDistanceBase =
                 _mm256_setr_epi16(0x0000, 0x0100, 0x0200, 0x0300, 0x0400, 0x0500, 0x0600, 0x0700,
                                   0x0800, 0x0900, 0x0A00, 0x0B00, 0x0C00, 0x0D00, 0x0E00, 0x0F00);
             assert(distance <= kMaxDist);
-            std::int16_t dist_and_hash = std::int16_t(distance) << 8;
+            __m256i dist_0      = _mm256_set1_epi16((short)distance);
             __m256i ctrl_bits   = _mm256_loadu_si256((const __m256i *)data);
-            __m256i dist_0_hash = _mm256_set1_epi16((short)dist_and_hash);
-            __m256i zero_bits   = _mm256_setzero_si256();
-            __m256i dist_1_hash = _mm256_adds_epi16(dist_0_hash, kDistanceBase);
-            __m256i empty_mask  = _mm256_cmpgt_epi16(zero_bits, dist_1_hash);
-            std::uint32_t maskEmpty = (std::uint32_t)_mm256_movepi16_mask(empty_mask);
+            __m256i dist_and_0  = _mm256_slli_epi16(dist_0, 8);
+            __m256i dist_bits   = _mm256_adds_epi16(dist_and_0, kDistanceBase);
+            __m256i result_mask = _mm256_cmpgt_epi16(dist_bits, ctrl_bits);
+            std::uint32_t maskEmpty = (std::uint32_t)_mm256_movepi16_mask(result_mask);
             return maskEmpty;
+#else
+            const __m256i kDistanceBase2 =
+                _mm256_setr_epi16(0x0000, 0x0001, 0x0002, 0x0003, 0x0004, 0x0005, 0x0006, 0x0007,
+                                  0x0008, 0x0009, 0x000A, 0x000B, 0x000C, 0x000D, 0x000E, 0x000F);
+            assert(distance <= kMaxDist);
+            __m256i dist_0      = _mm256_set1_epi16((short)distance);
+            __m256i ctrl_bits   = _mm256_loadu_si256((const __m256i *)data);
+            __m256i zero_bits   = _mm256_setzero_si256();
+            __m256i dist_bits   = _mm256_adds_epi16(dist_0, kDistanceBase2);
+            __m256i ctrl_dist   = _mm256_srli_epi16(ctrl_bits, 8);
+            __m256i empty_mask  = _mm256_cmpgt_epi16(zero_bits, ctrl_bits);
+            __m256i dist_mask   = _mm256_cmpgt_epi16(dist_bits, ctrl_dist);
+            __m256i result_mask = _mm256_or_si256(empty_mask, dist_mask);
+            std::uint32_t maskEmpty = (std::uint32_t)_mm256_movepi16_mask(result_mask);
+            return maskEmpty;
+#endif
         }
 
         bool hasAnyMatch(const_pointer data, std::uint8_t ctrl_hash) const {
@@ -763,12 +781,14 @@ public:
                 _mm256_setr_epi16(0x0000, 0x0100, 0x0200, 0x0300, 0x0400, 0x0500, 0x0600, 0x0700,
                                   0x0800, 0x0900, 0x0A00, 0x0B00, 0x0C00, 0x0D00, 0x0E00, 0x0F00);
             assert(dist_and_hash <= kMaxDist16);
-            __m256i ctrl_bits   = _mm256_loadu_si256((const __m256i *)data);
             __m256i dist_0_hash = _mm256_set1_epi16(dist_and_hash);
-            __m256i zero_bits   = _mm256_setzero_si256();
+            __m256i ctrl_bits   = _mm256_loadu_si256((const __m256i *)data);
+            __m256i ones_bits   = _mm256_setones_si256();
+            __m256i high_mask   = _mm256_slli_epi16(ones_bits, 8);
             __m256i dist_1_hash = _mm256_adds_epi16(dist_0_hash, kDistanceBase);
-            __m256i match_mask  = _mm256_cmpeq_epi16(ctrl_bits, dist_0_hash);
-            __m256i empty_mask  = _mm256_cmpgt_epi16(zero_bits, dist_1_hash);
+            __m256i dist_and_0  = _mm256_and_si256(dist_1_hash, high_mask);
+            __m256i empty_mask  = _mm256_cmpgt_epi16(dist_and_0, ctrl_bits);
+            __m256i match_mask  = _mm256_cmpeq_epi16(dist_1_hash, ctrl_bits);
             __m256i result_mask = _mm256_andnot_si256(empty_mask, match_mask);
                     empty_mask  = _mm256_srli_epi16(empty_mask, 8);
                     result_mask = _mm256_srli_epi16(result_mask, 8);
@@ -783,12 +803,14 @@ public:
                 _mm256_setr_epi16(0x0000, 0x0100, 0x0200, 0x0300, 0x0400, 0x0500, 0x0600, 0x0700,
                                   0x0800, 0x0900, 0x0A00, 0x0B00, 0x0C00, 0x0D00, 0x0E00, 0x0F00);
             assert(dist_and_hash <= kMaxDist16);
-            __m256i ctrl_bits   = _mm256_loadu_si256((const __m256i *)data);
             __m256i dist_0_hash = _mm256_set1_epi16(dist_and_hash);
-            __m256i zero_bits   = _mm256_setzero_si256();
+            __m256i ctrl_bits   = _mm256_loadu_si256((const __m256i *)data);
+            __m256i ones_bits   = _mm256_setones_si256();
+            __m256i high_mask   = _mm256_slli_epi16(ones_bits, 8);
             __m256i dist_1_hash = _mm256_adds_epi16(dist_0_hash, kDistanceBase);
-            __m256i match_mask  = _mm256_cmpeq_epi16(ctrl_bits, dist_0_hash);
-            __m256i empty_mask  = _mm256_cmpgt_epi16(zero_bits, dist_1_hash);
+            __m256i dist_and_0  = _mm256_and_si256(dist_1_hash, high_mask);
+            __m256i empty_mask  = _mm256_cmpgt_epi16(dist_and_0, ctrl_bits);
+            __m256i match_mask  = _mm256_cmpeq_epi16(dist_1_hash, ctrl_bits);
             __m256i result_mask = _mm256_andnot_si256(empty_mask, match_mask);
             std::uint32_t maskEmpty = (std::uint32_t)_mm256_movemask_epi8(empty_mask);
             std::uint32_t maskHash  = (std::uint32_t)_mm256_movemask_epi8(result_mask);
@@ -807,19 +829,36 @@ public:
         }
 
         std::uint32_t matchEmptyAndDistance(const_pointer data, std::int8_t distance) const {
+#if 1
             const __m256i kDistanceBase =
                 _mm256_setr_epi16(0x0000, 0x0100, 0x0200, 0x0300, 0x0400, 0x0500, 0x0600, 0x0700,
                                   0x0800, 0x0900, 0x0A00, 0x0B00, 0x0C00, 0x0D00, 0x0E00, 0x0F00);
             assert(distance <= kMaxDist);
-            std::int16_t dist_and_hash = std::int16_t(distance) << 8;
+            __m256i dist_0      = _mm256_set1_epi16((short)distance);
             __m256i ctrl_bits   = _mm256_loadu_si256((const __m256i *)data);
-            __m256i dist_0_hash = _mm256_set1_epi16((short)dist_and_hash);
-            __m256i zero_bits   = _mm256_setzero_si256();
-            __m256i dist_1_hash = _mm256_adds_epi16(dist_0_hash, kDistanceBase);
-            __m256i empty_mask  = _mm256_cmpgt_epi16(zero_bits, dist_1_hash);
-                    empty_mask  = _mm256_srli_epi16(empty_mask, 8);
-            std::uint32_t maskEmpty = (std::uint32_t)_mm256_movemask_epi8(empty_mask);
+            __m256i dist_and_0  = _mm256_slli_epi16(dist_0, 8);
+            __m256i dist_bits   = _mm256_adds_epi16(dist_and_0, kDistanceBase);
+            __m256i result_mask = _mm256_cmpgt_epi16(dist_bits, ctrl_bits);
+                    result_mask = _mm256_srli_epi16(result_mask, 8);
+            std::uint32_t maskEmpty = (std::uint32_t)_mm256_movemask_epi8(result_mask);
             return maskEmpty;
+#else
+            const __m256i kDistanceBase2 =
+                _mm256_setr_epi16(0x0000, 0x0001, 0x0002, 0x0003, 0x0004, 0x0005, 0x0006, 0x0007,
+                                  0x0008, 0x0009, 0x000A, 0x000B, 0x000C, 0x000D, 0x000E, 0x000F);
+            assert(distance <= kMaxDist);
+            __m256i dist_0      = _mm256_set1_epi16((short)distance);
+            __m256i ctrl_bits   = _mm256_loadu_si256((const __m256i *)data);
+            __m256i zero_bits   = _mm256_setzero_si256();
+            __m256i dist_bits   = _mm256_adds_epi16(dist_0, kDistanceBase2);
+            __m256i ctrl_dist   = _mm256_srli_epi16(ctrl_bits, 8);
+            __m256i empty_mask  = _mm256_cmpgt_epi16(zero_bits, ctrl_bits);
+            __m256i dist_mask   = _mm256_cmpgt_epi16(dist_bits, ctrl_dist);
+            __m256i result_mask = _mm256_or_si256(empty_mask, dist_mask);
+                    result_mask = _mm256_srli_epi16(result_mask, 8);
+            std::uint32_t maskEmpty = (std::uint32_t)_mm256_movemask_epi8(result_mask);
+            return maskEmpty;
+#endif
         }
 
         bool hasAnyMatch(const_pointer data, std::uint8_t ctrl_hash) const {
@@ -3606,7 +3645,7 @@ private:
                         size_type pos = BitUtils::bsf32(maskEmpty);
                         maskEmpty = BitUtils::clearLowBit32(maskEmpty);
                         size_type index = group.index(slot_index, pos);
-                        last_index = this->round_index(index);
+                        last_index = index;
                         break;
                     }
                     slot_index = this->slot_next_group(slot_index);
