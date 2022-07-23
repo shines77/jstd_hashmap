@@ -186,8 +186,6 @@
 #define UINT64_Low(u64)         ((uint32_t)(u64 & 0x00000000FFFFFFFFull))
 #endif
 
-#pragma message(PRINT_MACRO_VAR(HASH_MAP_FUNCTION))
-
 #ifndef _DEBUG
 static const std::size_t kDefaultIters = 10000000;
 #else

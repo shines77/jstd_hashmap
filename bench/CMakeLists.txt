@@ -95,7 +95,7 @@ PUBLIC
     ${EXTRA_INCLUDES}
 )
 
-if (0)
+if (1)
 
 ##
 ## cardinal_bench_v1

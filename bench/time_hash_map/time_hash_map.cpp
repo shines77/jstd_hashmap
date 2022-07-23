@@ -211,8 +211,6 @@
 #define UINT64_Low(u64)         ((uint32_t)(u64 & 0x00000000FFFFFFFFull))
 #endif
 
-#pragma message(PRINT_MACRO_VAR(HASH_MAP_FUNCTION))
-
 #if defined(_MSC_VER)
 static const bool FLAGS_test_std_hash_map = false;
 #else
