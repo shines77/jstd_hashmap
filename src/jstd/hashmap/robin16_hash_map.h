@@ -2889,8 +2889,10 @@ private:
                 break;
             }
             distance += kGroupWidth;
+#ifdef _DEBUG
             if (distance >= (kEmptySlot - kGroupWidth - 1))
                 distance = distance;
+#endif
             slot_index = this->slot_next_group(slot_index);
         } while (slot_index != first_slot);
 
@@ -2955,8 +2957,10 @@ private:
 
             if (isRehashing) {
                 insert_ctrl.distance++;
+#ifdef _DEBUG
                 if (insert_ctrl.distance >= kEndOfMark)
                     distance = distance;
+#endif
                 //insert_ctrl.distance = (insert_ctrl.distance < kEndOfMark) ? insert_ctrl.distance : (kEndOfMark - 1);
             } else {
                 insert_ctrl.distance++;
@@ -3380,8 +3384,10 @@ private:
                 return this->round_index(index);
             }
             distance += kGroupWidth;
+#ifdef _DEBUG
             if (distance >= (kEmptySlot - kGroupWidth - 1))
                 distance = distance;
+#endif
             slot_index = this->slot_next_group(slot_index);
             assert(slot_index != first_slot);
         } while (1);
