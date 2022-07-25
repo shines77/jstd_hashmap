@@ -2582,6 +2582,7 @@ private:
         std::uint8_t distance = 0;
         if (kUseUnrollLoop) {
             const control_type * ctrl = this->control_at(slot_index);
+
             // Optimize from: (ctrl->isUsed() && (ctrl->distance >= 0))
             if (likely(ctrl->isUsed())) {
                 if (ctrl->hash == ctrl_hash) {
@@ -2595,6 +2596,7 @@ private:
             }
 
             ctrl = this->next_control(slot_index);
+
             // Optimization: merging two comparisons
             if (likely(std::uint8_t(ctrl->distance + 1) > 1)) {
             //if (likely(ctrl->isUsed() && (ctrl->distance >= 1))) {
@@ -2609,8 +2611,9 @@ private:
             }
 
             distance = 2;
+            ctrl = this->next_control(slot_index);
+#if 0
             do {
-                ctrl = this->next_control(slot_index);
                 // Optimization: merging two comparisons
                 if (likely(std::uint8_t(ctrl->distance + 1) > distance)) {
                 //if (likely(ctrl->isUsed() && (ctrl->distance >= distance))) {
@@ -2620,6 +2623,7 @@ private:
                             return slot_index;
                         }
                     }
+                    ctrl = this->next_control(slot_index);
                     distance++;
                     if (distance >= 4)
                         break;
@@ -2627,8 +2631,7 @@ private:
                     return npos;
                 }
             } while (1);
-
-            slot_index = this->next_index(slot_index);
+#endif
         }
 
         do {

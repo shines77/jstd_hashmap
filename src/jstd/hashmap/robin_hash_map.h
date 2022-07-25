@@ -331,8 +331,12 @@ public:
 
         void setValue(std::int8_t dist, std::uint8_t hash) {
             assert(dist < kEmptySlot);
+#if 1
+            this->value = ctrl_data::make(dist, hash);
+#else
             this->setHash(hash);
             this->setDist(dist);
+#endif
         }
 
         void setValue(std::int16_t dist_and_hash) {
@@ -539,8 +543,9 @@ public:
             __m256i high_mask   = _mm256_slli_epi16(ones_bits, 8);
             __m256i dist_1_hash = _mm256_adds_epi16(dist_0_hash, kDistanceBase);
             __m256i dist_and_0  = _mm256_and_si256(dist_1_hash, high_mask);
-            __m256i empty_mask  = _mm256_cmpgt_epi16(dist_and_0, ctrl_bits);
+            __m256i ctrl_dist   = _mm256_and_si256(dist_1_hash, ctrl_bits);
             __m256i match_mask  = _mm256_cmpeq_epi16(dist_1_hash, ctrl_bits);
+            __m256i empty_mask  = _mm256_cmpgt_epi16(dist_and_0,  ctrl_dist);
             __m256i result_mask = _mm256_andnot_si256(empty_mask, match_mask);
             std::uint32_t maskEmpty = (std::uint32_t)_mm256_movepi16_mask(empty_mask);
             std::uint32_t maskHash  = (std::uint32_t)_mm256_movepi16_mask(result_mask);
@@ -770,8 +775,9 @@ public:
             __m256i high_mask   = _mm256_slli_epi16(ones_bits, 8);
             __m256i dist_1_hash = _mm256_adds_epi16(dist_0_hash, kDistanceBase);
             __m256i dist_and_0  = _mm256_and_si256(dist_1_hash, high_mask);
-            __m256i empty_mask  = _mm256_cmpgt_epi16(dist_and_0, ctrl_bits);
+            __m256i ctrl_dist   = _mm256_and_si256(dist_1_hash, ctrl_bits);
             __m256i match_mask  = _mm256_cmpeq_epi16(dist_1_hash, ctrl_bits);
+            __m256i empty_mask  = _mm256_cmpgt_epi16(dist_and_0,  ctrl_dist);
             __m256i result_mask = _mm256_andnot_si256(empty_mask, match_mask);
                     empty_mask  = _mm256_srli_epi16(empty_mask, 8);
                     result_mask = _mm256_srli_epi16(result_mask, 8);
@@ -2069,12 +2075,12 @@ private:
     }
 
     slot_type * slot_at(size_type slot_index) noexcept {
-        assert(slot_index < this->slot_max_capacity());
+        assert(slot_index <= this->slot_max_capacity());
         return (this->slots() + ssize_type(slot_index));
     }
 
     const slot_type * slot_at(size_type slot_index) const noexcept {
-        assert(slot_index < this->slot_max_capacity());
+        assert(slot_index <= this->slot_max_capacity());
         return (this->slots() + ssize_type(slot_index));
     }
 
@@ -2466,10 +2472,14 @@ private:
         std::uint8_t ctrl_hash = this->get_ctrl_hash(hash_code);
         size_type start_slot = slot_index;
         std::int8_t distance = 0;
-        ctrl_type dist_and_hash(0, ctrl_hash);
+        ctrl_type dist_and_hash(0, 0);
+
+        const ctrl_type * ctrl = this->ctrl_at(slot_index);
 
         if (kUnrollMode == UnrollMode16) {
-            const ctrl_type * ctrl = this->ctrl_at(slot_index);
+#if 0
+            dist_and_hash.setValue(0, ctrl_hash);
+
             if (likely(ctrl->value == dist_and_hash.value)) {
                 const slot_type * slot = this->slot_at(slot_index);
                 if (this->key_equal_(slot->value.first, key)) {
@@ -2504,9 +2514,8 @@ private:
             }
 
             return npos;
+#endif
         } else if (kUnrollMode == UnrollMode8) {
-            const ctrl_type * ctrl = this->ctrl_at(slot_index);
-
             // Optimize from: (ctrl->isUsed() && (ctrl->dist >= 0))
             if (likely(ctrl->isUsed())) {
                 if (ctrl->hash == ctrl_hash) {
@@ -2560,6 +2569,33 @@ private:
 
             return npos;
         }
+
+        if (likely(ctrl->value >= std::int8_t(0))) {
+            if (ctrl->hash == ctrl_hash) {
+                const slot_type * slot = this->slot_at(slot_index);
+                if (this->key_equal_(slot->value.first, key)) {
+                    return slot_index;
+                }
+            }
+        } else {
+            return npos;
+        }
+
+        ctrl++;
+
+        if (likely(ctrl->value >= kDistInc16)) {
+            slot_index++;
+            if (ctrl->hash == ctrl_hash) {
+                const slot_type * slot = this->slot_at(slot_index);
+                if (this->key_equal_(slot->value.first, key)) {
+                    return slot_index;
+                }
+            }
+        } else {
+            return npos;
+        }
+
+        dist_and_hash.setValue(std::int8_t(kDistInc16 * 2), ctrl_hash);
 
         size_type max_slot_index = this->slot_max_capacity();
 

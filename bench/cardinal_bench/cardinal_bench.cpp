@@ -87,7 +87,7 @@
 #define USE_JSTD_ROBIN16_HASH_MAP   1
 #define USE_JSTD_ROBIN_HASH_MAP     1
 #else
-#define USE_STD_UNORDERED_MAP       0
+#define USE_STD_UNORDERED_MAP       1
 #define USE_JSTD_FLAT16_HASH_MAP    0
 #define USE_JSTD_ROBIN16_HASH_MAP   1
 #define USE_JSTD_ROBIN_HASH_MAP     1
@@ -574,7 +574,7 @@ void benchmark_MumHash_insert_random(std::size_t iters)
 
 void benchmark_all_hashmaps(std::size_t iters)
 {
-#if 1
+#if 0
     benchmark_insert_random<int, int>(iters);
 
     printf("------------------------------------------------------------------------------------\n\n");
