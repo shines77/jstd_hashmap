@@ -2580,6 +2580,10 @@ private:
             return npos;
         }
 
+        ctrl_type dist_and_hash(1, ctrl_hash);
+        slot_index++;
+
+#if 0
         ctrl++;
 
         if (likely(ctrl->value >= kDistInc16)) {
@@ -2596,6 +2600,7 @@ private:
 
         ctrl_type dist_and_hash(2, ctrl_hash);
         slot_index++;
+#endif
 
 #if 0
         ctrl++;
