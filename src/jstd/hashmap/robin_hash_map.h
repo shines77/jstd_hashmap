@@ -2466,6 +2466,7 @@ private:
         }
     }
 
+    JSTD_FORCED_INLINE
     size_type find_impl(const key_type & key) const {
         hash_code_t hash_code = this->get_hash(key);
         size_type slot_index = this->index_for_hash(hash_code);
@@ -2475,6 +2476,20 @@ private:
         ctrl_type dist_and_hash(2, ctrl_hash);
 
         if (kUnrollMode == UnrollMode16) {
+#if 1
+            ctrl_type dist_and_0(0, 0);
+            const ctrl_type * ctrl = this->ctrl_at(slot_index);
+            const slot_type * slot = this->slot_at(slot_index);
+            while (ctrl->value >= dist_and_0.value) {
+                if (this->key_equal_(slot->value.first, key)) {
+                    slot_index = this->index_of(ctrl);
+                    return slot_index;
+                }
+                slot++;
+                ctrl++;
+                dist_and_0.incDist();
+            }
+#else
             const ctrl_type * ctrl = this->ctrl_at(slot_index);
             if (likely(ctrl->value >= std::int8_t(0))) {
                 if (ctrl->hash == ctrl_hash) {
@@ -2518,6 +2533,7 @@ private:
             }
 
             return npos;
+#endif
 #endif
         } else if (kUnrollMode == UnrollMode8) {
             const ctrl_type * ctrl = this->ctrl_at(slot_index);
