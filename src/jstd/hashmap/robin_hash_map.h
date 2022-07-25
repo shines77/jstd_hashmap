@@ -2489,6 +2489,8 @@ private:
                 ctrl++;
                 dist_and_0.incDist();
             }
+
+            return npos;
 #else
             const ctrl_type * ctrl = this->ctrl_at(slot_index);
             if (likely(ctrl->value >= std::int8_t(0))) {
