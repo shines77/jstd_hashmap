@@ -2472,33 +2472,38 @@ private:
         std::uint8_t ctrl_hash = this->get_ctrl_hash(hash_code);
         size_type start_slot = slot_index;
         std::int8_t distance = 0;
-
-        const ctrl_type * ctrl = this->ctrl_at(slot_index);
+        ctrl_type dist_and_hash(2, ctrl_hash);
 
         if (kUnrollMode == UnrollMode16) {
-#if 0
-            ctrl_type dist_and_hash(0, ctrl_hash);
-
-            if (likely(ctrl->value == dist_and_hash.value)) {
-                const slot_type * slot = this->slot_at(slot_index);
-                if (this->key_equal_(slot->value.first, key)) {
-                    return slot_index;
+            const ctrl_type * ctrl = this->ctrl_at(slot_index);
+            if (likely(ctrl->value >= std::int8_t(0))) {
+                if (ctrl->hash == ctrl_hash) {
+                    const slot_type * slot = this->slot_at(slot_index);
+                    if (this->key_equal_(slot->value.first, key)) {
+                        return slot_index;
+                    }
                 }
+            } else {
+                return npos;
             }
 
             ctrl++;
-            dist_and_hash.incDist();
 
-            if (likely(ctrl->value == dist_and_hash.value)) {
+            if (likely(ctrl->value >= kDistInc16)) {
                 slot_index++;
-                const slot_type * slot = this->slot_at(slot_index);
-                if (this->key_equal_(slot->value.first, key)) {
-                    return slot_index;
+                if (ctrl->hash == ctrl_hash) {
+                    const slot_type * slot = this->slot_at(slot_index);
+                    if (this->key_equal_(slot->value.first, key)) {
+                        return slot_index;
+                    }
                 }
+            } else {
+                return npos;
             }
-
+            
+            slot_index++;
+#if 0
             ctrl++;
-            dist_and_hash.incDist();
 
             while (ctrl->dist >= dist_and_hash.dist) {
                 if (likely(ctrl->value == dist_and_hash.value)) {
@@ -2515,6 +2520,8 @@ private:
             return npos;
 #endif
         } else if (kUnrollMode == UnrollMode8) {
+            const ctrl_type * ctrl = this->ctrl_at(slot_index);
+
             // Optimize from: (ctrl->isUsed() && (ctrl->dist >= 0))
             if (likely(ctrl->isUsed())) {
                 if (ctrl->hash == ctrl_hash) {
@@ -2568,52 +2575,6 @@ private:
 
             return npos;
         }
-
-        if (likely(ctrl->value >= std::int8_t(0))) {
-            if (ctrl->hash == ctrl_hash) {
-                const slot_type * slot = this->slot_at(slot_index);
-                if (this->key_equal_(slot->value.first, key)) {
-                    return slot_index;
-                }
-            }
-        } else {
-            return npos;
-        }
-
-        ctrl++;
-
-        if (likely(ctrl->value >= kDistInc16)) {
-            slot_index++;
-            if (ctrl->hash == ctrl_hash) {
-                const slot_type * slot = this->slot_at(slot_index);
-                if (this->key_equal_(slot->value.first, key)) {
-                    return slot_index;
-                }
-            }
-        } else {
-            return npos;
-        }
-
-        ctrl_type dist_and_hash(2, ctrl_hash);
-        slot_index++;
-
-#if 1
-        ctrl++;
-
-        while (ctrl->dist >= dist_and_hash.dist) {
-            if (likely(ctrl->value == dist_and_hash.value)) {
-                slot_index = this->index_of(ctrl);
-                const slot_type * slot = this->slot_at(slot_index);
-                if (this->key_equal_(slot->value.first, key)) {
-                    return slot_index;
-                }
-            }
-            ctrl++;
-            dist_and_hash.incDist();
-        }
-
-        return npos;
-#endif
 
         size_type max_slot_index = this->slot_max_capacity();
 
