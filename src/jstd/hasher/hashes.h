@@ -1283,7 +1283,7 @@ private:
     std::uint8_t shift_;
 
 public:
-    fibonacci_hash_policy() noexcept : shift_(28u) {
+    fibonacci_hash_policy() noexcept : shift_(std::uint8_t(63)) {
     }
 
     fibonacci_hash_policy(const fibonacci_hash_policy & src) noexcept
@@ -1317,7 +1317,7 @@ public:
     }
 
     void reset() {
-        this->shift_ = 28u;
+        this->shift_ = std::uint8_t(63);
     }
 };
 
@@ -1330,7 +1330,7 @@ private:
     std::uint8_t shift_;
 
 public:
-    mum_hash_policy() noexcept : shift_(28u) {
+    mum_hash_policy() noexcept : shift_(std::uint8_t(63)) {
     }
 
     mum_hash_policy(const mum_hash_policy & src) noexcept
@@ -1364,7 +1364,7 @@ public:
     }
 
     void reset() {
-        this->shift_ = 28u;
+        this->shift_ = std::uint8_t(63);
     }
 };
 
