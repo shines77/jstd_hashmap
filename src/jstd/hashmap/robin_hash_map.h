@@ -2536,7 +2536,7 @@ private:
         ctrl_type dist_and_hash(2, ctrl_hash);
 
         if (kUnrollMode == UnrollMode16) {
-#if 1
+#if 0
             ctrl_type dist_and_0(0, 0);
             const ctrl_type * ctrl = this->ctrl_at(slot_index);
             const slot_type * slot = this->slot_at(slot_index);
