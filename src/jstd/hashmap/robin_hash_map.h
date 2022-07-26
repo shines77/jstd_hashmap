@@ -150,10 +150,11 @@ public:
     static constexpr size_type kGroupMask   = kGroupWidth - 1;
     static constexpr size_type kGroupShift  = kCtrlShift + kGroupBits;
 
+    static constexpr size_type kDefaultCapacity = 0;
     // kMinimumCapacity must be >= 2
     static constexpr size_type kMinimumCapacity = 4;
-    // kDefaultCapacity must be >= kMinimumCapacity
-    static constexpr size_type kDefaultCapacity = 4;
+
+    static constexpr size_type kMinLookups = 4;
 
     static constexpr float kMinLoadFactor = 0.2f;
     static constexpr float kMaxLoadFactor = 0.8f;
@@ -984,7 +985,7 @@ public:
         };
 
         slot_type() {}
-        ~slot_type() = delete;
+        ~slot_type() = default;
     };
 
     typedef slot_type       mutable_slot_type;
@@ -1095,7 +1096,7 @@ public:
 
         basic_iterator & operator ++ () {
             const ctrl_type * ctrl = this->owner_->ctrl_at(this->index_);
-            size_type max_index = this->owner_->slot_max_capacity();
+            size_type max_index = this->owner_->max_slot_capacity();
             do {
                 ++(this->index_);
                 ++ctrl;
@@ -1233,10 +1234,10 @@ public:
 
     typedef typename std::allocator_traits<allocator_type>::template rebind_alloc<mutable_value_type>
                                         mutable_allocator_type;
+    typedef typename std::allocator_traits<allocator_type>::template rebind_alloc<ctrl_type>
+                                        ctrl_allocator_type;
     typedef typename std::allocator_traits<allocator_type>::template rebind_alloc<slot_type>
                                         slot_allocator_type;
-    typedef typename std::allocator_traits<allocator_type>::template rebind_alloc<mutable_slot_type>
-                                        mutable_slot_allocator_type;
 
 private:
     ctrl_type *     ctrls_;
@@ -1257,8 +1258,8 @@ private:
 
     allocator_type              allocator_;
     mutable_allocator_type      mutable_allocator_;
+    ctrl_allocator_type         ctrl_allocator_;
     slot_allocator_type         slot_allocator_;
-    mutable_slot_allocator_type mutable_slot_allocator_;
 
 public:
     robin_hash_map() : robin_hash_map(kDefaultCapacity) {
@@ -1268,14 +1269,17 @@ public:
                             const hasher & hash = hasher(),
                             const key_equal & equal = key_equal(),
                             const allocator_type & alloc = allocator_type()) :
-        ctrls_(nullptr), slots_(nullptr),
-        slot_size_(0), slot_mask_(0), max_lookups_(0),
+        ctrls_(this_type::default_empty_ctrls()),
+        slots_(this_type::default_empty_slots()),
+        slot_size_(0), slot_mask_(0), max_lookups_(kMinLookups),
         slot_threshold_(0), n_mlf_(kDefaultLoadFactorInt),
         n_mlf_rev_(kDefaultLoadFactorRevInt),
         hasher_(hash), key_equal_(equal),
         allocator_(alloc), mutable_allocator_(alloc),
-        slot_allocator_(alloc), mutable_slot_allocator_(alloc) {
-        this->create_slots<true>(init_capacity);
+        ctrl_allocator_(alloc), slot_allocator_(alloc) {
+        if (init_capacity != 0) {
+            this->create_slots<true>(init_capacity);
+        }
     }
 
     explicit robin_hash_map(const allocator_type & alloc)
@@ -1288,13 +1292,14 @@ public:
                    const hasher & hash = hasher(),
                    const key_equal & equal = key_equal(),
                    const allocator_type & alloc = allocator_type()) :
-        ctrls_(nullptr), slots_(nullptr),
-        slot_size_(0), slot_mask_(0), max_lookups_(0),
+        ctrls_(this_type::default_empty_ctrls()),
+        slots_(this_type::default_empty_slots()),
+        slot_size_(0), slot_mask_(0), max_lookups_(kMinLookups),
         slot_threshold_(0), n_mlf_(kDefaultLoadFactorInt),
         n_mlf_rev_(kDefaultLoadFactorRevInt),
         hasher_(hash), key_equal_(equal),
         allocator_(alloc), mutable_allocator_(alloc),
-        slot_allocator_(alloc), mutable_slot_allocator_(alloc) {
+        ctrl_allocator_(alloc), slot_allocator_(alloc) {
         // Prepare enough space to ensure that no expansion is required during the insertion process.
         size_type input_size = distance(first, last);
         size_type reserve_capacity = (init_capacity >= input_size) ? init_capacity : input_size;
@@ -1323,8 +1328,9 @@ public:
     }
 
     robin_hash_map(const robin_hash_map & other, const Allocator & alloc) :
-        ctrls_(nullptr), slots_(nullptr),
-        slot_size_(0), slot_mask_(0), max_lookups_(0),
+        ctrls_(this_type::default_empty_ctrls()),
+        slots_(this_type::default_empty_slots()),
+        slot_size_(0), slot_mask_(0), max_lookups_(kMinLookups),
         slot_threshold_(0), n_mlf_(kDefaultLoadFactorInt),
         n_mlf_rev_(kDefaultLoadFactorRevInt),
 #if ROBIN_USE_HASH_POLICY
@@ -1332,24 +1338,25 @@ public:
 #endif
         hasher_(hasher()), key_equal_(key_equal()),
         allocator_(alloc), mutable_allocator_(alloc),
-        slot_allocator_(alloc), mutable_slot_allocator_(alloc) {
+        ctrl_allocator_(alloc), slot_allocator_(alloc) {
         // Prepare enough space to ensure that no expansion is required during the insertion process.
         size_type other_size = other.slot_size();
         this->reserve_for_insert(other_size);
         try {
             this->insert_unique(other.begin(), other.end());
         } catch (const std::bad_alloc & ex) {
-            this->destroy<true>();
+            this->destroy();
             throw std::bad_alloc();
         } catch (...) {
-            this->destroy<true>();
+            this->destroy();
             throw;
         }
     }
 
     robin_hash_map(robin_hash_map && other) noexcept :
-        ctrls_(nullptr), slots_(nullptr),
-        slot_size_(0), slot_mask_(0), max_lookups_(0),
+        ctrls_(this_type::default_empty_ctrls()),
+        slots_(this_type::default_empty_slots()),
+        slot_size_(0), slot_mask_(0), max_lookups_(kMinLookups),
         slot_threshold_(0), n_mlf_(kDefaultLoadFactorInt),
         n_mlf_rev_(kDefaultLoadFactorRevInt),
 #if ROBIN_USE_HASH_POLICY
@@ -1359,15 +1366,16 @@ public:
         key_equal_(std::move(other.key_eq_ref())),
         allocator_(std::move(other.get_allocator_ref())),
         mutable_allocator_(std::move(other.get_mutable_allocator_ref())),
-        slot_allocator_(std::move(other.get_slot_allocator_ref())),
-        mutable_slot_allocator_(std::move(other.get_mutable_slot_allocator_ref())) {
+        ctrl_allocator_(std::move(other.get_ctrl_allocator_ref())),
+        slot_allocator_(std::move(other.get_slot_allocator_ref())) {
         // Swap content only
         this->swap_content(other);
     }
 
     robin_hash_map(robin_hash_map && other, const Allocator & alloc) noexcept :
-        ctrls_(nullptr), slots_(nullptr),
-        slot_size_(0), slot_mask_(0), max_lookups_(0),
+        ctrls_(this_type::default_empty_ctrls()),
+        slots_(this_type::default_empty_slots()),
+        slot_size_(0), slot_mask_(0), max_lookups_(kMinLookups),
         slot_threshold_(0), n_mlf_(kDefaultLoadFactorInt),
         n_mlf_rev_(kDefaultLoadFactorRevInt),
 #if ROBIN_USE_HASH_POLICY
@@ -1377,8 +1385,8 @@ public:
         key_equal_(std::move(other.key_eq_ref())),
         allocator_(alloc),
         mutable_allocator_(std::move(other.get_mutable_allocator_ref())),
-        slot_allocator_(std::move(other.get_slot_allocator_ref())),
-        mutable_slot_allocator_(std::move(other.get_mutable_slot_allocator_ref())) {
+        ctrl_allocator_(std::move(other.get_ctrl_allocator_ref())),
+        slot_allocator_(std::move(other.get_slot_allocator_ref())) {
         // Swap content only
         this->swap_content(other);
     }
@@ -1388,8 +1396,9 @@ public:
                    const hasher & hash = hasher(),
                    const key_equal & equal = key_equal(),
                    const allocator_type & alloc = allocator_type()) :
-        ctrls_(nullptr), slots_(nullptr),
-        slot_size_(0), slot_mask_(0), max_lookups_(0),
+        ctrls_(this_type::default_empty_ctrls()),
+        slots_(this_type::default_empty_slots()),
+        slot_size_(0), slot_mask_(0), max_lookups_(kMinLookups),
         slot_threshold_(0), n_mlf_(kDefaultLoadFactorInt),
         n_mlf_rev_(kDefaultLoadFactorRevInt),
 #if ROBIN_USE_HASH_POLICY
@@ -1397,7 +1406,7 @@ public:
 #endif
         hasher_(hash), key_equal_(equal),
         allocator_(alloc), mutable_allocator_(alloc),
-        slot_allocator_(alloc), mutable_slot_allocator_(alloc) {
+        ctrl_allocator_(alloc), slot_allocator_(alloc) {
         // Prepare enough space to ensure that no expansion is required during the insertion process.
         size_type reserve_capacity = (init_capacity >= init_list.size()) ? init_capacity : init_list.size();
         this->reserve_for_insert(reserve_capacity);
@@ -1418,7 +1427,7 @@ public:
     }
 
     ~robin_hash_map() {
-        this->destroy<true>();
+        this->destroy_data();
     }
 
     bool is_valid() const { return (this->ctrls() != nullptr); }
@@ -1444,7 +1453,7 @@ public:
 
     size_type group_mask() const { return (this->slot_mask() / kGroupWidth); }
     size_type group_count() const {
-        return ((this->slot_max_capacity() + kGroupWidth - 1) / kGroupWidth);
+        return ((this->max_slot_capacity() + kGroupWidth - 1) / kGroupWidth);
     }
     size_type group_capacity() const { return (this->group_count() + 1); }
 
@@ -1460,7 +1469,7 @@ public:
     }
 
     size_type max_lookups() const { return this->max_lookups_; }
-    size_type slot_max_capacity() const {
+    size_type max_slot_capacity() const {
         return (this->slot_capacity() + this->max_lookups());
     }
 
@@ -1560,11 +1569,11 @@ public:
     }
 
     iterator end() {
-        return this->iterator_at(this->slot_max_capacity());
+        return this->iterator_at(this->max_slot_capacity());
     }
 
     const_iterator end() const {
-        return this->iterator_at(this->slot_max_capacity());
+        return this->iterator_at(this->max_slot_capacity());
     }
 
     const_iterator cend() const {
@@ -1593,12 +1602,12 @@ public:
         return this->mutable_allocator_;
     }
 
-    slot_allocator_type get_slot_allocator() const noexcept {
-        return this->slot_allocator_;
+    ctrl_allocator_type get_ctrl_allocator() const noexcept {
+        return this->ctrl_allocator_;
     }
 
-    mutable_slot_allocator_type get_mutable_slot_allocator() const noexcept {
-        return this->mutable_slot_allocator_;
+    slot_allocator_type get_slot_allocator() const noexcept {
+        return this->slot_allocator_;
     }
 
     hasher & hash_function_ref() noexcept {
@@ -1623,12 +1632,12 @@ public:
         return this->mutable_allocator_;
     }
 
-    slot_allocator_type & get_slot_allocator_ref() noexcept {
-        return this->slot_allocator_;
+    ctrl_allocator_type & get_ctrl_allocator_ref() noexcept {
+        return this->ctrl_allocator_;
     }
 
-    mutable_slot_allocator_type & get_mutable_slot_allocator_ref() noexcept {
-        return this->mutable_slot_allocator_;
+    slot_allocator_type & get_slot_allocator_ref() noexcept {
+        return this->slot_allocator_;
     }
 
     static const char * name() {
@@ -1638,13 +1647,13 @@ public:
     void clear(bool need_destory = false) noexcept {
         if (this->slot_capacity() > kDefaultCapacity) {
             if (need_destory) {
-                this->destroy<true>();
+                this->destroy_data();
                 this->create_slots<false>(kDefaultCapacity);
                 assert(this->slot_size() == 0);
                 return;
             }
         }
-        this->destroy<false>();
+        this->clear_data();
         assert(this->slot_size() == 0);
     }
 
@@ -1882,6 +1891,30 @@ public:
     }
 
 private:
+    static ctrl_type * default_empty_ctrls() {
+        static constexpr size_type kMinGroupCount = (kMinLookups + (kGroupWidth - 1)) / kGroupWidth;
+        static constexpr size_type kMinCtrlCapacity = (kMinGroupCount + 1) * kGroupWidth;
+        static ctrl_type s_empty_ctrls[kMinCtrlCapacity] = {
+            { kEmptySlot, 0 }, { kEmptySlot, 0 }, { kEmptySlot, 0 }, { kEmptySlot, 0,},
+            { kEndOfMark, 0 }, { kEndOfMark, 0 }, { kEndOfMark, 0 }, { kEndOfMark, 0 },
+            { kEndOfMark, 0 }, { kEndOfMark, 0 }, { kEndOfMark, 0 }, { kEndOfMark, 0 },
+            { kEndOfMark, 0 }, { kEndOfMark, 0 }, { kEndOfMark, 0 }, { kEndOfMark, 0 },
+
+            { kEndOfMark, 0 }, { kEndOfMark, 0 }, { kEndOfMark, 0 }, { kEndOfMark, 0 },
+            { kEndOfMark, 0 }, { kEndOfMark, 0 }, { kEndOfMark, 0 }, { kEndOfMark, 0 },
+            { kEndOfMark, 0 }, { kEndOfMark, 0 }, { kEndOfMark, 0 }, { kEndOfMark, 0 },
+            { kEndOfMark, 0 }, { kEndOfMark, 0 }, { kEndOfMark, 0 }, { kEndOfMark, 0 }
+        };
+        return s_empty_ctrls;
+    }
+
+    static slot_type * default_empty_slots() {
+        static slot_type s_empty_slots[kMinLookups] = {
+            {}, {}, {}, {}
+        };
+        return s_empty_slots;
+    }
+
     JSTD_FORCED_INLINE
     size_type calc_capacity(size_type init_capacity) const noexcept {
         size_type new_capacity = (std::max)(init_capacity, kMinimumCapacity);
@@ -1891,8 +1924,20 @@ private:
         return new_capacity;
     }
 
-    JSTD_FORCED_INLINE
-    size_type min_require_capacity(size_type init_capacity) {
+    size_type calc_max_lookups(size_type new_capacity) const {
+        assert(new_capacity > 1);
+        assert(pow2::is_pow2(new_capacity));
+#if 1
+        // Fast to get log2_int, if the new_size is power of 2.
+        // Use bsf(n) has the same effect.
+        size_type max_lookups = size_type(BitUtils::bsr(new_capacity));
+#else
+        size_type max_lookups = size_type(pow2::log2_int<size_type, size_type(2)>(new_capacity));
+#endif
+        return max_lookups;
+    }
+
+    size_type min_require_capacity(size_type init_capacity) const {
         size_type new_capacity = init_capacity * this->integral_mlf_rev() / kLoadFactorAmplify;
         return new_capacity;
     }
@@ -1983,12 +2028,12 @@ private:
     }
 
     inline size_type next_index(size_type index) const noexcept {
-        assert(index < this->slot_max_capacity());
+        assert(index < this->max_slot_capacity());
         return (index + 1);
     }
 
     inline size_type next_index(size_type index, size_type slot_mask) const noexcept {
-        assert(index < this->slot_max_capacity());
+        assert(index < this->max_slot_capacity());
         return (index + 1);
     }
 
@@ -2035,12 +2080,12 @@ private:
     }
 
     ctrl_type * ctrl_at(size_type slot_index) noexcept {
-        assert(slot_index <= this->slot_max_capacity());
+        assert(slot_index <= this->max_slot_capacity());
         return (this->ctrls() + ssize_type(slot_index));
     }
 
     const ctrl_type * ctrl_at(size_type slot_index) const noexcept {
-        assert(slot_index <= this->slot_max_capacity());
+        assert(slot_index <= this->max_slot_capacity());
         return (this->ctrls() + ssize_type(slot_index));
     }
 
@@ -2055,12 +2100,12 @@ private:
     }
 
     group_type * group_at(size_type slot_index) noexcept {
-        assert(slot_index < this->slot_max_capacity());
+        assert(slot_index < this->max_slot_capacity());
         return (group_type *)(this->ctrl_at(slot_index));
     }
 
     const group_type * group_at(size_type slot_index) const noexcept {
-        assert(slot_index < this->slot_max_capacity());
+        assert(slot_index < this->max_slot_capacity());
         return (const group_type *)(this->ctrl_at(slot_index));
     }
 
@@ -2075,34 +2120,34 @@ private:
     }
 
     slot_type * slot_at(size_type slot_index) noexcept {
-        assert(slot_index <= this->slot_max_capacity());
+        assert(slot_index <= this->max_slot_capacity());
         return (this->slots() + ssize_type(slot_index));
     }
 
     const slot_type * slot_at(size_type slot_index) const noexcept {
-        assert(slot_index <= this->slot_max_capacity());
+        assert(slot_index <= this->max_slot_capacity());
         return (this->slots() + ssize_type(slot_index));
     }
 
     ctrl_type & get_control(size_type slot_index) {
-        assert(slot_index < this->slot_max_capacity());
+        assert(slot_index < this->max_slot_capacity());
         ctrl_type * ctrls = this->ctrls();
         return ctrls[slot_index];
     }
 
     const ctrl_type & get_control(size_type slot_index) const {
-        assert(slot_index < this->slot_max_capacity());
+        assert(slot_index < this->max_slot_capacity());
         ctrl_type * ctrls = this->ctrls();
         return ctrls[slot_index];
     }
 
     group_type & get_group(size_type slot_index) {
-        assert(slot_index < this->slot_max_capacity());
+        assert(slot_index < this->max_slot_capacity());
         return *this->group_at(slot_index);
     }
 
     const group_type & get_group(size_type slot_index) const {
-        assert(slot_index < this->slot_max_capacity());
+        assert(slot_index < this->max_slot_capacity());
         return *this->group_at(slot_index);
     }
 
@@ -2117,12 +2162,12 @@ private:
     }
 
     slot_type & get_slot(size_type slot_index) {
-        assert(slot_index < this->slot_max_capacity());
+        assert(slot_index < this->max_slot_capacity());
         return this->slots_[slot_index];
     }
 
     const slot_type & get_slot(size_type slot_index) const {
-        assert(slot_index < this->slot_max_capacity());
+        assert(slot_index < this->max_slot_capacity());
         return this->slots_[slot_index];
     }
 
@@ -2164,93 +2209,71 @@ private:
         new (slot) slot_type;
     }
 
-    template <bool finitial>
-    void destroy() noexcept {
-        this->destory_slots<finitial>();
-
+    void destroy_data() noexcept {
         // Note!!: destory_slots() need use this->ctrls()
-        this->destory_ctrls<finitial>();
+        this->destory_slots();
+        
+        this->destory_ctrls();
     }
 
-    template <bool finitial>
-    void destory_ctrls() noexcept {
-        if (this->ctrls_ != nullptr) {
-            if (!finitial) {
-                for (size_type slot_index = 0; slot_index < this->slot_capacity(); slot_index += kGroupWidth) {
-                    group_type * group = this->group_at(slot_index);
-                    group->clear();
-                }
-            }
-            if (finitial) {
-                delete[] this->ctrls_;
-                this->ctrls_ = nullptr;
-            }
-        }
-    }
+    void destory_slots() noexcept {
+        this->clear_slots();
 
-    template <bool finitial>
-    void destory_slots() noexcept(is_slot_trivial_destructor) {
-        // Destroy all slots.
-        if (this->slots_ != nullptr) {
-            if (!is_slot_trivial_destructor) {
-                ctrl_type * control = this->ctrls();
-                assert(control != nullptr);
-                for (size_type index = 0; index <= this->slot_mask(); index++) {
-                    if (control->isUsed()) {
-                        this->destroy_slot(index);
-                    }
-                    control++;
-                }
-            }
-            if (finitial) {
-                this->slot_allocator_.deallocate(this->slots_, this->slot_capacity());
-                this->slots_ = nullptr;
-            }
+        if (this->slots_ != this_type::default_empty_slots()) {
+            this->slot_allocator_.deallocate(this->slots_, this->max_slot_capacity());
         }
+        this->slots_ = this_type::default_empty_slots();
 
         this->slot_size_ = 0;
     }
 
-    JSTD_FORCED_INLINE
-    void destroy_slot(size_type index) {
-        slot_type * slot = this->slot_at(index);
-        this->destroy_slot(slot);
+    void destory_ctrls() noexcept {
+        if (this->ctrls_ != this_type::default_empty_ctrls()) {
+            size_type max_ctrl_capacity = (this->group_count() + 1) * kGroupWidth;
+            this->ctrl_allocator_.deallocate(this->ctrls_, max_ctrl_capacity);
+        }
+        this->ctrls_ = this_type::default_empty_ctrls();
+    }
+
+    void clear_data() noexcept {
+        // Note!!: clear_slots() need use this->ctrls()
+        this->clear_slots();
+
+        this->clear_ctrls(this->ctrls(), this->slot_capacity(),
+                          this->max_lookups(), this->group_count());
     }
 
     JSTD_FORCED_INLINE
-    void destroy_slot(slot_type * slot) {
+    void clear_slots() noexcept {
         if (!is_slot_trivial_destructor) {
-            if (kIsCompatibleLayout) {
-                this->mutable_allocator_.destroy(&slot->mutable_value);
-            } else {
-                this->allocator_.destroy(&slot->value);
+            ctrl_type * ctrl = this->ctrls();
+            assert(ctrl != nullptr);
+            for (size_type index = 0; index < this->max_slot_capacity(); index++) {
+                if (ctrl->isUsed()) {
+                    this->destroy_slot(index);
+                }
+                ctrl++;
             }
         }
     }
 
     JSTD_FORCED_INLINE
-    void setUsedCtrl(size_type index, std::int16_t dist_and_hash) {
-        ctrl_type * ctrl = this->ctrl_at(index);
-        ctrl->setValue(dist_and_hash);
-    }
+    void clear_ctrls(ctrl_type * ctrls, size_type slot_capacity,
+                     size_type max_lookups, size_type group_count) noexcept {
+        group_type * group = reinterpret_cast<group_type *>(ctrls);
+        group_type * last_group = group + group_count;
+        for (; group < last_group; ++group) {
+            group->template fillAll16<kEmptySlot16>();
+        }
+        if (slot_capacity >= kGroupWidth) {
+            group->template fillAll16<kEmptySlot16>();
+        } else {
+            assert(slot_capacity < kGroupWidth);
+            group_type * tail_group = reinterpret_cast<group_type *>(ctrls + (slot_capacity + max_lookups));
+            tail_group->template fillAll16<kEndOfMark16>();
 
-    JSTD_FORCED_INLINE
-    void setUsedCtrl(size_type index, std::int8_t dist, std::uint8_t ctrl_hash) {
-        ctrl_type * ctrl = this->ctrl_at(index);
-        ctrl->setValue(dist, ctrl_hash);
-    }
-
-    JSTD_FORCED_INLINE
-    void setUsedCtrl(size_type index, ctrl_type dist_and_hash) {
-        ctrl_type * ctrl = this->ctrl_at(index);
-        ctrl->setValue(dist_and_hash.value);
-    }
-
-    JSTD_FORCED_INLINE
-    void setUnusedCtrl(size_type index, std::int8_t tag) {
-        ctrl_type * ctrl = this->ctrl_at(index);
-        assert(ctrl->isUsed());
-        ctrl->setDist(tag);
+            group->template fillAll16<kEndOfMark16>();
+        }
     }
 
     inline bool need_grow() const {
@@ -2262,18 +2285,6 @@ private:
         this->rehash_impl<false, true>(new_capacity);
     }
 
-    size_type calc_next_capacity(size_type new_capacity) const {
-        assert(new_capacity > 1);
-        assert(pow2::is_pow2(new_capacity));
-#if 1
-        // Fast to get log2_int, if the new_size is power of 2.
-        // Use bsf(n) has the same effect.
-        return size_type(BitUtils::bsr(new_capacity));
-#else
-        return size_type(pow2::log2_int<size_type, size_type(2)>(new_capacity));
-#endif
-    }
-
     JSTD_FORCED_INLINE
     void reserve_for_insert(size_type init_capacity) {
         size_type new_capacity = this->min_require_capacity(init_capacity);
@@ -2281,51 +2292,61 @@ private:
     }
 
     template <bool initialize = false>
-    void create_slots(size_type init_capacity) {
-        size_type new_capacity;
-        if (initialize)
-            new_capacity = this->calc_capacity(init_capacity);
-        else
-            new_capacity = init_capacity;
-        assert(new_capacity > 0);
-        assert(new_capacity >= kMinimumCapacity);
+    void reset() noexcept {
+        if (initialize) {
+            this->ctrls_ = this->default_empty_ctrls();
+            this->slots_ = this->default_empty_slots();
+            this->slot_size_ = 0;
+        }
+        this->slot_mask_ = 0;
+        this->max_lookups_ = kMinLookups;
+        this->slot_threshold_ = 0;
+#if ROBIN_USE_HASH_POLICY
+        this->hash_policy_.reset();
+#endif
+    }
 
-        size_type new_max_lookups;
+    template <bool initialize = false>
+    void create_slots(size_type init_capacity) {
+        if (init_capacity == 0) {
+            if (!initialize) {
+                this->destroy_data();
+            }
+            this->reset<initialize>();
+            return;
+        }
+
+        size_type new_capacity;
+        if (initialize) {
+            new_capacity = this->calc_capacity(init_capacity);
+            assert(new_capacity > 0);
+            assert(new_capacity >= kMinimumCapacity);
+        } else {
+            new_capacity = init_capacity;
+        }
+
 #if ROBIN_USE_HASH_POLICY
         auto hash_policy_setting = this->hash_policy_.calc_next_capacity(new_capacity);
-        this->hash_policy_.commit(hash_policy_setting);
-        new_max_lookups = size_type(64 - hash_policy_setting);
-#else
-        new_max_lookups = this->calc_next_capacity(new_capacity);
+        this->hash_policy_.commit(hash_policy_setting);        
 #endif
+        size_type new_max_lookups = this->calc_max_lookups(new_capacity);
         if (new_max_lookups < 16)
-            new_max_lookups = new_max_lookups * 2;
+            new_max_lookups = (std::max)(new_max_lookups * 2, kMinLookups);
         else
             new_max_lookups = (std::min)(new_max_lookups * 4, size_type(std::uint8_t(kMaxDist) + 1));
         this->max_lookups_ = new_max_lookups;
 
-        size_type new_ctrl_capacity = new_capacity + new_max_lookups + 1;
+        size_type new_ctrl_capacity = new_capacity + new_max_lookups;
         size_type new_group_count = (new_ctrl_capacity + (kGroupWidth - 1)) / kGroupWidth;
         assert(new_group_count > 0);
         size_type ctrl_alloc_size = (new_group_count + 1) * kGroupWidth;
 
-        ctrl_type * new_ctrls = new ctrl_type[ctrl_alloc_size];
+        ctrl_type * new_ctrls = this->ctrl_allocator_.allocate(ctrl_alloc_size);
         this->ctrls_ = new_ctrls;
         this->max_lookups_ = new_max_lookups;
 
-        group_type * new_groups = reinterpret_cast<group_type *>(new_ctrls);
-        for (size_type index = 0; index <= new_group_count; index++) {
-            new_groups[index].template fillAll16<kEmptySlot16>();
-        }
-        if (new_capacity >= kGroupWidth) {
-            //new_groups[new_group_count].template fillAll16<kEmptySlot16>();
-        } else {
-            assert(new_capacity < kGroupWidth);
-            group_type * tail_group = (group_type *)((char *)new_groups + new_ctrl_capacity * sizeof(ctrl_type));
-            (*tail_group).template fillAll16<kEndOfMark16>();
-
-            new_groups[new_group_count].template fillAll16<kEndOfMark16>();
-        }
+        // Reset ctrls to default state
+        this->clear_ctrls(new_ctrls, new_capacity, new_max_lookups, new_group_count);
 
         slot_type * new_slots = this->slot_allocator_.allocate(new_ctrl_capacity);
         this->slots_ = new_slots;
@@ -2359,19 +2380,18 @@ private:
             slot_type * old_slots = this->slots();
             size_type old_slot_size = this->slot_size();
             size_type old_slot_mask = this->slot_mask();
-            size_type old_slot_capacity = this->slot_max_capacity();
+            size_type old_slot_capacity = this->slot_capacity();
+            size_type old_max_slot_capacity = this->max_slot_capacity();
 
             this->create_slots<false>(new_capacity);
 
             if ((this->max_load_factor() < 0.5f) && false) {
-                ctrl_type * last_ctrl = old_ctrls + old_slot_capacity;
+                ctrl_type * last_ctrl = old_ctrls + old_max_slot_capacity;
                 slot_type * old_slot = old_slots;
                 for (ctrl_type * ctrl = old_ctrls; ctrl != last_ctrl; ctrl++) {
                     if (likely(ctrl->isUsed())) {
                         this->move_insert_unique(old_slot);
-                        if (!is_slot_trivial_destructor) {
-                            this->destroy_slot(old_slot);
-                        }
+                        this->destroy_slot(old_slot);
                     }
                     old_slot++;
                 }
@@ -2387,21 +2407,17 @@ private:
                             size_type old_index = group->index(start_index, pos);
                             slot_type * old_slot = old_slots + old_index;
                             this->move_insert_unique(old_slot);
-                            if (!is_slot_trivial_destructor) {
-                                this->destroy_slot(old_slot);
-                            }
+                            this->destroy_slot(old_slot);
                         }
                         start_index += kGroupWidth;
                     }
                 } else {
-                    ctrl_type * last_ctrl = old_ctrls + old_slot_capacity;
+                    ctrl_type * last_ctrl = old_ctrls + old_max_slot_capacity;
                     slot_type * old_slot = old_slots;
                     for (ctrl_type * ctrl = old_ctrls; ctrl != last_ctrl; ctrl++) {
                         if (likely(ctrl->isUsed())) {
                             this->move_insert_unique(old_slot);
-                            if (!is_slot_trivial_destructor) {
-                                this->destroy_slot(old_slot);
-                            }
+                            this->destroy_slot(old_slot);
                         }
                         old_slot++;
                     }
@@ -2410,10 +2426,29 @@ private:
 
             assert(this->slot_size() == old_slot_size);
 
-            this->slot_allocator_.deallocate(old_slots, old_slot_capacity);
+            if (old_ctrls != this->default_empty_ctrls()) {
+                size_type old_max_ctrl_capacity = (old_group_count + 1) * kGroupWidth;
+                this->ctrl_allocator_.deallocate(old_ctrls, old_max_ctrl_capacity);
+            }
+            if (old_slots != this->default_empty_slots()) {
+                this->slot_allocator_.deallocate(old_slots, old_max_slot_capacity);
+            }
+        }
+    }
 
-            if (old_ctrls != nullptr) {
-                delete[] old_ctrls;
+    JSTD_FORCED_INLINE
+    void destroy_slot(size_type index) {
+        slot_type * slot = this->slot_at(index);
+        this->destroy_slot(slot);
+    }
+
+    JSTD_FORCED_INLINE
+    void destroy_slot(slot_type * slot) {
+        if (!is_slot_trivial_destructor) {
+            if (kIsCompatibleLayout) {
+                this->mutable_allocator_.destroy(&slot->mutable_value);
+            } else {
+                this->allocator_.destroy(&slot->value);
             }
         }
     }
@@ -2464,6 +2499,31 @@ private:
             swap_pair<allocator_type, value_type, false>::swap(
                 this->allocator_, slot1->value, slot2->value, tmp->value);
         }
+    }
+
+    JSTD_FORCED_INLINE
+    void setUsedCtrl(size_type index, std::int16_t dist_and_hash) {
+        ctrl_type * ctrl = this->ctrl_at(index);
+        ctrl->setValue(dist_and_hash);
+    }
+
+    JSTD_FORCED_INLINE
+    void setUsedCtrl(size_type index, std::int8_t dist, std::uint8_t ctrl_hash) {
+        ctrl_type * ctrl = this->ctrl_at(index);
+        ctrl->setValue(dist, ctrl_hash);
+    }
+
+    JSTD_FORCED_INLINE
+    void setUsedCtrl(size_type index, ctrl_type dist_and_hash) {
+        ctrl_type * ctrl = this->ctrl_at(index);
+        ctrl->setValue(dist_and_hash.value);
+    }
+
+    JSTD_FORCED_INLINE
+    void setUnusedCtrl(size_type index, std::int8_t tag) {
+        ctrl_type * ctrl = this->ctrl_at(index);
+        assert(ctrl->isUsed());
+        ctrl->setDist(tag);
     }
 
     JSTD_FORCED_INLINE
@@ -2594,7 +2654,7 @@ private:
             return npos;
         }
 
-        size_type max_slot_index = this->slot_max_capacity();
+        size_type max_slot_index = this->max_slot_capacity();
 
         do {
             const group_type & group = this->get_group(slot_index);
@@ -2743,7 +2803,7 @@ private:
             return { slot_index, false };
         }
 
-        size_type max_slot_index = this->slot_max_capacity();
+        size_type max_slot_index = this->max_slot_capacity();
 
         do {
             const group_type & group = this->get_group(slot_index);
@@ -2815,7 +2875,7 @@ private:
             this->destroy_slot(target_slot);
         }
 
-        size_type max_index = this->slot_max_capacity();
+        size_type max_index = this->max_slot_capacity();
         size_type slot_index = this->next_index(target);
         while (slot_index < max_index) {
             if (ctrl->isEmptyOnly()) {
@@ -3230,12 +3290,12 @@ private:
             ctrl++;
             distance = 4;
 
-            ctrl_type * last_ctrl = this->ctrl_at(this->slot_max_capacity());
+            ctrl_type * last_ctrl = this->ctrl_at(this->max_slot_capacity());
 
             while (ctrl < last_ctrl) {
                 if (likely(ctrl->dist < distance)) {
                     slot_index = this->index_of(ctrl);
-                    assert(slot_index < this->slot_max_capacity());                    
+                    assert(slot_index < this->max_slot_capacity());                    
                     std::int8_t o_dist = this->round_dist(slot_index, first_slot);
                     assert(o_dist == distance);
                     o_ctrl.dist = distance;
@@ -3248,7 +3308,7 @@ private:
             }
 
             slot_index = this->index_of(ctrl);
-            assert(slot_index < this->slot_max_capacity());
+            assert(slot_index < this->max_slot_capacity());
             std::int8_t o_dist = this->round_dist(slot_index, first_slot);
             assert(o_dist == distance);
             o_ctrl.dist = distance;
@@ -3524,7 +3584,7 @@ private:
             return 0;
         }
 
-        size_type max_slot_index = this->slot_max_capacity();
+        size_type max_slot_index = this->max_slot_capacity();
 
         do {
             const group_type & group = this->get_group(slot_index);
@@ -3627,7 +3687,7 @@ private:
                 slot_index++;
             }
 
-            size_type max_slot_index = this->slot_max_capacity();
+            size_type max_slot_index = this->max_slot_capacity();
 
             if (this->slot_capacity() >= kGroupWidth) {
                 do {
@@ -3712,11 +3772,11 @@ ClearSlot:
         if (std::allocator_traits<mutable_allocator_type>::propagate_on_container_swap::value) {
             swap(this->mutable_allocator_, other.get_mutable_allocator_ref());
         }
+        if (std::allocator_traits<ctrl_allocator_type>::propagate_on_container_swap::value) {
+            swap(this->ctrl_allocator_, other.get_ctrl_allocator_ref());
+        }
         if (std::allocator_traits<slot_allocator_type>::propagate_on_container_swap::value) {
             swap(this->slot_allocator_, other.get_slot_allocator_ref());
-        }
-        if (std::allocator_traits<mutable_slot_allocator_type>::propagate_on_container_swap::value) {
-            swap(this->mutable_slot_allocator_, other.get_mutable_slot_allocator_ref());
         }
     }
 
