@@ -2551,9 +2551,27 @@ private:
             }
 
             return npos;
+#elif 1
+            ctrl_type dist_and_0(0, 0);
+            const ctrl_type * ctrl = this->ctrl_at(slot_index);
+            const slot_type * slot = this->slot_at(slot_index);
+
+            while (ctrl->value >= dist_and_0.value) {
+                if (ctrl->hash == ctrl_hash) {
+                    if (this->key_equal_(slot->value.first, key)) {
+                        slot_index = this->index_of(ctrl);
+                        return slot_index;
+                    }
+                }
+                slot++;
+                ctrl++;
+                dist_and_0.incDist();
+            }
+
+            return npos;
 #else
             const ctrl_type * ctrl = this->ctrl_at(slot_index);
-            if (likely(ctrl->value >= std::int8_t(0))) {
+            if (ctrl->value >= std::int16_t(0)) {
                 if (ctrl->hash == ctrl_hash) {
                     const slot_type * slot = this->slot_at(slot_index);
                     if (this->key_equal_(slot->value.first, key)) {
@@ -2566,7 +2584,7 @@ private:
 
             ctrl++;
 
-            if (likely(ctrl->value >= kDistInc16)) {
+            if (ctrl->value >= kDistInc16) {
                 slot_index++;
                 if (ctrl->hash == ctrl_hash) {
                     const slot_type * slot = this->slot_at(slot_index);
