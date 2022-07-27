@@ -1365,7 +1365,7 @@ public:
         slot_threshold_(0), n_mlf_(kDefaultLoadFactorInt),
         n_mlf_rev_(kDefaultLoadFactorRevInt),
 #if ROBIN_USE_HASH_POLICY
-        hash_policy_(other.hash_policy_ref()),
+        hash_policy_(std::move(other.hash_policy_ref())),
 #endif
         hasher_(std::move(other.hash_function_ref())),
         key_equal_(std::move(other.key_eq_ref())),
@@ -1385,7 +1385,7 @@ public:
         slot_threshold_(0), n_mlf_(kDefaultLoadFactorInt),
         n_mlf_rev_(kDefaultLoadFactorRevInt),
 #if ROBIN_USE_HASH_POLICY
-        hash_policy_(other.hash_policy_ref()),
+        hash_policy_(std::move(other.hash_policy_ref())),
 #endif
         hasher_(std::move(other.hash_function_ref())),
         key_equal_(std::move(other.key_eq_ref())),

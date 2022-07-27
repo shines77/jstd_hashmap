@@ -2188,7 +2188,7 @@ private:
                 }
             }
             if (group.hasAnyEmpty()) {
-                return npos;
+                break;
             }
             slot_index = this->slot_next_group(slot_index);
         } while (slot_index != start_slot);
