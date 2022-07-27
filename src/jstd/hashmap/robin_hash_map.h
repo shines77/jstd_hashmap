@@ -2284,6 +2284,8 @@ private:
                 ctrl++;
             }
         }
+
+        this->slot_size_ = 0;
     }
 
     JSTD_FORCED_INLINE
