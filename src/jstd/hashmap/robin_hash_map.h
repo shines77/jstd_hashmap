@@ -2568,7 +2568,7 @@ private:
         const slot_type * slot = this->slot_at(slot_index);
 
         if (kUnrollMode == UnrollMode16) {
-#if 0
+#if 1
             ctrl_type dist_and_0(0, 0);
 
             while (ctrl->value >= dist_and_0.value) {

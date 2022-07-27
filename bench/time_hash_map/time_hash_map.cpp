@@ -431,9 +431,11 @@ public:
         g_num_hashes++;
 #endif
         std::size_t hash_val = static_cast<std::size_t>(this->key_);
+#if 0
         for (std::size_t i = 0; i < kHashLen; ++i) {
             hash_val += this->buffer_[i];
         }
+#endif
 
         return static_cast<std::size_t>(
             HASH_MAP_FUNCTION<std::size_t>()(hash_val)

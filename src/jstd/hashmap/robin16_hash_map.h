@@ -1539,7 +1539,7 @@ public:
 
     size_type bucket(const key_type & key) const {
         size_type index = this->find_impl(key);
-        return ((index != npos) ? (index / kGroupWidth) : npos);
+        return index;
     }
 
     float load_factor() const {
@@ -1759,9 +1759,9 @@ public:
 
     mapped_type & at(const key_type & key) {
         size_type index = this->find_impl(key);
-        if (index != npos) {
+        if (index <= this->slot_mask()) {
             slot_type * slot = this->slot_at(index);
-            return slot->second;
+            return slot->value.second;
         } else {
             throw std::out_of_range("std::out_of_range exception: jstd::robin16_hash_map<K,V>::at(key), "
                                     "the specified key is not exists.");
@@ -1770,9 +1770,9 @@ public:
 
     const mapped_type & at(const key_type & key) const {
         size_type index = this->find_impl(key);
-        if (index != npos) {
-            slot_type * slot = this->slot_at(index);
-            return slot->second;
+        if (index <= this->slot_mask()) {
+            const slot_type * slot = this->slot_at(index);
+            return slot->value.second;
         } else {
             throw std::out_of_range("std::out_of_range exception: jstd::robin16_hash_map<K,V>::at(key) const, "
                                     "the specified key is not exists.");
@@ -1781,20 +1781,17 @@ public:
 
     size_type count(const key_type & key) const {
         size_type index = this->find_impl(key);
-        return (index != npos) ? size_type(1) : size_type(0);
+        return (index <= this->slot_mask()) ? size_type(1) : size_type(0);
     }
 
     bool contains(const key_type & key) const {
         size_type index = this->find_impl(key);
-        return (index != npos);
+        return (index <= this->slot_mask());
     }
 
     iterator find(const key_type & key) {
         size_type index = this->find_impl(key);
-        if (index != npos)
-            return this->iterator_at(index);
-        else
-            return this->end();
+        return this->iterator_at(index);
     }
 
     const_iterator find(const key_type & key) const {
@@ -2592,7 +2589,7 @@ private:
                     }
                 }
             } else {
-                return npos;
+                return this->slot_capacity();
             }
 
             ctrl = this->next_control(slot_index);
@@ -2607,7 +2604,7 @@ private:
                     }
                 }
             } else {
-                return npos;
+                return this->slot_capacity();
             }
 
             distance = 2;
@@ -2628,7 +2625,7 @@ private:
                     if (distance >= 4)
                         break;
                 } else {
-                    return npos;
+                    return this->slot_capacity();
                 }
             } while (1);
 #endif
@@ -2650,13 +2647,13 @@ private:
                 }
             }
             if (mask32.maskEmpty != 0) {
-                return npos;
+                break;
             }
             distance += kGroupWidth;
             slot_index = this->slot_next_group(slot_index);
         } while (slot_index != start_slot);
 
-        return npos;
+        return this->slot_capacity();
     }
 
 #if 0
