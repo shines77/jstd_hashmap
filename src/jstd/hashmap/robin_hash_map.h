@@ -1242,6 +1242,7 @@ public:
 private:
     ctrl_type *     ctrls_;
     slot_type *     slots_;
+    slot_type *     last_slot_;
     size_type       slot_size_;
     size_type       slot_mask_;
     size_type       max_lookups_;
@@ -1271,6 +1272,7 @@ public:
                             const allocator_type & alloc = allocator_type()) :
         ctrls_(this_type::default_empty_ctrls()),
         slots_(this_type::default_empty_slots()),
+        last_slot_(this_type::default_last_empty_slot()),
         slot_size_(0), slot_mask_(0), max_lookups_(kMinLookups),
         slot_threshold_(0), n_mlf_(kDefaultLoadFactorInt),
         n_mlf_rev_(kDefaultLoadFactorRevInt),
@@ -1294,6 +1296,7 @@ public:
                    const allocator_type & alloc = allocator_type()) :
         ctrls_(this_type::default_empty_ctrls()),
         slots_(this_type::default_empty_slots()),
+        last_slot_(this_type::default_last_empty_slot()),
         slot_size_(0), slot_mask_(0), max_lookups_(kMinLookups),
         slot_threshold_(0), n_mlf_(kDefaultLoadFactorInt),
         n_mlf_rev_(kDefaultLoadFactorRevInt),
@@ -1330,6 +1333,7 @@ public:
     robin_hash_map(const robin_hash_map & other, const Allocator & alloc) :
         ctrls_(this_type::default_empty_ctrls()),
         slots_(this_type::default_empty_slots()),
+        last_slot_(this_type::default_last_empty_slot()),
         slot_size_(0), slot_mask_(0), max_lookups_(kMinLookups),
         slot_threshold_(0), n_mlf_(kDefaultLoadFactorInt),
         n_mlf_rev_(kDefaultLoadFactorRevInt),
@@ -1356,6 +1360,7 @@ public:
     robin_hash_map(robin_hash_map && other) noexcept :
         ctrls_(this_type::default_empty_ctrls()),
         slots_(this_type::default_empty_slots()),
+        last_slot_(this_type::default_last_empty_slot()),
         slot_size_(0), slot_mask_(0), max_lookups_(kMinLookups),
         slot_threshold_(0), n_mlf_(kDefaultLoadFactorInt),
         n_mlf_rev_(kDefaultLoadFactorRevInt),
@@ -1375,6 +1380,7 @@ public:
     robin_hash_map(robin_hash_map && other, const Allocator & alloc) noexcept :
         ctrls_(this_type::default_empty_ctrls()),
         slots_(this_type::default_empty_slots()),
+        last_slot_(this_type::default_last_empty_slot()),
         slot_size_(0), slot_mask_(0), max_lookups_(kMinLookups),
         slot_threshold_(0), n_mlf_(kDefaultLoadFactorInt),
         n_mlf_rev_(kDefaultLoadFactorRevInt),
@@ -1398,6 +1404,7 @@ public:
                    const allocator_type & alloc = allocator_type()) :
         ctrls_(this_type::default_empty_ctrls()),
         slots_(this_type::default_empty_slots()),
+        last_slot_(this_type::default_last_empty_slot()),
         slot_size_(0), slot_mask_(0), max_lookups_(kMinLookups),
         slot_threshold_(0), n_mlf_(kDefaultLoadFactorInt),
         n_mlf_rev_(kDefaultLoadFactorRevInt),
@@ -1460,6 +1467,9 @@ public:
     slot_type * slots() { return this->slots_; }
     const slot_type * slots() const { return this->slots_; }
 
+    slot_type * last_slot() { return this->last_slot_; }
+    const slot_type * last_slot() const { return this->last_slot_; }
+
     size_type slot_size() const { return this->slot_size_; }
     size_type slot_mask() const { return this->slot_mask_; }
     size_type slot_capacity() const { return (this->slot_mask_ + 1); }
@@ -1478,8 +1488,8 @@ public:
     }
 
     size_type bucket(const key_type & key) const {
-        size_type index = this->find_impl(key);
-        return index;
+        const slot_type * slot = this->find_impl(key);
+        return this->index_of(slot);
     }
 
     float load_factor() const {
@@ -1683,7 +1693,7 @@ public:
     }
 
     void swap(robin_hash_map & other) {
-        if (&other != this) {
+        if (std::addressof(other) != this) {
             this->swap_impl(other);
         }
     }
@@ -1697,10 +1707,9 @@ public:
     }
 
     mapped_type & at(const key_type & key) {
-        size_type index = this->find_impl(key);
-        if (index != npos) {
-            slot_type * slot = this->slot_at(index);
-            return slot->second;
+        slot_type * slot = const_cast<slot_type *>(this->find_impl(key));
+        if (slot != nullptr) {
+            return slot->value.second;
         } else {
             throw std::out_of_range("std::out_of_range exception: jstd::robin_hash_map<K,V>::at(key), "
                                     "the specified key is not exists.");
@@ -1708,10 +1717,9 @@ public:
     }
 
     const mapped_type & at(const key_type & key) const {
-        size_type index = this->find_impl(key);
-        if (index != npos) {
-            slot_type * slot = this->slot_at(index);
-            return slot->second;
+        const slot_type * slot = this->find_impl(key);
+        if (index != nullptr) {
+            return slot->value.second;
         } else {
             throw std::out_of_range("std::out_of_range exception: jstd::robin_hash_map<K,V>::at(key) const, "
                                     "the specified key is not exists.");
@@ -1719,19 +1727,19 @@ public:
     }
 
     size_type count(const key_type & key) const {
-        size_type index = this->find_impl(key);
-        return (index != npos) ? size_type(1) : size_type(0);
+        const slot_type * slot = this->find_impl(key);
+        return size_type(slot != nullptr);
     }
 
     bool contains(const key_type & key) const {
-        size_type index = this->find_impl(key);
-        return (index != npos);
+        const slot_type * slot = this->find_impl(key);
+        return (slot != nullptr);
     }
 
     iterator find(const key_type & key) {
-        size_type index = this->find_impl(key);
-        if (index != npos)
-            return this->iterator_at(index);
+        const slot_type * slot = this->find_impl(key);
+        if (slot != nullptr)
+            return this->iterator_at(this->index_of(slot));
         else
             return this->end();
     }
@@ -1913,6 +1921,10 @@ private:
             {}, {}, {}, {}
         };
         return s_empty_slots;
+    }
+
+    static slot_type * default_last_empty_slot() {
+        return (default_empty_slots() + kMinLookups);
     }
 
     JSTD_FORCED_INLINE
@@ -2151,6 +2163,22 @@ private:
         return *this->group_at(slot_index);
     }
 
+    group_type & get_group(ctrl_type * ctrl) {
+        size_type slot_index = this->index_of(ctrl);
+        assert(slot_index < this->max_slot_capacity());
+        group_type * group = reinterpret_cast<group_type *>(ctrl);
+        return *group;
+    }
+
+    const group_type & get_group(const ctrl_type * ctrl) const {
+        size_type slot_index = this->index_of(ctrl);
+        assert(slot_index < this->max_slot_capacity());
+        const group_type * group = const_cast<const group_type *>(
+                reinterpret_cast<group_type *>(const_cast<ctrl_type *>(ctrl))
+            );
+        return *group;
+    }
+
     group_type & get_physical_group(size_type group_index) {
         assert(group_index < this->group_count());
         return this->ctrls_[group_index];
@@ -2223,6 +2251,7 @@ private:
             this->slot_allocator_.deallocate(this->slots_, this->max_slot_capacity());
         }
         this->slots_ = this_type::default_empty_slots();
+        this->last_slot_ = this_type::default_last_empty_slot();
 
         this->slot_size_ = 0;
     }
@@ -2294,10 +2323,11 @@ private:
     template <bool initialize = false>
     void reset() noexcept {
         if (initialize) {
-            this->ctrls_ = this->default_empty_ctrls();
-            this->slots_ = this->default_empty_slots();
+            this->ctrls_ = this_type::default_empty_ctrls();
+            this->slots_ = this_type::default_empty_slots();
+            this->last_slot_ = this_type::default_last_empty_slot();
             this->slot_size_ = 0;
-        }
+        }        
         this->slot_mask_ = 0;
         this->max_lookups_ = kMinLookups;
         this->slot_threshold_ = 0;
@@ -2350,6 +2380,7 @@ private:
 
         slot_type * new_slots = this->slot_allocator_.allocate(new_ctrl_capacity);
         this->slots_ = new_slots;
+        this->last_slot_ = new_slots + new_ctrl_capacity;
         if (initialize) {
             assert(this->slot_size_ == 0);
         } else {
@@ -2526,8 +2557,7 @@ private:
         ctrl->setDist(tag);
     }
 
-    JSTD_FORCED_INLINE
-    size_type find_impl(const key_type & key) const {
+    const slot_type * find_impl(const key_type & key) const {
         hash_code_t hash_code = this->get_hash(key);
         size_type slot_index = this->index_for_hash(hash_code);
         std::uint8_t ctrl_hash = this->get_ctrl_hash(hash_code);
@@ -2535,32 +2565,30 @@ private:
         std::int8_t distance = 0;
         ctrl_type dist_and_hash(2, ctrl_hash);
 
+        const ctrl_type * ctrl = this->ctrl_at(slot_index);
+        const slot_type * slot = this->slot_at(slot_index);
+
         if (kUnrollMode == UnrollMode16) {
-#if 0
+#if 1
             ctrl_type dist_and_0(0, 0);
-            const ctrl_type * ctrl = this->ctrl_at(slot_index);
-            const slot_type * slot = this->slot_at(slot_index);
+
             while (ctrl->value >= dist_and_0.value) {
                 if (this->key_equal_(slot->value.first, key)) {
-                    slot_index = this->index_of(ctrl);
-                    return slot_index;
+                    return slot;
                 }
                 slot++;
                 ctrl++;
                 dist_and_0.incDist();
             }
 
-            return npos;
-#elif 1
+            return nullptr;
+#elif 0
             ctrl_type dist_and_0(0, 0);
-            const ctrl_type * ctrl = this->ctrl_at(slot_index);
-            const slot_type * slot = this->slot_at(slot_index);
 
             while (ctrl->value >= dist_and_0.value) {
                 if (ctrl->hash == ctrl_hash) {
                     if (this->key_equal_(slot->value.first, key)) {
-                        slot_index = this->index_of(ctrl);
-                        return slot_index;
+                        return slot;
                     }
                 }
                 slot++;
@@ -2568,86 +2596,63 @@ private:
                 dist_and_0.incDist();
             }
 
-            return npos;
+            return nullptr;
 #else
-            const ctrl_type * ctrl = this->ctrl_at(slot_index);
             if (ctrl->value >= std::int16_t(0)) {
                 if (ctrl->hash == ctrl_hash) {
-                    const slot_type * slot = this->slot_at(slot_index);
                     if (this->key_equal_(slot->value.first, key)) {
-                        return slot_index;
+                        return slot;
                     }
                 }
             } else {
-                return npos;
+                return nullptr;
             }
 
             ctrl++;
+            slot++;
 
             if (ctrl->value >= kDistInc16) {
-                slot_index++;
                 if (ctrl->hash == ctrl_hash) {
-                    const slot_type * slot = this->slot_at(slot_index);
                     if (this->key_equal_(slot->value.first, key)) {
-                        return slot_index;
+                        return slot;
                     }
                 }
             } else {
-                return npos;
+                return nullptr;
             }
             
-            slot_index++;
-#if 0
             ctrl++;
-
-            while (ctrl->dist >= dist_and_hash.dist) {
-                if (likely(ctrl->value == dist_and_hash.value)) {
-                    slot_index = this->index_of(ctrl);
-                    const slot_type * slot = this->slot_at(slot_index);
-                    if (this->key_equal_(slot->value.first, key)) {
-                        return slot_index;
-                    }
-                }
-                ctrl++;
-                dist_and_hash.incDist();
-            }
-
-            return npos;
-#endif
+            slot++;
 #endif
         } else if (kUnrollMode == UnrollMode8) {
-            const ctrl_type * ctrl = this->ctrl_at(slot_index);
-
             // Optimize from: (ctrl->isUsed() && (ctrl->dist >= 0))
             if (likely(ctrl->isUsed())) {
                 if (ctrl->hash == ctrl_hash) {
-                    const slot_type * slot = this->slot_at(slot_index);
                     if (this->key_equal_(slot->value.first, key)) {
-                        return slot_index;
+                        return slot;
                     }
                 }
             } else {
-                return npos;
+                return nullptr;
             }
 
             ctrl++;
-            slot_index++;
+            slot++;
 
             // Optimization: merging two comparisons
             if (likely(ctrl->dist > 0)) {
             //if (likely(ctrl->isUsed() && (ctrl->dist >= 1))) {
                 if (ctrl->hash == ctrl_hash) {
-                    const slot_type * slot = this->slot_at(slot_index);
                     if (this->key_equal_(slot->value.first, key)) {
-                        return slot_index;
+                        return slot;
                     }
                 }
             } else {
-                return npos;
+                return nullptr;
             }
 
             ctrl++;
-            slot_index++;
+            slot++;
             distance = 2;
 
             do {
@@ -2655,13 +2660,12 @@ private:
                 if (likely(ctrl->dist >= distance)) {
                 //if (likely(ctrl->isUsed() && (ctrl->dist >= distance))) {
                     if (ctrl->hash == ctrl_hash) {
-                        const slot_type * slot = this->slot_at(slot_index);
                         if (this->key_equal_(slot->value.first, key)) {
-                            return slot_index;
+                            return slot;
                         }
                     }
 
-                    slot_index++;
+                    slot++;
                     ctrl++;
                     distance++;
                 } else {
@@ -2669,33 +2673,33 @@ private:
                 }
             } while (1);
 
-            return npos;
+            return nullptr;
         }
 
-        size_type max_slot_index = this->max_slot_capacity();
+        const slot_type * last_slot = this->last_slot();
 
         do {
-            const group_type & group = this->get_group(slot_index);
+            const group_type & group = this->get_group(ctrl);
             auto mask32 = group.matchHashAndDistance(dist_and_hash.value);
             std::uint32_t maskHash = mask32.maskHash;
-            size_type start_index = slot_index;
             while (maskHash != 0) {
                 size_type pos = BitUtils::bsf32(maskHash);
                 maskHash = BitUtils::clearLowBit32(maskHash);
-                size_type index = group.index(start_index, pos);
-                const slot_type * target = this->slot_at(index);
+                size_type index = group.index(0, pos);
+                const slot_type * target = slot + index;
                 if (this->key_equal_(target->value.first, key)) {
-                    return index;
+                    return target;
                 }
             }
             if (mask32.maskEmpty != 0) {
                 break;
             }
             dist_and_hash.incDist(kGroupWidth);
-            slot_index = this->slot_next_group(slot_index);
-        } while (slot_index < max_slot_index);
+            ctrl += kGroupWidth;
+            slot += kGroupWidth;
+        } while (slot < last_slot);
 
-        return npos;
+        return nullptr;
     }
 
     JSTD_NO_INLINE
