@@ -1708,7 +1708,7 @@ public:
 
     mapped_type & at(const key_type & key) {
         slot_type * slot = const_cast<slot_type *>(this->find_impl(key));
-        if (slot != nullptr) {
+        if (slot != this->last_slot()) {
             return slot->value.second;
         } else {
             throw std::out_of_range("std::out_of_range exception: jstd::robin_hash_map<K,V>::at(key), "
@@ -1718,7 +1718,7 @@ public:
 
     const mapped_type & at(const key_type & key) const {
         const slot_type * slot = this->find_impl(key);
-        if (slot != nullptr) {
+        if (slot != this->last_slot()) {
             return slot->value.second;
         } else {
             throw std::out_of_range("std::out_of_range exception: jstd::robin_hash_map<K,V>::at(key) const, "
@@ -1728,20 +1728,17 @@ public:
 
     size_type count(const key_type & key) const {
         const slot_type * slot = this->find_impl(key);
-        return size_type(slot != nullptr);
+        return size_type(slot != this->last_slot());
     }
 
     bool contains(const key_type & key) const {
         const slot_type * slot = this->find_impl(key);
-        return (slot != nullptr);
+        return (slot != this->last_slot());
     }
 
     iterator find(const key_type & key) {
         const slot_type * slot = this->find_impl(key);
-        if (slot != nullptr)
-            return this->iterator_at(this->index_of(slot));
-        else
-            return this->end();
+        return this->iterator_at(this->index_of(slot));
     }
 
     const_iterator find(const key_type & key) const {
@@ -2583,7 +2580,7 @@ private:
                 dist_and_0.incDist();
             }
 
-            return nullptr;
+            return this->last_slot();
 #elif 0
             ctrl_type dist_and_0(0, 0);
 
@@ -2598,7 +2595,7 @@ private:
                 dist_and_0.incDist();
             }
 
-            return nullptr;
+            return this->last_slot();
 #else
             if (ctrl->value >= std::int16_t(0)) {
                 if (ctrl->hash == ctrl_hash) {
@@ -2607,7 +2604,7 @@ private:
                     }
                 }
             } else {
-                return nullptr;
+                return this->last_slot();
             }
 
             ctrl++;
@@ -2620,7 +2617,7 @@ private:
                     }
                 }
             } else {
-                return nullptr;
+                return this->last_slot();
             }
             
             ctrl++;
@@ -2635,7 +2632,7 @@ private:
                     }
                 }
             } else {
-                return nullptr;
+                return this->last_slot();
             }
 
             ctrl++;
@@ -2650,7 +2647,7 @@ private:
                     }
                 }
             } else {
-                return nullptr;
+                return this->last_slot();
             }
 
             ctrl++;
@@ -2675,7 +2672,7 @@ private:
                 }
             } while (1);
 
-            return nullptr;
+            return this->last_slot();
         }
 
         const slot_type * last_slot = this->last_slot();
@@ -2701,7 +2698,7 @@ private:
             slot += kGroupWidth;
         } while (slot < last_slot);
 
-        return nullptr;
+        return last_slot;
     }
 
     JSTD_NO_INLINE
