@@ -179,11 +179,11 @@
 #define PRINT_MACRO_VAR(x)      #x " = " MACRO_TO_STRING(x)
 
 #ifndef UINT64_High
-#define UINT64_High(u64)        ((uint32_t)(u64 >> 32))
+#define UINT64_High(u64)        ((uint32_t)((uint64_t)u64 >> 32))
 #endif
 
 #ifndef UINT64_Low
-#define UINT64_Low(u64)         ((uint32_t)(u64 & 0x00000000FFFFFFFFull))
+#define UINT64_Low(u64)         ((uint32_t)((uint64_t)u64 & 0x00000000FFFFFFFFull))
 #endif
 
 #ifndef _DEBUG

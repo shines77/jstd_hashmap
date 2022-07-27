@@ -204,11 +204,11 @@
 #define PRINT_MACRO_VAR(x)      #x " = " MACRO_TO_STRING(x)
 
 #ifndef UINT64_High
-#define UINT64_High(u64)        ((uint32_t)(u64 >> 32))
+#define UINT64_High(u64)        ((uint32_t)((uint64_t)u64 >> 32))
 #endif
 
 #ifndef UINT64_Low
-#define UINT64_Low(u64)         ((uint32_t)(u64 & 0x00000000FFFFFFFFull))
+#define UINT64_Low(u64)         ((uint32_t)((uint64_t)u64 & 0x00000000FFFFFFFFull))
 #endif
 
 #if defined(_MSC_VER)
@@ -376,17 +376,33 @@ private:
 
 public:
     HashObject() noexcept : key_(0) {
-        std::memset(this->buffer_, 0, sizeof(char) * kBufLen);
+        std::memset(this->buffer_, 0, kBufLen * sizeof(char));
 #if (USE_STAT_COUNTER != 0) && (USE_CTOR_COUNTER != 0)
         g_num_constructor++;
 #endif
     }
+
     HashObject(key_type key) noexcept : key_(key) {
-        std::memset(this->buffer_, (int)(key & 0xFFUL), sizeof(char) * kBufLen);   // a "random" char
+        static constexpr std::size_t count = (kBufLen * sizeof(char)) / sizeof(key_type);
+        static constexpr std::size_t length = count * sizeof(key_type);
+        static constexpr std::ptrdiff_t remain = kBufLen - count * sizeof(key_type);
+
+        // a "random" char
+        key_type * buf = (key_type *)&this->buffer_[0];
+        std::fill_n(buf, count, key);
+
+        if (remain > 0) {
+            std::uint8_t * rbuf = (std::uint8_t *)&this->buffer_[length];
+            std::uint8_t ch = std::uint8_t(key & 0xFFul);
+            for (std::ptrdiff_t i = 0; i < remain; i++) {
+                *rbuf++ = ch;
+            }
+        }
 #if (USE_STAT_COUNTER != 0) && (USE_CTOR_COUNTER != 0)
         g_num_constructor++;
 #endif
     }
+
     HashObject(const this_type & that) noexcept {
         operator = (that);
     }
@@ -398,7 +414,7 @@ public:
         g_num_copies++;
 #endif
         this->key_ = that.key_;
-        std::memcpy(this->buffer_, that.buffer_, sizeof(char) * kBufLen);
+        std::memcpy(this->buffer_, that.buffer_, kBufLen * sizeof(char));
         return *this;
     }
 
@@ -415,13 +431,10 @@ public:
         g_num_hashes++;
 #endif
         std::size_t hash_val = static_cast<std::size_t>(this->key_);
-#if 1
         for (std::size_t i = 0; i < kHashLen; ++i) {
             hash_val += this->buffer_[i];
         }
-#else
-        hash_val += static_cast<std::size_t>((this->key_ & 0xFFUL) * kHashLen);
-#endif
+
         return static_cast<std::size_t>(
             HASH_MAP_FUNCTION<std::size_t>()(hash_val)
         );
@@ -455,7 +468,7 @@ public:
     static constexpr std::size_t cHashSize = sizeof(std::uint32_t);
 
 private:
-    std::uint32_t key_;   // the key used for hashing
+    key_type key_;   // the key used for hashing
 
 public:
     HashObject() noexcept : key_(0) {
@@ -463,7 +476,7 @@ public:
         g_num_constructor++;
 #endif
     }
-    HashObject(std::uint32_t key) noexcept : key_(key) {
+    HashObject(key_type key) noexcept : key_(key) {
 #if (USE_STAT_COUNTER != 0) && (USE_CTOR_COUNTER != 0)
         g_num_constructor++;
 #endif
@@ -495,7 +508,7 @@ public:
         g_num_hashes++;
 #endif
         return static_cast<std::size_t>(
-            HASH_MAP_FUNCTION<std::uint32_t>()(this->key_)
+            HASH_MAP_FUNCTION<key_type>()(this->key_)
         );
     }
 
@@ -514,23 +527,20 @@ public:
         return out;
     }
 };
-
-#if defined(WIN64) || defined(_WIN64) || defined(_M_X64) || defined(_M_AMD64) \
- || defined(__amd64__) || defined(__x86_64__) || defined(__LP64__)
 
 // A specialization for the case sizeof(buffer_) == 0
 template <>
-class HashObject<std::size_t, sizeof(std::size_t), sizeof(std::size_t)> {
+class HashObject<std::uint64_t, sizeof(std::uint64_t), sizeof(std::uint64_t)> {
 public:
-    typedef std::size_t     key_type;
-    typedef HashObject<std::size_t, sizeof(std::size_t), sizeof(std::size_t)>
+    typedef std::uint64_t   key_type;
+    typedef HashObject<std::uint64_t, sizeof(std::uint64_t), sizeof(std::uint64_t)>
                             this_type;
 
-    static constexpr std::size_t cSize = sizeof(std::size_t);
-    static constexpr std::size_t cHashSize = sizeof(std::size_t);
+    static constexpr std::size_t cSize = sizeof(std::uint64_t);
+    static constexpr std::size_t cHashSize = sizeof(std::uint64_t);
 
 private:
-    std::size_t key_;   // the key used for hashing
+    key_type key_;   // the key used for hashing
 
 public:
     HashObject() noexcept : key_(0) {
@@ -538,7 +548,7 @@ public:
         g_num_constructor++;
 #endif
     }
-    HashObject(std::size_t key) noexcept : key_(key) {
+    HashObject(key_type key) noexcept : key_(key) {
 #if (USE_STAT_COUNTER != 0) && (USE_CTOR_COUNTER != 0)
         g_num_constructor++;
 #endif
@@ -570,7 +580,7 @@ public:
         g_num_hashes++;
 #endif
         return static_cast<std::size_t>(
-            HASH_MAP_FUNCTION<std::size_t>()(this->key_)
+            HASH_MAP_FUNCTION<key_type>()(this->key_)
         );
     }
 
@@ -589,8 +599,6 @@ public:
         return out;
     }
 };
-
-#endif // _WIN64 || __amd64__
 
 template <typename Key, std::size_t Size = sizeof(Key),
                         std::size_t HashSize = sizeof(Key)>
@@ -1135,7 +1143,7 @@ void benchmark_all_hashmaps(std::size_t iters)
     }
 
     if (FLAGS_test_8_bytes) {
-        test_all_hashmaps<HashObject<std::size_t, 8, 8>, std::size_t>(8, iters / 2);
+        test_all_hashmaps<HashObject<std::uint64_t, 8, 8>, std::uint64_t>(8, iters / 2);
     }
 
     if (FLAGS_test_16_bytes) {

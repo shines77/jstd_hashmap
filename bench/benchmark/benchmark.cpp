@@ -1322,7 +1322,7 @@ void RandomGenerator_test()
     printf("\n");
     printf("RandomGen::nextInt32()      = %d\n"
            "MtRandomGen::nextUInt32()   = %u\n"
-           "MtRandomGen64::nextUInt64() = %" PRIuPTR "\n",
+           "MtRandomGen64::nextUInt64() = %" PRIu64 "\n",
            i32, u32, u64);
     printf("\n");
 }
