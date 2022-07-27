@@ -1718,7 +1718,7 @@ public:
 
     const mapped_type & at(const key_type & key) const {
         const slot_type * slot = this->find_impl(key);
-        if (index != nullptr) {
+        if (slot != nullptr) {
             return slot->value.second;
         } else {
             throw std::out_of_range("std::out_of_range exception: jstd::robin_hash_map<K,V>::at(key) const, "
