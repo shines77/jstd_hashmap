@@ -103,6 +103,14 @@ static void map_sequential_find_empty(std::size_t iters) {
     mapped_type i;
     mapped_type max_iters = static_cast<mapped_type>(iters);
 
+    for (i = 0; i < max_iters; i++) {
+        hashmap.emplace(i, i + 1);
+    }
+
+    for (i = 0; i < max_iters; i++) {
+        hashmap.erase(i);
+    }
+
     r = 1;
     reset_counter();
     sw.start();
@@ -638,6 +646,14 @@ static void map_random_find_empty(std::size_t iters, const Vector & indices) {
     std::size_t r;
     mapped_type i;
     mapped_type max_iters = static_cast<mapped_type>(iters);
+
+    for (i = 0; i < max_iters; i++) {
+        hashmap.emplace(i, i + 1);
+    }
+
+    for (i = 0; i < max_iters; i++) {
+        hashmap.erase(i);
+    }
 
     r = 1;
     reset_counter();
