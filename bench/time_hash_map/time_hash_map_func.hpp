@@ -107,9 +107,7 @@ static void map_sequential_find_empty(std::size_t iters) {
         hashmap.emplace(i, i + 1);
     }
 
-    for (i = 0; i < max_iters; i++) {
-        hashmap.erase(i);
-    }
+    hashmap.clear();
 
     r = 1;
     reset_counter();
@@ -651,9 +649,7 @@ static void map_random_find_empty(std::size_t iters, const Vector & indices) {
         hashmap.emplace(i, i + 1);
     }
 
-    for (i = 0; i < max_iters; i++) {
-        hashmap.erase(i);
-    }
+    hashmap.clear();
 
     r = 1;
     reset_counter();
