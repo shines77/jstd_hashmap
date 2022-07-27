@@ -2982,7 +2982,7 @@ private:
             // The key to be inserted already exists.
             if (AlwaysUpdate) {
                 slot_type * slot = this->slot_at(target);
-                slot->second = value.second;
+                slot->value.second = value.second;
             }
             return { this->iterator_at(target), false };
         }
