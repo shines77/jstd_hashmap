@@ -217,6 +217,15 @@ public:
     static constexpr std::uint64_t kEndOfMark64  = 0xFEFEFEFEFEFEFEFEull;
     static constexpr std::uint64_t kUnusedMask64 = 0x8080808080808080ull;
 
+    enum CompareOp {
+        opEQ,   // ==
+        opNE,   // !=
+        opGT,   // >
+        opGE,   // >=
+        opLT,   // <
+        opLE    // <=
+    };
+
     struct ctrl_data {
         union {
             struct {
@@ -362,6 +371,126 @@ public:
 
         void decDist(size_type width) {
             this->value -= std::int16_t(kDistInc16 * width);
+        }
+
+        bool hash_equals(std::uint8_t ctrl_hash) const {
+            return (this->hash == ctrl_hash);
+        }
+
+        bool hash_equals(const ctrl_data & ctrl) const {
+            return (this->hash == ctrl.hash);
+        }
+
+        bool dist_equals(std::int8_t dist) const {
+            return (this->dist == dist);
+        }
+
+        bool dist_equals(const ctrl_data & ctrl) const {
+            return (this->dist == ctrl.dist);
+        }
+
+        bool equals(std::int16_t value) const {
+            return (this->value == value);
+        }
+
+        bool equals(const ctrl_data & ctrl) const {
+            return (this->value == ctrl.value);
+        }
+
+        template <CompareOp CmpOp>
+        bool cmp_hash(std::uint8_t ctrl_hash) const {
+            if (CmpOp == opEQ)
+                return (this->hash == ctrl_hash);
+            else if (CmpOp == opNE)
+                return (this->hash != ctrl_hash);
+            else if (CmpOp == opGT)
+                return (this->hash >  ctrl_hash);
+            else if (CmpOp == opGE)
+                return (this->hash >= ctrl_hash);
+            else if (CmpOp == opLT)
+                return (this->hash <  ctrl_hash);
+            else if (CmpOp == opLE)
+                return (this->hash <= ctrl_hash);
+        }
+
+        template <CompareOp CmpOp>
+        bool cmp_hash(const ctrl_data & ctrl) const {
+            if (CmpOp == opEQ)
+                return (this->hash == ctrl.hash);
+            else if (CmpOp == opNE)
+                return (this->hash != ctrl.hash);
+            else if (CmpOp == opGT)
+                return (this->hash >  ctrl.hash);
+            else if (CmpOp == opGE)
+                return (this->hash >= ctrl.hash);
+            else if (CmpOp == opLT)
+                return (this->hash <  ctrl.hash);
+            else if (CmpOp == opLE)
+                return (this->hash <= ctrl.hash);
+        }
+
+        template <CompareOp CmpOp>
+        bool cmp_dist(std::int8_t dist) const {
+            if (CmpOp == opEQ)
+                return (this->dist == dist);
+            else if (CmpOp == opNE)
+                return (this->dist != dist);
+            else if (CmpOp == opGT)
+                return (this->dist >  dist);
+            else if (CmpOp == opGE)
+                return (this->dist >= dist);
+            else if (CmpOp == opLT)
+                return (this->dist <  dist);
+            else if (CmpOp == opLE)
+                return (this->dist <= dist);
+        }
+
+        template <CompareOp CmpOp>
+        bool cmp_dist(const ctrl_data & ctrl) const {
+            if (CmpOp == opEQ)
+                return (this->dist == ctrl.dist);
+            else if (CmpOp == opNE)
+                return (this->dist != ctrl.dist);
+            else if (CmpOp == opGT)
+                return (this->dist >  ctrl.dist);
+            else if (CmpOp == opGE)
+                return (this->dist >= ctrl.dist);
+            else if (CmpOp == opLT)
+                return (this->dist <  ctrl.dist);
+            else if (CmpOp == opLE)
+                return (this->dist <= ctrl.dist);
+        }
+
+        template <CompareOp CmpOp>
+        bool compare(std::int16_t value) const {
+            if (CmpOp == opEQ)
+                return (this->value == value);
+            else if (CmpOp == opNE)
+                return (this->value != value);
+            else if (CmpOp == opGT)
+                return (this->value >  value);
+            else if (CmpOp == opGE)
+                return (this->value >= value);
+            else if (CmpOp == opLT)
+                return (this->value <  value);
+            else if (CmpOp == opLE)
+                return (this->value <= value);
+        }
+
+        template <CompareOp CmpOp>
+        bool compare(const ctrl_data & ctrl) const {
+            if (CmpOp == opEQ)
+                return (this->value == ctrl.value);
+            else if (CmpOp == opNE)
+                return (this->value != ctrl.value);
+            else if (CmpOp == opGT)
+                return (this->value >  ctrl.value);
+            else if (CmpOp == opGE)
+                return (this->value >= ctrl.value);
+            else if (CmpOp == opLT)
+                return (this->value <  ctrl.value);
+            else if (CmpOp == opLE)
+                return (this->value <= ctrl.value);
         }
     };
 
@@ -2568,7 +2697,7 @@ private:
         const slot_type * slot = this->slot_at(slot_index);
 
         if (kUnrollMode == UnrollMode16) {
-#if 1
+#if 0
             ctrl_type dist_and_0(0, 0);
 
             while (ctrl->value >= dist_and_0.value) {
@@ -2581,11 +2710,11 @@ private:
             }
 
             return this->last_slot();
-#elif 0
+#elif 1
             ctrl_type dist_and_0(0, 0);
 
             while (ctrl->value >= dist_and_0.value) {
-                if (ctrl->hash == ctrl_hash) {
+                if (ctrl->hash_equals(ctrl_hash)) {
                     if (this->key_equal_(slot->value.first, key)) {
                         return slot;
                     }
@@ -2598,7 +2727,7 @@ private:
             return this->last_slot();
 #else
             if (ctrl->value >= std::int16_t(0)) {
-                if (ctrl->hash == ctrl_hash) {
+                if (ctrl->hash_equals(ctrl_hash)) {
                     if (this->key_equal_(slot->value.first, key)) {
                         return slot;
                     }
@@ -2611,7 +2740,7 @@ private:
             slot++;
 
             if (ctrl->value >= kDistInc16) {
-                if (ctrl->hash == ctrl_hash) {
+                if (ctrl->hash_equals(ctrl_hash)) {
                     if (this->key_equal_(slot->value.first, key)) {
                         return slot;
                     }
@@ -2626,7 +2755,7 @@ private:
         } else if (kUnrollMode == UnrollMode8) {
             // Optimize from: (ctrl->isUsed() && (ctrl->dist >= 0))
             if (likely(ctrl->isUsed())) {
-                if (ctrl->hash == ctrl_hash) {
+                if (ctrl->hash_equals(ctrl_hash)) {
                     if (this->key_equal_(slot->value.first, key)) {
                         return slot;
                     }
@@ -2641,7 +2770,7 @@ private:
             // Optimization: merging two comparisons
             if (likely(ctrl->dist > 0)) {
             //if (likely(ctrl->isUsed() && (ctrl->dist >= 1))) {
-                if (ctrl->hash == ctrl_hash) {
+                if (ctrl->hash_equals(ctrl_hash)) {
                     if (this->key_equal_(slot->value.first, key)) {
                         return slot;
                     }
@@ -2658,7 +2787,7 @@ private:
                 // Optimization: merging two comparisons
                 if (likely(ctrl->dist >= distance)) {
                 //if (likely(ctrl->isUsed() && (ctrl->dist >= distance))) {
-                    if (ctrl->hash == ctrl_hash) {
+                    if (ctrl->hash_equals(ctrl_hash)) {
                         if (this->key_equal_(slot->value.first, key)) {
                             return slot;
                         }
@@ -2713,116 +2842,40 @@ private:
         ctrl_type dist_and_hash(0, ctrl_hash);
         std::uint32_t maskEmpty;
 
-        if (kUnrollMode == UnrollMode16) {
-            std::uint16_t max_dist = (std::uint16_t)(this->max_lookups_ << 8);
-            ctrl_type * ctrl = this->ctrl_at(slot_index);
-            while (ctrl->dist >= dist_and_hash.dist) {
-                if (likely(ctrl->value == dist_and_hash.value)) {
-                    slot_index = this->index_of(ctrl);
-                    slot_type * slot = this->slot_at(slot_index);
-                    if (this->key_equal_(slot->value.first, key)) {
-                        o_dist_and_hash = dist_and_hash;
-                        return { slot_index, true };
-                    }
-                }
+        std::uint16_t max_dist = (std::uint16_t)(this->max_lookups_ << 8);
+        ctrl_type dist_and_0(0, 0);
 
-                ctrl++;
-                dist_and_hash.incDist();
-                if (dist_and_hash.uvalue >= max_dist)
-                    break;
+        ctrl_type * ctrl = this->ctrl_at(slot_index);
+        slot_type * slot = this->slot_at(slot_index);
+
+        while (ctrl->value >= dist_and_0.value) {
+            if (likely(ctrl->value == dist_and_hash.value)) {
+                slot_index = this->index_of(ctrl);
+                slot_type * slot = this->slot_at(slot_index);
+                if (this->key_equal_(slot->value.first, key)) {
+                    o_dist_and_hash = dist_and_hash;
+                    return { slot_index, true };
+                }
             }
 
-            if (this->need_grow() || (dist_and_hash.uvalue >= max_dist)) {
-                // The size of slot reach the slot threshold or hashmap is full.
-                this->grow_if_necessary();
-
-                return this->find_and_prepare_insert(key, o_dist_and_hash);
-            }
-
-            o_dist_and_hash = dist_and_hash;
-            slot_index = this->index_of(ctrl);
-            return { slot_index, false };
-        } else if (kUnrollMode == UnrollMode8) {
-            ctrl_type * ctrl = this->ctrl_at(slot_index);
-            // Optimize from: (ctrl->isUsed() && (ctrl->dist >= 0))
-            if (likely(ctrl->isUsed())) {
-                if (ctrl->hash == ctrl_hash) {
-                    slot_type * slot = this->slot_at(slot_index);
-                    if (this->key_equal_(slot->value.first, key)) {
-                        o_dist_and_hash.setValue(0, ctrl_hash);
-                        return { slot_index, true };
-                    }
-                }
-            } else {
-                if (this->need_grow()) {
-                    // The size of slot reach the slot threshold or hashmap is full.
-                    this->grow_if_necessary();
-
-                    return this->find_and_prepare_insert(key, o_dist_and_hash);
-                }
-                o_dist_and_hash.setValue(0, ctrl_hash);
-                return { slot_index, false };
-            }
-
+            slot++;
             ctrl++;
-
-            // Optimization: merging two comparisons
-            if (likely(ctrl->dist > 0)) {
-            //if (likely(ctrl->isUsed() && (ctrl->dist >= 1))) {
-                if (ctrl->hash == ctrl_hash) {
-                    slot_type * slot = this->slot_at(slot_index);
-                    if (this->key_equal_(slot->value.first, key)) {
-                        o_dist_and_hash.setValue(1, ctrl_hash);
-                        return { (slot_index + 1), true };
-                    }
-                }
-            } else {
-                if (this->need_grow()) {
-                    // The size of slot reach the slot threshold or hashmap is full.
-                    this->grow_if_necessary();
-
-                    return this->find_and_prepare_insert(key, o_dist_and_hash);
-                }
-                o_dist_and_hash.setValue(1, ctrl_hash);
-                return { (slot_index + 1), false };
-            }
-
-            ctrl++;
-            distance = 2;
-
-            do {
-                // Optimization: merging two comparisons
-                if (likely(ctrl->dist >= distance)) {
-                //if (likely(ctrl->isUsed() && (ctrl->dist >= distance))) {
-                    if (ctrl->hash == ctrl_hash) {
-                        slot_index = this->index_of(ctrl);
-                        slot_type * slot = this->slot_at(slot_index);
-                        if (this->key_equal_(slot->value.first, key)) {
-                            o_dist_and_hash.setValue(distance, ctrl_hash);
-                            return { slot_index, true };
-                        }
-                    }
-                    ctrl++;
-                    distance++;
-                    if (ctrl->dist < distance)
-                        break;
-                } else {
-                    if (this->need_grow()) {
-                        // The size of slot reach the slot threshold or hashmap is full.
-                        this->grow_if_necessary();
-
-                        return this->find_and_prepare_insert(key, o_dist_and_hash);
-                    }
-                    o_dist_and_hash.setValue(distance, ctrl_hash);
-                    slot_index = this->index_of(ctrl);
-                    return { slot_index, false };
-                }
-            } while (1);
-
-            o_dist_and_hash.setValue(distance, ctrl_hash);
-            slot_index = this->index_of(ctrl);
-            return { slot_index, false };
+            dist_and_hash.incDist();
+            if (dist_and_hash.uvalue >= max_dist)
+                break;
         }
+
+        if (this->need_grow() || (dist_and_hash.uvalue >= max_dist)) {
+            // The size of slot reach the slot threshold or hashmap is full.
+            this->grow_if_necessary();
+
+            return this->find_and_prepare_insert(key, o_dist_and_hash);
+        }
+
+        o_dist_and_hash = dist_and_hash;
+        slot_index = this->index_of(ctrl);
+        return { slot_index, false };
+
 
         size_type max_slot_index = this->max_slot_capacity();
 
