@@ -1404,7 +1404,7 @@ public:
         size_type other_size = other.slot_size();
         this->reserve_for_insert(other_size);
         try {
-            this->insert_unique(other.begin(), other.end());
+            this->unique_insert(other.begin(), other.end());
         } catch (const std::bad_alloc & ex) {
             this->destroy();
             throw std::bad_alloc();
@@ -2032,6 +2032,22 @@ private:
         return { this->ctrl_at(index), this->slot_at(index) };
     }
 #endif
+
+    iterator iterator_at(ctrl_type * ctrl) noexcept {
+        return { this, this->index_of(ctrl) };
+    }
+
+    const_iterator iterator_at(const ctrl_type * ctrl) const noexcept {
+        return { this, this->index_of(ctrl) };
+    }
+
+    iterator iterator_at(slot_type * slot) noexcept {
+        return { this, this->index_of(slot) };
+    }
+
+    const_iterator iterator_at(const slot_type * slot) const noexcept {
+        return { this, this->index_of(slot) };
+    }
 
     inline hash_code_t get_hash(const key_type & key) const noexcept {
         hash_code_t hash_code = static_cast<hash_code_t>(this->hasher_(key));
@@ -3015,10 +3031,10 @@ InsertOrGrow:
         }
 #endif
         if (ctrl->isEmpty()) {
-            ctrl->setValue(dist_and_hash);
+            this->setUsedCtrl(ctrl, dist_and_hash);
             return { slot, kIsNotExists };
         } else {
-            bool need_grow = this->insert_to_place(ctrl, slot, dist_and_hash);
+            bool need_grow = this->insert_to_place<false>(ctrl, slot, dist_and_hash);
             return { slot, static_cast<KeyResult>(need_grow) };
         }
     }
@@ -3068,7 +3084,7 @@ InsertOrGrow:
         slot_type * last_slot = this->last_slot();
         while (target < last_slot) {
             if (ctrl->isEmptyOnly()) {
-                this->emplace_poor_slot(insert, target, ctrl, to_insert.value);
+                this->emplace_poor_slot(ctrl, insert, target, to_insert.value);
                 return false;
             } else if (to_insert.dist > ctrl->dist) {
                 std::swap(to_insert.value, ctrl->value);
@@ -3082,7 +3098,7 @@ InsertOrGrow:
                 assert(to_insert.distance() < this->max_lookups());
             } else {
                 if (to_insert.distance() >= this->max_lookups()) {
-                    this->emplace_poor_slot(insert, target, ctrl, to_insert.value);
+                    this->emplace_poor_slot(ctrl, insert, target, to_insert.value);
                     return true;
                 }
             }
@@ -3090,20 +3106,20 @@ InsertOrGrow:
             target++;
         }
 
-        this->emplace_poor_slot(insert, target, ctrl, to_insert.value);
+        this->emplace_poor_slot(ctrl, insert, target, to_insert.value);
         return true;
     }
 
     JSTD_FORCED_INLINE
-    void emplace_poor_slot(slot_type * insert, slot_type * target, ctrl_type * ctrl,
+    void emplace_poor_slot(ctrl_type * ctrl, slot_type * insert, slot_type * target,
                            std::int16_t dist_and_hash) {
-        ctrl->setValue(dist_and_hash);
+        this->setUsedCtrl(ctrl, dist_and_hash);
 
-        this->placement_new_slot(slot);
+        this->placement_new_slot(target);
         if (kIsCompatibleLayout)
-            this->mutable_allocator_.construct(&slot->mutable_value, std::move(insert->mutable_value));
+            this->mutable_allocator_.construct(&target->mutable_value, std::move(insert->mutable_value));
         else
-            this->allocator_.construct(&slot->value, std::move(insert->value));
+            this->allocator_.construct(&target->value, std::move(insert->value));
 
         this->destroy_slot(insert);
     }
@@ -3112,41 +3128,29 @@ InsertOrGrow:
     std::pair<iterator, bool> emplace_impl(const value_type & value) {
         ctrl_type dist_and_hash;
         auto find_info = this->find_or_insert(value.first, dist_and_hash);
-        slot_type * target = find_info.first;
+        slot_type * slot = find_info.first;
         size_type is_exists = find_info.second;
         if (is_exists != kIsExists) {
             // The key to be inserted is not exists.
-            assert(target != nullptr);
-
-            ctrl_type * ctrl = this->ctrl_at(target);
-            if (ctrl->isEmpty()) {
-                // Found [EmptyEntry] to insert
-                assert(ctrl->isEmpty());
-                this->setUsedCtrl(target, dist_and_hash);
-            } else {
-                // Insert to target place
-                bool need_grow = this->insert_to_place<false>(target, dist_and_hash);
-                if (need_grow) {
-                    this->grow_if_necessary();
-                    return this->emplace_impl<AlwaysUpdate>(value);
-                }
+            assert(slot != nullptr);
+            if (is_exists == kNeedGrow) {
+                this->grow_if_necessary();
+                return this->emplace_impl<AlwaysUpdate>(value);
             }
 
-            slot_type * slot = this->slot_at(target);
             this->placement_new_slot(slot);
             if (kIsCompatibleLayout)
                 this->mutable_allocator_.construct(&slot->mutable_value, value);
             else
                 this->allocator_.construct(&slot->value, value);
             this->slot_size_++;
-            return { this->iterator_at(target), true };
+            return { this->iterator_at(slot), true };
         } else {
             // The key to be inserted already exists.
             if (AlwaysUpdate) {
-                slot_type * slot = this->slot_at(target);
                 slot->value.second = value.second;
             }
-            return { this->iterator_at(target), false };
+            return { this->iterator_at(slot), false };
         }
     }
 
@@ -3154,44 +3158,32 @@ InsertOrGrow:
     std::pair<iterator, bool> emplace_impl(value_type && value) {
         ctrl_type dist_and_hash;
         auto find_info = this->find_or_insert(value.first, dist_and_hash);
-        slot_type * target = find_info.first;
+        slot_type * slot = find_info.first;
         size_type is_exists = find_info.second;
         if (is_exists != kIsExists) {
             // The key to be inserted is not exists.
-            assert(target != nullptr);
-
-            ctrl_type * ctrl = this->ctrl_at(target);
-            if (ctrl->isEmpty()) {
-                // Found [EmptyEntry] to insert
-                assert(ctrl->isEmpty());
-                this->setUsedCtrl(target, dist_and_hash);
-            } else {
-                bool need_grow = this->insert_to_place<false>(target, dist_and_hash);
-                if (need_grow) {
-                    this->grow_if_necessary();
-                    return this->emplace_impl<AlwaysUpdate>(std::forward<value_type>(value));
-                }
+            assert(slot != nullptr);
+            if (is_exists == kNeedGrow) {
+                this->grow_if_necessary();
+                return this->emplace_impl<AlwaysUpdate>(std::forward<value_type>(value));
             }
 
-            slot_type * slot = this->slot_at(target);
-            this->placement_new_slot(slot);
             if (kIsCompatibleLayout)
                 this->mutable_allocator_.construct(&slot->mutable_value, std::forward<value_type>(value));
             else
                 this->allocator_.construct(&slot->value, std::forward<value_type>(value));
             this->slot_size_++;
-            return { this->iterator_at(target), true };
+            return { this->iterator_at(slot), true };
         } else {
             // The key to be inserted already exists.
             if (AlwaysUpdate) {
                 static constexpr bool is_rvalue_ref = std::is_rvalue_reference<decltype(value)>::value;
-                slot_type * slot = this->slot_at(target);
                 if (is_rvalue_ref)
                     slot->value.second = std::move(value.second);
                 else
                     slot->value.second = value.second;
             }
-            return { this->iterator_at(target), false };
+            return { this->iterator_at(slot), false };
         }
     }
 
@@ -3208,28 +3200,18 @@ InsertOrGrow:
     std::pair<iterator, bool> emplace_impl(KeyT && key, MappedT && value) {
         ctrl_type dist_and_hash;
         auto find_info = this->find_or_insert(key, dist_and_hash);
-        slot_type * target = find_info.first;
+        slot_type * slot = find_info.first;
         size_type is_exists = find_info.second;
         if (is_exists != kIsExists) {
             // The key to be inserted is not exists.
-            assert(target != nullptr);
-
-            ctrl_type * ctrl = this->ctrl_at(target);
-            if (ctrl->isEmpty()) {
-                // Found [EmptyEntry] to insert
-                assert(ctrl->isEmpty());
-                this->setUsedCtrl(target, dist_and_hash);
-            } else {
-                bool need_grow = this->insert_to_place<false>(target, dist_and_hash);
-                if (need_grow) {
-                    this->grow_if_necessary();
-                    return this->emplace_impl<AlwaysUpdate, KeyT, MappedT>(
-                            std::forward<KeyT>(key), std::forward<MappedT>(value)
-                        );
-                }
+            assert(slot != nullptr);
+            if (is_exists == kNeedGrow) {
+                this->grow_if_necessary();
+                return this->emplace_impl<AlwaysUpdate, KeyT, MappedT>(
+                        std::forward<KeyT>(key), std::forward<MappedT>(value)
+                    );
             }
 
-            slot_type * slot = this->slot_at(target);
             this->placement_new_slot(slot);
             if (kIsCompatibleLayout) {
                 this->mutable_allocator_.construct(&slot->mutable_value,
@@ -3240,21 +3222,19 @@ InsertOrGrow:
                                                          std::forward<MappedT>(value));
             }
             this->slot_size_++;
-            return { this->iterator_at(target), true };
+            return { this->iterator_at(slot), true };
         } else {
             // The key to be inserted already exists.
             static constexpr bool isMappedType = jstd::is_same_ex<MappedT, mapped_type>::value;
             if (AlwaysUpdate) {
                 if (isMappedType) {
-                    slot_type * slot = this->slot_at(target);
                     slot->value.second = std::forward<MappedT>(value);
                 } else {
                     mapped_type mapped_value(std::forward<MappedT>(value));
-                    slot_type * slot = this->slot_at(target);
                     slot->value.second = std::move(mapped_value);
                 }
             }
-            return { this->iterator_at(target), false };
+            return { this->iterator_at(slot), false };
         }
     }
 
@@ -3270,29 +3250,18 @@ InsertOrGrow:
     std::pair<iterator, bool> emplace_impl(KeyT && key, Args && ... args) {
         ctrl_type dist_and_hash;
         auto find_info = this->find_or_insert(key, dist_and_hash);
-        slot_type * target = find_info.first;
+        slot_type * slot = find_info.first;
         size_type is_exists = find_info.second;
         if (is_exists != kIsExists) {
             // The key to be inserted is not exists.
-            assert(target != nullptr);
-
-            ctrl_type * ctrl = this->ctrl_at(target);
-            if (ctrl->isEmpty()) {
-                // Found [EmptyEntry] to insert
-                assert(ctrl->isEmpty());
-                this->setUsedCtrl(target, dist_and_hash);
-            } else {
-                // Insert to target place
-                bool need_grow = this->insert_to_place<false>(target, dist_and_hash);
-                if (need_grow) {
-                    this->grow_if_necessary();
-                    return this->emplace(std::piecewise_construct,
-                                         std::forward_as_tuple(std::forward<KeyT>(key)),
-                                         std::forward_as_tuple(std::forward<Args>(args)...));
-                }
+            assert(slot != nullptr);
+            if (is_exists == kNeedGrow) {
+                this->grow_if_necessary();
+                return this->emplace(std::piecewise_construct,
+                                        std::forward_as_tuple(std::forward<KeyT>(key)),
+                                        std::forward_as_tuple(std::forward<Args>(args)...));
             }
 
-            slot_type * slot = this->slot_at(target);
             this->placement_new_slot(slot);
             if (kIsCompatibleLayout) {
                 this->mutable_allocator_.construct(&slot->mutable_value,
@@ -3306,15 +3275,14 @@ InsertOrGrow:
                                            std::forward_as_tuple(std::forward<Args>(args)...));
             }
             this->slot_size_++;
-            return { this->iterator_at(target), true };
+            return { this->iterator_at(slot), true };
         } else {
             // The key to be inserted already exists.
             if (AlwaysUpdate) {
                 mapped_type mapped_value(std::forward<Args>(args)...);
-                slot_type * slot = this->slot_at(target);
                 slot->value.second = std::move(mapped_value);
             }
-            return { this->iterator_at(target), false };
+            return { this->iterator_at(slot), false };
         }
     }
 
@@ -3333,29 +3301,18 @@ InsertOrGrow:
         ctrl_type dist_and_hash;
         tuple_wrapper2<key_type> key_wrapper(first);
         auto find_info = this->find_or_insert(key_wrapper.value(), dist_and_hash);
-        slot_type * target = find_info.first;
+        slot_type * slot = find_info.first;
         size_type is_exists = find_info.second;
         if (is_exists != kIsExists) {
             // The key to be inserted is not exists.
-            assert(target != nullptr);
-
-            ctrl_type * ctrl = this->ctrl_at(target);
-            if (ctrl->isEmpty()) {
-                // Found [EmptyEntry] to insert
-                assert(ctrl->isEmpty());
-                this->setUsedCtrl(target, dist_and_hash);
-            } else {
-                // Insert to target place
-                bool need_grow = this->insert_to_place<false>(target, dist_and_hash);
-                if (need_grow) {
-                    this->grow_if_necessary();
-                    return this->emplace(std::piecewise_construct,
-                                         std::forward<std::tuple<Ts1...>>(first),
-                                         std::forward<std::tuple<Ts2...>>(second));
-                }
+            assert(slot != nullptr);
+            if (is_exists == kNeedGrow) {
+                this->grow_if_necessary();
+                return this->emplace(std::piecewise_construct,
+                                        std::forward<std::tuple<Ts1...>>(first),
+                                        std::forward<std::tuple<Ts2...>>(second));
             }
 
-            slot_type * slot = this->slot_at(target);
             this->placement_new_slot(slot);
             if (kIsCompatibleLayout) {
                 this->mutable_allocator_.construct(&slot->mutable_value,
@@ -3369,15 +3326,14 @@ InsertOrGrow:
                                            std::forward<std::tuple<Ts2...>>(second));
             }
             this->slot_size_++;
-            return { this->iterator_at(target), true };
+            return { this->iterator_at(slot), true };
         } else {
             // The key to be inserted already exists.
             if (AlwaysUpdate) {
                 tuple_wrapper2<mapped_type> mapped_wrapper(std::move(second));
-                slot_type * slot = this->slot_at(target);
                 slot->value.second = std::move(mapped_wrapper.value());
             }
-            return { this->iterator_at(target), false };
+            return { this->iterator_at(slot), false };
         }
     }
 
@@ -3399,22 +3355,11 @@ InsertOrGrow:
         if (is_exists != kIsExists) {
             // The key to be inserted is not exists.
             assert(target != nullptr);
-
-            ctrl_type * ctrl = this->ctrl_at(target);
-            if (ctrl->isEmpty()) {
-                // Found [EmptyEntry] to insert
-                assert(ctrl->isEmpty());
-                this->setUsedCtrl(target, dist_and_hash);
-            } else {
-                // Insert to target place
-                bool need_grow = this->insert_to_place<false>(target, dist_and_hash);
-                if (need_grow) {
-                    this->grow_if_necessary();
-                    return this->emplace(std::move(value));
-                }
+            if (is_exists == kNeedGrow) {
+                this->grow_if_necessary();
+                return this->emplace(std::move(value));
             }
 
-            slot_type * slot = this->slot_at(target);
             this->placement_new_slot(slot);
             if (kIsCompatibleLayout) {
                 this->mutable_allocator_.construct(&slot->mutable_value, std::move(value));
@@ -3422,14 +3367,13 @@ InsertOrGrow:
                 this->allocator_.construct(&slot->value, std::move(value));
             }
             this->slot_size_++;
-            return { this->iterator_at(target), true };
+            return { this->iterator_at(slot), true };
         } else {
             // The key to be inserted already exists.
             if (AlwaysUpdate) {
-                slot_type * slot = this->slot_at(target);
                 slot->value.second = std::move(value.second);
             }
-            return { this->iterator_at(target), false };
+            return { this->iterator_at(slot), false };
         }
     }
 
@@ -3563,13 +3507,14 @@ InsertOrGrow:
         bool need_grow = false;
 
         ctrl_type * ctrl = this->ctrl_at(target);
+        slot_type * target_slot = this->slot_at(target);
         if (ctrl->isEmpty()) {
             // Found [EmptyEntry] to insert
             assert(ctrl->isEmpty());
             this->setUsedCtrl(target, dist_and_hash);
         } else {
             // Insert to target place
-            need_grow = this->insert_to_place<true>(target, dist_and_hash);
+            need_grow = this->insert_to_place<true>(ctrl, target_slot, dist_and_hash);
             assert(need_grow == false);
         }
 
@@ -3586,22 +3531,23 @@ InsertOrGrow:
         return need_grow;
     }
 
-    void insert_unique(const value_type & value) {
+    void unique_insert(const value_type & value) {
         ctrl_type dist_and_hash;
         size_type target = this->unique_find_or_insert(value.first, dist_and_hash);
         assert(target != npos);
 
         ctrl_type * ctrl = this->ctrl_at(target);
+        slot_type * target_slot = this->slot_at(target);
         if (ctrl->isEmpty()) {
             // Found [EmptyEntry] to insert
             assert(ctrl->isEmpty());
             this->setUsedCtrl(target, dist_and_hash);
         } else {
             // Insert to target place
-            bool need_grow = this->insert_to_place<false>(target, dist_and_hash);
+            bool need_grow = this->insert_to_place<false>(ctrl, target_slot, dist_and_hash);
             if (need_grow) {
                 this->grow_if_necessary();
-                this->insert_unique(value);
+                this->unique_insert(value);
                 return;
             }
         }
@@ -3617,22 +3563,23 @@ InsertOrGrow:
         assert(this->slot_size() <= this->slot_capacity());
     }
 
-    void insert_unique(value_type && value) {
+    void unique_insert(value_type && value) {
         ctrl_type dist_and_hash;
         size_type target = this->unique_find_or_insert(value.first, dist_and_hash);
         assert(target != npos);
 
         ctrl_type * ctrl = this->ctrl_at(target);
+        slot_type * target_slot = this->slot_at(target);
         if (ctrl->isEmpty()) {
             // Found [EmptyEntry] to insert
             assert(ctrl->isEmpty());
             this->setUsedCtrl(target, dist_and_hash);
         } else {
             // Insert to target place
-            bool need_grow = this->insert_to_place<false>(target, dist_and_hash);
+            bool need_grow = this->insert_to_place<false>(ctrl, target_slot, dist_and_hash);
             if (need_grow) {
                 this->grow_if_necessary();
-                this->insert_unique(std::forward<value_type>(value));
+                this->unique_insert(std::forward<value_type>(value));
                 return;
             }
         }
@@ -3651,9 +3598,9 @@ InsertOrGrow:
 
     // Use in constructor
     template <typename InputIter>
-    void insert_unique(InputIter first, InputIter last) {
+    void unique_insert(InputIter first, InputIter last) {
         for (InputIter iter = first; iter != last; ++iter) {
-            this->insert_unique(static_cast<value_type>(*iter));
+            this->unique_insert(static_cast<value_type>(*iter));
         }
     }
 
