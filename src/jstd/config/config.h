@@ -157,48 +157,58 @@
     #ifndef JSTD_IS_CXX_20
     #define JSTD_IS_CXX_20  1
     #endif
+    #define jstd_cplusplus  2020L
   #elif (defined(_MSVC_LANG) && (_MSVC_LANG >= 201703L && _MSVC_LANG < 202002L)) \
      || (__cplusplus >= 201703L && __cplusplus < 202002L)
     #ifndef JSTD_IS_CXX_17
     #define JSTD_IS_CXX_17  1
     #endif
+    #define jstd_cplusplus  2017L
   #elif (defined(_MSVC_LANG) && (_MSVC_LANG >= 201402L && _MSVC_LANG < 201703L \
      && _MSC_VER >= 1910)) \
      || (__cplusplus >= 201402L && __cplusplus < 201703L && _MSC_VER >= 1910)
     #ifndef JSTD_IS_CXX_14
     #define JSTD_IS_CXX_14  1
     #endif
+    #define jstd_cplusplus  2014L
   #elif defined(_MSC_VER) && (_MSC_FULL_VER >= 190024210) \
      || (__cplusplus >= 201103L)
     #ifndef JSTD_IS_CXX_11
     #define JSTD_IS_CXX_11  1
     #endif
+    #define jstd_cplusplus  2011L
   #else
     #ifndef JSTD_IS_CXX_98
     #define JSTD_IS_CXX_98  1
     #endif
+    #define jstd_cplusplus  1997L
   #endif
 #elif defined(__GNUC__) || defined(__clang__)
   #if (__cplusplus >= 202002L)
     #ifndef JSTD_IS_CXX_20
     #define JSTD_IS_CXX_20  1
     #endif
+    #define jstd_cplusplus  2020L
   #elif (__cplusplus >= 201703L && __cplusplus < 202002L)
     #ifndef JSTD_IS_CXX_17
     #define JSTD_IS_CXX_17  1
     #endif
+    #define jstd_cplusplus  2017L
   #elif (__cplusplus >= 201402L && __cplusplus < 201703L)
     #ifndef JSTD_IS_CXX_14
     #define JSTD_IS_CXX_14  1
     #endif
+    #define jstd_cplusplus  2017L
   #elif (__cplusplus >= 201103L && __cplusplus < 201402L)
     #ifndef JSTD_IS_CXX_11
     #define JSTD_IS_CXX_11  1
     #endif
+    #define jstd_cplusplus  2011L
   #else
     #ifndef JSTD_IS_CXX_98
     #define JSTD_IS_CXX_98  1
     #endif
+    #define jstd_cplusplus  1997L
   #endif
 #endif // _MSC_VER && !__clang__
 
@@ -394,6 +404,12 @@
 #define JSTD_TRIVIALITY_TYPE_TRAITS
 #define JSTD_INCOMPLETE_TYPE_TRAITS
 #endif
+
+#if defined(__cpp_lib_exchange_function) || (jstd_cplusplus >= 2014L)
+#ifndef JSTD_EXCHANGE_FUNCTION
+#define JSTD_EXCHANGE_FUNCTION
+#endif
+#endif // __cpp_lib_exchange_function || C++ 14
 
 ////////////////////////////////////////////////////////////////////////////////
 

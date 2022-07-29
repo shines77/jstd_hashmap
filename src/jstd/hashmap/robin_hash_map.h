@@ -2592,7 +2592,14 @@ private:
               bool is_noexcept_move = is_noexcept_move_assignable<T>::value>
     struct exchange_pair {
         static void exchange(Alloc & alloc, T & src, T & dest, T & empty) {
+#ifdef JSTD_EXCHANGE_FUNCTION
             empty = std::exchange(dest, src);
+#else
+            alloc.construct(&empty, std::move(dest));
+            alloc.destroy(&dest);
+            alloc.construct(&dest, std::move(src));
+            alloc.destroy(&src);
+#endif
         }
     };
 
@@ -2609,9 +2616,12 @@ private:
     template <typename Alloc, typename T>
     struct exchange_pair<Alloc, T, false, true> {
         typedef typename T::first_type                      first_type;
+        typedef typename T::second_type                     second_type;
         typedef typename std::remove_cv<first_type>::type   mutable_first_type;
         typedef typename std::allocator_traits<Alloc>::template rebind_alloc<mutable_first_type>
                                                             mutable_first_allocator_type;
+        typedef typename std::allocator_traits<Alloc>::template rebind_alloc<second_type>
+                                                            second_allocator_type;
         static mutable_first_type * mutable_key(T * value) {
             // Still check for isCompatibleLayout so that we can avoid calling jstd::launder
             // unless necessary because it can interfere with optimizations.
@@ -2626,7 +2636,15 @@ private:
             first_allocator.construct(mutable_key(&dest), std::move(*mutable_key(&src)));
             first_allocator.destroy(mutable_key(&src));
 
+#ifdef JSTD_EXCHANGE_FUNCTION
             empty.second = std::exchange(dest.second, src.second);
+#else
+            second_allocator_type second_allocator;
+            second_allocator.construct(&empty.second, std::move(dest.second));
+            second_allocator.destroy(&dest.second);
+            second_allocator.construct(&dest.second, std::move(src.second));
+            second_allocator.destroy(&src.second);
+#endif
         }
     };
 
@@ -2889,8 +2907,8 @@ private:
     }
 
     enum KeyResult {
-        kIsNotExists = 0,
-        kNeedGrow = 1,
+        kNeedGrow = 0,
+        kIsNotExists = 1,
         kIsExists = 2
     };
 
@@ -3034,8 +3052,8 @@ InsertOrGrow:
             this->setUsedCtrl(ctrl, dist_and_hash);
             return { slot, kIsNotExists };
         } else {
-            bool need_grow = this->insert_to_place<false>(ctrl, slot, dist_and_hash);
-            return { slot, static_cast<KeyResult>(need_grow) };
+            bool neednt_grow = this->insert_to_place<false>(ctrl, slot, dist_and_hash);
+            return { slot, static_cast<KeyResult>(neednt_grow) };
         }
     }
 
@@ -3085,10 +3103,11 @@ InsertOrGrow:
         while (target < last_slot) {
             if (ctrl->isEmptyOnly()) {
                 this->emplace_poor_slot(ctrl, insert, target, to_insert.value);
-                return false;
+                return true;
             } else if (to_insert.dist > ctrl->dist) {
                 std::swap(to_insert.value, ctrl->value);
                 this->exchange_slot(insert, target, empty);
+                std::swap(insert, empty);
             }
 
             to_insert.incDist();
@@ -3099,7 +3118,7 @@ InsertOrGrow:
             } else {
                 if (to_insert.distance() >= this->max_lookups()) {
                     this->emplace_poor_slot(ctrl, insert, target, to_insert.value);
-                    return true;
+                    return false;
                 }
             }
             ctrl++;
@@ -3107,7 +3126,7 @@ InsertOrGrow:
         }
 
         this->emplace_poor_slot(ctrl, insert, target, to_insert.value);
-        return true;
+        return false;
     }
 
     JSTD_FORCED_INLINE
@@ -3350,11 +3369,11 @@ InsertOrGrow:
         ctrl_type dist_and_hash;
         value_type value(std::forward<First>(first), std::forward<Args>(args)...);
         auto find_info = this->find_or_insert(value.first, dist_and_hash);
-        slot_type * target = find_info.first;
+        slot_type * slot = find_info.first;
         size_type is_exists = find_info.second;
         if (is_exists != kIsExists) {
             // The key to be inserted is not exists.
-            assert(target != nullptr);
+            assert(slot != nullptr);
             if (is_exists == kNeedGrow) {
                 this->grow_if_necessary();
                 return this->emplace(std::move(value));
@@ -3504,7 +3523,7 @@ InsertOrGrow:
         ctrl_type dist_and_hash;
         size_type target = this->unique_find_or_insert(slot->value.first, dist_and_hash);
         assert(target != npos);
-        bool need_grow = false;
+        bool neednt_grow = true;
 
         ctrl_type * ctrl = this->ctrl_at(target);
         slot_type * target_slot = this->slot_at(target);
@@ -3514,8 +3533,8 @@ InsertOrGrow:
             this->setUsedCtrl(target, dist_and_hash);
         } else {
             // Insert to target place
-            need_grow = this->insert_to_place<true>(ctrl, target_slot, dist_and_hash);
-            assert(need_grow == false);
+            neednt_grow = this->insert_to_place<true>(ctrl, target_slot, dist_and_hash);
+            assert(neednt_grow == true);
         }
 
         slot_type * new_slot = this->slot_at(target);
@@ -3528,7 +3547,7 @@ InsertOrGrow:
         }
         this->slot_size_++;
         assert(this->slot_size() <= this->slot_capacity());
-        return need_grow;
+        return neednt_grow;
     }
 
     void unique_insert(const value_type & value) {
@@ -3544,8 +3563,8 @@ InsertOrGrow:
             this->setUsedCtrl(target, dist_and_hash);
         } else {
             // Insert to target place
-            bool need_grow = this->insert_to_place<false>(ctrl, target_slot, dist_and_hash);
-            if (need_grow) {
+            bool neednt_grow = this->insert_to_place<false>(ctrl, target_slot, dist_and_hash);
+            if (!neednt_grow) {
                 this->grow_if_necessary();
                 this->unique_insert(value);
                 return;
@@ -3576,8 +3595,8 @@ InsertOrGrow:
             this->setUsedCtrl(target, dist_and_hash);
         } else {
             // Insert to target place
-            bool need_grow = this->insert_to_place<false>(ctrl, target_slot, dist_and_hash);
-            if (need_grow) {
+            bool neednt_grow = this->insert_to_place<false>(ctrl, target_slot, dist_and_hash);
+            if (!neednt_grow) {
                 this->grow_if_necessary();
                 this->unique_insert(std::forward<value_type>(value));
                 return;
