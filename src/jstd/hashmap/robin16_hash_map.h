@@ -2955,6 +2955,9 @@ private:
                 this->swap_slot(to_insert, slot, tmp_slot);
             }
 
+            assert(insert_ctrl.distance < kEmptySlot);
+            slot_index = this->next_index(slot_index);
+
             if (isRehashing) {
                 insert_ctrl.distance++;
 #ifdef _DEBUG
@@ -2969,8 +2972,6 @@ private:
                     return true;
                 }
             }
-            assert(insert_ctrl.distance < kEmptySlot);
-            slot_index = this->next_index(slot_index);
         } while (slot_index != target);
 
         this->emplace_tmp_rich_slot(to_insert, target, insert_ctrl.value);

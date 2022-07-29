@@ -1533,7 +1533,7 @@ public:
 
     size_type slot_size() const { return this->slot_size_; }
     size_type slot_mask() const { return this->slot_mask_; }
-    size_type slot_capacity() const { return (this->slot_mask_ + 1); }
+    size_type slot_capacity() const { return (this->slot_mask_ + (this->slot_mask_ != 0)); }
     size_type slot_threshold() const { return this->slot_threshold_; }
     size_type slot_threshold(size_type now_slow_capacity) const {
         return (now_slow_capacity * this->integral_mlf() / kLoadFactorAmplify);
@@ -2927,8 +2927,29 @@ private:
         slot_type * slot = this->slot_at(slot_index);
         ctrl_type dist_and_0(0, 0);
         ctrl_type dist_and_hash;
+#if 1
+        while (ctrl->value >= dist_and_0.value) {
+            if (this->key_equal_(slot->value.first, key)) {
+                return { slot, kIsExists };
+            }
 
-#if 0
+            ctrl++;
+            slot++;
+            dist_and_0.incDist();
+        }
+
+        if (this->need_grow() || (dist_and_0.uvalue >= this->max_distance())) {
+            // The size of slot reach the slot threshold or hashmap is full.
+            this->grow_if_necessary();
+
+            auto find_info = this->find_failed(hash_code, dist_and_0);
+            ctrl = find_info.first;
+            slot = find_info.second;
+        }
+
+        dist_and_hash.uvalue = dist_and_0.uvalue | ctrl_hash;
+        //return { slot, kIsNotExists };
+#elif 0
         while (ctrl->value >= dist_and_0.value) {
             if (ctrl->hash_equals(ctrl_hash)) {
                 if (this->key_equal_(slot->value.first, key)) {
@@ -2952,31 +2973,8 @@ private:
 
         dist_and_hash.uvalue = dist_and_0.uvalue | ctrl_hash;
         //return { slot, kIsNotExists };
-#elif 0
-        while (ctrl->value >= dist_and_0.value) {
-            if (this->key_equal_(slot->value.first, key)) {
-                return { slot, kIsExists };
-            }
-
-            ctrl++;
-            slot++;
-            dist_and_0.incDist();
-        }
-
-        if (this->need_grow() || (dist_and_0.uvalue >= this->max_distance())) {
-            // The size of slot reach the slot threshold or hashmap is full.
-            this->grow_if_necessary();
-
-            auto find_info = this->find_failed(hash_code, dist_and_0);
-            ctrl = find_info.first;
-            slot = find_info.second;
-        }
-
-        dist_and_hash.uvalue = dist_and_0.uvalue | ctrl_hash;
-        //return { slot, kIsNotExists };
 #else   
         const slot_type * last_slot;
-        std::uint32_t maskEmpty = 0;
 
         if (ctrl->value >= ctrl_type::make_dist(0)) {
             if (ctrl->hash_equals(ctrl_hash)) {
@@ -2990,8 +2988,9 @@ private:
 
         ctrl++;
         slot++;
+        dist_and_0.incDist();
 
-        if (ctrl->value >= ctrl_type::make_dist(1)) {
+        if (ctrl->value >= dist_and_0.value) {
             if (ctrl->hash_equals(ctrl_hash)) {
                 if (this->key_equal_(slot->value.first, key)) {
                     return { slot, kIsExists };
@@ -3021,8 +3020,14 @@ private:
                     return { target, kIsExists };
                 }
             }
-            maskEmpty = mask32.maskEmpty;
+            std::uint32_t maskEmpty = mask32.maskEmpty;
             if (maskEmpty != 0) {
+                // It's a [EmptyEntry], or (distance > ctrl->dist) entry.
+                size_type pos = BitUtils::bsf32(maskEmpty);
+                size_type index = group_type::index(0, pos);
+                ctrl = ctrl + index;
+                slot = slot + index;
+                dist_and_hash.dist += std::int8_t(index);
                 break;
             }
             ctrl += kGroupWidth;
@@ -3030,7 +3035,13 @@ private:
             dist_and_hash.incDist(kGroupWidth);
         }
 
+        dist_and_0.dist = dist_and_hash.dist;
+        goto InsertOrGrow_Start;
+
 InsertOrGrow:
+        dist_and_hash.uvalue = dist_and_0.uvalue | ctrl_hash;
+
+InsertOrGrow_Start:
         if (this->need_grow() || (dist_and_0.uvalue >= this->max_distance())) {
             // The size of slot reach the slot threshold or hashmap is full.
             this->grow_if_necessary();
@@ -3039,16 +3050,9 @@ InsertOrGrow:
             ctrl = find_info.first;
             slot = find_info.second;
             dist_and_hash.uvalue = dist_and_0.uvalue | ctrl_hash;
-        } else {
-            // It's a [EmptyEntry], or (distance > ctrl->dist) entry.
-            assert(maskEmpty != 0);
-            size_type pos = BitUtils::bsf32(maskEmpty);
-            size_type index = group_type::index(0, pos);
-            ctrl = ctrl + index;
-            slot = slot + index;
-            dist_and_hash.dist += std::int8_t(index);
         }
 #endif
+
         if (ctrl->isEmpty()) {
             this->setUsedCtrl(ctrl, dist_and_hash);
             return { slot, kIsNotExists };
@@ -3078,13 +3082,15 @@ InsertOrGrow:
 
     template <bool isRehashing>
     JSTD_FORCED_INLINE
-    bool insert_to_place(ctrl_type * ctrl, slot_type * target, ctrl_type dist_and_hash) {
+    bool insert_to_place(ctrl_type * insert_ctrl, slot_type * insert_slot, ctrl_type dist_and_hash) {
+        ctrl_type * ctrl = insert_ctrl;
+        slot_type * target = insert_slot;
         ctrl_type to_insert(dist_and_hash);
         assert(!ctrl->isEmpty());
         assert(to_insert.dist > ctrl->dist);
         std::swap(to_insert.value, ctrl->value);
-        to_insert.incDist();
         ctrl++;
+        to_insert.incDist();
 
         alignas(slot_type) unsigned char slot_raw1[sizeof(slot_type)];
         alignas(slot_type) unsigned char slot_raw2[sizeof(slot_type)];
@@ -3100,10 +3106,12 @@ InsertOrGrow:
         }
         this->destroy_slot(target);
 
+        target++;
+
         slot_type * last_slot = this->last_slot();
         while (target < last_slot) {
             if (ctrl->isEmptyOnly()) {
-                this->emplace_poor_slot(ctrl, insert, target, to_insert.value);
+                this->emplace_poor_slot(ctrl, target, insert, to_insert.value);
                 return true;
             } else if (to_insert.dist > ctrl->dist) {
                 std::swap(to_insert.value, ctrl->value);
@@ -3111,35 +3119,35 @@ InsertOrGrow:
                 std::swap(insert, empty);
             }
 
+            ctrl++;
+            target++;
             to_insert.incDist();
             assert(to_insert.dist <= kMaxDist);
 
             if (isRehashing) {
-                assert(to_insert.distance() < this->max_lookups());
+                assert(to_insert.distance() >= this->max_lookups());
             } else {
                 if (to_insert.distance() >= this->max_lookups()) {
-                    this->emplace_poor_slot(ctrl, insert, target, to_insert.value);
+                    this->emplace_poor_slot(insert_ctrl, insert_slot, insert, to_insert.value);
                     return false;
                 }
             }
-            ctrl++;
-            target++;
         }
 
-        this->emplace_poor_slot(ctrl, insert, target, to_insert.value);
+        this->emplace_poor_slot(insert_ctrl, insert_slot, insert, to_insert.value);
         return false;
     }
 
     JSTD_FORCED_INLINE
-    void emplace_poor_slot(ctrl_type * ctrl, slot_type * insert, slot_type * target,
+    void emplace_poor_slot(ctrl_type * ctrl, slot_type * slot, slot_type * insert,
                            std::int16_t dist_and_hash) {
         this->setUsedCtrl(ctrl, dist_and_hash);
 
-        this->placement_new_slot(target);
+        this->placement_new_slot(slot);
         if (kIsCompatibleLayout)
-            this->mutable_allocator_.construct(&target->mutable_value, std::move(insert->mutable_value));
+            this->mutable_allocator_.construct(&slot->mutable_value, std::move(insert->mutable_value));
         else
-            this->allocator_.construct(&target->value, std::move(insert->value));
+            this->allocator_.construct(&slot->value, std::move(insert->value));
 
         this->destroy_slot(insert);
     }
@@ -3449,7 +3457,7 @@ Insert_To_Slot:
             this->setUsedCtrl(ctrl, dist_and_hash);
             return { slot, false };
         } else {
-            bool neednt_grow = this->insert_to_place<false>(ctrl, slot, dist_and_hash);
+            bool neednt_grow = this->insert_to_place<true>(ctrl, slot, dist_and_hash);
             return { slot, !neednt_grow };
         }
     }
