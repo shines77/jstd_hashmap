@@ -2976,7 +2976,7 @@ private:
         //return { slot, kIsNotExists };
 #else   
         const slot_type * last_slot;
-        std::uint32_t maskEmpty;
+        std::uint32_t maskEmpty = 0;
 
         if (ctrl->value >= ctrl_type::make_dist(0)) {
             if (ctrl->hash_equals(ctrl_hash)) {
