@@ -2828,8 +2828,7 @@ private:
 
         const ctrl_type * ctrl = this->ctrl_at(slot_index);
         const slot_type * slot = this->slot_at(slot_index);
-
-#if 0
+#if 1
         ctrl_type dist_and_0(0, 0);
 
         while (ctrl->value >= dist_and_0.value) {
@@ -2842,7 +2841,7 @@ private:
         }
 
         return this->last_slot();
-#elif 1
+#elif 0
         ctrl_type dist_and_0(0, 0);
 
         while (ctrl->value >= dist_and_0.value) {
@@ -2927,7 +2926,7 @@ private:
         slot_type * slot = this->slot_at(slot_index);
         ctrl_type dist_and_0(0, 0);
         ctrl_type dist_and_hash;
-#if 1
+#if 0
         while (ctrl->value >= dist_and_0.value) {
             if (this->key_equal_(slot->value.first, key)) {
                 return { slot, kIsExists };
@@ -2949,7 +2948,7 @@ private:
 
         dist_and_hash.uvalue = dist_and_0.uvalue | ctrl_hash;
         //return { slot, kIsNotExists };
-#elif 0
+#elif 1
         while (ctrl->value >= dist_and_0.value) {
             if (ctrl->hash_equals(ctrl_hash)) {
                 if (this->key_equal_(slot->value.first, key)) {
@@ -3460,89 +3459,6 @@ Insert_To_Slot:
             bool neednt_grow = this->insert_to_place<true>(ctrl, slot, dist_and_hash);
             return { slot, !neednt_grow };
         }
-    }
-
-    JSTD_NO_INLINE
-    std::pair<slot_type *, bool>
-    unique_find_or_insert_old(const key_type & key) {
-        hash_code_t hash_code = this->get_hash(key);
-        size_type slot_index = this->index_for_hash(hash_code);
-        std::uint8_t ctrl_hash = this->get_ctrl_hash(hash_code);
-
-        ctrl_type * ctrl = this->ctrl_at(slot_index);
-        slot_type * slot = this->slot_at(slot_index);
-        ctrl_type dist_and_0(0, 0);
-        ctrl_type dist_and_hash;
-
-        if (likely(ctrl->value < ctrl_type::make_dist(0))) {
-            return { slot, false };
-        }
-
-        ctrl++;
-        slot++;
-
-        if (likely(ctrl->value < ctrl_type::make_dist(1))) {
-            return { slot, false };
-        }
-
-        ctrl++;
-        slot++;
-
-        if (likely(ctrl->value < ctrl_type::make_dist(2))) {
-            return { slot, false };
-        }
-
-        ctrl++;
-        slot++;
-
-        if (likely(ctrl->value < ctrl_type::make_dist(3))) {
-            return { slot, false };
-        }
-
-        ctrl++;
-        slot++;
-
-        dist_and_0.setDist(4);
-
-        slot_type * last_slot = this->last_slot();
-
-#if 0
-        while (slot < last_slot) {
-            if (likely(ctrl->value < dist_and_0.value)) {
-                assert(dist_and_0.value >= 0 && dist_and_0.uvalue < this->max_distance());
-                return { slot, false };
-            }
-            ctrl++;
-            slot++;
-            dist_and_0.incDist();
-            assert(slot < this->last_slot());
-        }
-
-        assert(dist_and_0.value >= 0 && dist_and_0.uvalue < this->max_distance());
-        return { slot, false };
-#endif
-
-        dist_and_hash.uvalue = dist_and_0.uvalue | ctrl_hash;
-
-        // Find the first empty slot and insert
-        while (slot < last_slot) {
-            const group_type & group = this->get_group(ctrl);
-            std::uint32_t maskEmpty = group.matchEmptyAndDistance(dist_and_hash);
-            if (maskEmpty != 0) {
-                // Found a [EmptyEntry] to insert
-                size_type pos = BitUtils::bsf32(maskEmpty);
-                size_type index = group.index(0, pos);
-                ctrl += index;
-                slot += index;
-                break;
-            }
-            ctrl += kGroupWidth;
-            slot += kGroupWidth;
-            dist_and_hash.incDist(kGroupWidth);
-            assert(dist_and_hash.value >= 0 && dist_and_hash.uvalue < this->max_distance());
-        }
-
-        return { slot, false };
     }
 
     // Use in rehash_impl()
