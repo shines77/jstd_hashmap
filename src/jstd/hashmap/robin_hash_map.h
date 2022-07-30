@@ -3124,9 +3124,9 @@ InsertOrGrow_Start:
             assert(to_insert.dist <= kMaxDist);
 
             if (isRehashing) {
-                assert(to_insert.distance() >= this->max_lookups());
+                assert(to_insert.uvalue < this->max_distance());
             } else {
-                if (to_insert.distance() >= this->max_lookups()) {
+                if (to_insert.uvalue >= this->max_distance()) {
                     this->emplace_poor_slot(insert_ctrl, insert_slot, insert, to_insert.value);
                     return false;
                 }

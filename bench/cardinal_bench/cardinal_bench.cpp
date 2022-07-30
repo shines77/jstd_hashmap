@@ -89,7 +89,7 @@
 #else
 #define USE_STD_UNORDERED_MAP       0
 #define USE_JSTD_FLAT16_HASH_MAP    0
-#define USE_JSTD_ROBIN16_HASH_MAP   1
+#define USE_JSTD_ROBIN16_HASH_MAP   0
 #define USE_JSTD_ROBIN_HASH_MAP     1
 #endif // _DEBUG
 
@@ -468,7 +468,7 @@ template <typename Key, typename Value>
 void benchmark_insert_random(std::size_t iters)
 {
     static constexpr std::size_t Factor = 16;
-#ifndef _DEBUG
+#ifdef _DEBUG
     static constexpr std::size_t DataSize = 1024 * 1000 * Factor;
     static constexpr std::size_t Cardinal0 = 60 * Factor;
     static constexpr std::size_t Cardinal1 = 600 * Factor;
@@ -490,6 +490,7 @@ void benchmark_insert_random(std::size_t iters)
 
     printf("DataSize = %u, std::hash<T>\n\n", (uint32_t)DataSize);
 
+#ifndef _DEBUG
     benchmark_insert_random_impl<Key, Value, DataSize, Cardinal0>();
     printf("-----------------------------------------------------------------------\n\n");
     benchmark_insert_random_impl<Key, Value, DataSize, Cardinal1>();
@@ -502,6 +503,7 @@ void benchmark_insert_random(std::size_t iters)
     printf("-----------------------------------------------------------------------\n\n");
     //benchmark_insert_random_impl<Key, Value, DataSize, Cardinal5>();
     //printf("-----------------------------------------------------------------------\n\n");
+#endif
     benchmark_insert_random_impl<Key, Value, DataSize, Cardinal6>();
 }
 
