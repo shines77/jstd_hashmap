@@ -93,7 +93,7 @@
 #define USE_STD_HASH_MAP            0
 #define USE_STD_UNORDERED_MAP       0
 #define USE_JSTD_FLAT16_HASH_MAP    0
-#define USE_JSTD_ROBIN16_HASH_MAP   0
+#define USE_JSTD_ROBIN16_HASH_MAP   1
 #define USE_JSTD_ROBIN_HASH_MAP     1
 #endif // _DEBUG
 
@@ -244,6 +244,7 @@ static constexpr std::size_t kInitCapacity = 8;
 #if USE_STAT_COUNTER
 static std::size_t g_num_hashes = 0;
 static std::size_t g_num_copies = 0;
+static std::size_t g_num_assigns = 0;
 #if USE_CTOR_COUNTER
 static std::size_t g_num_constructor = 0;
 #endif
@@ -255,10 +256,11 @@ void reset_counter()
 #if USE_STAT_COUNTER
     g_num_hashes = 0;
     g_num_copies = 0;
+    g_num_assigns = 0;
 #if USE_CTOR_COUNTER
     g_num_constructor = 0;
 #endif
-#endif
+#endif // USE_STAT_COUNTER
 }
 
 static inline
@@ -403,18 +405,21 @@ public:
 #endif
     }
 
-    HashObject(const this_type & that) noexcept {
-        operator = (that);
+    HashObject(const this_type & that) noexcept : key_(that.key_) {
+        std::memcpy(this->buffer_, that.buffer_, kBufLen * sizeof(char));
+#if USE_STAT_COUNTER
+        g_num_copies++;
+#endif
     }
 
     ~HashObject() = default;
 
     this_type & operator = (const this_type & that) noexcept {
-#if USE_STAT_COUNTER
-        g_num_copies++;
-#endif
         this->key_ = that.key_;
         std::memcpy(this->buffer_, that.buffer_, kBufLen * sizeof(char));
+#if USE_STAT_COUNTER
+        g_num_assigns++;
+#endif
         return *this;
     }
 
@@ -427,16 +432,15 @@ public:
     }
 
     std::size_t Hash() const {
-#if USE_STAT_COUNTER
-        g_num_hashes++;
-#endif
         std::size_t hash_val = static_cast<std::size_t>(this->key_);
 #if 0
         for (std::size_t i = 0; i < kHashLen; ++i) {
             hash_val += this->buffer_[i];
         }
 #endif
-
+#if USE_STAT_COUNTER
+        g_num_hashes++;
+#endif
         return static_cast<std::size_t>(
             HASH_MAP_FUNCTION<std::size_t>()(hash_val)
         );
@@ -483,17 +487,19 @@ public:
         g_num_constructor++;
 #endif
     }
-    HashObject(const this_type & that) noexcept {
-        operator = (that);
+    HashObject(const this_type & that) noexcept : key_(that.key_) {
+#if USE_STAT_COUNTER
+        g_num_copies++;
+#endif
     }
 
     ~HashObject() = default;
 
     this_type & operator = (const this_type & that) noexcept {
-#if USE_STAT_COUNTER
-        g_num_copies++;
-#endif
         this->key_ = that.key_;
+#if USE_STAT_COUNTER
+        g_num_assigns++;
+#endif
         return *this;
     }
 
@@ -550,22 +556,26 @@ public:
         g_num_constructor++;
 #endif
     }
+
     HashObject(key_type key) noexcept : key_(key) {
 #if (USE_STAT_COUNTER != 0) && (USE_CTOR_COUNTER != 0)
         g_num_constructor++;
 #endif
     }
-    HashObject(const this_type & that) noexcept {
-        operator = (that);
+
+    HashObject(const this_type & that) noexcept : key_(that.key_) {
+#if USE_STAT_COUNTER
+        g_num_copies++;
+#endif
     }
 
     ~HashObject() = default;
 
     this_type & operator = (const this_type & that) noexcept {
-#if USE_STAT_COUNTER
-        g_num_copies++;
-#endif
         this->key_ = that.key_;
+#if USE_STAT_COUNTER
+        g_num_assigns++;
+#endif
         return *this;
     }
 
@@ -934,14 +944,14 @@ static void report_result(char const * title, double ut, double lf, std::size_t 
     printf("%-35s %8.2f ns  lf=%0.3f  %s\n", title, (ut * 1000000000.0 / iters), lf, heap);
 #else
   #if USE_CTOR_COUNTER
-    printf("%-35s %8.2f ns  (%8" PRIuPTR " hashes, %8" PRIuPTR " copies, %8" PRIuPTR " ctor)  lf=%0.3f  %s\n",
+    printf("%-35s %8.2f ns  (%8" PRIuPTR " hashes, %8" PRIuPTR " copies, %8" PRIuPTR " assigns, %8" PRIuPTR " ctor)  lf=%0.3f  %s\n",
            title, (ut * 1000000000.0 / iters),
-           g_num_hashes, g_num_copies, g_num_constructor,
+           g_num_hashes, g_num_copies, g_num_assigns, g_num_constructor,
            lf, heap);
   #else
-    printf("%-35s %8.2f ns  (%8" PRIuPTR " hashes, %8" PRIuPTR " copies)  lf=%0.3f  %s\n",
+    printf("%-35s %8.2f ns  (%8" PRIuPTR " hashes, %8" PRIuPTR " copies, %8" PRIuPTR " assigns)  lf=%0.3f  %s\n",
            title, (ut * 1000000000.0 / iters),
-           g_num_hashes, g_num_copies,
+           g_num_hashes, g_num_copies, g_num_assigns,
            lf, heap);
   #endif
 #endif
@@ -991,7 +1001,7 @@ static void measure_hashmap(const char * name, std::size_t obj_size, std::size_t
                name, obj_size, sizeof(typename MapType::value_type), iters);
     }
     else {
-        printf("%s (%" PRIuPTR " byte objects, %" PRIuPTR " byte EntryType, %" PRIuPTR " iterations):\n",
+        printf("%s (%" PRIuPTR " byte objects, %" PRIuPTR " byte ValueType, %" PRIuPTR " iterations):\n",
                name, obj_size, entry_size, iters);
     }
     if (1) printf("\n");
@@ -1140,6 +1150,7 @@ void benchmark_all_hashmaps(std::size_t iters)
     // a HashObject as it would be to use just a straight int/char
     // buffer.  To keep memory use similar, we normalize the number of
     // iterations based on size.
+#if 0
     if (FLAGS_test_4_bytes) {
         test_all_hashmaps<HashObject<std::uint32_t, 4, 4>, std::uint32_t>(4, iters / 1);
     }
@@ -1147,6 +1158,7 @@ void benchmark_all_hashmaps(std::size_t iters)
     if (FLAGS_test_8_bytes) {
         test_all_hashmaps<HashObject<std::uint64_t, 8, 8>, std::uint64_t>(8, iters / 2);
     }
+#endif
 
     if (FLAGS_test_16_bytes) {
         test_all_hashmaps<HashObject<std::size_t, 16, 16>, std::size_t>(16, iters / 4);
@@ -1209,17 +1221,17 @@ void std_hash_test()
 void is_noexcept_move_test()
 {
     static constexpr bool v1_0 = jstd::is_noexcept_move_assignable<HashObject<std::uint32_t, 4, 4>>::value;
-    static constexpr bool v2_0 = jstd::is_noexcept_move_assignable<HashObject<std::size_t, 8, 8>>::value;
+    static constexpr bool v2_0 = jstd::is_noexcept_move_assignable<HashObject<std::uint64_t, 8, 8>>::value;
     static constexpr bool v3_0 = jstd::is_noexcept_move_assignable<HashObject<std::size_t, 16, 16>>::value;
     static constexpr bool v4_0 = jstd::is_noexcept_move_assignable<HashObject<std::size_t, 256, 32>>::value;
 
     static constexpr bool v1_1 = jstd::is_noexcept_move_assignable<std::pair<HashObject<std::uint32_t, 4, 4>, std::uint32_t>>::value;
-    static constexpr bool v2_1 = jstd::is_noexcept_move_assignable<std::pair<HashObject<std::size_t, 8, 8>, std::size_t>>::value;
+    static constexpr bool v2_1 = jstd::is_noexcept_move_assignable<std::pair<HashObject<std::uint64_t, 8, 8>, std::size_t>>::value;
     static constexpr bool v3_1 = jstd::is_noexcept_move_assignable<std::pair<HashObject<std::size_t, 16, 16>, std::size_t>>::value;
     static constexpr bool v4_1 = jstd::is_noexcept_move_assignable<std::pair<HashObject<std::size_t, 256, 32>, std::size_t>>::value;
 
     static constexpr bool v1_2 = jstd::is_noexcept_move_assignable<std::pair<const HashObject<std::uint32_t, 4, 4>, std::uint32_t>>::value;
-    static constexpr bool v2_2 = jstd::is_noexcept_move_assignable<std::pair<const HashObject<std::size_t, 8, 8>, std::size_t>>::value;
+    static constexpr bool v2_2 = jstd::is_noexcept_move_assignable<std::pair<const HashObject<std::uint64_t, 8, 8>, std::size_t>>::value;
     static constexpr bool v3_2 = jstd::is_noexcept_move_assignable<std::pair<const HashObject<std::size_t, 16, 16>, std::size_t>>::value;
     static constexpr bool v4_2 = jstd::is_noexcept_move_assignable<std::pair<const HashObject<std::size_t, 256, 32>, std::size_t>>::value;
 
@@ -1256,7 +1268,7 @@ int main(int argc, char * argv[])
     jtest::CPU::warm_up(1000);
 
     if (1) { std_hash_test(); }
-    if (0) { is_noexcept_move_test(); }
+    if (1) { is_noexcept_move_test(); }
 
     if (1)
     {
