@@ -72,6 +72,7 @@
 #include <type_traits>
 #include <stdexcept>
 
+#include "jstd/hashmap/layout_policy.h"
 #include "jstd/hashmap/hash_chunk_list.h"
 #include "jstd/type_traits.h"
 #include "jstd/utility.h"
@@ -81,25 +82,10 @@
 
 namespace jstd {
 
-template <typename Key, typename Value>
-struct layout_policy {
-    static constexpr bool isAutoDetectPairLayout = true;
-    static constexpr bool keyValueIsIsolated = false;
-
-    static constexpr bool isAutoDetectKeyInlined = true;
-    static constexpr bool keyIsInlined = true;
-
-    static constexpr bool isAutoDetectValueInlined = true;
-    static constexpr bool valueIsInlined = true;
-
-    static constexpr bool isAutoDetectStoreHash = true;
-    static constexpr bool needStoreHash = true;
-};
-
 template < typename Key, typename Value,
            typename Hash = std::hash<Key>,
            typename KeyEqual = std::equal_to<Key>,
-           typename LayoutPolicy = jstd::layout_policy<Key, Value>,
+           typename LayoutPolicy = jstd::default_layout_policy<Key, Value>,
            typename Allocator = std::allocator<std::pair<const Key, Value>> >
 class unordered_map {
 public:
@@ -146,12 +132,11 @@ public:
     static constexpr std::size_t kWordLen = 32;
     static constexpr bool kIs64Bit = false;
 #endif
-    static constexpr bool kDetectStoreHash = (std::is_arithmetic<key_type>::value ||
-                                              std::is_enum<key_type>::value);
+    static constexpr bool kDetectStoreHash = detail::is_plain_type<key_type>::value;
 
     static constexpr bool kNeedStoreHash =
-        (!layout_policy_t::isAutoDetectStoreHash && layout_policy_t::needStoreHash) ||
-         (layout_policy_t::isAutoDetectStoreHash && (kDetectStoreHash));
+        (!layout_policy_t::autoDetectStoreHash && layout_policy_t::needStoreHash) ||
+         (layout_policy_t::autoDetectStoreHash && (kDetectStoreHash));
 
     enum entry_type_t {
         kEntryTypeShfit  = 31,

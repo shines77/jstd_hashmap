@@ -76,6 +76,7 @@
 #include "jstd/lang/launder.h"
 #include "jstd/hasher/hashes.h"
 #include "jstd/hasher/hash_crc32c.h"
+#include "jstd/hashmap/layout_policy.h"
 #include "jstd/support/BitUtils.h"
 #include "jstd/support/Power2.h"
 #include "jstd/support/BitVec.h"
@@ -101,6 +102,7 @@ namespace jstd {
 template < typename Key, typename Value,
            typename Hash = std::hash<typename std::remove_cv<Key>::type>,
            typename KeyEqual = std::equal_to<typename std::remove_cv<Key>::type>,
+           typename LayoutPolicy = jstd::default_layout_policy<Key, Value>,
            typename Allocator = std::allocator<std::pair<typename std::add_const<typename std::remove_cv<Key>::type>::type,
                                                          typename std::remove_cv<Value>::type>> >
 class robin_hash_map {
@@ -124,11 +126,12 @@ public:
     typedef typename Hash::result_type              hash_result_t;
     typedef typename hash_policy_selector<Hash>::type
                                                     hash_policy_t;
+    typedef LayoutPolicy                            layout_policy_t;
 
     typedef std::size_t                             size_type;
     typedef std::intptr_t                           ssize_type;
     typedef std::size_t                             hash_code_t;
-    typedef robin_hash_map<Key, Value, Hash, KeyEqual, Allocator>
+    typedef robin_hash_map<Key, Value, Hash, KeyEqual, LayoutPolicy, Allocator>
                                                     this_type;
 
     static constexpr bool kUseIndexSalt = false;
@@ -175,10 +178,20 @@ public:
 #else
     static constexpr bool isGccOrClang = false;
 #endif
-    static constexpr bool isPlaneKeyHash = isGccOrClang &&
+    static constexpr bool isPlainKeyHash = isGccOrClang &&
                                            std::is_same<Hash, std::hash<key_type>>::value &&
-                                          (std::is_arithmetic<key_type>::value ||
-                                           std::is_enum<key_type>::value);
+                                          (detail::is_plain_type<key_type>::value);
+
+    static constexpr bool kDetectStoreHash = detail::is_plain_type<key_type>::value;
+
+    static constexpr bool kNeedStoreHash =
+        (!layout_policy_t::autoDetectStoreHash && layout_policy_t::needStoreHash) ||
+         (layout_policy_t::autoDetectStoreHash && (kDetectStoreHash));
+
+    static constexpr bool kKeyIsPlain    = detail::is_plain_type<key_type>::value;
+    static constexpr bool kMappedIsPlain = detail::is_plain_type<mapped_type>::value;
+
+    static constexpr bool kIsPlainKV = kKeyIsPlain && kMappedIsPlain;
 
     static constexpr bool is_slot_trivial_copyable =
             (std::is_trivially_copyable<actual_value_type>::value ||
@@ -190,8 +203,8 @@ public:
             (std::is_trivially_destructible<actual_value_type>::value ||
             (std::is_trivially_destructible<key_type>::value &&
              std::is_trivially_destructible<mapped_type>::value) ||
-           ((std::is_arithmetic<key_type>::value || std::is_enum<key_type>::value) &&
-            (std::is_arithmetic<mapped_type>::value || std::is_enum<mapped_type>::value)));
+            (detail::is_plain_type<key_type>::value &&
+             detail::is_plain_type<mapped_type>::value));
 
     static constexpr std::int8_t kEmptySlot     = (std::int8_t)0b11111111;
     static constexpr std::int8_t kEndOfMark     = (std::int8_t)0b11111110;
@@ -1106,7 +1119,7 @@ public:
         };
 
         slot_type() {}
-        ~slot_type() = default;
+        ~slot_type() {};
     };
 
     typedef slot_type       mutable_slot_type;
@@ -1941,17 +1954,20 @@ public:
 
     iterator erase(iterator pos) {
         size_type index = this->index_of(pos);
-        this->erase_slot(pos);
-        return ++pos;
+        this->erase_slot(index);
+        ctrl_type * ctrl = this->ctrl_at(index);
+        return this->next_valid_iterator(ctrl, pos);
     }
 
     const_iterator erase(const_iterator pos) {
         size_type index = this->index_of(pos);
         this->erase_slot(index);
-        return ++pos;
+        ctrl_type * ctrl = this->ctrl_at(index);
+        return this->next_valid_iterator(ctrl, pos);
     }
 
     iterator erase(const_iterator first, const_iterator last) {
+        // TODO: There is a bug, which needs to be traversed from the last to the first.
         for (; first != last; ++first) {
             size_type index = this->index_of(first);
             this->erase_slot(index);
@@ -2051,6 +2067,32 @@ private:
 
     const_iterator iterator_at(const slot_type * slot) const noexcept {
         return { this, this->index_of(slot) };
+    }
+
+    iterator next_valid_iterator(ctrl_type * ctrl, iterator iter) {
+        if (ctrl->isUsed())
+            return iter;
+        else
+            return ++iter;
+    }
+
+    const_iterator next_valid_iterator(ctrl_type * ctrl, const_iterator iter) {
+        if (ctrl->isUsed())
+            return iter;
+        else
+            return ++iter;
+    }
+
+    iterator next_valid_iterator(iterator iter) {
+        size_type index = this->index_of(iter);
+        ctrl_type * ctrl = this->ctrl_at(index);
+        return this->next_valid_iterator(ctrl, iter);
+    }
+
+    const_iterator next_valid_iterator(const_iterator iter) {
+        size_type index = this->index_of(iter);
+        ctrl_type * ctrl = this->ctrl_at(index);
+        return this->next_valid_iterator(ctrl, iter);
     }
 
     inline hash_code_t get_hash(const key_type & key) const noexcept {
@@ -2277,11 +2319,19 @@ private:
     }
 
     size_type index_of(iterator pos) const {
+#if 1
+        return pos.index();
+#else
         return this->index_of(pos.value());
+#endif
     }
 
     size_type index_of(const_iterator pos) const {
+#if 1
+        return pos.index();
+#else
         return this->index_of(pos.value());
+#endif
     }
 
     size_type index_of(slot_type * slot) const {
@@ -2356,7 +2406,7 @@ private:
             assert(ctrl != nullptr);
             for (size_type index = 0; index < this->max_slot_capacity(); index++) {
                 if (ctrl->isUsed()) {
-                    this->destroy_slot(index);
+                    this->destory_slot(index);
                 }
                 ctrl++;
             }
@@ -2501,7 +2551,7 @@ private:
                 for (ctrl_type * ctrl = old_ctrls; ctrl != last_ctrl; ctrl++) {
                     if (likely(ctrl->isUsed())) {
                         this->unique_move_insert(old_slot);
-                        this->destroy_slot(old_slot);
+                        this->destory_slot(old_slot);
                     }
                     old_slot++;
                 }
@@ -2517,7 +2567,7 @@ private:
                             size_type old_index = group->index(start_index, pos);
                             slot_type * old_slot = old_slots + old_index;
                             this->unique_move_insert(old_slot);
-                            this->destroy_slot(old_slot);
+                            this->destory_slot(old_slot);
                         }
                         start_index += kGroupWidth;
                     }
@@ -2527,7 +2577,7 @@ private:
                     for (ctrl_type * ctrl = old_ctrls; ctrl != last_ctrl; ctrl++) {
                         if (likely(ctrl->isUsed())) {
                             this->unique_move_insert(old_slot);
-                            this->destroy_slot(old_slot);
+                            this->destory_slot(old_slot);
                         }
                         old_slot++;
                     }
@@ -2547,13 +2597,13 @@ private:
     }
 
     JSTD_FORCED_INLINE
-    void destroy_slot(size_type index) {
+    void destory_slot(size_type index) {
         slot_type * slot = this->slot_at(index);
-        this->destroy_slot(slot);
+        this->destory_slot(slot);
     }
 
     JSTD_FORCED_INLINE
-    void destroy_slot(slot_type * slot) {
+    void destory_slot(slot_type * slot) {
         if (!is_slot_trivial_destructor) {
             if (kIsCompatibleLayout) {
                 this->mutable_allocator_.destroy(&slot->mutable_value);
@@ -2561,6 +2611,12 @@ private:
                 this->allocator_.destroy(&slot->value);
             }
         }
+    }
+
+    JSTD_FORCED_INLINE
+    void destroy_slot_data(ctrl_type * ctrl, slot_type * slot) {
+        this->setUnusedCtrl(ctrl, kEmptySlot16);
+        this->destory_slot(slot);
     }
 
     JSTD_FORCED_INLINE
@@ -2578,7 +2634,7 @@ private:
         } else {
             this->allocator_.construct(&dest_slot->value, std::move(src_slot->value));
         }
-        this->destroy_slot(src_slot);
+        this->destory_slot(src_slot);
     }
 
     JSTD_FORCED_INLINE
@@ -2589,7 +2645,7 @@ private:
         } else {
             this->allocator_.construct(&dest_slot->value, src_slot->value);
         }
-        this->destroy_slot(src_slot);
+        this->destory_slot(src_slot);
     }
 
     template <typename Alloc, typename T, bool isCompatibleLayout,
@@ -3149,7 +3205,13 @@ InsertOrGrow_Start:
         std::swap(to_insert.value, ctrl->value);
         ctrl++;
         to_insert.incDist();
+#if 1
+        alignas(slot_type) unsigned char slot_raw[sizeof(slot_type)];
 
+        slot_type * empty  = reinterpret_cast<slot_type *>(&slot_raw);
+        slot_type * insert = insert_slot;
+        target++;
+#else
         alignas(slot_type) unsigned char slot_raw1[sizeof(slot_type)];
         alignas(slot_type) unsigned char slot_raw2[sizeof(slot_type)];
 
@@ -3162,22 +3224,22 @@ InsertOrGrow_Start:
         } else {
             this->allocator_.construct(&insert->value, std::move(target->value));
         }
-        this->destroy_slot(target);
+        this->destory_slot(target);
         target++;
-
+#endif
         static constexpr bool isNoexceptMoveAssignable = is_noexcept_move_assignable<value_type>::value;
         static constexpr bool isMutableNoexceptMoveAssignable = is_noexcept_move_assignable<mutable_value_type>::value;
 
         // Initialize the empty slot use default constructor if necessary
         this->placement_new_slot(empty);
-        if (!is_slot_trivial_destructor) {
+        if ((!is_slot_trivial_destructor) && (!kIsPlainKV)) {
             if (kIsCompatibleLayout) {          
                 if (isMutableNoexceptMoveAssignable) {
                     this->mutable_allocator_.construct(&empty->mutable_value);
                 }
             } else {       
                 if (isNoexceptMoveAssignable) {
-                    this->allocator_.construct(&empty->mutable_value);
+                    this->allocator_.construct(&empty->value);
                 }
             }
         }
@@ -3186,11 +3248,16 @@ InsertOrGrow_Start:
         while (target < last_slot) {
             if (ctrl->isEmptyOnly()) {
                 this->emplace_rich_slot(ctrl, target, insert, to_insert.value);
+                this->destory_empty_slot(empty);
                 return true;
             } else if (to_insert.dist > ctrl->dist) {
                 std::swap(to_insert.value, ctrl->value);
-                this->exchange_slot(insert, target, empty);
-                std::swap(insert, empty);
+                if (kIsPlainKV) {
+                    this->swap_slot(insert, target, empty);
+                } else {
+                    this->exchange_slot(insert, target, empty);
+                    std::swap(insert, empty);
+                }
             }
 
             ctrl++;
@@ -3203,12 +3270,14 @@ InsertOrGrow_Start:
             } else {
                 if (to_insert.uvalue >= this->max_distance()) {
                     this->emplace_rich_slot(insert_ctrl, insert_slot, insert, to_insert.value);
+                    this->destory_empty_slot(empty);
                     return false;
                 }
             }
         }
 
         this->emplace_rich_slot(insert_ctrl, insert_slot, insert, to_insert.value);
+        this->destory_empty_slot(empty);
         return false;
     }
 
@@ -3223,7 +3292,27 @@ InsertOrGrow_Start:
         else
             this->allocator_.construct(&slot->value, std::move(insert->value));
 
-        this->destroy_slot(insert);
+        this->destory_slot(insert);
+    }
+
+    JSTD_FORCED_INLINE
+    void destory_empty_slot(slot_type * empty) {
+        static constexpr bool isNoexceptMoveAssignable = is_noexcept_move_assignable<value_type>::value;
+        static constexpr bool isMutableNoexceptMoveAssignable = is_noexcept_move_assignable<mutable_value_type>::value;
+
+        if ((!is_slot_trivial_destructor) && (!kIsPlainKV)) {
+            if (kIsCompatibleLayout) {
+                if (isMutableNoexceptMoveAssignable) {
+                    //this->mutable_allocator_.destory(&empty->mutable_value);
+                    this->destory_slot(empty);
+                }
+            } else {       
+                if (isNoexceptMoveAssignable) {
+                    //this->allocator_.destory(&empty->value);
+                    this->destory_slot(empty);
+                }
+            }
+        }
     }
 
     template <bool AlwaysUpdate>
@@ -3608,275 +3697,47 @@ Insert_To_Slot:
 
     JSTD_FORCED_INLINE
     size_type find_and_erase(const key_type & key) {
-        hash_code_t hash_code = this->get_hash(key);
-        size_type slot_index = this->index_for_hash(hash_code);
-        std::uint8_t ctrl_hash = this->get_ctrl_hash(hash_code);
-        size_type start_slot = slot_index;
-        std::int8_t distance = 0;
-        ctrl_data dist_and_hash(0, ctrl_hash);
-
-        if (kUnrollMode == UnrollMode16) {
-            ctrl_type * ctrl = this->ctrl_at(slot_index);
-            if (likely(ctrl->value == dist_and_hash.value)) {
-                const slot_type * slot = this->slot_at(slot_index);
-                if (this->key_equal_(slot->value.first, key)) {
-                    this->erase_slot(slot_index);
-                    return 1;
-                }
-            }
-
-            ctrl++;
-            dist_and_hash.incDist();
-
-            if (likely(ctrl->value == dist_and_hash.value)) {
-                slot_index++;
-                const slot_type * slot = this->slot_at(slot_index);
-                if (this->key_equal_(slot->value.first, key)) {
-                    this->erase_slot(slot_index);
-                    return 1;
-                }
-            }
-
-            ctrl++;
-            dist_and_hash.incDist();
-
-            do {
-                if (likely(ctrl->value == dist_and_hash.value)) {
-                    slot_index = this->index_of(ctrl);
-                    const slot_type * slot = this->slot_at(slot_index);
-                    if (this->key_equal_(slot->value.first, key)) {
-                        this->erase_slot(slot_index);
-                        return 1;
-                    }
-                }
-                ctrl++;
-                dist_and_hash.incDist();
-            } while (ctrl->dist >= dist_and_hash.dist);
-
-            return 0;
-        } else if (kUnrollMode == UnrollMode8) {
-            ctrl_type * ctrl = this->ctrl_at(slot_index);
-
-            // Optimize from: (ctrl->isUsed() && (ctrl->dist >= 0))
-            if (likely(ctrl->isUsed())) {
-                if (ctrl->hash == ctrl_hash) {
-                    const slot_type * slot = this->slot_at(slot_index);
-                    if (this->key_equal_(slot->value.first, key)) {
-                        this->erase_slot(slot_index);
-                        return 1;
-                    }
-                }
-            } else {
-                return 0;
-            }
-
-            ctrl++;
-            slot_index++;
-
-            // Optimization: merging two comparisons
-            if (likely(std::uint8_t(ctrl->dist + 1) > 1)) {
-            //if (likely(ctrl->isUsed() && (ctrl->dist >= 1))) {
-                if (ctrl->hash == ctrl_hash) {
-                    const slot_type * slot = this->slot_at(slot_index);
-                    if (this->key_equal_(slot->value.first, key)) {
-                        this->erase_slot(slot_index);
-                        return 1;
-                    }
-                }
-            } else {
-                return 0;
-            }
-
-            ctrl++;
-            slot_index++;
-            distance = 2;
-
-            do {
-                // Optimization: merging two comparisons
-                if (likely(std::uint8_t(ctrl->dist + 1) > distance)) {
-                //if (likely(ctrl->isUsed() && (ctrl->dist >= distance))) {
-                    if (ctrl->hash == ctrl_hash) {
-                        const slot_type * slot = this->slot_at(slot_index);
-                        if (this->key_equal_(slot->value.first, key)) {
-                            this->erase_slot(slot_index);
-                            return 1;
-                        }
-                    }
-
-                    slot_index++;
-                    ctrl++;
-                    distance++;
-                    if (ctrl->dist < distance)
-                        break;
-                } else {
-                    return 0;
-                }
-            } while (1);
-
+        const slot_type * slot = this->find_impl(key);
+        if (slot != this->last_slot()) {
+            size_type to_erase = this->index_of(slot);
+            this->erase_slot(to_erase);
+            return 1;
+        } else {
             return 0;
         }
-
-        size_type max_slot_index = this->max_slot_capacity();
-
-        do {
-            const group_type & group = this->get_group(slot_index);
-            auto mask32 = group.matchHashAndDistance(dist_and_hash.value);
-            std::uint32_t maskHash = mask32.maskHash;
-            while (maskHash != 0) {
-                size_type pos = BitUtils::bsf32(maskHash);
-                maskHash = BitUtils::clearLowBit32(maskHash);
-                size_type index = group.index(slot_index, pos);
-                const slot_type * target = this->slot_at(index);
-                if (this->key_equal_(target->value.first, key)) {
-                    this->erase_slot(index);
-                    return 1;
-                }
-            }
-            if (mask32.maskEmpty != 0) {
-                break;
-            }
-            dist_and_hash.incDist(kGroupWidth);
-            slot_index = this->slot_next_group(slot_index);
-        } while (slot_index < max_slot_index);
-
-        return 0;
     }
 
     JSTD_NO_INLINE
     void erase_slot(size_type to_erase) {
-        assert(to_erase <= this->slot_capacity());
-        assert(this->ctrl_at(to_erase)->isUsed());
-        size_type prev_index;
-        size_type last_index = npos;
-        size_type first_index = this->next_index(to_erase);
-        size_type slot_index = first_index;
+        assert(to_erase < this->max_slot_capacity());
 
-        if (1) {
-            ctrl_type * ctrl = this->ctrl_at(slot_index);
-            if (kUnrollMode == UnrollMode16) {
-                if (ctrl->isEmptyOrZero()) {
-                    prev_index = to_erase;
-                    goto ClearSlot;
-                }
+        ctrl_type * curr_ctrl = this->ctrl_at(to_erase);
+        slot_type * curr_slot = this->slot_at(to_erase);
+        assert(curr_ctrl->isUsed());
 
-                ctrl++;
-                slot_index++;
-
-                if (ctrl->isEmptyOrZero()) {
-                    last_index = slot_index;
-                    goto TransferSlots;
-                }
-
-                ctrl++;
-                slot_index++;
-
-                if (ctrl->isEmptyOrZero()) {
-                    last_index = slot_index;
-                    goto TransferSlots;
-                }
-
-                ctrl++;
-                slot_index++;
-
-                if (ctrl->isEmptyOrZero()) {
-                    last_index = slot_index;
-                    goto TransferSlots;
-                }
-
-                ctrl++;
-                slot_index++;
-            } else if (kUnrollMode == UnrollMode8) {
-                if (std::uint8_t(ctrl->dist + 1) < 2) {
-                    prev_index = to_erase;
-                    goto ClearSlot;
-                }
-
-                ctrl++;
-                slot_index++;
-
-                if (std::uint8_t(ctrl->dist + 1) < 2) {
-                    last_index = slot_index;
-                    goto TransferSlots;
-                }
-
-                ctrl++;
-                slot_index++;
-
-                if (std::uint8_t(ctrl->dist + 1) < 2) {
-                    last_index = slot_index;
-                    goto TransferSlots;
-                }
-
-                ctrl++;
-                slot_index++;
-
-                if (std::uint8_t(ctrl->dist + 1) < 2) {
-                    last_index = slot_index;
-                    goto TransferSlots;
-                }
-
-                ctrl++;
-                slot_index++;
-            }
-
-            size_type max_slot_index = this->max_slot_capacity();
-
-            if (this->slot_capacity() >= kGroupWidth) {
-                do {
-                    const group_type & group = this->get_group(slot_index);
-                    auto maskEmpty = group.matchEmptyOrZero();
-                    if (maskEmpty != 0) {
-                        size_type pos = BitUtils::bsf32(maskEmpty);
-                        maskEmpty = BitUtils::clearLowBit32(maskEmpty);
-                        size_type index = group.index(slot_index, pos);
-                        last_index = index;
-                        break;
-                    }
-                    slot_index = this->slot_next_group(slot_index);
-                } while (slot_index < max_slot_index);
-            } else {
-                while (slot_index < max_slot_index) {
-                    ctrl++;
-                    slot_index++;
-                    if (ctrl->isEmptyOrZero()) {
-                        last_index = slot_index;
-                        break;
-                    }
-                }
-            }
-
-            goto TransferSlots;
-        }
-
-TransferSlots:
-        assert(last_index != npos);
-        prev_index = to_erase;
-        slot_index = first_index;
-        while (slot_index != last_index) {
-            ctrl_type * ctrl = this->ctrl_at(slot_index);
-            assert(ctrl->dist > 0);
-            std::int16_t dist_and_hash = ctrl->value;
-            dist_and_hash--;
-            this->setUsedCtrl(prev_index, dist_and_hash);
-
-            slot_type * prev_slot = this->slot_at(prev_index);
-            slot_type * slot = this->slot_at(slot_index);
-            this->transfer_slot(prev_slot, slot);
-
-            prev_index = slot_index;
-            slot_index = this->next_index(slot_index);
-        }
-
-ClearSlot:
-        // Setting to empty ctrl
-        ctrl_type * prev_ctrl = this->ctrl_at(prev_index);
-        assert(prev_ctrl->isUsed());
-        this->setUnusedCtrl(prev_index, kEmptySlot16);
-        // Destroy slot
-        this->destroy_slot(prev_index);
+        this->destory_slot(curr_slot);
 
         assert(this->slot_size_ > 0);
         this->slot_size_--;
+
+        ctrl_type * next_ctrl = curr_ctrl + std::ptrdiff_t(1);       
+        slot_type * next_slot = curr_slot + std::ptrdiff_t(1);
+
+        while (!next_ctrl->isEmptyOrZero()) {
+            ctrl_type dist_and_hash(*next_ctrl);
+            assert(dist_and_hash.dist > 0);
+            dist_and_hash.decDist();
+            this->setUsedCtrl(curr_ctrl, dist_and_hash);
+            this->transfer_slot(curr_slot, next_slot);
+
+            curr_ctrl++;
+            curr_slot++;
+
+            next_ctrl++;
+            next_slot++;
+        }
+
+        this->setUnusedCtrl(curr_ctrl, kEmptySlot16);
     }
 
     void swap_content(robin_hash_map & other) {
