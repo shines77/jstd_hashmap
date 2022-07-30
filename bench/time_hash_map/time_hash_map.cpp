@@ -1226,12 +1226,12 @@ void is_noexcept_move_test()
     static constexpr bool v4_0 = jstd::is_noexcept_move_assignable<HashObject<std::size_t, 256, 32>>::value;
 
     static constexpr bool v1_1 = jstd::is_noexcept_move_assignable<std::pair<HashObject<std::uint32_t, 4, 4>, std::uint32_t>>::value;
-    static constexpr bool v2_1 = jstd::is_noexcept_move_assignable<std::pair<HashObject<std::uint64_t, 8, 8>, std::size_t>>::value;
+    static constexpr bool v2_1 = jstd::is_noexcept_move_assignable<std::pair<HashObject<std::uint64_t, 8, 8>, std::uint64_t>>::value;
     static constexpr bool v3_1 = jstd::is_noexcept_move_assignable<std::pair<HashObject<std::size_t, 16, 16>, std::size_t>>::value;
     static constexpr bool v4_1 = jstd::is_noexcept_move_assignable<std::pair<HashObject<std::size_t, 256, 32>, std::size_t>>::value;
 
     static constexpr bool v1_2 = jstd::is_noexcept_move_assignable<std::pair<const HashObject<std::uint32_t, 4, 4>, std::uint32_t>>::value;
-    static constexpr bool v2_2 = jstd::is_noexcept_move_assignable<std::pair<const HashObject<std::uint64_t, 8, 8>, std::size_t>>::value;
+    static constexpr bool v2_2 = jstd::is_noexcept_move_assignable<std::pair<const HashObject<std::uint64_t, 8, 8>, std::uint64_t>>::value;
     static constexpr bool v3_2 = jstd::is_noexcept_move_assignable<std::pair<const HashObject<std::size_t, 16, 16>, std::size_t>>::value;
     static constexpr bool v4_2 = jstd::is_noexcept_move_assignable<std::pair<const HashObject<std::size_t, 256, 32>, std::size_t>>::value;
 
@@ -1268,7 +1268,7 @@ int main(int argc, char * argv[])
     jtest::CPU::warm_up(1000);
 
     if (1) { std_hash_test(); }
-    if (1) { is_noexcept_move_test(); }
+    if (0) { is_noexcept_move_test(); }
 
     if (1)
     {

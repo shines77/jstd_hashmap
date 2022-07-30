@@ -259,6 +259,9 @@
     <ClInclude Include="..\..\..\src\jstd\test\ReadRss.h">
       <Filter>src\test</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\hashmap\layout_policy.h">
+      <Filter>src\hashmap</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\src\jstd\dll_main.cpp">
