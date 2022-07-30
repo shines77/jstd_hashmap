@@ -613,7 +613,8 @@ public:
 };
 
 template <typename Key, std::size_t Size = sizeof(Key),
-                        std::size_t HashSize = sizeof(Key)>
+                        std::size_t HashSize = sizeof(Key),
+                        bool is_special = false>
 class HashFn {
 public:
     typedef Key                             key_type;
@@ -625,7 +626,10 @@ public:
     static const std::size_t min_buckets = 8;
 
     result_type operator () (const argument_type & obj) const {
-        return static_cast<result_type>(obj.Hash());
+        if (is_special)
+            return static_cast<result_type>(test::MumHash<key_type>()(obj.Hash()));
+        else
+            return static_cast<result_type>(obj.Hash());
     }
 
     // Do the identity hash for pointers.

@@ -378,7 +378,7 @@ std::string formatMsTime(double fMillisec) {
 }
 
 template <typename Key, typename Value>
-std::string get_hashmap_name(const char * fmt)
+std::string format_hashmap_name(const char * fmt)
 {
     char name[1024];
     snprintf(name, sizeof(name), fmt,
@@ -442,10 +442,10 @@ template <typename Key, typename Value, std::size_t DataSize, std::size_t Cardin
 void benchmark_insert_random_impl()
 {
     std::string name0, name1, name2, name3;
-    name0 = get_hashmap_name<Key, Value>("std::unordered_map<%s, %s>");
-    name1 = get_hashmap_name<Key, Value>("jstd::flat16_hash_map<%s, %s>");
-    name2 = get_hashmap_name<Key, Value>("jstd::robin16_hash_map<%s, %s>");
-    name3 = get_hashmap_name<Key, Value>("jstd::robin_hash_map<%s, %s>");
+    name0 = format_hashmap_name<Key, Value>("std::unordered_map<%s, %s>");
+    name1 = format_hashmap_name<Key, Value>("jstd::flat16_hash_map<%s, %s>");
+    name2 = format_hashmap_name<Key, Value>("jstd::robin16_hash_map<%s, %s>");
+    name3 = format_hashmap_name<Key, Value>("jstd::robin_hash_map<%s, %s>");
 
     std::vector<Key> keys;
     generate_random_keys<Key>(keys, DataSize, Cardinal);
@@ -511,10 +511,10 @@ template <typename Key, typename Value, std::size_t DataSize, std::size_t Cardin
 void benchmark_MumHash_insert_random_impl()
 {
     std::string name0, name1, name2, name3;
-    name0 = get_hashmap_name<Key, Value>("std::unordered_map<%s, %s>");
-    name1 = get_hashmap_name<Key, Value>("jstd::flat16_hash_map<%s, %s>");
-    name2 = get_hashmap_name<Key, Value>("jstd::robin16_hash_map<%s, %s>");
-    name3 = get_hashmap_name<Key, Value>("jstd::robin_hash_map<%s, %s>");
+    name0 = format_hashmap_name<Key, Value>("std::unordered_map<%s, %s>");
+    name1 = format_hashmap_name<Key, Value>("jstd::flat16_hash_map<%s, %s>");
+    name2 = format_hashmap_name<Key, Value>("jstd::robin16_hash_map<%s, %s>");
+    name3 = format_hashmap_name<Key, Value>("jstd::robin_hash_map<%s, %s>");
 
     std::vector<Key> keys;
     generate_random_keys<Key>(keys, DataSize, Cardinal);
