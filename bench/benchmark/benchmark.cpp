@@ -132,6 +132,7 @@
 #include <jstd/hashmap/robin_hash_map.h>
 #endif
 #include <jstd/hashmap/hashmap_analyzer.h>
+#include <jstd/hasher/hashes.h>
 #include <jstd/hasher/hash_helper.h>
 #include <jstd/string/string_view.h>
 #include <jstd/string/string_view_array.h>
@@ -1737,7 +1738,7 @@ void IntegalHash_test()
     printf("hash::IntegalHash(uint64_t) sequential\n\n");
     for (std::uint64_t i = 0; i < 16; i++) {
         std::uint64_t hash64 = integalHasher64(i);
-        printf("value = %-20" PRIuPTR ", hash_code = %-20" PRIuPTR " (0x%08X%08X)\n",
+        printf("value = %-20" PRIu64 ", hash_code = %-20" PRIu64 " (0x%08X%08X)\n",
                i, hash64,
                (std::uint32_t)(hash64 >> 32),
                (std::uint32_t)(hash64 & 0xFFFFFFFFul));
@@ -1748,7 +1749,7 @@ void IntegalHash_test()
     for (std::uint64_t i = 0; i < 16; i++) {
         std::uint64_t value = next_random_u64();
         std::uint64_t hash64 = integalHasher64(value);
-        printf("value = %-20" PRIuPTR ", hash_code = %-20" PRIuPTR " (0x%08X%08X)\n",
+        printf("value = %-20" PRIu64 ", hash_code = %-20" PRIu64 " (0x%08X%08X)\n",
                value, hash64,
                (std::uint32_t)(hash64 >> 32),
                (std::uint32_t)(hash64 & 0xFFFFFFFFul));
