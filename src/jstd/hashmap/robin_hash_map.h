@@ -2631,13 +2631,13 @@ private:
         }
 
         static void exchange(Alloc & alloc, T & src, T & dest, T & empty)
-            noexcept(std::is_nothrow_move_assignable<first_type>::value &&
+            noexcept(std::is_nothrow_move_assignable<mutable_first_type>::value &&
                      std::is_nothrow_move_assignable<second_type>::value)
         {
-            empty.first = std::move(*mutable_key(&dest));
+            *mutable_key(&empty) = std::move(*mutable_key(&dest));
             empty.second = std::move(dest.second);
 
-            dest.first = std::move(*mutable_key(&src));            
+            *mutable_key(&dest) = std::move(*mutable_key(&src));            
             dest.second = std::move(src.second);
         }
     };
