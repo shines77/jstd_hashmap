@@ -204,7 +204,7 @@ public:
     static constexpr std::uint64_t kUnusedMask64 = 0x8080808080808080ull;
 
 #if 1
-    struct control_data {
+    struct ctrl_data {
         union {
             struct {
                 std::uint8_t distance;
@@ -215,18 +215,18 @@ public:
 
         static constexpr std::uint8_t kMinUnusedSlot = cmin(kEmptySlot, kEndOfMark);
 
-        control_data() noexcept {
+        ctrl_data() noexcept {
         }
 
-        explicit control_data(std::uint16_t value) noexcept
+        explicit ctrl_data(std::uint16_t value) noexcept
             : value(value) {
         }
 
-        control_data(std::uint8_t distance, std::uint8_t hash) noexcept
+        ctrl_data(std::uint8_t distance, std::uint8_t hash) noexcept
             : distance(distance), hash(hash) {
         }
 
-        ~control_data() = default;
+        ~ctrl_data() = default;
 
 
         bool isEmpty() const {
@@ -250,7 +250,15 @@ public:
         }
 
         static bool isNonEmpty(std::uint8_t tag) {
-            return !control_data::isEmpty(tag);
+            return !ctrl_data::isEmpty(tag);
+        }
+
+        bool isEmptyOrZero() const {
+#if 1
+            return (std::uint8_t(this->distance + 1) < std::uint8_t(2));
+#else
+            return (this->distance == kEmptySlot || this->distance == 0);
+#endif
         }
 
         bool isEndOf() const {
@@ -300,7 +308,7 @@ public:
         }
     };
 #else
-    struct control_data {
+    struct ctrl_data {
         union {
             struct {
                 std::uint8_t distance;
@@ -311,18 +319,18 @@ public:
 
         static constexpr std::uint8_t kMinUnusedSlot = cmin(kEmptySlot, kEndOfMark);
 
-        control_data() noexcept {
+        ctrl_data() noexcept {
         }
 
-        explicit control_data(std::uint16_t value) noexcept
+        explicit ctrl_data(std::uint16_t value) noexcept
             : value(value) {
         }
 
-        control_data(std::uint8_t distance, std::uint8_t hash) noexcept
+        ctrl_data(std::uint8_t distance, std::uint8_t hash) noexcept
             : distance(distance), hash(hash) {
         }
 
-        ~control_data() = default;
+        ~ctrl_data() = default;
 
         bool isEmpty() const {
             return (this->distance >= kEndOfMark);
@@ -345,7 +353,15 @@ public:
         }
 
         static bool isNonEmpty(std::uint8_t tag) {
-            return !control_data::isEmpty(tag);
+            return !ctrl_data::isEmpty(tag);
+        }
+
+        bool isEmptyOrZero() const {
+#if 1
+            return (std::uint8_t(this->distance + 1) < std::uint8_t(2));
+#else
+            return (this->distance == kEmptySlot || this->distance == 0);
+#endif
         }
 
         bool isEndOf() const {
@@ -396,9 +412,9 @@ public:
     };
 #endif
 
-    typedef control_data control_type;
+    typedef ctrl_data ctrl_type;
 
-    static constexpr size_type kGroupSize = kGroupWidth * sizeof(control_type);
+    static constexpr size_type kGroupSize = kGroupWidth * sizeof(ctrl_type);
 
     template <typename T>
     struct MatchMask2 {
@@ -959,11 +975,11 @@ public:
 #endif // __AVX2__
 
     struct map_group {
-        typedef BitMask256<control_type>                        bitmask256_type;
-        typedef typename BitMask256<control_type>::bitmask_type bitmask_type;
+        typedef BitMask256<ctrl_type>                        bitmask256_type;
+        typedef typename BitMask256<ctrl_type>::bitmask_type bitmask_type;
 
         union {
-            control_type controls[kGroupWidth];
+            ctrl_type ctrls[kGroupWidth];
             bitmask256_type bitmask;
         };
 
@@ -972,77 +988,77 @@ public:
         ~map_group() noexcept = default;
 
         void clear() {
-            bitmask.clear(&this->controls[0]);
+            bitmask.clear(&this->ctrls[0]);
         }
 
         template <std::uint8_t ControlTag>
         void fillAll16() {
-            bitmask.template fillAll16<ControlTag>(&this->controls[0]);
+            bitmask.template fillAll16<ControlTag>(&this->ctrls[0]);
         }
 
         bitmask_type matchTag(std::uint8_t ctrl_tag) const {
-            return bitmask.matchTag(&this->controls[0], ctrl_tag);
+            return bitmask.matchTag(&this->ctrls[0], ctrl_tag);
         }
 
         bitmask_type matchHash(std::uint8_t ctrl_hash) const {
-            return bitmask.matchHash(&this->controls[0], ctrl_hash);
+            return bitmask.matchHash(&this->ctrls[0], ctrl_hash);
         }
 
         MatchMask2<bitmask_type>
         matchHashAndDistance(std::uint8_t ctrl_hash, std::uint8_t distance) const {
-            return bitmask.matchHashAndDistance(&this->controls[0], ctrl_hash, distance);
+            return bitmask.matchHashAndDistance(&this->ctrls[0], ctrl_hash, distance);
         }
 
         bitmask_type matchEmpty() const {
-            return bitmask.matchEmpty(&this->controls[0]);
+            return bitmask.matchEmpty(&this->ctrls[0]);
         }
 
         bitmask_type matchEmptyOrZero() const {
-            return bitmask.matchEmptyOrZero(&this->controls[0]);
+            return bitmask.matchEmptyOrZero(&this->ctrls[0]);
         }
 
         bitmask_type matchEmptyAndDistance(std::uint8_t distance) const {
-            return bitmask.matchEmptyAndDistance(&this->controls[0], distance);
+            return bitmask.matchEmptyAndDistance(&this->ctrls[0], distance);
         }
 
         bitmask_type matchUsedOrEndOf() const {
-            return bitmask.matchUsedOrEndOf(&this->controls[0]);
+            return bitmask.matchUsedOrEndOf(&this->ctrls[0]);
         }
 
         bitmask_type matchUsed() const {
-            return bitmask.matchUsed(&this->controls[0]);
+            return bitmask.matchUsed(&this->ctrls[0]);
         }
 
         bitmask_type matchUnused() const {
-            return bitmask.matchUnused(&this->controls[0]);
+            return bitmask.matchUnused(&this->ctrls[0]);
         }
 
         bool hasAnyMatch(std::uint8_t ctrl_hash) const {
-            return bitmask.hasAnyMatch(&this->controls[0], ctrl_hash);
+            return bitmask.hasAnyMatch(&this->ctrls[0], ctrl_hash);
         }
 
         bool hasAnyEmpty() const {
-            return bitmask.hasAnyEmpty(&this->controls[0]);
+            return bitmask.hasAnyEmpty(&this->ctrls[0]);
         }
 
         bool hasAnyUsed() const {
-            return bitmask.hasAnyUsed(&this->controls[0]);
+            return bitmask.hasAnyUsed(&this->ctrls[0]);
         }
 
         bool hasAnyUnused() const {
-            return bitmask.hasAnyUnused(&this->controls[0]);
+            return bitmask.hasAnyUnused(&this->ctrls[0]);
         }
 
         bool isAllEmpty() const {
-            return bitmask.isAllEmpty(&this->controls[0]);
+            return bitmask.isAllEmpty(&this->ctrls[0]);
         }
 
         bool isAllUsed() const {
-            return bitmask.isAllUsed(&this->controls[0]);
+            return bitmask.isAllUsed(&this->ctrls[0]);
         }
 
         bool isAllUnused() const {
-            return bitmask.isAllUnused(&this->controls[0]);
+            return bitmask.isAllUnused(&this->ctrls[0]);
         }
 
         static inline std::uint8_t pos(size_type position) {
@@ -1116,10 +1132,10 @@ public:
         }
 
         basic_iterator & operator ++ () {
-            const control_type * ctrl;
+            const ctrl_type * ctrl;
             do {
                 ++(this->index_);
-                ctrl = this->owner_->control_at(this->index_);
+                ctrl = this->owner_->ctrl_at(this->index_);
             } while (ctrl->isEmptyOnly() && (this->index_ < this->owner_->slot_capacity()));
             return *this;
         }
@@ -1186,13 +1202,13 @@ public:
         using difference_type = std::ptrdiff_t;
 
     private:
-        control_type * ctrl_;
+        ctrl_type * ctrl_;
         slot_type *    slot_;
 
     public:
         basic_iterator() noexcept : ctrl_(nullptr), slot_(nullptr) {
         }
-        basic_iterator(control_type * ctrl, slot_type * slot) noexcept
+        basic_iterator(ctrl_type * ctrl, slot_type * slot) noexcept
             : ctrl_(ctrl), slot_(slot) {
         }
         basic_iterator(const basic_iterator & src) noexcept
@@ -1455,8 +1471,8 @@ public:
     group_type * groups() { return groups_; }
     const group_type * groups() const { return groups_; }
 
-    control_type * controls() { return (control_type *)this->groups(); }
-    const control_type * controls() const { return (const control_type *)this->groups(); }
+    ctrl_type * ctrls() { return (ctrl_type *)this->groups(); }
+    const ctrl_type * ctrls() const { return (const ctrl_type *)this->groups(); }
 
     size_type group_mask() const { return group_mask_; }
     size_type group_count() const { return (group_mask_ + 1); }
@@ -1533,7 +1549,7 @@ public:
 
     iterator begin() {
 #if 1
-        assert(!(this->control_at(this->slot_capacity())->isEmptyOnly()));
+        assert(!(this->ctrl_at(this->slot_capacity())->isEmptyOnly()));
         group_type * group = this->groups();
         group_type * last_group = this->groups() + this->group_count();
         size_type start_index = 0;
@@ -1549,15 +1565,15 @@ public:
 
         return this->iterator_at(this->slot_capacity());
 #else
-        control_type * control = this->controls();
+        ctrl_type * ctrl = this->ctrls();
         size_type index;
         for (index = 0; index <= this->slot_mask(); index++) {
-            if (control->isUsed()) {
-                return { control, this->slot_at(index) };
+            if (ctrl->isUsed()) {
+                return { ctrl, this->slot_at(index) };
             }
-            control++;
+            ctrl++;
         }
-        return { control, this->slot_at(index) };
+        return { ctrl, this->slot_at(index) };
 #endif
     }
 
@@ -1870,7 +1886,7 @@ public:
 
     iterator erase(iterator pos) {
         size_type index = this->index_of(pos);
-        this->erase_slot(pos);
+        this->erase_slot(index);
         return ++pos;
     }
 
@@ -1881,6 +1897,7 @@ public:
     }
 
     iterator erase(const_iterator first, const_iterator last) {
+        // TODO: There is a bug, which needs to be traversed from the last to the first.
         for (; first != last; ++first) {
             size_type index = this->index_of(first);
             this->erase_slot(index);
@@ -1918,11 +1935,11 @@ private:
     }
 #else
     iterator iterator_at(size_type index) noexcept {
-        return { this->control_at(index), this->slot_at(index) };
+        return { this->ctrl_at(index), this->slot_at(index) };
     }
 
     const_iterator iterator_at(size_type index) const noexcept {
-        return { this->control_at(index), this->slot_at(index) };
+        return { this->ctrl_at(index), this->slot_at(index) };
     }
 #endif
 
@@ -2034,44 +2051,44 @@ private:
         return ((slot_index + kGroupWidth) & this->slot_mask());
     }
 
-    control_type * control_at(size_type slot_index) noexcept {
+    ctrl_type * ctrl_at(size_type slot_index) noexcept {
         assert(slot_index <= this->slot_capacity());
-        return (this->controls() + slot_index);
+        return (this->ctrls() + slot_index);
     }
 
-    const control_type * control_at(size_type slot_index) const noexcept {
+    const ctrl_type * ctrl_at(size_type slot_index) const noexcept {
         assert(slot_index <= this->slot_capacity());
-        return (this->controls() + slot_index);
+        return (this->ctrls() + slot_index);
     }
 
-    control_type * control_at_ex(size_type slot_index) noexcept {
+    ctrl_type * ctrl_at_ex(size_type slot_index) noexcept {
         assert(slot_index <= (this->slot_capacity() + kGroupWidth));
-        return (this->controls() + slot_index);
+        return (this->ctrls() + slot_index);
     }
 
-    const control_type * control_at_ex(size_type slot_index) const noexcept {
+    const ctrl_type * ctrl_at_ex(size_type slot_index) const noexcept {
         assert(slot_index <= (this->slot_capacity() + kGroupWidth));
-        return (this->controls() + slot_index);
+        return (this->ctrls() + slot_index);
     }
 
-    inline control_type * next_control(size_type & slot_index) noexcept {
+    inline ctrl_type * next_ctrl(size_type & slot_index) noexcept {
         slot_index = this->next_index(slot_index);
-        return this->control_at(slot_index);
+        return this->ctrl_at(slot_index);
     }
 
-    inline const control_type * next_control(size_type & slot_index) const noexcept {
+    inline const ctrl_type * next_ctrl(size_type & slot_index) const noexcept {
         slot_index = this->next_index(slot_index);
-        return this->control_at(slot_index);
+        return this->ctrl_at(slot_index);
     }
 
     group_type * group_at(size_type slot_index) noexcept {
         assert(slot_index < this->slot_capacity());
-        return (group_type *)(this->control_at(slot_index));
+        return (group_type *)(this->ctrl_at(slot_index));
     }
 
     const group_type * group_at(size_type slot_index) const noexcept {
         assert(slot_index < this->slot_capacity());
-        return (const group_type *)(this->control_at(slot_index));
+        return (const group_type *)(this->ctrl_at(slot_index));
     }
 
     group_type * physical_group_at(size_type group_index) noexcept {
@@ -2094,16 +2111,16 @@ private:
         return (this->slots() + slot_index);
     }
 
-    control_type & get_control(size_type slot_index) {
+    ctrl_type & get_ctrl(size_type slot_index) {
         assert(slot_index < this->slot_capacity());
-        control_type * controls = this->controls();
-        return controls[slot_index];
+        ctrl_type * ctrls = this->ctrls();
+        return ctrls[slot_index];
     }
 
-    const control_type & get_control(size_type slot_index) const {
+    const ctrl_type & get_ctrl(size_type slot_index) const {
         assert(slot_index < this->slot_capacity());
-        control_type * controls = this->controls();
-        return controls[slot_index];
+        ctrl_type * ctrls = this->ctrls();
+        return ctrls[slot_index];
     }
 
     group_type & get_group(size_type slot_index) {
@@ -2142,6 +2159,18 @@ private:
 
     size_type index_of(const_iterator pos) const {
         return this->index_of(pos.value());
+    }
+
+    size_type index_of(ctrl_type * ctrl) const {
+        assert(ctrl != nullptr);
+        assert(ctrl >= this->ctrls());
+        size_type index = (size_type)(ctrl - this->ctrls());
+        assert(is_positive(index));
+        return index;
+    }
+
+    size_type index_of(const ctrl_type * ctrl) const {
+        return this->index_of((ctrl_type *)ctrl);
     }
 
     size_type index_of(slot_type * slot) const {
@@ -2191,13 +2220,13 @@ private:
         // Destroy all slots.
         if (this->slots_ != nullptr) {
             if (!is_slot_trivial_destructor) {
-                control_type * control = this->controls();
-                assert(control != nullptr);
+                ctrl_type * ctrl = this->ctrls();
+                assert(ctrl != nullptr);
                 for (size_type index = 0; index <= this->slot_mask(); index++) {
-                    if (control->isUsed()) {
-                        this->destroy_slot(index);
+                    if (ctrl->isUsed()) {
+                        this->destory_slot(index);
                     }
-                    control++;
+                    ctrl++;
                 }
             }
             if (finitial) {
@@ -2210,13 +2239,13 @@ private:
     }
 
     JSTD_FORCED_INLINE
-    void destroy_slot(size_type index) {
+    void destory_slot(size_type index) {
         slot_type * slot = this->slot_at(index);
-        this->destroy_slot(slot);
+        this->destory_slot(slot);
     }
 
     JSTD_FORCED_INLINE
-    void destroy_slot(slot_type * slot) {
+    void destory_slot(slot_type * slot) {
         if (!is_slot_trivial_destructor) {
             if (kIsCompatibleLayout) {
                 this->mutable_allocator_.destroy(&slot->mutable_value);
@@ -2228,18 +2257,18 @@ private:
 
     template <bool WriteEndofMark>
     JSTD_FORCED_INLINE
-    void copy_and_mirror_controls() {
-        // Copy and mirror the beginning control bytes.
+    void copy_and_mirror_ctrls() {
+        // Copy and mirror the beginning ctrl bytes.
         size_type copy_size = (std::min)(this->slot_capacity(), kGroupWidth);
-        control_type * controls = this->controls();
-        std::memcpy((void *)&controls[this->slot_capacity()], (const void *)&controls[0],
-                    sizeof(control_type) * copy_size);
+        ctrl_type * ctrls = this->ctrls();
+        std::memcpy((void *)&ctrls[this->slot_capacity()], (const void *)&ctrls[0],
+                    sizeof(ctrl_type) * copy_size);
 
         if (WriteEndofMark) {
             // Set the end of mark
-            control_type * ctrl_0 = controls;
+            ctrl_type * ctrl_0 = ctrls;
             if (ctrl_0->isEmpty()) {
-                control_type * ctrl_mirror = this->control_at(this->slot_capacity());
+                ctrl_type * ctrl_mirror = this->ctrl_at(this->slot_capacity());
                 ctrl_mirror->setEndOf();
             }
         }
@@ -2247,21 +2276,21 @@ private:
 
     JSTD_FORCED_INLINE
     void setUsedCtrl(size_type index, std::uint8_t distance, std::uint8_t ctrl_hash) {
-        control_type * ctrl = this->control_at(index);
+        ctrl_type * ctrl = this->ctrl_at(index);
         ctrl->setUsed(distance, ctrl_hash);
         this->setUsedMirrorCtrl(index, distance, ctrl_hash);
     }
 
     JSTD_FORCED_INLINE
     void setUsedCtrl(size_type index, std::uint16_t dist_and_hash) {
-        control_type * ctrl = this->control_at(index);
+        ctrl_type * ctrl = this->ctrl_at(index);
         ctrl->setValue(dist_and_hash);
         this->setUsedMirrorCtrl(index, dist_and_hash);
     }
 
     JSTD_FORCED_INLINE
     void setUnusedCtrl(size_type index, std::uint8_t tag) {
-        control_type * ctrl = this->control_at(index);
+        ctrl_type * ctrl = this->ctrl_at(index);
         assert(ctrl->isUsed());
         ctrl->setDistance(tag);
         this->setUnusedMirrorCtrl(index, tag);
@@ -2269,9 +2298,9 @@ private:
 
     JSTD_FORCED_INLINE
     void setUsedMirrorCtrl(size_type index, std::uint8_t distance, std::uint8_t ctrl_hash) {
-        assert(control_type::isUsed(distance));
+        assert(ctrl_type::isUsed(distance));
         if (index < kGroupWidth) {
-            control_type * ctrl_mirror = this->control_at_ex(index + this->slot_capacity());
+            ctrl_type * ctrl_mirror = this->ctrl_at_ex(index + this->slot_capacity());
             ctrl_mirror->setUsed(distance, ctrl_hash);
         }
     }
@@ -2279,7 +2308,7 @@ private:
     JSTD_FORCED_INLINE
     void setUsedMirrorCtrl(size_type index, std::uint16_t dist_and_hash) {
         if (index < kGroupWidth) {
-            control_type * ctrl_mirror = this->control_at_ex(index + this->slot_capacity());
+            ctrl_type * ctrl_mirror = this->ctrl_at_ex(index + this->slot_capacity());
             ctrl_mirror->setValue(dist_and_hash);
         }
     }
@@ -2287,11 +2316,11 @@ private:
     JSTD_FORCED_INLINE
     void setUnusedMirrorCtrl(size_type index, std::uint8_t tag) {
         if (index < kGroupWidth) {
-            control_type * ctrl_mirror = this->control_at_ex(index + this->slot_capacity());
+            ctrl_type * ctrl_mirror = this->ctrl_at_ex(index + this->slot_capacity());
             ctrl_mirror->setDistance(tag);
 #if 0
             if (index == 0) {
-                assert(control_type::isEmpty(tag));
+                assert(ctrl_type::isEmpty(tag));
                 ctrl_mirror->setEndOf();
             }
 #endif
@@ -2341,17 +2370,11 @@ private:
             new_groups[group_count].template fillAll16<kEmptySlot>();
         } else {
             assert(new_capacity < kGroupWidth);
-            group_type * tail_group = (group_type *)((char *)new_groups + new_capacity * 2 * sizeof(control_type));
+            group_type * tail_group = (group_type *)((char *)new_groups + new_capacity * 2 * sizeof(ctrl_type));
             (*tail_group).template fillAll16<kEndOfMark>();
 
             new_groups[group_count].template fillAll16<kEndOfMark>();
         }
-
-#if 0
-        control_type * new_controls = (control_type *)new_groups;
-        control_type * endof_ctrl = new_controls + new_capacity;
-        endof_ctrl->setEndOf();
-#endif
 
         slot_type * slots = slot_allocator_.allocate(new_capacity);
         slots_ = slots;
@@ -2378,7 +2401,7 @@ private:
             }
 
             group_type * old_groups = this->groups();
-            control_type * old_controls = this->controls();
+            ctrl_type * old_ctrls = this->ctrls();
             size_type old_group_count = this->group_count();
             size_type old_group_capacity = this->group_capacity();
 
@@ -2390,14 +2413,12 @@ private:
             this->create_group<false>(new_capacity);
 
             if ((this->max_load_factor() < 0.5f) && false) {
-                control_type * last_control = old_controls + old_slot_capacity;
+                ctrl_type * last_ctrl = old_ctrls + old_slot_capacity;
                 slot_type * old_slot = old_slots;
-                for (control_type * control = old_controls; control != last_control; control++) {
-                    if (likely(control->isUsed())) {
+                for (ctrl_type * ctrl = old_ctrls; ctrl != last_ctrl; ctrl++) {
+                    if (likely(ctrl->isUsed())) {
                         this->move_insert_unique(old_slot);
-                        if (!is_slot_trivial_destructor) {
-                            this->destroy_slot(old_slot);
-                        }
+                        this->destory_slot(old_slot);
                     }
                     old_slot++;
                 }
@@ -2414,9 +2435,7 @@ private:
                             size_type old_index = group->index(start_index, pos);
                             slot_type * old_slot = old_slots + old_index;
                             this->move_insert_unique(old_slot);
-                            if (!is_slot_trivial_destructor) {
-                                this->destroy_slot(old_slot);
-                            }
+                            this->destory_slot(old_slot);
                         }
                         start_index += kGroupWidth;
                     }
@@ -2431,22 +2450,18 @@ private:
                             size_type old_index = group->index(start_index, pos);
                             slot_type * old_slot = old_slots + old_index;
                             this->move_insert_unique(old_slot);
-                            if (!is_slot_trivial_destructor) {
-                                this->destroy_slot(old_slot);
-                            }
+                            this->destory_slot(old_slot);
                         }
                         start_index -= kGroupWidth;
                     }
 #endif
                 } else {
-                    control_type * last_control = old_controls + old_slot_capacity;
+                    ctrl_type * last_ctrl = old_ctrls + old_slot_capacity;
                     slot_type * old_slot = old_slots;
-                    for (control_type * control = old_controls; control != last_control; control++) {
-                        if (likely(control->isUsed())) {
+                    for (ctrl_type * ctrl = old_ctrls; ctrl != last_ctrl; ctrl++) {
+                        if (likely(ctrl->isUsed())) {
                             this->move_insert_unique(old_slot);
-                            if (!is_slot_trivial_destructor) {
-                                this->destroy_slot(old_slot);
-                            }
+                            this->destory_slot(old_slot);
                         }
                         old_slot++;
                     }
@@ -2478,7 +2493,7 @@ private:
         } else {
             this->allocator_.construct(&dest_slot->value, std::move(src_slot->value));
         }
-        this->destroy_slot(src_slot);
+        this->destory_slot(src_slot);
     }
 
     JSTD_FORCED_INLINE
@@ -2489,7 +2504,7 @@ private:
         } else {
             this->allocator_.construct(&dest_slot->value, src_slot->value);
         }
-        this->destroy_slot(src_slot);
+        this->destory_slot(src_slot);
     }
 
     template <typename Alloc, typename T, bool isCompatibleLayout,
@@ -2621,7 +2636,7 @@ private:
         size_type start_slot = slot_index;
         std::uint8_t distance = 0;
         if (kUseUnrollLoop) {
-            const control_type * ctrl = this->control_at(slot_index);
+            const ctrl_type * ctrl = this->ctrl_at(slot_index);
 
             // Optimize from: (ctrl->isUsed() && (ctrl->distance >= 0))
             if (likely(ctrl->isUsed())) {
@@ -2635,7 +2650,7 @@ private:
                 return this->slot_capacity();
             }
 
-            ctrl = this->next_control(slot_index);
+            ctrl = this->next_ctrl(slot_index);
 
             // Optimization: merging two comparisons
             if (likely(std::uint8_t(ctrl->distance + 1) > 1)) {
@@ -2651,7 +2666,7 @@ private:
             }
 
             distance = 2;
-            ctrl = this->next_control(slot_index);
+            ctrl = this->next_ctrl(slot_index);
 #if 0
             do {
                 // Optimization: merging two comparisons
@@ -2663,7 +2678,7 @@ private:
                             return slot_index;
                         }
                     }
-                    ctrl = this->next_control(slot_index);
+                    ctrl = this->next_ctrl(slot_index);
                     distance++;
                     if (distance >= 4)
                         break;
@@ -2712,7 +2727,7 @@ private:
         o_ctrl_hash = ctrl_hash;
 
         if (kUseUnrollLoop) {
-            const control_type * ctrl = this->control_at(slot_index);
+            const ctrl_type * ctrl = this->ctrl_at(slot_index);
             if (likely(ctrl->isUsed() && (ctrl->distance >= 0))) {
                 if (ctrl->hash == ctrl_hash) {
                     const slot_type * slot = this->slot_at(slot_index);
@@ -2726,7 +2741,7 @@ private:
                 return npos;
             }
 
-            ctrl = this->next_control(slot_index);
+            ctrl = this->next_ctrl(slot_index);
             if (likely(ctrl->isUsed() && (ctrl->distance >= 1))) {
                 if (ctrl->hash == ctrl_hash) {
                     const slot_type * slot = this->slot_at(slot_index);
@@ -2787,13 +2802,13 @@ private:
         o_ctrl_hash = ctrl_hash;
 
         if (1) {
-            const control_type * ctrl = this->control_at(slot_index);
+            const ctrl_type * ctrl = this->ctrl_at(slot_index);
             if (likely(ctrl->isEmpty())) {
                 o_distance = 0;
                 return slot_index;
             }
 
-            ctrl = this->next_control(slot_index);
+            ctrl = this->next_ctrl(slot_index);
             if (likely(ctrl->isEmpty())) {
                 o_distance = 1;
                 return slot_index;
@@ -2836,7 +2851,7 @@ private:
         o_ctrl_hash = ctrl_hash;
 
         if (kUseUnrollLoop) {
-            control_type * ctrl = this->control_at(slot_index);
+            ctrl_type * ctrl = this->ctrl_at(slot_index);
             // Optimize from: (ctrl->isUsed() && (ctrl->distance >= 0))
             if (likely(ctrl->isUsed())) {
                 if (ctrl->hash == ctrl_hash) {
@@ -2857,7 +2872,7 @@ private:
                 return { slot_index, false };
             }
 
-            ctrl = this->next_control(slot_index);
+            ctrl = this->next_ctrl(slot_index);
             // Optimization: merging two comparisons
             if (likely(std::uint8_t(ctrl->distance + 1) > 1)) {
             //if (likely(ctrl->isUsed() && (ctrl->distance >= 1))) {
@@ -2881,7 +2896,7 @@ private:
 
             distance = 2;
             do {
-                ctrl = this->next_control(slot_index);
+                ctrl = this->next_ctrl(slot_index);
                 // Optimization: merging two comparisons
                 if (likely(std::uint8_t(ctrl->distance + 1) > distance)) {
                 //if (likely(ctrl->isUsed() && (ctrl->distance >= distance))) {
@@ -2959,8 +2974,8 @@ private:
     template <bool isRehashing>
     JSTD_NO_INLINE
     bool insert_to_place(size_type target, std::uint8_t distance, std::uint8_t ctrl_hash) {
-        control_type insert_ctrl(distance, ctrl_hash);
-        control_type * ctrl = this->control_at(target);
+        ctrl_type insert_ctrl(distance, ctrl_hash);
+        ctrl_type * ctrl = this->ctrl_at(target);
         assert(!ctrl->isEmpty());
         assert(distance > ctrl->distance);
         this->setUsedMirrorCtrl(target, insert_ctrl.value);
@@ -2980,11 +2995,11 @@ private:
         } else {
             this->allocator_.construct(&to_insert->value, std::move(target_slot->value));
         }
-        this->destroy_slot(target_slot);
+        this->destory_slot(target_slot);
 
         size_type slot_index = this->next_index(target);
         do {
-            ctrl = this->control_at(slot_index);
+            ctrl = this->ctrl_at(slot_index);
             if (ctrl->isEmpty()) {
                 this->emplace_rich_slot(to_insert, slot_index, insert_ctrl.value);
                 return false;
@@ -3031,9 +3046,7 @@ private:
         else
             this->allocator_.construct(&slot->value, std::move(to_insert->value));
 
-        if (is_slot_trivial_destructor) {
-            this->destroy_slot(to_insert);
-        }
+        this->destory_slot(to_insert);
     }
 
     template <bool AlwaysUpdate>
@@ -3047,7 +3060,7 @@ private:
             // The key to be inserted is not exists.
             assert(target != npos);
 
-            control_type * ctrl = this->control_at(target);
+            ctrl_type * ctrl = this->ctrl_at(target);
             if (ctrl->isEmpty()) {
                 // Found [EmptyEntry] to insert
                 assert(ctrl->isEmpty());
@@ -3090,7 +3103,7 @@ private:
             // The key to be inserted is not exists.
             assert(target != npos);
 
-            control_type * ctrl = this->control_at(target);
+            ctrl_type * ctrl = this->ctrl_at(target);
             if (ctrl->isEmpty()) {
                 // Found [EmptyEntry] to insert
                 assert(ctrl->isEmpty());
@@ -3145,7 +3158,7 @@ private:
             // The key to be inserted is not exists.
             assert(target != npos);
 
-            control_type * ctrl = this->control_at(target);
+            ctrl_type * ctrl = this->ctrl_at(target);
             if (ctrl->isEmpty()) {
                 // Found [EmptyEntry] to insert
                 assert(ctrl->isEmpty());
@@ -3208,7 +3221,7 @@ private:
             // The key to be inserted is not exists.
             assert(target != npos);
 
-            control_type * ctrl = this->control_at(target);
+            ctrl_type * ctrl = this->ctrl_at(target);
             if (ctrl->isEmpty()) {
                 // Found [EmptyEntry] to insert
                 assert(ctrl->isEmpty());
@@ -3272,7 +3285,7 @@ private:
             // The key to be inserted is not exists.
             assert(target != npos);
 
-            control_type * ctrl = this->control_at(target);
+            ctrl_type * ctrl = this->ctrl_at(target);
             if (ctrl->isEmpty()) {
                 // Found [EmptyEntry] to insert
                 assert(ctrl->isEmpty());
@@ -3334,7 +3347,7 @@ private:
             // The key to be inserted is not exists.
             assert(target != npos);
 
-            control_type * ctrl = this->control_at(target);
+            ctrl_type * ctrl = this->ctrl_at(target);
             if (ctrl->isEmpty()) {
                 // Found [EmptyEntry] to insert
                 assert(ctrl->isEmpty());
@@ -3378,14 +3391,14 @@ private:
         o_ctrl_hash = ctrl_hash;
 
         if (kUseUnrollLoop) {
-            const control_type * ctrl = this->control_at(slot_index);
+            const ctrl_type * ctrl = this->ctrl_at(slot_index);
             // Optimize from: (ctrl->isEmpty() || (ctrl->distance < 0))
             if (likely(ctrl->isEmpty())) {
                 o_distance = 0;
                 return slot_index;
             }
 
-            ctrl = this->next_control(slot_index);
+            ctrl = this->next_ctrl(slot_index);
             // Optimization: merging two comparisons
             if (likely(std::uint8_t(ctrl->distance + 1) < 2)) {
             //if (likely(ctrl->isEmpty() || (ctrl->distance < 1))) {
@@ -3393,7 +3406,7 @@ private:
                 return slot_index;
             }
 
-            ctrl = this->next_control(slot_index);
+            ctrl = this->next_ctrl(slot_index);
             // Optimization: merging two comparisons
             if (likely(std::uint8_t(ctrl->distance + 1) < 3)) {
             //if (likely(ctrl->isEmpty() || (ctrl->distance < 2))) {
@@ -3401,7 +3414,7 @@ private:
                 return slot_index;
             }
 
-            ctrl = this->next_control(slot_index);
+            ctrl = this->next_ctrl(slot_index);
             // Optimization: merging two comparisons
             if (likely(std::uint8_t(ctrl->distance + 1) < 4)) {
             //if (likely(ctrl->isEmpty() || (ctrl->distance < 3))) {
@@ -3447,7 +3460,7 @@ private:
         assert(target != npos);
         bool need_grow = false;
 
-        control_type * ctrl = this->control_at(target);
+        ctrl_type * ctrl = this->ctrl_at(target);
         if (ctrl->isEmpty()) {
             // Found [EmptyEntry] to insert
             assert(ctrl->isEmpty());
@@ -3477,7 +3490,7 @@ private:
         size_type target = this->unique_prepare_insert(value.first, distance, ctrl_hash);
         assert(target != npos);
 
-        control_type * ctrl = this->control_at(target);
+        ctrl_type * ctrl = this->ctrl_at(target);
         if (ctrl->isEmpty()) {
             // Found [EmptyEntry] to insert
             assert(ctrl->isEmpty());
@@ -3509,7 +3522,7 @@ private:
         size_type target = this->unique_prepare_insert(value.first, distance, ctrl_hash);
         assert(target != npos);
 
-        control_type * ctrl = this->control_at(target);
+        ctrl_type * ctrl = this->ctrl_at(target);
         if (ctrl->isEmpty()) {
             // Found [EmptyEntry] to insert
             assert(ctrl->isEmpty());
@@ -3546,182 +3559,49 @@ private:
 
     JSTD_FORCED_INLINE
     size_type find_and_erase(const key_type & key) {
-        hash_code_t hash_code = this->get_hash(key);
-        size_type slot_index = this->index_for_hash(hash_code);
-        std::uint8_t ctrl_hash = this->get_ctrl_hash(hash_code);
-        size_type start_slot = slot_index;
-        std::uint8_t distance = 0;
-
-        if (kUseUnrollLoop) {
-            control_type * ctrl = this->control_at(slot_index);
-            // Optimize from: (ctrl->isUsed() && (ctrl->distance >= 0))
-            if (likely(ctrl->isUsed())) {
-                if (ctrl->hash == ctrl_hash) {
-                    const slot_type * slot = this->slot_at(slot_index);
-                    if (this->key_equal_(slot->value.first, key)) {
-                        this->erase_slot(slot_index);
-                        return 1;
-                    }
-                }
-            } else {
-                return 0;
-            }
-
-            ctrl = this->next_control(slot_index);
-            // Optimization: merging two comparisons
-            if (likely(std::uint8_t(ctrl->distance + 1) > 1)) {
-            //if (likely(ctrl->isUsed() && (ctrl->distance >= 1))) {
-                if (ctrl->hash == ctrl_hash) {
-                    const slot_type * slot = this->slot_at(slot_index);
-                    if (this->key_equal_(slot->value.first, key)) {
-                        this->erase_slot(slot_index);
-                        return 1;
-                    }
-                }
-            } else {
-                return 0;
-            }
-
-            distance = 2;
-            do {
-                ctrl = this->next_control(slot_index);
-                // Optimization: merging two comparisons
-                if (likely(std::uint8_t(ctrl->distance + 1) > distance)) {
-                //if (likely(ctrl->isUsed() && (ctrl->distance >= distance))) {
-                    if (ctrl->hash == ctrl_hash) {
-                        const slot_type * slot = this->slot_at(slot_index);
-                        if (this->key_equal_(slot->value.first, key)) {
-                            this->erase_slot(slot_index);
-                            return 1;
-                        }
-                    }
-                    distance++;
-                    if (distance >= 4)
-                        break;
-                } else {
-                    return 0;
-                }
-            } while (1);
-
-            slot_index = this->next_index(slot_index);
+        size_type to_erase = this->find_impl(key);
+        if (to_erase != this->slot_capacity()) {
+            this->erase_slot(to_erase);
+            return 1;
+        } else {
+            return 0;
         }
-
-        do {
-            const group_type & group = this->get_group(slot_index);
-            auto mask32 = group.matchHashAndDistance(ctrl_hash, distance);
-            std::uint32_t maskHash = mask32.maskHash;
-            while (maskHash != 0) {
-                size_type pos = BitUtils::bsf32(maskHash);
-                maskHash = BitUtils::clearLowBit32(maskHash);
-                size_type index = group.index(slot_index, pos);
-                index = this->round_index(index);
-                const slot_type * target = this->slot_at(index);
-                if (this->key_equal_(target->value.first, key)) {
-                    this->erase_slot(index);
-                    return 1;
-                }
-            }
-            if (mask32.maskEmpty != 0) {
-                return 0;
-            }
-            distance += kGroupWidth;
-            slot_index = this->slot_next_group(slot_index);
-        } while (slot_index != start_slot);
-
-        return 0;
     }
 
     JSTD_NO_INLINE
     void erase_slot(size_type to_erase) {
-        assert(to_erase <= this->slot_capacity());
-        assert(this->control_at(to_erase)->isUsed());
+        assert(to_erase < this->slot_capacity());
 
-        size_type prev_index;
-        size_type last_index = npos;
-        size_type first_index = this->next_index(to_erase);
-        size_type slot_index = first_index;
-        if (1) {
-            control_type * ctrl = this->control_at(slot_index);
-            if (kUseUnrollLoop) {
-                if (std::uint8_t(ctrl->distance + 1) < 2) {
-                    prev_index = to_erase;
-                    goto ClearSlot;
-                }
+        ctrl_type * curr_ctrl = this->ctrl_at(to_erase);
+        slot_type * curr_slot = this->slot_at(to_erase);
+        assert(curr_ctrl->isUsed());
 
-                ctrl = this->next_control(slot_index);
-                if (std::uint8_t(ctrl->distance + 1) < 2) {
-                    last_index = slot_index;
-                    goto TransferSlots;
-                }
-
-                ctrl = this->next_control(slot_index);
-                if (std::uint8_t(ctrl->distance + 1) < 2) {
-                    last_index = slot_index;
-                    goto TransferSlots;
-                }
-
-                ctrl = this->next_control(slot_index);
-                if (std::uint8_t(ctrl->distance + 1) < 2) {
-                    last_index = slot_index;
-                    goto TransferSlots;
-                }
-            }
-
-            if (this->slot_capacity() >= kGroupWidth) {
-                do {
-                    const group_type & group = this->get_group(slot_index);
-                    auto maskEmpty = group.matchEmptyOrZero();
-                    if (maskEmpty != 0) {
-                        size_type pos = BitUtils::bsf32(maskEmpty);
-                        maskEmpty = BitUtils::clearLowBit32(maskEmpty);
-                        size_type index = group.index(slot_index, pos);
-                        last_index = this->round_index(index);
-                        break;
-                    }
-                    slot_index = this->slot_next_group(slot_index);
-                } while (slot_index != first_index);
-            } else {
-                while (slot_index != first_index) {
-                    ctrl = this->next_control(slot_index);
-                    if (std::uint8_t(ctrl->distance + 1) < 2) {
-                        last_index = slot_index;
-                        break;
-                    }
-                }
-            }
-
-            goto TransferSlots;
-        }
-
-TransferSlots:
-        assert(last_index != npos);
-        prev_index = to_erase;
-        slot_index = first_index;
-        while (slot_index != last_index) {
-            control_type * ctrl = this->control_at(slot_index);
-            assert(ctrl->distance > 0);
-            std::uint16_t dist_and_hash = ctrl->value;
-            dist_and_hash--;
-            this->setUsedCtrl(prev_index, dist_and_hash);
-
-            slot_type * prev_slot = this->slot_at(prev_index);
-            slot_type * slot = this->slot_at(slot_index);
-            this->transfer_slot(prev_slot, slot);
-
-            prev_index = slot_index;
-            slot_index = this->next_index(slot_index);
-        }
-
-ClearSlot:
-        // Setting to empty ctrl
-        control_type * prev_ctrl = this->control_at(prev_index);
-        assert(prev_ctrl->isUsed());
-        this->setUnusedCtrl(prev_index, kEmptySlot);
-        // Destroy slot
-        this->destroy_slot(prev_index);
+        this->destory_slot(curr_slot);
 
         assert(this->slot_size_ > 0);
         this->slot_size_--;
+
+        size_type curr_index;
+        ctrl_type * next_ctrl = curr_ctrl + std::ptrdiff_t(1);       
+        slot_type * next_slot = curr_slot + std::ptrdiff_t(1);
+
+        while (!next_ctrl->isEmptyOrZero()) {
+            ctrl_type dist_and_hash(*next_ctrl);
+            assert(dist_and_hash.distance > 0);
+            dist_and_hash.distance--;
+            curr_index = this->index_of(curr_ctrl);
+            this->setUsedCtrl(curr_index, dist_and_hash.value);
+            this->transfer_slot(curr_slot, next_slot);
+
+            curr_ctrl++;
+            curr_slot++;
+
+            next_ctrl++;
+            next_slot++;
+        }
+
+        curr_index = this->index_of(curr_ctrl);
+        this->setUnusedCtrl(curr_index, kEmptySlot);
     }
 
     void swap_content(robin16_hash_map & other) {
