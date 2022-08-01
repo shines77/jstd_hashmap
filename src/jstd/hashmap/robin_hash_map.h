@@ -3079,7 +3079,7 @@ private:
         slot_type * slot = this->slot_at(slot_index);
         ctrl_type dist_and_0(0, 0);
         ctrl_type dist_and_hash;
-#if 1
+#if 0
         while (ctrl->value >= dist_and_0.value) {
             if (this->key_equal_(slot->value.first, key)) {
                 return { slot, kIsExists };
@@ -3128,7 +3128,7 @@ private:
 #else   
         const slot_type * last_slot;
 
-        if (ctrl->value >= ctrl_type::make_dist(0)) {
+        if (ctrl->value >= dist_and_0.value) {
             if (ctrl->hash_equals(ctrl_hash)) {
                 if (this->key_equal_(slot->value.first, key)) {
                     return { slot, kIsExists };
@@ -3154,8 +3154,8 @@ private:
             
         ctrl++;
         slot++;
-
         dist_and_hash.setValue(2, ctrl_hash);
+
         last_slot = this->last_slot();
 
         while (slot < last_slot) {
