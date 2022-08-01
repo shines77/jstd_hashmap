@@ -97,7 +97,7 @@
 #endif
 #endif // _MSC_VER
 
-#define ROBIN_USE_HASH_POLICY     0
+#define ROBIN_V1_USE_HASH_POLICY    0
 
 namespace jstd {
 namespace v1 {
@@ -1369,7 +1369,7 @@ private:
     size_type       slot_threshold_;
     std::uint32_t   n_mlf_;
     std::uint32_t   n_mlf_rev_;
-#if ROBIN_USE_HASH_POLICY
+#if ROBIN_V1_USE_HASH_POLICY
     hash_policy_t   hash_policy_;
 #endif
 
@@ -1456,7 +1456,7 @@ public:
         slot_size_(0), slot_mask_(0), max_lookups_(kMinLookups),
         slot_threshold_(0), n_mlf_(kDefaultLoadFactorInt),
         n_mlf_rev_(kDefaultLoadFactorRevInt),
-#if ROBIN_USE_HASH_POLICY
+#if ROBIN_V1_USE_HASH_POLICY
         hash_policy_(other.hash_policy_ref()),
 #endif
         hasher_(hasher()), key_equal_(key_equal()),
@@ -1483,7 +1483,7 @@ public:
         slot_size_(0), slot_mask_(0), max_lookups_(kMinLookups),
         slot_threshold_(0), n_mlf_(kDefaultLoadFactorInt),
         n_mlf_rev_(kDefaultLoadFactorRevInt),
-#if ROBIN_USE_HASH_POLICY
+#if ROBIN_V1_USE_HASH_POLICY
         hash_policy_(std::move(other.hash_policy_ref())),
 #endif
         hasher_(std::move(other.hash_function_ref())),
@@ -1503,7 +1503,7 @@ public:
         slot_size_(0), slot_mask_(0), max_lookups_(kMinLookups),
         slot_threshold_(0), n_mlf_(kDefaultLoadFactorInt),
         n_mlf_rev_(kDefaultLoadFactorRevInt),
-#if ROBIN_USE_HASH_POLICY
+#if ROBIN_V1_USE_HASH_POLICY
         hash_policy_(std::move(other.hash_policy_ref())),
 #endif
         hasher_(std::move(other.hash_function_ref())),
@@ -1527,7 +1527,7 @@ public:
         slot_size_(0), slot_mask_(0), max_lookups_(kMinLookups),
         slot_threshold_(0), n_mlf_(kDefaultLoadFactorInt),
         n_mlf_rev_(kDefaultLoadFactorRevInt),
-#if ROBIN_USE_HASH_POLICY
+#if ROBIN_V1_USE_HASH_POLICY
         hash_policy_(),
 #endif
         hasher_(hash), key_equal_(equal),
@@ -1720,7 +1720,7 @@ public:
         return this->key_equal_;
     }
 
-#if ROBIN_USE_HASH_POLICY
+#if ROBIN_V1_USE_HASH_POLICY
     hash_policy_t hash_policy() const {
         return this->hash_policy_;
     }
@@ -1750,7 +1750,7 @@ public:
         return this->key_equal_;
     }
 
-#if ROBIN_USE_HASH_POLICY
+#if ROBIN_V1_USE_HASH_POLICY
     hash_policy_t & hash_policy_ref() noexcept {
         return this->hash_policy_;
     }
@@ -2165,7 +2165,7 @@ private:
     }
 
     inline hash_code_t get_third_hash(hash_code_t value) const noexcept {
-#if ROBIN_USE_HASH_POLICY
+#if ROBIN_V1_USE_HASH_POLICY
         return value;
 #elif 0
         return (size_type)hashes::mum_hash64((std::uint64_t)value, 11400714819323198485ull);
@@ -2181,7 +2181,7 @@ private:
     }
 
     inline size_type index_for_hash(hash_code_t hash_code) const noexcept {
-#if ROBIN_USE_HASH_POLICY
+#if ROBIN_V1_USE_HASH_POLICY
         return this->hash_policy_.index_for_hash(hash_code, this->slot_mask());
 #else
         if (kUseIndexSalt)
@@ -2193,7 +2193,7 @@ private:
 
     inline size_type index_for_hash(hash_code_t hash_code, size_type slot_mask) const noexcept {
         assert(pow2::is_pow2(slot_mask + 1));
-#if ROBIN_USE_HASH_POLICY
+#if ROBIN_V1_USE_HASH_POLICY
         return this->hash_policy_.index_for_hash(hash_code, slot_mask);
 #else
         if (kUseIndexSalt)
@@ -2505,7 +2505,7 @@ private:
         this->slot_mask_ = 0;
         this->max_lookups_ = kMinLookups;
         this->slot_threshold_ = 0;
-#if ROBIN_USE_HASH_POLICY
+#if ROBIN_V1_USE_HASH_POLICY
         this->hash_policy_.reset();
 #endif
     }
@@ -2529,7 +2529,7 @@ private:
             new_capacity = init_capacity;
         }
 
-#if ROBIN_USE_HASH_POLICY
+#if ROBIN_V1_USE_HASH_POLICY
         auto hash_policy_setting = this->hash_policy_.calc_next_capacity(new_capacity);
         this->hash_policy_.commit(hash_policy_setting);        
 #endif
@@ -3801,7 +3801,7 @@ Insert_To_Slot:
         swap(this->slot_threshold_, other.slot_threshold());
         swap(this->n_mlf_, other.integral_mlf());
         swap(this->n_mlf_rev_, other.integral_mlf_rev());
-#if ROBIN_USE_HASH_POLICY
+#if ROBIN_V1_USE_HASH_POLICY
         swap(this->hash_policy_, other.hash_policy_ref());
 #endif
     }

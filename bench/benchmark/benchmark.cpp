@@ -81,7 +81,7 @@
 #define USE_JSTD_FLAT16_HASH_MAP    1
 #define USE_JSTD_ROBIN16_HASH_MAP   0
 #define USE_JSTD_ROBIN_HASH_MAP     1
-#define USE_JSTD_V1_ROBIN_HASH_MAP  1
+#define USE_JSTD_ROBIN_HASH_MAP_V1  1
 #define USE_SKA_FLAT_HASH_MAP       0
 #define USE_SKA_BYTELL_HASH_MAP     0
 #define USE_ABSL_FLAT_HASH_MAP      0
@@ -121,7 +121,7 @@
 #if USE_JSTD_ROBIN_HASH_MAP
 #include <jstd/hashmap/robin_hash_map.h>
 #endif
-#if USE_JSTD_V1_ROBIN_HASH_MAP
+#if USE_JSTD_ROBIN_HASH_MAP_V1
 #include <jstd/hashmap/robin_hash_map_v1.h>
 #endif
 #include <jstd/hashmap/hashmap_analyzer.h>
