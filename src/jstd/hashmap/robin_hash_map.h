@@ -1517,7 +1517,7 @@ public:
         mutable_allocator_(std::move(other.get_mutable_allocator_ref())),
         ctrl_allocator_(std::move(other.get_ctrl_allocator_ref())),
         slot_allocator_(std::move(other.get_slot_allocator_ref())) {
-        if (alloc == that.get_allocator_ref()) {
+        if (alloc == other.get_allocator_ref()) {
             // Swap content only
             this->swap_content(other);
         } else {
