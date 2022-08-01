@@ -30,25 +30,25 @@ namespace jstd {
 // Defines how slots are initialized, destroyed, moved,
 //                       transfer, swap or exchange.
 //
-template <typename HashMapPolicy, typename = void>
-class map_policy_traits {
+template <typename SlotPolicy, typename = void>
+class slot_policy_traits {
 public:
-    // The policy of hash table.
-    using hashmap_policy = HashMapPolicy;
+    // The slot policy of hash table.
+    using slot_policy = SlotPolicy;
 
     // The type of the keys stored in the hash table.
-    using key_type = typename HashMapPolicy::key_type;
-    using mapped_type = typename HashMapPolicy::mapped_type;
+    using key_type = typename SlotPolicy::key_type;
+    using mapped_type = typename SlotPolicy::mapped_type;
 
     // The actual object stored in the hash table.
-    using slot_type = typename HashMapPolicy::slot_type;
+    using slot_type = typename SlotPolicy::slot_type;
 
     // The argument type for insertions into the hash table. This is different
     // from value_type for increased performance. See std::initializer_list<T> constructor
     // and insert() member functions for more details.
-    using init_type = typename HashMapPolicy::init_type;
+    using init_type = typename SlotPolicy::init_type;
 
-    using reference = decltype(HashMapPolicy::element(std::declval<slot_type *>()));
+    using reference = decltype(SlotPolicy::element(std::declval<slot_type *>()));
     using pointer = typename std::remove_reference<reference>::type *;
     using value_type = typename std::remove_reference<reference>::type;
 
@@ -77,7 +77,7 @@ private:
         }
     };
 
-    template <typename Policy = HashMapPolicy, typename = void>
+    template <typename Policy = SlotPolicy, typename = void>
     struct ConstantIteratorsImpl : std::false_type {
     };
 
@@ -96,14 +96,14 @@ public:
     // POSTCONDITION: `slot` is INITIALIZED
     template <typename Alloc, typename ... Args>
     static void construct(Alloc * alloc, slot_type * slot, Args && ... args) {
-        HashMapPolicy::construct(alloc, slot, std::forward<Args>(args)...);
+        SlotPolicy::construct(alloc, slot, std::forward<Args>(args)...);
     }
 
     // PRECONDITION:  `slot` is INITIALIZED
     // POSTCONDITION: `slot` is UNINITIALIZED
     template <typename Alloc>
     static void destroy(Alloc * alloc, slot_type * slot) {
-        HashMapPolicy::destroy(alloc, slot);
+        SlotPolicy::destroy(alloc, slot);
     }
 
     // Transfers the `old_slot` to `new_slot`. Any memory allocated by the
@@ -119,19 +119,19 @@ public:
     //                UNINITIALIZED
     template <typename Alloc>
     static void transfer(Alloc * alloc, slot_type * new_slot, slot_type * old_slot) {
-        map_policy_traits::transfer_impl(alloc, new_slot, old_slot, 0);
+        slot_policy_traits::transfer_impl(alloc, new_slot, old_slot, 0);
     }
 
     // PRECONDITION:  `slot` is INITIALIZED
     // POSTCONDITION: `slot` is INITIALIZED
-    template <typename Policy = HashMapPolicy>
+    template <typename Policy = SlotPolicy>
     static auto element(slot_type * slot) -> decltype(Policy::element(slot)) {
         return Policy::element(slot);
     }
 
 private:
     // Use auto -> decltype as an enabler.
-    template <typename Alloc, typename Policy = HashMapPolicy>
+    template <typename Alloc, typename Policy = SlotPolicy>
     static auto transfer_impl(Alloc * alloc, slot_type * new_slot,
                               slot_type * old_slot, int)
         -> decltype((void)Policy::transfer(alloc, new_slot, old_slot)) {
@@ -141,8 +141,8 @@ private:
     template <typename Alloc>
     static void transfer_impl(Alloc * alloc, slot_type * new_slot,
                               slot_type * old_slot, char) {
-        map_policy_traits::construct(alloc, new_slot, std::move(element(old_slot)));
-        map_policy_traits::destroy(alloc, old_slot);
+        slot_policy_traits::construct(alloc, new_slot, std::move(element(old_slot)));
+        slot_policy_traits::destroy(alloc, old_slot);
     }
 };
 

@@ -265,7 +265,7 @@
     <ClInclude Include="..\..\..\src\jstd\hashmap\map_slot_policy.h">
       <Filter>src\hashmap</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\src\jstd\hashmap\map_policy_traits.h">
+    <ClInclude Include="..\..\..\src\jstd\hashmap\slot_policy_traits.h">
       <Filter>src\hashmap</Filter>
     </ClInclude>
   </ItemGroup>

@@ -78,7 +78,7 @@
 #include "jstd/hasher/hash_crc32c.h"
 #include "jstd/hashmap/map_layout_policy.h"
 #include "jstd/hashmap/map_slot_policy.h"
-#include "jstd/hashmap/map_policy_traits.h"
+#include "jstd/hashmap/slot_policy_traits.h"
 #include "jstd/support/BitUtils.h"
 #include "jstd/support/Power2.h"
 #include "jstd/support/BitVec.h"
@@ -125,7 +125,7 @@ struct robin_hash_map_slot_policy {
         slot_policy::transfer(alloc, new_slot, old_slot);
     }
 
-    static std::size_t space_used(const slot_type *) {
+    static std::size_t extra_space(const slot_type *) {
         return 0;
     }
 
@@ -170,6 +170,10 @@ public:
     typedef map_slot_type<Key, Value>               slot_type;
     typedef map_slot_type<Key, Value>               node_type;
 
+    typedef robin_hash_map_slot_policy<Key, Value, slot_type>
+                                                    slot_policy_t;
+    typedef slot_policy_traits<slot_policy_t>       SlotPolicyTraits;
+
     typedef typename slot_type::key_type            key_type;
     typedef typename slot_type::mapped_type         mapped_type;
 
@@ -187,8 +191,6 @@ public:
     typedef KeyEqual                                key_equal;
     typedef Allocator                               allocator_type;
     typedef typename Hash::result_type              hash_result_t;
-    typedef robin_hash_map_slot_policy<Key, Value, slot_type>
-                                                    slot_policy_t;
     typedef typename hash_policy_selector<Hash>::type
                                                     hash_policy_t;
     typedef LayoutPolicy                            layout_policy_t;

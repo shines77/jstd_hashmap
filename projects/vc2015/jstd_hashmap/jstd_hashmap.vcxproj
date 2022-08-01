@@ -47,7 +47,7 @@
     <ClInclude Include="..\..\..\src\jstd\hashmap\hash_chunk_list.h" />
     <ClInclude Include="..\..\..\src\jstd\hashmap\key_extractor.h" />
     <ClInclude Include="..\..\..\src\jstd\hashmap\map_layout_policy.h" />
-    <ClInclude Include="..\..\..\src\jstd\hashmap\map_policy_traits.h" />
+    <ClInclude Include="..\..\..\src\jstd\hashmap\slot_policy_traits.h" />
     <ClInclude Include="..\..\..\src\jstd\hashmap\map_slot_policy.h" />
     <ClInclude Include="..\..\..\src\jstd\hashmap\robin16_hash_map.h" />
     <ClInclude Include="..\..\..\src\jstd\hashmap\robin_hash_map.h" />
