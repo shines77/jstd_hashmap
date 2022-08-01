@@ -405,7 +405,8 @@
 #define JSTD_INCOMPLETE_TYPE_TRAITS
 #endif
 
-#if defined(__cpp_lib_exchange_function) || (jstd_cplusplus >= 2014L)
+#if (defined(__cpp_lib_exchange_function)  && (__cpp_lib_exchange_function >= 201304L)) || \
+    (jstd_cplusplus >= 2014L)
 #ifndef JSTD_EXCHANGE_FUNCTION
 #define JSTD_EXCHANGE_FUNCTION
 #endif

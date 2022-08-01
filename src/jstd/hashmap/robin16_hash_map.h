@@ -3606,14 +3606,14 @@ private:
 
     void swap_content(robin16_hash_map & other) {
         using std::swap;
-        swap(this->groups_, other.groups());
-        swap(this->group_mask_, other.group_mask());
-        swap(this->slots_, other.slots());
-        swap(this->slot_size_, other.slot_size());
-        swap(this->slot_mask_, other.slot_mask());
-        swap(this->slot_threshold_, other.slot_threshold());
-        swap(this->n_mlf_, other.integral_mlf());
-        swap(this->n_mlf_rev_, other.integral_mlf_rev());
+        swap(this->groups_, other.groups_);
+        swap(this->group_mask_, other.group_mask_);
+        swap(this->slots_, other.slots_);
+        swap(this->slot_size_, other.slot_size_);
+        swap(this->slot_mask_, other.slot_mask_);
+        swap(this->slot_threshold_, other.slot_threshold_);
+        swap(this->n_mlf_, other.n_mlf_);
+        swap(this->n_mlf_rev_, other.n_mlf_rev_);
 #if ROBIN16_USE_HASH_POLICY
         swap(this->hash_policy_, other.hash_policy_ref());
 #endif

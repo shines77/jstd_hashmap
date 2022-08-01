@@ -86,8 +86,8 @@
 #ifndef _DEBUG
 #define USE_STD_HASH_MAP            0
 #define USE_STD_UNORDERED_MAP       1
-#define USE_JSTD_FLAT16_HASH_MAP    0
-#define USE_JSTD_ROBIN16_HASH_MAP   0
+#define USE_JSTD_FLAT16_HASH_MAP    1
+#define USE_JSTD_ROBIN16_HASH_MAP   1
 #define USE_JSTD_ROBIN_HASH_MAP     1
 #define USE_JSTD_ROBIN_HASH_MAP_V1  1
 #else
@@ -96,7 +96,7 @@
 #define USE_JSTD_FLAT16_HASH_MAP    0
 #define USE_JSTD_ROBIN16_HASH_MAP   0
 #define USE_JSTD_ROBIN_HASH_MAP     1
-#define USE_JSTD_ROBIN_HASH_MAP_V1  1
+#define USE_JSTD_ROBIN_HASH_MAP_V1  0
 #endif // _DEBUG
 
 #ifdef __SSE4_2__
@@ -316,7 +316,7 @@ struct IntegalHash
     template <typename Argument, typename std::enable_if<
                                   (!std::is_integral<Argument>::value ||
                                   sizeof(Argument) > 8)>::type * = nullptr>
-    result_type operator () (const Argument & value) const noexcept {
+    result_type operator () (const Argument & value) const {
         std::hash<Argument> hasher;
         return static_cast<result_type>(hasher(value));
     }
@@ -339,7 +339,7 @@ struct MumHash
     template <typename Argument, typename std::enable_if<
                                   (!std::is_integral<Argument>::value ||
                                   sizeof(Argument) > 8)>::type * = nullptr>
-    result_type operator () (const Argument & value) const noexcept {
+    result_type operator () (const Argument & value) const {
         std::hash<Argument> hasher;
         return static_cast<result_type>(hasher(value));
     }
@@ -426,7 +426,7 @@ public:
         return (const char *)&this->buffer_[0];
     }
 
-    std::size_t Hash() const {
+    std::size_t Hash() const noexcept {
         std::size_t hash_val = static_cast<std::size_t>(this->key_);
 #if 0
         for (std::size_t i = 0; i < kHashLen; ++i) {
@@ -506,7 +506,7 @@ public:
         return nullptr;
     }
 
-    std::size_t Hash() const {
+    std::size_t Hash() const noexcept {
 #if USE_STAT_COUNTER
         g_num_hashes++;
 #endif
@@ -582,7 +582,7 @@ public:
         return nullptr;
     }
 
-    std::size_t Hash() const {
+    std::size_t Hash() const noexcept {
 #if USE_STAT_COUNTER
         g_num_hashes++;
 #endif
@@ -620,7 +620,7 @@ public:
     static const std::size_t bucket_size = 4;
     static const std::size_t min_buckets = 8;
 
-    result_type operator () (const argument_type & obj) const {
+    result_type operator () (const argument_type & obj) const noexcept {
         if (is_special)
             return static_cast<result_type>(test::MumHash<key_type>()(obj.Hash()));
         else
@@ -628,40 +628,40 @@ public:
     }
 
     // Do the identity hash for pointers.
-    result_type operator () (const argument_type * obj) const {
+    result_type operator () (const argument_type * obj) const noexcept {
         return reinterpret_cast<result_type>(obj);
     }
 
     // Less operator for MSVC's hash containers.
-    bool operator () (const argument_type & a, argument_type & b) const {
+    bool operator () (const argument_type & a, argument_type & b) const noexcept {
         return (a < b);
     }
 
-    bool operator () (const argument_type * a, const argument_type * b) const {
+    bool operator () (const argument_type * a, const argument_type * b) const noexcept {
         return (a < b);
     }
 
     template <std::size_t nSize, std::size_t nHashSize>
-    result_type operator () (const HashObject<key_type, nSize, nHashSize> & obj) const {
+    result_type operator () (const HashObject<key_type, nSize, nHashSize> & obj) const noexcept {
         return static_cast<result_type>(obj.Hash());
     }
 
     // Do the identity hash for pointers.
     template <std::size_t nSize, std::size_t nHashSize>
-    result_type operator () (const HashObject<key_type, nSize, nHashSize> * obj) const {
+    result_type operator () (const HashObject<key_type, nSize, nHashSize> * obj) const noexcept {
         return reinterpret_cast<result_type>(obj);
     }
 
     // Less operator for MSVC's hash containers.
     template <std::size_t nSize, std::size_t nHashSize>
     bool operator () (const HashObject<key_type, nSize, nHashSize> & a,
-                      const HashObject<key_type, nSize, nHashSize> & b) const {
+                      const HashObject<key_type, nSize, nHashSize> & b) const noexcept {
         return (a < b);
     }
 
     template <std::size_t nSize, std::size_t nHashSize>
     bool operator () (const HashObject<key_type, nSize, nHashSize> * a,
-                      const HashObject<key_type, nSize, nHashSize> * b) const {
+                      const HashObject<key_type, nSize, nHashSize> * b) const noexcept {
         return (a < b);
     }
 };

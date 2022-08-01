@@ -1806,7 +1806,7 @@ void flat16_hash_map_int64_string_test()
 
     hash_map_t flat_hash_map;
 
-    printf("flat_hash_map.groups()     = %p\n", flat_hash_map.groups());
+    printf("flat_hash_map.groups()    = %p\n", flat_hash_map.groups());
     printf("sizeof(group_type)        = %u\n\n", (uint32_t)sizeof(group_type));
 
     printf("flat_hash_map.slot_type() = %p\n", flat_hash_map.slots());
@@ -1896,7 +1896,7 @@ template <typename Key, typename Value>
 bool is_compatible_layout_pair()
 {
     static constexpr bool is_compatible_layout =
-        jstd::is_compatible_layout<std::pair<const Key, Value>, std::pair<Key, Value>>::value;
+        jstd::is_compatible_pair_layout<std::pair<const Key, Value>, std::pair<Key, Value>>::value;
     return is_compatible_layout;
 }
 

@@ -3791,22 +3791,22 @@ Insert_To_Slot:
         this->setUnusedCtrl(curr_ctrl, kEmptySlot16);
     }
 
-    void swap_content(robin_hash_map & other) {
+    void swap_content(this_type & other) {
         using std::swap;
-        swap(this->ctrls_, other.ctrls());
-        swap(this->slots_, other.slots());
-        swap(this->slot_size_, other.slot_size());
-        swap(this->slot_mask_, other.slot_mask());
-        swap(this->max_lookups_, other.max_lookups());
-        swap(this->slot_threshold_, other.slot_threshold());
-        swap(this->n_mlf_, other.integral_mlf());
-        swap(this->n_mlf_rev_, other.integral_mlf_rev());
+        swap(this->ctrls_, other.ctrls_);
+        swap(this->slots_, other.slots_);
+        swap(this->slot_size_, other.slot_size_);
+        swap(this->slot_mask_, other.slot_mask_);
+        swap(this->max_lookups_, other.max_lookups_);
+        swap(this->slot_threshold_, other.slot_threshold_);
+        swap(this->n_mlf_, other.n_mlf_);
+        swap(this->n_mlf_rev_, other.n_mlf_rev_);
 #if ROBIN_V1_USE_HASH_POLICY
         swap(this->hash_policy_, other.hash_policy_ref());
 #endif
     }
 
-    void swap_policy(robin_hash_map & other) {
+    void swap_policy(this_type & other) {
         using std::swap;
         swap(this->hasher_, other.hash_function_ref());
         swap(this->key_equal_, other.key_eq_ref());
@@ -3824,11 +3824,27 @@ Insert_To_Slot:
         }
     }
 
-    void swap_impl(robin_hash_map & other) {
+    void swap_impl(this_type & other) {
         this->swap_content(other);
         this->swap_policy(other);
     }
 };
+
+template <class Key, class Value, class Hash, class KeyEqual, class LayoutPolicy, class Alloc, class Pred>
+typename robin_hash_map<Key, Value, Hash, KeyEqual, LayoutPolicy, Alloc>::size_type
+inline
+erase_if(robin_hash_map<Key, Value, Hash, KeyEqual, LayoutPolicy, Alloc> & hash_map, Pred pred)
+{
+    auto old_size = hash_map.size();
+    for (auto it = hash_map.begin(), last = hash_map.end(); it != last; ) {
+        if (pred(*it)) {
+            it = hash_map.erase(it);
+        } else {
+            ++it;
+        }
+    }
+    return (old_size - hash_map.size());
+}
 
 } // namespace v1
 } // namespace jstd

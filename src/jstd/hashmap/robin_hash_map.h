@@ -1475,15 +1475,21 @@ public:
         }
     }
 
-    robin_hash_map(robin_hash_map && other) noexcept :
-        ctrls_(this_type::default_empty_ctrls()),
-        slots_(this_type::default_empty_slots()),
-        last_slot_(this_type::default_last_empty_slot()),
-        slot_size_(0), slot_mask_(0), max_lookups_(kMinLookups),
-        slot_threshold_(0), n_mlf_(kDefaultLoadFactorInt),
-        n_mlf_rev_(kDefaultLoadFactorRevInt),
+    robin_hash_map(robin_hash_map && other) noexcept(
+            std::is_nothrow_copy_constructible<hasher>::value &&
+            std::is_nothrow_copy_constructible<key_equal>::value &&
+            std::is_nothrow_copy_constructible<allocator_type>::value) :
+        ctrls_(jstd_exchange(other.ctrls_, this_type::default_empty_ctrls())),
+        slots_(jstd_exchange(other.slots_, this_type::default_empty_slots())),
+        last_slot_(jstd_exchange(other.last_slot_, this_type::default_last_empty_slot())),
+        slot_size_(jstd_exchange(other.slot_size_, 0)),
+        slot_mask_(jstd_exchange(other.slot_mask_, 0)),
+        max_lookups_(jstd_exchange(other.max_lookups_, kMinLookups)),
+        slot_threshold_(jstd_exchange(other.slot_size_, 0)),
+        n_mlf_(jstd_exchange(other.n_mlf_, kDefaultLoadFactorInt)),
+        n_mlf_rev_(jstd_exchange(other.n_mlf_rev_, kDefaultLoadFactorRevInt)),
 #if ROBIN_USE_HASH_POLICY
-        hash_policy_(std::move(other.hash_policy_ref())),
+        hash_policy_(jstd_exchange(other.hash_policy_ref(), hash_policy_t())),
 #endif
         hasher_(std::move(other.hash_function_ref())),
         key_equal_(std::move(other.key_eq_ref())),
@@ -1492,10 +1498,10 @@ public:
         ctrl_allocator_(std::move(other.get_ctrl_allocator_ref())),
         slot_allocator_(std::move(other.get_slot_allocator_ref())) {
         // Swap content only
-        this->swap_content(other);
+        // this->swap_content(other);
     }
 
-    robin_hash_map(robin_hash_map && other, const Allocator & alloc) noexcept :
+    robin_hash_map(robin_hash_map && other, const Allocator & alloc) :
         ctrls_(this_type::default_empty_ctrls()),
         slots_(this_type::default_empty_slots()),
         last_slot_(this_type::default_last_empty_slot()),
@@ -1511,8 +1517,26 @@ public:
         mutable_allocator_(std::move(other.get_mutable_allocator_ref())),
         ctrl_allocator_(std::move(other.get_ctrl_allocator_ref())),
         slot_allocator_(std::move(other.get_slot_allocator_ref())) {
-        // Swap content only
-        this->swap_content(other);
+        if (alloc == that.get_allocator_ref()) {
+            // Swap content only
+            this->swap_content(other);
+        } else {
+            // Prepare enough space to ensure that no expansion is required during the insertion process.
+            size_type other_size = other.slot_size();
+            this->reserve_for_insert(other_size);
+
+            // Note: this will copy elements of dense_set and unordered_set instead of
+            // moving them. This can be fixed if it ever becomes an issue.
+            try {
+                this->unique_insert(other.begin(), other.end());
+            } catch (const std::bad_alloc & ex) {
+                this->destroy();
+                throw std::bad_alloc();
+            } catch (...) {
+                this->destroy();
+                throw;
+            }
+        }
     }
 
     robin_hash_map(std::initializer_list<value_type> init_list,
@@ -1553,6 +1577,25 @@ public:
 
     ~robin_hash_map() {
         this->destroy_data();
+    }
+
+    robin_hash_map & operator = (const robin_hash_map & other) {
+        robin_hash_map tmp(other,
+                           std::allocator_traits<allocator_type>::propagate_on_container_copy_assignment::value
+                           ? other.get_allocator_ref()
+                           : this->get_allocator_ref());
+        this->swap(tmp);
+        return *this;
+    }
+
+    robin_hash_map & operator = (robin_hash_map && other) noexcept(
+        std::allocator_traits<allocator_type>::is_always_equal::value &&
+        std::is_nothrow_move_assignable<hasher>::value &&
+        std::is_nothrow_move_assignable<key_equal>::value) {
+        // TODO: We should only use the operations from the noexcept clause
+        // to make sure we actually adhere to other contract.
+        return this->move_assign(std::move(other),
+                     typename std::allocator_traits<allocator_type>::propagate_on_container_move_assignment());
     }
 
     bool is_valid() const { return (this->ctrls() != nullptr); }
@@ -2139,7 +2182,11 @@ private:
         return this->next_valid_iterator(ctrl, iter);
     }
 
-    inline hash_code_t get_hash(const key_type & key) const noexcept {
+    inline hash_code_t get_hash(const key_type & key) const
+        //noexcept(noexcept(this->hasher_(key)))
+        //noexcept(noexcept(hasher()(key)))
+        noexcept(noexcept(std::declval<hasher &>()(key)))
+    {
         hash_code_t hash_code = static_cast<hash_code_t>(this->hasher_(key));
         return hash_code;
     }
@@ -2406,6 +2453,10 @@ private:
         // The construction of union doesn't do anything at runtime but it allows us
         // to access its members without violating aliasing rules.
         new (slot) slot_type;
+    }
+
+    void destroy() noexcept {
+        this->destroy_data();
     }
 
     void destroy_data() noexcept {
@@ -3767,22 +3818,39 @@ Insert_To_Slot:
         this->setUnusedCtrl(curr_ctrl, kEmptySlot16);
     }
 
-    void swap_content(robin_hash_map & other) {
+    // TODO: Optimize this assuming *this and other don't overlap.
+    this_type & move_assign(this_type && other, std::true_type) {
+        if (std::addressof(other) != this) {
+            this_type tmp(std::move(other));
+            this->swap_impl(tmp);
+        }
+        return *this;
+    }
+
+    this_type & move_assign(this_type && other, std::false_type) {
+        if (std::addressof(other) != this) {
+            this_type tmp(std::move(other), this->get_allocator_ref());
+            this->swap_impl(tmp);
+        }
+        return *this;
+    }
+
+    void swap_content(this_type & other) {
         using std::swap;
-        swap(this->ctrls_, other.ctrls());
-        swap(this->slots_, other.slots());
-        swap(this->slot_size_, other.slot_size());
-        swap(this->slot_mask_, other.slot_mask());
-        swap(this->max_lookups_, other.max_lookups());
-        swap(this->slot_threshold_, other.slot_threshold());
-        swap(this->n_mlf_, other.integral_mlf());
-        swap(this->n_mlf_rev_, other.integral_mlf_rev());
+        swap(this->ctrls_, other.ctrls_);
+        swap(this->slots_, other.slots_);
+        swap(this->slot_size_, other.slot_size_);
+        swap(this->slot_mask_, other.slot_mask_);
+        swap(this->max_lookups_, other.max_lookups_);
+        swap(this->slot_threshold_, other.slot_threshold_);
+        swap(this->n_mlf_, other.n_mlf_);
+        swap(this->n_mlf_rev_, other.n_mlf_rev_);
 #if ROBIN_USE_HASH_POLICY
         swap(this->hash_policy_, other.hash_policy_ref());
 #endif
     }
 
-    void swap_policy(robin_hash_map & other) {
+    void swap_policy(this_type & other) {
         using std::swap;
         swap(this->hasher_, other.hash_function_ref());
         swap(this->key_equal_, other.key_eq_ref());
@@ -3800,10 +3868,26 @@ Insert_To_Slot:
         }
     }
 
-    void swap_impl(robin_hash_map & other) {
+    void swap_impl(this_type & other) {
         this->swap_content(other);
         this->swap_policy(other);
     }
 };
+
+template <class Key, class Value, class Hash, class KeyEqual, class LayoutPolicy, class Alloc, class Pred>
+typename robin_hash_map<Key, Value, Hash, KeyEqual, LayoutPolicy, Alloc>::size_type
+inline
+erase_if(robin_hash_map<Key, Value, Hash, KeyEqual, LayoutPolicy, Alloc> & hash_map, Pred pred)
+{
+    auto old_size = hash_map.size();
+    for (auto it = hash_map.begin(), last = hash_map.end(); it != last; ) {
+        if (pred(*it)) {
+            it = hash_map.erase(it);
+        } else {
+            ++it;
+        }
+    }
+    return (old_size - hash_map.size());
+}
 
 } // namespace jstd
