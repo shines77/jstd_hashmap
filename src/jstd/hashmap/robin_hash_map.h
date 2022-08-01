@@ -2023,7 +2023,7 @@ private:
     static ctrl_type * default_empty_ctrls() {
         static constexpr size_type kMinGroupCount = (kMinLookups + (kGroupWidth - 1)) / kGroupWidth;
         static constexpr size_type kMinCtrlCapacity = (kMinGroupCount + 1) * kGroupWidth;
-        static ctrl_type s_empty_ctrls[kMinCtrlCapacity] = {
+        static const alignas(32) ctrl_type s_empty_ctrls[kMinCtrlCapacity] = {
             { kEmptySlot, 0 }, { kEmptySlot, 0 }, { kEmptySlot, 0 }, { kEmptySlot, 0,},
             { kEndOfMark, 0 }, { kEndOfMark, 0 }, { kEndOfMark, 0 }, { kEndOfMark, 0 },
             { kEndOfMark, 0 }, { kEndOfMark, 0 }, { kEndOfMark, 0 }, { kEndOfMark, 0 },
@@ -2034,14 +2034,14 @@ private:
             { kEndOfMark, 0 }, { kEndOfMark, 0 }, { kEndOfMark, 0 }, { kEndOfMark, 0 },
             { kEndOfMark, 0 }, { kEndOfMark, 0 }, { kEndOfMark, 0 }, { kEndOfMark, 0 }
         };
-        return s_empty_ctrls;
+        return const_cast<ctrl_type *>(s_empty_ctrls);
     }
 
     static slot_type * default_empty_slots() {
-        static slot_type s_empty_slots[kMinLookups] = {
+        static const alignas(32) slot_type s_empty_slots[kMinLookups] = {
             {}, {}, {}, {}
         };
-        return s_empty_slots;
+        return const_cast<slot_type *>(s_empty_slots);
     }
 
     static slot_type * default_last_empty_slot() {
@@ -2649,7 +2649,7 @@ private:
     JSTD_FORCED_INLINE
     void destroy_slot(slot_type * slot) {
         if (!is_slot_trivial_destructor) {
-            SlotPolicyTraits::destroy(this->allocator_, new_slot, old_slot);
+            SlotPolicyTraits::destroy(&this->allocator_, slot);
         }
     }
 
@@ -2668,7 +2668,7 @@ private:
 
     JSTD_FORCED_INLINE
     void transfer_slot(slot_type * new_slot, slot_type * old_slot) {
-        SlotPolicyTraits::transfer(this->allocator_, new_slot, old_slot);
+        SlotPolicyTraits::transfer(&this->allocator_, new_slot, old_slot);
     }
 
     JSTD_FORCED_INLINE
