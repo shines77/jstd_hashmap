@@ -259,7 +259,13 @@
     <ClInclude Include="..\..\..\src\jstd\test\ReadRss.h">
       <Filter>src\test</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\src\jstd\hashmap\layout_policy.h">
+    <ClInclude Include="..\..\..\src\jstd\hashmap\map_layout_policy.h">
+      <Filter>src\hashmap</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\hashmap\map_slot_policy.h">
+      <Filter>src\hashmap</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\hashmap\map_policy_traits.h">
       <Filter>src\hashmap</Filter>
     </ClInclude>
   </ItemGroup>

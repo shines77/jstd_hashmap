@@ -6,7 +6,7 @@
 #pragma once
 #endif
 
-#include <utility>
+#include <utility>      // For std::pair<First, Second>
 #include <type_traits>
 
 namespace jstd {
@@ -34,7 +34,7 @@ struct pair_traits< std::pair<T1, T2> > {
 struct no_key_t {
     no_key_t() {}
 
-    template <class T>
+    template <typename T>
     no_key_t(T const &) {}
 };
 
@@ -46,43 +46,46 @@ struct no_key_t {
 //
 //////////////////////////////////////////////////////////////////////////
 
-template <class ValueType>
+template <typename ValueType>
 struct key_extractor {
     typedef ValueType   value_type;
     typedef typename std::remove_const<
-                typename pair_traits<ValueType>::first_type>::type
-                        key_type;
+                typename pair_traits<ValueType>::first_type
+            >::type     key_type;
+    typedef typename std::remove_const<
+                typename pair_traits<ValueType>::second_type
+            >::type     mapped_type;
 
     static key_type const & extract(value_type const & val) {
         return val.first;
     }
 
-    template <class Second>
+    template <typename Second>
     static key_type const & extract(std::pair<key_type, Second> const & val) {
         return val.first;
     }
 
-    template <class Second>
+    template <typename Second>
     static key_type const & extract(std::pair<const key_type, Second> const & val) {
         return val.first;
     }
 
-    template <class Second>
+    template <typename Second>
     static key_type const & extract(std::pair<key_type, Second> && val) {
         return val.first;
     }
 
-    template <class Second>
+    template <typename Second>
     static key_type const & extract(std::pair<const key_type, Second> && val) {
         return val.first;
     }
 
-    template <class Arg1>
+    template <typename Arg1>
     static key_type const & extract(key_type const & key, Arg1 const &) {
         return key;
     }
 
-    template <class Arg1>
+    template <typename Arg1>
     static key_type const & extract(key_type && key, Arg1 const &) {
         return key;
     }
@@ -91,22 +94,22 @@ struct key_extractor {
         return no_key_t();
     }
 
-    template <class Arg>
+    template <typename Arg>
     static no_key_t extract(Arg const &) {
         return no_key_t();
     }
 
-    template <class Arg>
+    template <typename Arg>
     static no_key_t extract(Arg &&) {
         return no_key_t();
     }
 
-    template <class Arg1, class Arg2>
+    template <typename Arg1, typename Arg2>
     static no_key_t extract(Arg1 const & , Arg2 const & ) {
         return no_key_t();
     }
 
-    template <class Arg1, class Arg2, class Arg3, class... Args>
+    template <typename Arg1, typename Arg2, typename Arg3, typename... Args>
     static no_key_t extract(Arg1 const &, Arg2 const &, Arg3 const &, Args const & ...) {
         return no_key_t();
     }

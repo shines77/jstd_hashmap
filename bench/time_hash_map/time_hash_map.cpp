@@ -97,17 +97,6 @@
 #define USE_JSTD_ROBIN_HASH_MAP     1
 #endif // _DEBUG
 
-/* SIMD support features */
-#define JSTD_HAVE_MMX           1
-#define JSTD_HAVE_SSE           1
-#define JSTD_HAVE_SSE2          1
-#define JSTD_HAVE_SSE3          1
-#define JSTD_HAVE_SSSE3         1
-#define JSTD_HAVE_SSE4          1
-#define JSTD_HAVE_SSE4A         1
-#define JSTD_HAVE_SSE4_1        1
-#define JSTD_HAVE_SSE4_2        1
-
 #ifdef __SSE4_2__
 
 // Support SSE 4.2: _mm_crc32_u32(), _mm_crc32_u64().

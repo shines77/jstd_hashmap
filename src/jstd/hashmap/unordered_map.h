@@ -72,7 +72,7 @@
 #include <type_traits>
 #include <stdexcept>
 
-#include "jstd/hashmap/layout_policy.h"
+#include "jstd/hashmap/map_layout_policy.h"
 #include "jstd/hashmap/hash_chunk_list.h"
 #include "jstd/type_traits.h"
 #include "jstd/utility.h"

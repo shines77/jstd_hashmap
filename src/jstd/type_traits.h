@@ -497,70 +497,81 @@ struct has_mapped_type {
 //////////////////////////////////////////////////////////////////////////////////
 
 template <typename Pair, typename = std::true_type>
-struct OffsetOf {
+struct PairOffsetOf {
     static constexpr std::size_t kFirst  = static_cast<std::size_t>(-1);
     static constexpr std::size_t kSecond = static_cast<std::size_t>(-1);
 };
 
 template <typename Pair>
-struct OffsetOf<Pair, typename std::is_standard_layout<Pair>::type> {
+struct PairOffsetOf<Pair, typename std::is_standard_layout<Pair>::type> {
     static constexpr std::size_t kFirst  = offsetof(Pair, first);
     static constexpr std::size_t kSecond = offsetof(Pair, second);
 };
 
 template <typename Key, typename Value>
-struct is_absl_compatible_layout {
+struct is_compatible_kv_layout {
 private:
     struct Pair {
         Key     first;
         Value   second;
     };
 
-    // Is PairT layout-compatible with Pair ?
-    template <typename PairT>
-    static constexpr bool isLayoutCompatible() {
-        return (std::is_standard_layout<PairT>() &&
-               (sizeof(PairT) == sizeof(Pair)) &&
-               (alignof(PairT) == alignof(Pair)) &&
-               (OffsetOf<PairT>::kFirst == OffsetOf<Pair>::kFirst) &&
-               (OffsetOf<PairT>::kSecond == OffsetOf<Pair>::kSecond));
+    // Is class P layout-compatible with class Pair ?
+    template <typename P>
+    static constexpr bool isCompatiblePairLayout() {
+        return (std::is_standard_layout<P>() &&
+               (sizeof(P) == sizeof(Pair)) &&
+               (alignof(P) == alignof(Pair)) &&
+               (PairOffsetOf<P>::kFirst == PairOffsetOf<Pair>::kFirst) &&
+               (PairOffsetOf<P>::kSecond == PairOffsetOf<Pair>::kSecond));
     }
 
 public:
-    // Whether std::pair<const K, V> and std::pair<K, V> are layout-compatible.
+    // Whether std::pair<const Key, Value> and std::pair<Key, Value are layout-compatible.
     // If they are, then it is safe to store them in a union and read from either.
-    static constexpr bool value = (std::is_standard_layout<Key>() &&
-                                   std::is_standard_layout<Pair>() &&
-                                   (OffsetOf<Pair>::kFirst == 0) &&
-                                   isLayoutCompatible<std::pair<Key, Value>>() &&
-                                   isLayoutCompatible<std::pair<const Key, Value>>());
+    static constexpr bool value = std::is_standard_layout<Key>() &&
+                                  std::is_standard_layout<Pair>() &&
+                                  (PairOffsetOf<Pair>::kFirst == 0) &&
+                                  isCompatiblePairLayout<std::pair<Key, Value>>() &&
+                                  isCompatiblePairLayout<std::pair<const Key, Value>>();
 };
 
 //
 // Pair        = std::pair<const Key, Value>
 // MutablePair = std::pair<Key, Value>
 //
-template <typename Pair, typename MutablePair>
-struct is_compatible_layout {
+template <typename ConstPair, typename MutablePair>
+struct is_compatible_pair_layout {
 public:
-    typedef typename Pair::first_type           First;
-    typedef typename Pair::second_type          Second;
+    typedef typename ConstPair::first_type      First;
+    typedef typename ConstPair::second_type     Second;
     typedef typename MutablePair::first_type    MutableFirst;
     typedef typename MutablePair::second_type   MutableSecond;
+
+private:
+    struct Pair {
+        MutableFirst    first;
+        MutableSecond   second;
+    };
+
+    // Is class P layout-compatible with class Pair ?
+    template <typename P>
+    static constexpr bool isCompatiblePairLayout() {
+        return (std::is_standard_layout<P>() &&
+               (sizeof(P) == sizeof(Pair)) &&
+               (alignof(P) == alignof(Pair)) &&
+               (PairOffsetOf<P>::kFirst == PairOffsetOf<Pair>::kFirst) &&
+               (PairOffsetOf<P>::kSecond == PairOffsetOf<Pair>::kSecond));
+    }
 
 public:
     // Whether std::pair<const Key, Value> and std::pair<Key, Value> are layout-compatible.
     // If they are, then it is safe to store them in a union and read from either.
-    static constexpr bool value = (std::is_standard_layout<First>() &&
-                                   std::is_standard_layout<MutableFirst>() &&
-                                   std::is_standard_layout<Second>() &&
-                                   std::is_standard_layout<MutableSecond>() &&
-                                   std::is_standard_layout<Pair>() &&
-                                   std::is_standard_layout<MutablePair>() &&
-                                   (sizeof(Pair)  == sizeof(MutablePair)) &&
-                                   (alignof(Pair) == alignof(MutablePair)) &&
-                                   (OffsetOf<Pair>::kFirst  == OffsetOf<MutablePair>::kFirst) &&
-                                   (OffsetOf<Pair>::kSecond == OffsetOf<MutablePair>::kSecond));
+    static constexpr bool value = std::is_standard_layout<MutableFirst>() &&
+                                  std::is_standard_layout<Pair>() &&
+                                  (PairOffsetOf<Pair>::kFirst == 0) &&
+                                  isCompatiblePairLayout<ConstPair>() &&
+                                  isCompatiblePairLayout<MutablePair>();
 };
 
 //////////////////////////////////////////////////////////////////////////////////

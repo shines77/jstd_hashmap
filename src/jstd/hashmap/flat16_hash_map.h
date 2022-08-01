@@ -168,7 +168,7 @@ public:
 
     static constexpr bool kIsCompatibleLayout =
             std::is_same<value_type, mutable_value_type>::value ||
-            is_compatible_layout<value_type, mutable_value_type>::value;
+            is_compatible_pair_layout<value_type, mutable_value_type>::value;
 
     static constexpr std::uint8_t kEmptyEntry   = 0b10000000;
     static constexpr std::uint8_t kDeletedEntry = 0b11111110;

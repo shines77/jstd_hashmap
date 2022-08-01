@@ -76,7 +76,8 @@
 #include "jstd/lang/launder.h"
 #include "jstd/hasher/hashes.h"
 #include "jstd/hasher/hash_crc32c.h"
-#include "jstd/hashmap/layout_policy.h"
+#include "jstd/hashmap/map_layout_policy.h"
+#include "jstd/hashmap/map_policy_traits.h"
 #include "jstd/support/BitUtils.h"
 #include "jstd/support/Power2.h"
 #include "jstd/support/BitVec.h"
@@ -99,6 +100,47 @@
 
 namespace jstd {
 
+template <typename Key, typename Value, typename SlotType>
+struct robin_hash_map_policy {
+    using slot_policy = map_slot_policy<Key, Value, SlotType>;
+
+    using slot_type   = typename slot_policy::slot_type;
+    using key_type    = typename slot_policy::key_type;
+    using mapped_type = typename slot_policy::mapped_type;
+    using init_type   = std::pair</* non const */ key_type, mapped_type>;
+
+    template <typename Allocator, typename ... Args>
+    static void construct(Allocator * alloc, slot_type * slot, Args &&... args) {
+        slot_policy::construct(alloc, slot, std::forward<Args>(args)...);
+    }
+
+    template <typename Allocator>
+    static void destroy(Allocator * alloc, slot_type * slot) {
+        slot_policy::destroy(alloc, slot);
+    }
+
+    template <typename Allocator>
+    static void transfer(Allocator * alloc, slot_type * new_slot, slot_type * old_slot) {
+        slot_policy::transfer(alloc, new_slot, old_slot);
+    }
+
+    static std::size_t space_used(const slot_type *) {
+        return 0;
+    }
+
+    static std::pair<const key_type, mapped_type> & element(slot_type * slot) {
+        return slot->value;
+    }
+
+    static Value & value(std::pair<const key_type, mapped_type> * kv) {
+        return kv->second;
+    }
+
+    static const Value & value(const std::pair<const key_type, mapped_type> * kv) {
+        return kv->second;
+    }
+};
+
 template < typename Key, typename Value,
            typename Hash = std::hash<typename std::remove_cv<Key>::type>,
            typename KeyEqual = std::equal_to<typename std::remove_cv<Key>::type>,
@@ -115,7 +157,7 @@ public:
 
     static constexpr bool kIsCompatibleLayout =
             std::is_same<value_type, mutable_value_type>::value ||
-            is_compatible_layout<value_type, mutable_value_type>::value;
+            is_compatible_pair_layout<value_type, mutable_value_type>::value;
 
     typedef typename std::conditional<kIsCompatibleLayout, mutable_value_type, value_type>::type
                                                     actual_value_type;
@@ -135,13 +177,6 @@ public:
                                                     this_type;
 
     static constexpr bool kUseIndexSalt = false;
-
-    enum {
-        UnrollLoopDisable,
-        UnrollMode8,
-        UnrollMode16
-    };
-    static constexpr int kUnrollMode = UnrollMode16;
 
     static constexpr size_type npos = size_type(-1);
 
@@ -1119,7 +1154,7 @@ public:
         };
 
         slot_type() {}
-        ~slot_type() {};
+        ~slot_type() {}
     };
 
     typedef slot_type       mutable_slot_type;
@@ -3030,7 +3065,6 @@ private:
         kIsExists = 2
     };
 
-    JSTD_NO_INLINE
     std::pair<slot_type *, FindResult>
     find_or_insert(const key_type & key) {
         hash_code_t hash_code = this->get_hash(key);
