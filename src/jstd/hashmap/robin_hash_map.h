@@ -2183,10 +2183,8 @@ private:
     }
 
     inline hash_code_t get_hash(const key_type & key) const
-        //noexcept(noexcept(this->hasher_(key)))
-        //noexcept(noexcept(hasher()(key)))
-        noexcept(noexcept(std::declval<hasher &>()(key)))
-    {
+        noexcept(noexcept(this->hasher_(key)))
+        /* noexcept(noexcept(std::declval<hasher &>()(key))) */ {
         hash_code_t hash_code = static_cast<hash_code_t>(this->hasher_(key));
         return hash_code;
     }
