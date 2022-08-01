@@ -77,6 +77,7 @@
 #include "jstd/hasher/hashes.h"
 #include "jstd/hasher/hash_crc32c.h"
 #include "jstd/hashmap/map_layout_policy.h"
+#include "jstd/hashmap/map_slot_policy.h"
 #include "jstd/hashmap/map_policy_traits.h"
 #include "jstd/support/BitUtils.h"
 #include "jstd/support/Power2.h"
@@ -101,7 +102,7 @@
 namespace jstd {
 
 template <typename Key, typename Value, typename SlotType>
-struct robin_hash_map_policy {
+struct robin_hash_map_slot_policy {
     using slot_policy = map_slot_policy<Key, Value, SlotType>;
 
     using slot_type   = typename slot_policy::slot_type;
@@ -142,18 +143,38 @@ struct robin_hash_map_policy {
 };
 
 template < typename Key, typename Value,
-           typename Hash = std::hash<typename std::remove_cv<Key>::type>,
-           typename KeyEqual = std::equal_to<typename std::remove_cv<Key>::type>,
+           typename Hash = std::hash<typename std::remove_const<Key>::type>,
+           typename KeyEqual = std::equal_to<typename std::remove_const<Key>::type>,
            typename LayoutPolicy = jstd::default_layout_policy<Key, Value>,
-           typename Allocator = std::allocator<std::pair<typename std::add_const<typename std::remove_cv<Key>::type>::type,
-                                                         typename std::remove_cv<Value>::type>> >
+           typename Allocator = std::allocator<std::pair<typename std::add_const<typename std::remove_const<Key>::type>::type,
+                                                         typename std::remove_const<Value>::type>> >
 class robin_hash_map {
 public:
-    typedef typename std::remove_cv<Key>::type      key_type;
-    typedef typename std::remove_cv<Value>::type    mapped_type;
+    template <typename K, typename V>
+    union map_slot_type {
+    public:
+        using key_type = typename std::remove_const<K>::type;
+        using mapped_type = typename std::remove_const<V>::type;
+        using value_type = std::pair<const key_type, mapped_type>;
+        using mutable_value_type = std::pair<key_type, mapped_type>;
 
-    typedef std::pair<const key_type, mapped_type>  value_type;
-    typedef std::pair<key_type, mapped_type>        mutable_value_type;
+        value_type          value;
+        mutable_value_type  mutable_value;
+        const key_type      key;
+        key_type            mutable_key;
+
+        map_slot_type() {}
+        ~map_slot_type() {}
+    };
+
+    typedef map_slot_type<Key, Value>               slot_type;
+    typedef map_slot_type<Key, Value>               node_type;
+
+    typedef typename slot_type::key_type            key_type;
+    typedef typename slot_type::mapped_type         mapped_type;
+
+    typedef typename slot_type::value_type          value_type;
+    typedef typename slot_type::mutable_value_type  mutable_value_type;
 
     static constexpr bool kIsCompatibleLayout =
             std::is_same<value_type, mutable_value_type>::value ||
@@ -166,6 +187,8 @@ public:
     typedef KeyEqual                                key_equal;
     typedef Allocator                               allocator_type;
     typedef typename Hash::result_type              hash_result_t;
+    typedef robin_hash_map_slot_policy<Key, Value, slot_type>
+                                                    slot_policy_t;
     typedef typename hash_policy_selector<Hash>::type
                                                     hash_policy_t;
     typedef LayoutPolicy                            layout_policy_t;
@@ -223,10 +246,10 @@ public:
         (!layout_policy_t::autoDetectStoreHash && layout_policy_t::needStoreHash) ||
          (layout_policy_t::autoDetectStoreHash && (kDetectStoreHash));
 
-    static constexpr bool kKeyIsPlain    = detail::is_plain_type<key_type>::value;
-    static constexpr bool kMappedIsPlain = detail::is_plain_type<mapped_type>::value;
+    static constexpr bool kIsPlainKey    = detail::is_plain_type<key_type>::value;
+    static constexpr bool kIsPlainMapped = detail::is_plain_type<mapped_type>::value;
 
-    static constexpr bool kIsPlainKV = kKeyIsPlain && kMappedIsPlain;
+    static constexpr bool kIsPlainKV = kIsPlainKey && kIsPlainMapped;
 
     static constexpr bool is_slot_trivial_copyable =
             (std::is_trivially_copyable<actual_value_type>::value ||
@@ -1143,22 +1166,6 @@ public:
     };
 
     typedef map_group  group_type;
-
-    class slot_type {
-    public:
-        union {
-            value_type          value;
-            mutable_value_type  mutable_value;
-            const key_type      key;
-            key_type            mutable_key;
-        };
-
-        slot_type() {}
-        ~slot_type() {}
-    };
-
-    typedef slot_type       mutable_slot_type;
-    typedef slot_type       node_type;
 
 #if 1
     template <typename ValueType>

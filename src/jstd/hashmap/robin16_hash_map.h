@@ -99,10 +99,10 @@
 namespace jstd {
 
 template < typename Key, typename Value,
-           typename Hash = std::hash<typename std::remove_cv<Key>::type>,
-           typename KeyEqual = std::equal_to<typename std::remove_cv<Key>::type>,
-           typename Allocator = std::allocator<std::pair<typename std::add_const<typename std::remove_cv<Key>::type>::type,
-                                                         typename std::remove_cv<Value>::type>> >
+           typename Hash = std::hash<typename std::remove_const<Key>::type>,
+           typename KeyEqual = std::equal_to<typename std::remove_const<Key>::type>,
+           typename Allocator = std::allocator<std::pair<typename std::add_const<typename std::remove_const<Key>::type>::type,
+                                                         typename std::remove_const<Value>::type>> >
 class robin16_hash_map {
 public:
     typedef typename std::remove_cv<Key>::type      key_type;
@@ -168,7 +168,7 @@ public:
 #else
     static constexpr bool isGccOrClang = false;
 #endif
-    static constexpr bool isPlaneKeyHash = isGccOrClang &&
+    static constexpr bool isPlainKeyHash = isGccOrClang &&
                                            std::is_same<Hash, std::hash<key_type>>::value &&
                                           (std::is_arithmetic<key_type>::value ||
                                            std::is_enum<key_type>::value);
