@@ -2700,15 +2700,15 @@ private:
     }
 
     JSTD_FORCED_INLINE
-    void transfer_slot(slot_type * dest_slot, const slot_type * src_slot) {
+    void transfer_slot(slot_type * new_slot, const slot_type * old_slot) {
         this->placement_new_slot(new_slot);
         if (kIsCompatibleLayout) {
-            this->mutable_allocator_.construct(&dest_slot->mutable_value,
-                                               src_slot->mutable_value);
+            this->mutable_allocator_.construct(&new_slot->mutable_value,
+                                               old_slot->mutable_value);
         } else {
-            this->allocator_.construct(&dest_slot->value, src_slot->value);
+            this->allocator_.construct(&new_slot->value, old_slot->value);
         }
-        this->destroy_slot(src_slot);
+        this->destroy_slot(old_slot);
     }
 
     template <typename Alloc, typename T, bool isCompatibleLayout,
