@@ -155,7 +155,7 @@ public:
     hash_entry_chunk_list() {}
 
     ~hash_entry_chunk_list() {
-        this->destory();
+        this->destroy();
     }
 
     size_type size() const       { return this->chunk_list_.size();     }
@@ -228,7 +228,7 @@ public:
             throw std::out_of_range("hash_entry_chunk_list<T>::at(pos) out of range.");
     }
 
-    void destory() {
+    void destroy() {
         if (likely(this->chunk_list_.size() > 0)) {
             size_type last_index = this->chunk_list_.size() - 1;
             for (size_type i = 0; i < last_index; i++) {

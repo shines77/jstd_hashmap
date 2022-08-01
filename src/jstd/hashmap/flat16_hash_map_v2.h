@@ -1199,9 +1199,9 @@ public:
         return "jstd::flat16_hash_map<K, V>";
     }
 
-    void clear(bool need_destory = false) noexcept {
+    void clear(bool need_destroy = false) noexcept {
         if (this->slot_capacity() > kDefaultCapacity) {
-            if (need_destory) {
+            if (need_destroy) {
                 this->destroy<true>();
                 this->create_group<false>(kDefaultCapacity);
                 assert(this->slot_size() == 0);
@@ -1641,14 +1641,14 @@ private:
 
     template <bool finitial>
     void destroy() noexcept {
-        this->destory_slots<finitial>();
+        this->destroy_slots<finitial>();
 
-        // Note!!: destory_slots() need use this->groups()
-        this->destory_group<finitial>();
+        // Note!!: destroy_slots() need use this->groups()
+        this->destroy_group<finitial>();
     }
 
     template <bool finitial>
-    void destory_group() noexcept {
+    void destroy_group() noexcept {
         if (this->groups_ != nullptr) {
             if (!finitial) {
                 for (size_type group_index = 0; group_index <= this->group_mask(); group_index++) {
@@ -1664,7 +1664,7 @@ private:
     }
 
     template <bool finitial>
-    void destory_slots() noexcept(is_slot_trivial_destructor) {
+    void destroy_slots() noexcept(is_slot_trivial_destructor) {
         // Destroy all slots.
         if (this->slots_ != nullptr) {
             if (!is_slot_trivial_destructor) {

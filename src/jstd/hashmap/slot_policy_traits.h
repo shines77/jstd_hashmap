@@ -106,6 +106,7 @@ public:
         SlotPolicy::destroy(alloc, slot);
     }
 
+    //
     // Transfers the `old_slot` to `new_slot`. Any memory allocated by the
     // allocator inside `old_slot` to `new_slot` can be transferred.
     //
@@ -115,8 +116,8 @@ public:
     //     destroy(old_slot);
     //
     // PRECONDITION:  `new_slot` is UNINITIALIZED and `old_slot` is INITIALIZED
-    // POSTCONDITION: `new_slot` is INITIALIZED and `old_slot` is
-    //                UNINITIALIZED
+    // POSTCONDITION: `new_slot` is INITIALIZED   and `old_slot` is UNINITIALIZED
+    //
     template <typename Alloc>
     static void transfer(Alloc * alloc, slot_type * new_slot, slot_type * old_slot) {
         slot_policy_traits::transfer_impl(alloc, new_slot, old_slot, 0);

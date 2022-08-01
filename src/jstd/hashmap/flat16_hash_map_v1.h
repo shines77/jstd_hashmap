@@ -1254,9 +1254,9 @@ public:
         return "jstd::v1::flat16_hash_map<K, V>";
     }
 
-    void clear(bool need_destory = false) noexcept {
+    void clear(bool need_destroy = false) noexcept {
         if (this->entry_capacity() > kDefaultCapacity) {
-            if (need_destory) {
+            if (need_destroy) {
                 this->destroy<true>();
                 this->create_cluster<false>(kDefaultCapacity);
                 assert(this->entry_size() == 0);
@@ -1656,14 +1656,14 @@ private:
 
     template <bool finitial>
     void destroy() noexcept {
-        this->destory_entries<finitial>();
+        this->destroy_entries<finitial>();
 
-        // Note!!: destory_entries() need use this->clusters()
-        this->destory_cluster<finitial>();
+        // Note!!: destroy_entries() need use this->clusters()
+        this->destroy_cluster<finitial>();
     }
 
     template <bool finitial>
-    void destory_cluster() noexcept {
+    void destroy_cluster() noexcept {
         if (this->clusters_ != nullptr) {
             if (!finitial) {
                 for (size_type index = 0; index <= this->cluster_mask(); index++) {
@@ -1679,7 +1679,7 @@ private:
     }
 
     template <bool finitial>
-    void destory_entries() noexcept {
+    void destroy_entries() noexcept {
         // Destroy all entries.
         if (this->entries_ != nullptr) {
             if (!entry_is_trivial_destructor) {

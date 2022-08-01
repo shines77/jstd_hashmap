@@ -1661,9 +1661,9 @@ public:
         return "jstd::robin16_hash_map<K, V>";
     }
 
-    void clear(bool need_destory = false) noexcept {
+    void clear(bool need_destroy = false) noexcept {
         if (this->slot_capacity() > kDefaultCapacity) {
-            if (need_destory) {
+            if (need_destroy) {
                 this->destroy<true>();
                 this->create_group<false>(kDefaultCapacity);
                 assert(this->slot_size() == 0);
@@ -2193,14 +2193,14 @@ private:
 
     template <bool finitial>
     void destroy() noexcept {
-        this->destory_slots<finitial>();
+        this->destroy_slots<finitial>();
 
-        // Note!!: destory_slots() need use this->groups()
-        this->destory_group<finitial>();
+        // Note!!: destroy_slots() need use this->groups()
+        this->destroy_group<finitial>();
     }
 
     template <bool finitial>
-    void destory_group() noexcept {
+    void destroy_group() noexcept {
         if (this->groups_ != nullptr) {
             if (!finitial) {
                 for (size_type group_index = 0; group_index <= this->group_mask(); group_index++) {
@@ -2216,7 +2216,7 @@ private:
     }
 
     template <bool finitial>
-    void destory_slots() noexcept(is_slot_trivial_destructor) {
+    void destroy_slots() noexcept(is_slot_trivial_destructor) {
         // Destroy all slots.
         if (this->slots_ != nullptr) {
             if (!is_slot_trivial_destructor) {
@@ -2224,7 +2224,7 @@ private:
                 assert(ctrl != nullptr);
                 for (size_type index = 0; index <= this->slot_mask(); index++) {
                     if (ctrl->isUsed()) {
-                        this->destory_slot(index);
+                        this->destroy_slot(index);
                     }
                     ctrl++;
                 }
@@ -2239,13 +2239,13 @@ private:
     }
 
     JSTD_FORCED_INLINE
-    void destory_slot(size_type index) {
+    void destroy_slot(size_type index) {
         slot_type * slot = this->slot_at(index);
-        this->destory_slot(slot);
+        this->destroy_slot(slot);
     }
 
     JSTD_FORCED_INLINE
-    void destory_slot(slot_type * slot) {
+    void destroy_slot(slot_type * slot) {
         if (!is_slot_trivial_destructor) {
             if (kIsCompatibleLayout) {
                 this->mutable_allocator_.destroy(&slot->mutable_value);
@@ -2418,7 +2418,7 @@ private:
                 for (ctrl_type * ctrl = old_ctrls; ctrl != last_ctrl; ctrl++) {
                     if (likely(ctrl->isUsed())) {
                         this->move_insert_unique(old_slot);
-                        this->destory_slot(old_slot);
+                        this->destroy_slot(old_slot);
                     }
                     old_slot++;
                 }
@@ -2435,7 +2435,7 @@ private:
                             size_type old_index = group->index(start_index, pos);
                             slot_type * old_slot = old_slots + old_index;
                             this->move_insert_unique(old_slot);
-                            this->destory_slot(old_slot);
+                            this->destroy_slot(old_slot);
                         }
                         start_index += kGroupWidth;
                     }
@@ -2450,7 +2450,7 @@ private:
                             size_type old_index = group->index(start_index, pos);
                             slot_type * old_slot = old_slots + old_index;
                             this->move_insert_unique(old_slot);
-                            this->destory_slot(old_slot);
+                            this->destroy_slot(old_slot);
                         }
                         start_index -= kGroupWidth;
                     }
@@ -2461,7 +2461,7 @@ private:
                     for (ctrl_type * ctrl = old_ctrls; ctrl != last_ctrl; ctrl++) {
                         if (likely(ctrl->isUsed())) {
                             this->move_insert_unique(old_slot);
-                            this->destory_slot(old_slot);
+                            this->destroy_slot(old_slot);
                         }
                         old_slot++;
                     }
@@ -2493,7 +2493,7 @@ private:
         } else {
             this->allocator_.construct(&dest_slot->value, std::move(src_slot->value));
         }
-        this->destory_slot(src_slot);
+        this->destroy_slot(src_slot);
     }
 
     JSTD_FORCED_INLINE
@@ -2504,7 +2504,7 @@ private:
         } else {
             this->allocator_.construct(&dest_slot->value, src_slot->value);
         }
-        this->destory_slot(src_slot);
+        this->destroy_slot(src_slot);
     }
 
     template <typename Alloc, typename T, bool isCompatibleLayout,
@@ -2995,7 +2995,7 @@ private:
         } else {
             this->allocator_.construct(&to_insert->value, std::move(target_slot->value));
         }
-        this->destory_slot(target_slot);
+        this->destroy_slot(target_slot);
 
         size_type slot_index = this->next_index(target);
         do {
@@ -3046,7 +3046,7 @@ private:
         else
             this->allocator_.construct(&slot->value, std::move(to_insert->value));
 
-        this->destory_slot(to_insert);
+        this->destroy_slot(to_insert);
     }
 
     template <bool AlwaysUpdate>
@@ -3576,7 +3576,7 @@ private:
         slot_type * curr_slot = this->slot_at(to_erase);
         assert(curr_ctrl->isUsed());
 
-        this->destory_slot(curr_slot);
+        this->destroy_slot(curr_slot);
 
         assert(this->slot_size_ > 0);
         this->slot_size_--;

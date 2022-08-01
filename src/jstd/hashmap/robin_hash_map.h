@@ -1775,9 +1775,9 @@ public:
         return "jstd::robin_hash_map<K, V>";
     }
 
-    void clear(bool need_destory = false) noexcept {
+    void clear(bool need_destroy = false) noexcept {
         if (this->slot_capacity() > kDefaultCapacity) {
-            if (need_destory) {
+            if (need_destroy) {
                 this->destroy_data();
                 this->create_slots<false>(kDefaultCapacity);
                 assert(this->slot_size() == 0);
@@ -2409,13 +2409,13 @@ private:
     }
 
     void destroy_data() noexcept {
-        // Note!!: destory_slots() need use this->ctrls()
-        this->destory_slots();
+        // Note!!: destroy_slots() need use this->ctrls()
+        this->destroy_slots();
         
-        this->destory_ctrls();
+        this->destroy_ctrls();
     }
 
-    void destory_slots() noexcept {
+    void destroy_slots() noexcept {
         this->clear_slots();
 
         if (this->slots_ != this_type::default_empty_slots()) {
@@ -2427,7 +2427,7 @@ private:
         this->slot_size_ = 0;
     }
 
-    void destory_ctrls() noexcept {
+    void destroy_ctrls() noexcept {
         if (this->ctrls_ != this_type::default_empty_ctrls()) {
             size_type max_ctrl_capacity = (this->group_count() + 1) * kGroupWidth;
             this->ctrl_allocator_.deallocate(this->ctrls_, max_ctrl_capacity);
@@ -2450,7 +2450,7 @@ private:
             assert(ctrl != nullptr);
             for (size_type index = 0; index < this->max_slot_capacity(); index++) {
                 if (ctrl->isUsed()) {
-                    this->destory_slot(index);
+                    this->destroy_slot(index);
                 }
                 ctrl++;
             }
@@ -2595,7 +2595,7 @@ private:
                 for (ctrl_type * ctrl = old_ctrls; ctrl != last_ctrl; ctrl++) {
                     if (likely(ctrl->isUsed())) {
                         this->unique_move_insert(old_slot);
-                        this->destory_slot(old_slot);
+                        this->destroy_slot(old_slot);
                     }
                     old_slot++;
                 }
@@ -2611,7 +2611,7 @@ private:
                             size_type old_index = group->index(start_index, pos);
                             slot_type * old_slot = old_slots + old_index;
                             this->unique_move_insert(old_slot);
-                            this->destory_slot(old_slot);
+                            this->destroy_slot(old_slot);
                         }
                         start_index += kGroupWidth;
                     }
@@ -2621,7 +2621,7 @@ private:
                     for (ctrl_type * ctrl = old_ctrls; ctrl != last_ctrl; ctrl++) {
                         if (likely(ctrl->isUsed())) {
                             this->unique_move_insert(old_slot);
-                            this->destory_slot(old_slot);
+                            this->destroy_slot(old_slot);
                         }
                         old_slot++;
                     }
@@ -2641,55 +2641,39 @@ private:
     }
 
     JSTD_FORCED_INLINE
-    void destory_slot(size_type index) {
+    void destroy_slot(size_type index) {
         slot_type * slot = this->slot_at(index);
-        this->destory_slot(slot);
+        this->destroy_slot(slot);
     }
 
     JSTD_FORCED_INLINE
-    void destory_slot(slot_type * slot) {
+    void destroy_slot(slot_type * slot) {
         if (!is_slot_trivial_destructor) {
-            if (kIsCompatibleLayout) {
-                this->mutable_allocator_.destroy(&slot->mutable_value);
-            } else {
-                this->allocator_.destroy(&slot->value);
-            }
+            SlotPolicyTraits::destroy(this->allocator_, new_slot, old_slot);
         }
     }
 
     JSTD_FORCED_INLINE
     void destroy_slot_data(ctrl_type * ctrl, slot_type * slot) {
         this->setUnusedCtrl(ctrl, kEmptySlot16);
-        this->destory_slot(slot);
+        this->destroy_slot(slot);
     }
 
     JSTD_FORCED_INLINE
-    void transfer_slot(size_type dest_index, size_type src_index) {
-        slot_type * dest_slot = this->slot_at(dest_index);
-        slot_type * src_slot  = this->slot_at(src_index);
-        this->transfer_slot(dest_slot, src_slot);
+    void transfer_slot(size_type new_index, size_type old_index) {
+        slot_type * new_slot = this->slot_at(new_index);
+        slot_type * old_slot = this->slot_at(old_index);
+        this->transfer_slot(new_slot, old_slot);
     }
 
     JSTD_FORCED_INLINE
-    void transfer_slot(slot_type * dest_slot, slot_type * src_slot) {
-        if (kIsCompatibleLayout) {
-            this->mutable_allocator_.construct(&dest_slot->mutable_value,
-                                               std::move(src_slot->mutable_value));
-        } else {
-            this->allocator_.construct(&dest_slot->value, std::move(src_slot->value));
-        }
-        this->destory_slot(src_slot);
+    void transfer_slot(slot_type * new_slot, slot_type * old_slot) {
+        SlotPolicyTraits::transfer(this->allocator_, new_slot, old_slot);
     }
 
     JSTD_FORCED_INLINE
     void transfer_slot(slot_type * dest_slot, const slot_type * src_slot) {
-        if (kIsCompatibleLayout) {
-            this->mutable_allocator_.construct(&dest_slot->mutable_value,
-                                               src_slot->mutable_value);
-        } else {
-            this->allocator_.construct(&dest_slot->value, src_slot->value);
-        }
-        this->destory_slot(src_slot);
+        SlotPolicyTraits::transfer(this->allocator_, new_slot, old_slot);
     }
 
     template <typename Alloc, typename T, bool isCompatibleLayout,
@@ -3267,7 +3251,7 @@ InsertOrGrow_Start:
         } else {
             this->allocator_.construct(&insert->value, std::move(target->value));
         }
-        this->destory_slot(target);
+        this->destroy_slot(target);
         target++;
 #endif
         static constexpr bool isNoexceptMoveAssignable = is_noexcept_move_assignable<value_type>::value;
@@ -3291,7 +3275,7 @@ InsertOrGrow_Start:
         while (target < last_slot) {
             if (ctrl->isEmptyOnly()) {
                 this->emplace_rich_slot(ctrl, target, insert, to_insert.value);
-                this->destory_empty_slot(empty);
+                this->destroy_empty_slot(empty);
                 return true;
             } else if (to_insert.dist > ctrl->dist) {
                 std::swap(to_insert.value, ctrl->value);
@@ -3313,14 +3297,14 @@ InsertOrGrow_Start:
             } else {
                 if (to_insert.uvalue >= this->max_distance()) {
                     this->emplace_rich_slot(insert_ctrl, insert_slot, insert, to_insert.value);
-                    this->destory_empty_slot(empty);
+                    this->destroy_empty_slot(empty);
                     return false;
                 }
             }
         }
 
         this->emplace_rich_slot(insert_ctrl, insert_slot, insert, to_insert.value);
-        this->destory_empty_slot(empty);
+        this->destroy_empty_slot(empty);
         return false;
     }
 
@@ -3335,24 +3319,24 @@ InsertOrGrow_Start:
         else
             this->allocator_.construct(&slot->value, std::move(insert->value));
 
-        this->destory_slot(insert);
+        this->destroy_slot(insert);
     }
 
     JSTD_FORCED_INLINE
-    void destory_empty_slot(slot_type * empty) {
+    void destroy_empty_slot(slot_type * empty) {
         static constexpr bool isNoexceptMoveAssignable = is_noexcept_move_assignable<value_type>::value;
         static constexpr bool isMutableNoexceptMoveAssignable = is_noexcept_move_assignable<mutable_value_type>::value;
 
         if ((!is_slot_trivial_destructor) && (!kIsPlainKV)) {
             if (kIsCompatibleLayout) {
                 if (isMutableNoexceptMoveAssignable) {
-                    //this->mutable_allocator_.destory(&empty->mutable_value);
-                    this->destory_slot(empty);
+                    //this->mutable_allocator_.destroy(&empty->mutable_value);
+                    this->destroy_slot(empty);
                 }
             } else {       
                 if (isNoexceptMoveAssignable) {
-                    //this->allocator_.destory(&empty->value);
-                    this->destory_slot(empty);
+                    //this->allocator_.destroy(&empty->value);
+                    this->destroy_slot(empty);
                 }
             }
         }
@@ -3758,7 +3742,7 @@ Insert_To_Slot:
         slot_type * curr_slot = this->slot_at(to_erase);
         assert(curr_ctrl->isUsed());
 
-        this->destory_slot(curr_slot);
+        this->destroy_slot(curr_slot);
 
         assert(this->slot_size_ > 0);
         this->slot_size_--;
