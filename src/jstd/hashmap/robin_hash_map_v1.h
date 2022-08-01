@@ -2642,6 +2642,22 @@ private:
     }
 
     JSTD_FORCED_INLINE
+    void construct_slot(size_type index) {
+        slot_type * slot = this->slot_at(index);
+        this->construct_slot(slot);
+    }
+
+    JSTD_FORCED_INLINE
+    void construct_slot(slot_type * slot) {
+        this->placement_new_slot(slot);
+        if (kIsCompatibleLayout) {
+            this->mutable_allocator_.construct(&slot->mutable_value);
+        } else {
+            this->allocator_.construct(&slot->value);
+        }
+    }
+
+    JSTD_FORCED_INLINE
     void destroy_slot(size_type index) {
         slot_type * slot = this->slot_at(index);
         this->destroy_slot(slot);
@@ -2665,25 +2681,27 @@ private:
     }
 
     JSTD_FORCED_INLINE
-    void transfer_slot(size_type dest_index, size_type src_index) {
-        slot_type * dest_slot = this->slot_at(dest_index);
-        slot_type * src_slot  = this->slot_at(src_index);
-        this->transfer_slot(dest_slot, src_slot);
+    void transfer_slot(size_type new_index, size_type old_index) {
+        slot_type * new_slot = this->slot_at(new_index);
+        slot_type * old_slot = this->slot_at(old_index);
+        this->transfer_slot(new_slot, old_slot);
     }
 
     JSTD_FORCED_INLINE
-    void transfer_slot(slot_type * dest_slot, slot_type * src_slot) {
+    void transfer_slot(slot_type * new_slot, slot_type * old_slot) {
+        this->placement_new_slot(new_slot);
         if (kIsCompatibleLayout) {
-            this->mutable_allocator_.construct(&dest_slot->mutable_value,
-                                               std::move(src_slot->mutable_value));
+            this->mutable_allocator_.construct(&new_slot->mutable_value,
+                                               std::move(old_slot->mutable_value));
         } else {
-            this->allocator_.construct(&dest_slot->value, std::move(src_slot->value));
+            this->allocator_.construct(&new_slot->value, std::move(old_slot->value));
         }
-        this->destroy_slot(src_slot);
+        this->destroy_slot(old_slot);
     }
 
     JSTD_FORCED_INLINE
     void transfer_slot(slot_type * dest_slot, const slot_type * src_slot) {
+        this->placement_new_slot(new_slot);
         if (kIsCompatibleLayout) {
             this->mutable_allocator_.construct(&dest_slot->mutable_value,
                                                src_slot->mutable_value);
@@ -3254,7 +3272,6 @@ InsertOrGrow_Start:
 
         slot_type * empty  = reinterpret_cast<slot_type *>(&slot_raw);
         slot_type * insert = insert_slot;
-        target++;
 #else
         alignas(slot_type) unsigned char slot_raw1[sizeof(slot_type)];
         alignas(slot_type) unsigned char slot_raw2[sizeof(slot_type)];
@@ -3262,31 +3279,12 @@ InsertOrGrow_Start:
         slot_type * insert = reinterpret_cast<slot_type *>(&slot_raw1);
         slot_type * empty  = reinterpret_cast<slot_type *>(&slot_raw2);
 
-        this->placement_new_slot(insert);
-        if (kIsCompatibleLayout) {
-            this->mutable_allocator_.construct(&insert->mutable_value, std::move(target->mutable_value));
-        } else {
-            this->allocator_.construct(&insert->value, std::move(target->value));
-        }
-        this->destroy_slot(target);
-        target++;
+        this->transfer_slot(insert, target);
 #endif
-        static constexpr bool isNoexceptMoveAssignable = is_noexcept_move_assignable<value_type>::value;
-        static constexpr bool isMutableNoexceptMoveAssignable = is_noexcept_move_assignable<mutable_value_type>::value;
+        target++;
 
         // Initialize the empty slot use default constructor if necessary
-        this->placement_new_slot(empty);
-        if ((!is_slot_trivial_destructor) && (!kIsPlainKV)) {
-            if (kIsCompatibleLayout) {          
-                if (isMutableNoexceptMoveAssignable) {
-                    this->mutable_allocator_.construct(&empty->mutable_value);
-                }
-            } else {       
-                if (isNoexceptMoveAssignable) {
-                    this->allocator_.construct(&empty->value);
-                }
-            }
-        }
+        this->construct_empty_slot(empty);
 
         slot_type * last_slot = this->last_slot();
         while (target < last_slot) {
@@ -3329,14 +3327,25 @@ InsertOrGrow_Start:
     void emplace_rich_slot(ctrl_type * ctrl, slot_type * slot, slot_type * insert,
                            std::int16_t dist_and_hash) {
         this->setUsedCtrl(ctrl, dist_and_hash);
+        this->transfer_slot(slot, insert);
+    }
 
-        this->placement_new_slot(slot);
-        if (kIsCompatibleLayout)
-            this->mutable_allocator_.construct(&slot->mutable_value, std::move(insert->mutable_value));
-        else
-            this->allocator_.construct(&slot->value, std::move(insert->value));
+    JSTD_FORCED_INLINE
+    void construct_empty_slot(slot_type * empty) {
+        static constexpr bool isNoexceptMoveAssignable = is_noexcept_move_assignable<value_type>::value;
+        static constexpr bool isMutableNoexceptMoveAssignable = is_noexcept_move_assignable<mutable_value_type>::value;
 
-        this->destroy_slot(insert);
+        if ((!is_slot_trivial_destructor) && (!kIsPlainKV)) {
+            if (kIsCompatibleLayout) {          
+                if (isMutableNoexceptMoveAssignable) {
+                    this->construct_slot(empty);
+                }
+            } else {       
+                if (isNoexceptMoveAssignable) {
+                    this->construct_slot(empty);
+                }
+            }
+        }
     }
 
     JSTD_FORCED_INLINE
@@ -3347,12 +3356,10 @@ InsertOrGrow_Start:
         if ((!is_slot_trivial_destructor) && (!kIsPlainKV)) {
             if (kIsCompatibleLayout) {
                 if (isMutableNoexceptMoveAssignable) {
-                    //this->mutable_allocator_.destroy(&empty->mutable_value);
                     this->destroy_slot(empty);
                 }
             } else {       
                 if (isNoexceptMoveAssignable) {
-                    //this->allocator_.destroy(&empty->value);
                     this->destroy_slot(empty);
                 }
             }
