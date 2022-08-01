@@ -2023,7 +2023,7 @@ private:
     static ctrl_type * default_empty_ctrls() {
         static constexpr size_type kMinGroupCount = (kMinLookups + (kGroupWidth - 1)) / kGroupWidth;
         static constexpr size_type kMinCtrlCapacity = (kMinGroupCount + 1) * kGroupWidth;
-        static const alignas(32) ctrl_type s_empty_ctrls[kMinCtrlCapacity] = {
+        alignas(32) static const ctrl_type s_empty_ctrls[kMinCtrlCapacity] = {
             { kEmptySlot, 0 }, { kEmptySlot, 0 }, { kEmptySlot, 0 }, { kEmptySlot, 0,},
             { kEndOfMark, 0 }, { kEndOfMark, 0 }, { kEndOfMark, 0 }, { kEndOfMark, 0 },
             { kEndOfMark, 0 }, { kEndOfMark, 0 }, { kEndOfMark, 0 }, { kEndOfMark, 0 },
@@ -2038,7 +2038,7 @@ private:
     }
 
     static slot_type * default_empty_slots() {
-        static const alignas(32) slot_type s_empty_slots[kMinLookups] = {
+        alignas(32) static const slot_type s_empty_slots[kMinLookups] = {
             {}, {}, {}, {}
         };
         return const_cast<slot_type *>(s_empty_slots);
@@ -2672,7 +2672,7 @@ private:
     }
 
     JSTD_FORCED_INLINE
-    void transfer_slot(slot_type * dest_slot, const slot_type * src_slot) {
+    void transfer_slot(slot_type * new_slot, const slot_type * old_slot) {
         SlotPolicyTraits::transfer(this->allocator_, new_slot, old_slot);
     }
 
