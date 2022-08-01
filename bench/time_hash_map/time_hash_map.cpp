@@ -89,12 +89,14 @@
 #define USE_JSTD_FLAT16_HASH_MAP    1
 #define USE_JSTD_ROBIN16_HASH_MAP   1
 #define USE_JSTD_ROBIN_HASH_MAP     1
+#define USE_JSTD_V1_ROBIN_HASH_MAP  1
 #else
 #define USE_STD_HASH_MAP            0
 #define USE_STD_UNORDERED_MAP       0
 #define USE_JSTD_FLAT16_HASH_MAP    0
 #define USE_JSTD_ROBIN16_HASH_MAP   1
 #define USE_JSTD_ROBIN_HASH_MAP     1
+#define USE_JSTD_V1_ROBIN_HASH_MAP  1
 #endif // _DEBUG
 
 #ifdef __SSE4_2__
@@ -141,6 +143,9 @@
 #endif
 #if USE_JSTD_ROBIN_HASH_MAP
 #include <jstd/hashmap/robin_hash_map.h>
+#endif
+#if USE_JSTD_V1_ROBIN_HASH_MAP
+#include <jstd/hashmap/robin_hash_map_v1.h>
 #endif
 #include <jstd/hashmap/hashmap_analyzer.h>
 #include <jstd/hasher/hashes.h>
@@ -209,6 +214,7 @@ static const bool FLAGS_test_std_unordered_map = true;
 static const bool FLAGS_test_jstd_flat16_hash_map = true;
 static const bool FLAGS_test_jstd_robin16_hash_map = true;
 static const bool FLAGS_test_jstd_robin_hash_map = true;
+static const bool FLAGS_test_jstd_v1_robin_hash_map = true;
 static const bool FLAGS_test_map = true;
 
 static constexpr bool FLAGS_test_4_bytes = true;
@@ -1132,6 +1138,15 @@ static void test_all_hashmaps(std::size_t obj_size, std::size_t iters) {
                         jstd::robin_hash_map<HashObj *, Value, HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>
                         >(
             "jstd::robin_hash_map<K, V>", obj_size, 0, iters, has_stress_hash_function);
+    }
+#endif
+
+#if USE_JSTD_V1_ROBIN_HASH_MAP
+    if (FLAGS_test_jstd_v1_robin_hash_map) {
+        measure_hashmap<jstd::v1::robin_hash_map<HashObj,   Value, HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>,
+                        jstd::v1::robin_hash_map<HashObj *, Value, HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>
+                        >(
+            "jstd::v1::robin_hash_map<K, V>", obj_size, 0, iters, has_stress_hash_function);
     }
 #endif
 }

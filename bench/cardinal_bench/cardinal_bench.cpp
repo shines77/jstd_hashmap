@@ -86,11 +86,13 @@
 #define USE_JSTD_FLAT16_HASH_MAP    1
 #define USE_JSTD_ROBIN16_HASH_MAP   1
 #define USE_JSTD_ROBIN_HASH_MAP     1
+#define USE_JSTD_V1_ROBIN_HASH_MAP  1
 #else
 #define USE_STD_UNORDERED_MAP       0
 #define USE_JSTD_FLAT16_HASH_MAP    0
 #define USE_JSTD_ROBIN16_HASH_MAP   1
 #define USE_JSTD_ROBIN_HASH_MAP     1
+#define USE_JSTD_V1_ROBIN_HASH_MAP  1
 #endif // _DEBUG
 
 #ifdef __SSE4_2__
@@ -124,6 +126,9 @@
 #endif
 #if USE_JSTD_ROBIN_HASH_MAP
 #include <jstd/hashmap/robin_hash_map.h>
+#endif
+#if USE_JSTD_V1_ROBIN_HASH_MAP
+#include <jstd/hashmap/robin_hash_map_v1.h>
 #endif
 #include <jstd/hashmap/hashmap_analyzer.h>
 #include <jstd/hasher/hashes.h>
@@ -430,26 +435,30 @@ void run_insert_random(const std::string & name, std::vector<Key> & keys, std::s
 template <typename Key, typename Value, std::size_t DataSize, std::size_t Cardinal>
 void benchmark_insert_random_impl()
 {
-    std::string name0, name1, name2, name3;
+    std::string name0, name1, name2, name3, name4;
     name0 = format_hashmap_name<Key, Value>("std::unordered_map<%s, %s>");
     name1 = format_hashmap_name<Key, Value>("jstd::flat16_hash_map<%s, %s>");
     name2 = format_hashmap_name<Key, Value>("jstd::robin16_hash_map<%s, %s>");
     name3 = format_hashmap_name<Key, Value>("jstd::robin_hash_map<%s, %s>");
+    name4 = format_hashmap_name<Key, Value>("jstd::v1::robin_hash_map<%s, %s>");
 
     std::vector<Key> keys;
     generate_random_keys<Key>(keys, DataSize, Cardinal);
 
 #if USE_STD_UNORDERED_MAP
-    run_insert_random<std::unordered_map<Key, Value>>    (name0, keys, Cardinal);
+    run_insert_random<std::unordered_map<Key, Value>>      (name0, keys, Cardinal);
 #endif
 #if USE_JSTD_FLAT16_HASH_MAP
-    run_insert_random<jstd::flat16_hash_map<Key, Value>> (name1, keys, Cardinal);
+    run_insert_random<jstd::flat16_hash_map<Key, Value>>   (name1, keys, Cardinal);
 #endif
 #if USE_JSTD_ROBIN16_HASH_MAP
-    run_insert_random<jstd::robin16_hash_map<Key, Value>>(name2, keys, Cardinal);
+    run_insert_random<jstd::robin16_hash_map<Key, Value>>  (name2, keys, Cardinal);
 #endif
 #if USE_JSTD_ROBIN_HASH_MAP
-    run_insert_random<jstd::robin_hash_map<Key, Value>>  (name3, keys, Cardinal);
+    run_insert_random<jstd::robin_hash_map<Key, Value>>    (name3, keys, Cardinal);
+#endif
+#if USE_JSTD_V1_ROBIN_HASH_MAP
+    run_insert_random<jstd::v1::robin_hash_map<Key, Value>>(name4, keys, Cardinal);
 #endif
 }
 
@@ -499,26 +508,30 @@ void benchmark_insert_random(std::size_t iters)
 template <typename Key, typename Value, std::size_t DataSize, std::size_t Cardinal>
 void benchmark_MumHash_insert_random_impl()
 {
-    std::string name0, name1, name2, name3;
+    std::string name0, name1, name2, name3, name4;
     name0 = format_hashmap_name<Key, Value>("std::unordered_map<%s, %s>");
     name1 = format_hashmap_name<Key, Value>("jstd::flat16_hash_map<%s, %s>");
     name2 = format_hashmap_name<Key, Value>("jstd::robin16_hash_map<%s, %s>");
     name3 = format_hashmap_name<Key, Value>("jstd::robin_hash_map<%s, %s>");
+    name4 = format_hashmap_name<Key, Value>("jstd::v1::robin_hash_map<%s, %s>");
 
     std::vector<Key> keys;
     generate_random_keys<Key>(keys, DataSize, Cardinal);
 
 #if USE_STD_UNORDERED_MAP
-    run_insert_random<std::unordered_map<Key, Value, test::MumHash<Key>>>    (name0, keys, Cardinal);
+    run_insert_random<std::unordered_map<Key, Value, test::MumHash<Key>>>      (name0, keys, Cardinal);
 #endif
 #if USE_JSTD_FLAT16_HASH_MAP
-    run_insert_random<jstd::flat16_hash_map<Key, Value, test::MumHash<Key>>> (name1, keys, Cardinal);
+    run_insert_random<jstd::flat16_hash_map<Key, Value, test::MumHash<Key>>>   (name1, keys, Cardinal);
 #endif
 #if USE_JSTD_ROBIN16_HASH_MAP
-    run_insert_random<jstd::robin16_hash_map<Key, Value, test::MumHash<Key>>>(name2, keys, Cardinal);
+    run_insert_random<jstd::robin16_hash_map<Key, Value, test::MumHash<Key>>>  (name2, keys, Cardinal);
 #endif
 #if USE_JSTD_ROBIN_HASH_MAP
-    run_insert_random<jstd::robin_hash_map<Key, Value, test::MumHash<Key>>>  (name3, keys, Cardinal);
+    run_insert_random<jstd::robin_hash_map<Key, Value, test::MumHash<Key>>>    (name3, keys, Cardinal);
+#endif
+#if USE_JSTD_V1_ROBIN_HASH_MAP
+    run_insert_random<jstd::v1::robin_hash_map<Key, Value, test::MumHash<Key>>>(name4, keys, Cardinal);
 #endif
 }
 
