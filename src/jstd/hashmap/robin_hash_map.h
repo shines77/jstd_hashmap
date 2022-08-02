@@ -3031,7 +3031,7 @@ private:
         const ctrl_type * ctrl = this->ctrl_at(slot_index);
         const slot_type * slot = this->slot_at(slot_index);
 
-#if 0
+#if 1
         ctrl_type dist_and_0(0, ctrl_hash);
 
         while (dist_and_0.value < ctrl->value) {
@@ -3057,7 +3057,7 @@ private:
         } while (1);
 
         return this->last_slot();
-#elif 1
+#elif 0
         dist_and_hash.setValue(0, ctrl_hash);
 
         while (dist_and_hash.value < ctrl->value) {
