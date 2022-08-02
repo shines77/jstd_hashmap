@@ -1203,7 +1203,7 @@ public:
 
     private:
         ctrl_type * ctrl_;
-        slot_type *    slot_;
+        slot_type * slot_;
 
     public:
         basic_iterator() noexcept : ctrl_(nullptr), slot_(nullptr) {
@@ -1958,7 +1958,7 @@ private:
 #else
         hash_code_t hash_code;
         if (sizeof(size_type) == 4)
-            hash_code = (hash_code_t)(((std::uint64_t)value * 2654435761ul) >> 28);
+            hash_code = (hash_code_t)(((std::uint64_t)value * 2654435761ul) >> 12);
         else
             hash_code = (hash_code_t)(((std::uint64_t)value * 14695981039346656037ull) >> 28);
         return hash_code;
@@ -2839,8 +2839,8 @@ private:
 
     JSTD_NO_INLINE
     std::pair<size_type, bool>
-    find_and_prepare_insert(const key_type & key, std::uint8_t & o_distance,
-                                                  std::uint8_t & o_ctrl_hash) {
+    find_or_prepare_insert(const key_type & key, std::uint8_t & o_distance,
+                                                 std::uint8_t & o_ctrl_hash) {
         hash_code_t hash_code = this->get_hash(key);
         size_type slot_index = this->index_for_hash(hash_code);
         std::uint8_t ctrl_hash = this->get_ctrl_hash(hash_code);
@@ -2866,7 +2866,7 @@ private:
                     // The size of slot reach the slot threshold or hashmap is full.
                     this->grow_if_necessary();
 
-                    return this->find_and_prepare_insert(key, o_distance, o_ctrl_hash);
+                    return this->find_or_prepare_insert(key, o_distance, o_ctrl_hash);
                 }
                 o_distance = 0;
                 return { slot_index, false };
@@ -2888,7 +2888,7 @@ private:
                     // The size of slot reach the slot threshold or hashmap is full.
                     this->grow_if_necessary();
 
-                    return this->find_and_prepare_insert(key, o_distance, o_ctrl_hash);
+                    return this->find_or_prepare_insert(key, o_distance, o_ctrl_hash);
                 }
                 o_distance = 1;
                 return { slot_index, false };
@@ -2915,7 +2915,7 @@ private:
                         // The size of slot reach the slot threshold or hashmap is full.
                         this->grow_if_necessary();
 
-                        return this->find_and_prepare_insert(key, o_distance, o_ctrl_hash);
+                        return this->find_or_prepare_insert(key, o_distance, o_ctrl_hash);
                     }
                     o_distance = distance;
                     return { slot_index, false };
@@ -2958,7 +2958,7 @@ private:
             // The size of slot reach the slot threshold or hashmap is full.
             this->grow_if_necessary();
 
-            return this->find_and_prepare_insert(key, o_distance, o_ctrl_hash);
+            return this->find_or_prepare_insert(key, o_distance, o_ctrl_hash);
         }
 
         // It's a [EmptyEntry], or (distance > ctrl->distance) entry.
@@ -3053,7 +3053,7 @@ private:
     std::pair<iterator, bool> emplace_impl(const value_type & value) {
         std::uint8_t distance;
         std::uint8_t ctrl_hash;
-        auto find_info = this->find_and_prepare_insert(value.first, distance, ctrl_hash);
+        auto find_info = this->find_or_prepare_insert(value.first, distance, ctrl_hash);
         size_type target = find_info.first;
         bool is_exists = find_info.second;
         if (!is_exists) {
@@ -3096,7 +3096,7 @@ private:
     std::pair<iterator, bool> emplace_impl(value_type && value) {
         std::uint8_t distance;
         std::uint8_t ctrl_hash;
-        auto find_info = this->find_and_prepare_insert(value.first, distance, ctrl_hash);
+        auto find_info = this->find_or_prepare_insert(value.first, distance, ctrl_hash);
         size_type target = find_info.first;
         bool is_exists = find_info.second;
         if (!is_exists) {
@@ -3151,7 +3151,7 @@ private:
     std::pair<iterator, bool> emplace_impl(KeyT && key, MappedT && value) {
         std::uint8_t distance;
         std::uint8_t ctrl_hash;
-        auto find_info = this->find_and_prepare_insert(key, distance, ctrl_hash);
+        auto find_info = this->find_or_prepare_insert(key, distance, ctrl_hash);
         size_type target = find_info.first;
         bool is_exists = find_info.second;
         if (!is_exists) {
@@ -3214,7 +3214,7 @@ private:
     std::pair<iterator, bool> emplace_impl(KeyT && key, Args && ... args) {
         std::uint8_t distance;
         std::uint8_t ctrl_hash;
-        auto find_info = this->find_and_prepare_insert(key, distance, ctrl_hash);
+        auto find_info = this->find_or_prepare_insert(key, distance, ctrl_hash);
         size_type target = find_info.first;
         bool is_exists = find_info.second;
         if (!is_exists) {
@@ -3278,7 +3278,7 @@ private:
         std::uint8_t distance;
         std::uint8_t ctrl_hash;
         tuple_wrapper2<key_type> key_wrapper(first);
-        auto find_info = this->find_and_prepare_insert(key_wrapper.value(), distance, ctrl_hash);
+        auto find_info = this->find_or_prepare_insert(key_wrapper.value(), distance, ctrl_hash);
         size_type target = find_info.first;
         bool is_exists = find_info.second;
         if (!is_exists) {
@@ -3340,7 +3340,7 @@ private:
         std::uint8_t distance;
         std::uint8_t ctrl_hash;
         value_type value(std::forward<First>(first), std::forward<Args>(args)...);
-        auto find_info = this->find_and_prepare_insert(value.first, distance, ctrl_hash);
+        auto find_info = this->find_or_prepare_insert(value.first, distance, ctrl_hash);
         size_type target = find_info.first;
         bool is_exists = find_info.second;
         if (!is_exists) {
@@ -3582,7 +3582,7 @@ private:
         this->slot_size_--;
 
         size_type curr_index;
-        ctrl_type * next_ctrl = curr_ctrl + std::ptrdiff_t(1);       
+        ctrl_type * next_ctrl = curr_ctrl + std::ptrdiff_t(1);
         slot_type * next_slot = curr_slot + std::ptrdiff_t(1);
 
         while (!next_ctrl->isEmptyOrZero()) {

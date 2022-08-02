@@ -1553,7 +1553,7 @@ public:
     }
 
     ~robin_hash_map() {
-        this->destroy_data();
+        this->destroy();
     }
 
     bool is_valid() const { return (this->ctrls() != nullptr); }
@@ -2411,10 +2411,14 @@ private:
         new (slot) slot_type;
     }
 
+    void destroy() noexcept {
+        this->destroy_data();
+    }
+
     void destroy_data() noexcept {
         // Note!!: destroy_slots() need use this->ctrls()
         this->destroy_slots();
-        
+
         this->destroy_ctrls();
     }
 
@@ -2503,7 +2507,7 @@ private:
             this->slots_ = this_type::default_empty_slots();
             this->last_slot_ = this_type::default_last_empty_slot();
             this->slot_size_ = 0;
-        }        
+        }
         this->slot_mask_ = 0;
         this->max_lookups_ = kMinLookups;
         this->slot_threshold_ = 0;
@@ -2533,7 +2537,7 @@ private:
 
 #if ROBIN_V1_USE_HASH_POLICY
         auto hash_policy_setting = this->hash_policy_.calc_next_capacity(new_capacity);
-        this->hash_policy_.commit(hash_policy_setting);        
+        this->hash_policy_.commit(hash_policy_setting);
 #endif
         size_type new_max_lookups = this->calc_max_lookups(new_capacity);
         if (new_max_lookups < 16)
@@ -2758,7 +2762,7 @@ private:
             *mutable_key(&empty) = std::move(*mutable_key(&dest));
             empty.second = std::move(dest.second);
 
-            *mutable_key(&dest) = std::move(*mutable_key(&src));            
+            *mutable_key(&dest) = std::move(*mutable_key(&src));
             dest.second = std::move(src.second);
         }
     };
@@ -3059,7 +3063,7 @@ private:
         } else {
             return this->last_slot();
         }
-            
+
         ctrl++;
         slot++;
 #endif
@@ -3151,7 +3155,7 @@ private:
 
         dist_and_hash.uvalue = dist_and_0.uvalue | ctrl_hash;
         //return { slot, kIsNotExists };
-#else   
+#else
         const slot_type * last_slot;
 
         if (ctrl->value >= ctrl_type::make_dist(0)) {
@@ -3177,7 +3181,7 @@ private:
         } else {
             goto InsertOrGrow;
         }
-            
+
         ctrl++;
         slot++;
 
@@ -3338,11 +3342,11 @@ InsertOrGrow_Start:
         static constexpr bool isMutableNoexceptMoveAssignable = is_noexcept_move_assignable<mutable_value_type>::value;
 
         if ((!is_slot_trivial_destructor) && (!kIsPlainKV)) {
-            if (kIsCompatibleLayout) {          
+            if (kIsCompatibleLayout) {
                 if (isMutableNoexceptMoveAssignable) {
                     this->construct_slot(empty);
                 }
-            } else {       
+            } else {
                 if (isNoexceptMoveAssignable) {
                     this->construct_slot(empty);
                 }
@@ -3360,7 +3364,7 @@ InsertOrGrow_Start:
                 if (isMutableNoexceptMoveAssignable) {
                     this->destroy_slot(empty);
                 }
-            } else {       
+            } else {
                 if (isNoexceptMoveAssignable) {
                     this->destroy_slot(empty);
                 }
@@ -3773,7 +3777,7 @@ Insert_To_Slot:
         assert(this->slot_size_ > 0);
         this->slot_size_--;
 
-        ctrl_type * next_ctrl = curr_ctrl + std::ptrdiff_t(1);       
+        ctrl_type * next_ctrl = curr_ctrl + std::ptrdiff_t(1);
         slot_type * next_slot = curr_slot + std::ptrdiff_t(1);
 
         while (!next_ctrl->isEmptyOrZero()) {
