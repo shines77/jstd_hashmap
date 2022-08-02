@@ -3026,11 +3026,12 @@ private:
         hash_code_t hash_code = this->get_hash(key);
         size_type slot_index = this->index_for_hash(hash_code);
         std::uint8_t ctrl_hash = this->get_ctrl_hash(hash_code);
+        ctrl_type dist_and_hash;
 
         const ctrl_type * ctrl = this->ctrl_at(slot_index);
         const slot_type * slot = this->slot_at(slot_index);
 
-#if 1
+#if 0
         ctrl_type dist_and_0(0, ctrl_hash);
 
         while (dist_and_0.value < ctrl->value) {
@@ -3056,8 +3057,8 @@ private:
         } while (1);
 
         return this->last_slot();
-#elif 0
-        ctrl_type dist_and_hash(0, ctrl_hash);
+#elif 1
+        dist_and_hash.setValue(0, ctrl_hash);
 
         while (dist_and_hash.value < ctrl->value) {
             dist_and_hash.incDist();
@@ -3131,7 +3132,7 @@ private:
         ctrl++;
         slot++;
 #endif
-        ctrl_type dist_and_hash(2, ctrl_hash);
+        dist_and_hash.setValue(2, ctrl_hash);
         const slot_type * last_slot = this->last_slot();
 
         do {
@@ -3318,8 +3319,8 @@ InsertOrGrow_Start:
 
         ctrl_type dist_and_0(0, 0);
         while (dist_and_0.value <= ctrl->value) {
-            ctrl++;
             dist_and_0.incDist();
+            ctrl++;
         }
 
         slot_index = this->index_of(ctrl);

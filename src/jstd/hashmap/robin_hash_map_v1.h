@@ -3099,6 +3099,7 @@ private:
         kIsExists = 2
     };
 
+    JSTD_NO_INLINE
     std::pair<slot_type *, FindResult>
     find_or_insert(const key_type & key) {
         hash_code_t hash_code = this->get_hash(key);
