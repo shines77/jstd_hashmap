@@ -3032,28 +3032,24 @@ private:
         const slot_type * slot = this->slot_at(slot_index);
 
 #if 1
-        ctrl_type dist_and_0(0, ctrl_hash);
+        dist_and_hash.setValue(0, ctrl_hash);
 
-        while (dist_and_0.value < ctrl->value) {
-            dist_and_0.incDist();
+        while (dist_and_hash.value < ctrl->value) {
+            dist_and_hash.incDist();
             ctrl++;
         }
 
-        dist_and_0.setHash(0);
         do {
-            if (dist_and_0.value < ctrl->value) {
-                dist_and_0.incDist();
-                ctrl++;
-            } else if (dist_and_0.value == ctrl->value) {
+            if (dist_and_hash.value == ctrl->value) {
                 const slot_type * target = slot + dist_and_0.dist;
                 if (this->key_equal_(target->value.first, key)) {
                     return target;
                 }
-                dist_and_0.incDist();
-                ctrl++;
-            } else {
+            } else if (dist_and_hash.dist > ctrl->dist) {
                 break;
             }
+            dist_and_hash.incDist();
+            ctrl++;
         } while (1);
 
         return this->last_slot();
