@@ -3031,23 +3031,24 @@ private:
         const slot_type * slot = this->slot_at(slot_index);
 
 #if 1
-        ctrl_type dist_and_hash(0, ctrl_hash);
+        ctrl_type dist_and_0(0, ctrl_hash);
 
-        while (dist_and_hash.value < ctrl->value) {
-            dist_and_hash.incDist();
+        while (dist_and_0.value < ctrl->value) {
+            dist_and_0.incDist();
             ctrl++;
         }
 
+        dist_and_0.setHash(0);
         do {
-            if (dist_and_hash.dist < ctrl->dist) {
-                dist_and_hash.incDist();
+            if (dist_and_0.value < ctrl->value) {
+                dist_and_0.incDist();
                 ctrl++;
-            } else if (dist_and_hash.dist == ctrl->dist) {
-                const slot_type * target = slot + dist_and_hash.dist;
+            } else if (dist_and_0.value == ctrl->value) {
+                const slot_type * target = slot + dist_and_0.dist;
                 if (this->key_equal_(target->value.first, key)) {
                     return target;
                 }
-                dist_and_hash.incDist();
+                dist_and_0.incDist();
                 ctrl++;
             } else {
                 break;
@@ -3129,9 +3130,8 @@ private:
 
         ctrl++;
         slot++;
-
-        ctrl_type dist_and_hash(2, ctrl_hash);
 #endif
+        ctrl_type dist_and_hash(2, ctrl_hash);
         const slot_type * last_slot = this->last_slot();
 
         do {
@@ -3176,7 +3176,7 @@ private:
         ctrl_type dist_and_0(0, 0);
         ctrl_type dist_and_hash;
 #if 1
-        while (ctrl->value >= dist_and_0.value) {
+        while (dist_and_0.value <= ctrl->value) {
             if (this->key_equal_(slot->value.first, key)) {
                 return { slot, kIsExists };
             }
@@ -3198,7 +3198,7 @@ private:
         dist_and_hash.uvalue = dist_and_0.uvalue | ctrl_hash;
         //return { slot, kIsNotExists };
 #elif 0
-        while (ctrl->value >= dist_and_0.value) {
+        while (dist_and_0.value <= ctrl->value) {
             if (ctrl->hash_equals(ctrl_hash)) {
                 if (this->key_equal_(slot->value.first, key)) {
                     return { slot, kIsExists };
@@ -3224,7 +3224,7 @@ private:
 #else
         const slot_type * last_slot;
 
-        if (ctrl->value >= dist_and_0.value) {
+        if (dist_and_0.value <= ctrl->value) {
             if (ctrl->hash_equals(ctrl_hash)) {
                 if (this->key_equal_(slot->value.first, key)) {
                     return { slot, kIsExists };
@@ -3238,7 +3238,7 @@ private:
         slot++;
         dist_and_0.incDist();
 
-        if (ctrl->value >= dist_and_0.value) {
+        if (dist_and_0.value <= ctrl->value) {
             if (ctrl->hash_equals(ctrl_hash)) {
                 if (this->key_equal_(slot->value.first, key)) {
                     return { slot, kIsExists };
@@ -3317,7 +3317,7 @@ InsertOrGrow_Start:
         ctrl_type * ctrl = this->ctrl_at(slot_index);
 
         ctrl_type dist_and_0(0, 0);
-        while (ctrl->value >= dist_and_0.value) {
+        while (dist_and_0.value <= ctrl->value) {
             ctrl++;
             dist_and_0.incDist();
         }
@@ -3696,7 +3696,7 @@ InsertOrGrow_Start:
         slot_type * slot;
         ctrl_type dist_and_0(0, 0);
 
-        while (ctrl->value >= dist_and_0.value) {
+        while (dist_and_0.value <= ctrl->value) {
             ctrl++;
             dist_and_0.incDist();
         }
