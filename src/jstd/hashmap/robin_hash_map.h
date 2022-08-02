@@ -3041,7 +3041,7 @@ private:
 
         do {
             if (dist_and_hash.value == ctrl->value) {
-                const slot_type * target = slot + dist_and_0.dist;
+                const slot_type * target = slot + dist_and_hash.dist;
                 if (this->key_equal_(target->value.first, key)) {
                     return target;
                 }
