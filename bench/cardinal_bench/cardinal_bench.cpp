@@ -117,7 +117,9 @@
 #include <jstd/basic/stdint.h>
 #include <jstd/basic/inttypes.h>
 
+#if USE_STD_UNORDERED_MAP
 #include <unordered_map>
+#endif
 #if USE_JSTD_FLAT16_HASH_MAP
 #include <jstd/hashmap/flat16_hash_map.h>
 #endif
