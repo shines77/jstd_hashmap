@@ -124,7 +124,7 @@ T jstd_exchange(T & target, U && new_value) noexcept(
             std::is_nothrow_move_constructible<T>::value &&
             std::is_nothrow_assignable<T &, U>::value)
 {
-#if JSTD_EXCHANGE_FUNCTION
+#ifdef JSTD_EXCHANGE_FUNCTION
     return std::exchange(target, std::forward<U>(new_value));
 #else
     T old_value = std::move(target);
