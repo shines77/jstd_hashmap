@@ -3694,10 +3694,11 @@ InsertOrGrow_Start:
             slot += dist_and_0.dist;
         }
 
-#if 0
-        slot_type * last_slot = this->last_slot();
         ctrl_type dist_and_hash;
         dist_and_hash.uvalue = dist_and_0.uvalue | ctrl_hash;
+
+#if 0
+        slot_type * last_slot = this->last_slot();
 
         // Find the first empty slot and insert
         while (slot < last_slot) {
