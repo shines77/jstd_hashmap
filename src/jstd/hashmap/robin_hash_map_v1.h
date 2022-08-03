@@ -354,18 +354,10 @@ public:
         }
 
         bool isEmpty() const {
-            return this->isUnused();
-        }
-
-        static bool isEmpty(std::int8_t tag) {
-            return ctrl_data::isUnused(tag);
-        }
-
-        bool isEmptyOnly() const {
             return (this->dist == kEmptySlot);
         }
 
-        static bool isEmptyOnly(std::int8_t tag) {
+        static bool isEmpty(std::int8_t tag) {
             return (tag == kEmptySlot);
         }
 
@@ -377,14 +369,6 @@ public:
             return !ctrl_data::isEmpty(tag);
         }
 
-        bool isEmptyOrZero() const {
-#if 0
-            return (std::int8_t(this->dist) <= 0);
-#else
-            return (this->value < std::int16_t(0x0100));
-#endif
-        }
-
         bool isEndOf() const {
             return (this->dist == kEndOfMark);
         }
@@ -394,7 +378,7 @@ public:
         }
 
         static bool isUsed(std::int8_t tag) {
-            return (std::int8_t(tag) >= 0);
+            return (tag >= 0);
         }
 
         bool isUnused() const {
@@ -402,23 +386,37 @@ public:
         }
 
         static bool isUnused(std::int8_t tag) {
-            return (std::int8_t(tag) < 0);
+            return (tag < 0);
         }
 
-        void setHash(std::uint8_t ctrl_hash) {
-            this->hash = ctrl_hash;
+        bool isEmptyOrZero() const {
+            //return (this->dist == 0 || this->dist == kEmptySlot);
+            return (std::uint8_t(this->dist + 1) <= 1);
+        }
+
+        bool isUnusedOrZero() const {
+            // return (this->dist <= 0);
+            return (this->value < kDistInc16);
         }
 
         void setEmpty() {
-            this->dist = kEmptySlot;
+            this->value = kEmptySlot16;
         }
 
         void setEndOf() {
-            this->dist = kEndOfMark;
+            this->value = kEndOfMark16;
+        }
+
+        void setUnused() {
+            this->value = kEmptySlot16;
         }
 
         void setDist(std::int8_t dist) {
             this->dist = dist;
+        }
+
+        void setHash(std::uint8_t ctrl_hash) {
+            this->hash = ctrl_hash;
         }
 
         void setValue(std::int8_t dist, std::uint8_t hash) {
@@ -1219,7 +1217,7 @@ public:
             do {
                 ++(this->index_);
                 ++ctrl;
-            } while (ctrl->isEmptyOnly() && (this->index_ < max_index));
+            } while (ctrl->isEmpty() && (this->index_ < max_index));
             return *this;
         }
 
@@ -1316,7 +1314,7 @@ public:
             do {
                 ++(this->ctrl_);
                 ++(this->slot_);
-            } while (ctrl_->isEmptyOnly());
+            } while (ctrl_->isEmpty());
             return *this;
         }
 
@@ -2682,7 +2680,7 @@ private:
 
     JSTD_FORCED_INLINE
     void destroy_slot_data(ctrl_type * ctrl, slot_type * slot) {
-        this->setUnusedCtrl(ctrl, kEmptySlot16);
+        this->setUnusedCtrl(ctrl);
         this->destroy_slot(slot);
     }
 
@@ -2979,35 +2977,21 @@ private:
     }
 
     JSTD_FORCED_INLINE
-    void setUnusedCtrl(size_type index, std::int8_t tag) {
+    void setUnusedCtrl(size_type index) {
         ctrl_type * ctrl = this->ctrl_at(index);
-        this->setUnusedCtrl(ctrl, tag);
+        this->setUnused(ctrl);
     }
 
     JSTD_FORCED_INLINE
-    void setUnusedCtrl(size_type index, std::int16_t tag16) {
-        ctrl_type * ctrl = this->ctrl_at(index);
-        this->setUnusedCtrl(ctrl, tag16);
-    }
-
-    JSTD_FORCED_INLINE
-    void setUnusedCtrl(ctrl_type * ctrl, std::int8_t tag) {
+    void setUnusedCtrl(ctrl_type * ctrl) {
         assert(ctrl->isUsed());
-        ctrl->setDist(tag);
-    }
-
-    JSTD_FORCED_INLINE
-    void setUnusedCtrl(ctrl_type * ctrl, std::int16_t tag16) {
-        assert(ctrl->isUsed());
-        ctrl->setValue(tag16);
+        ctrl->setUnused();
     }
 
     const slot_type * find_impl(const key_type & key) const {
         hash_code_t hash_code = this->get_hash(key);
         size_type slot_index = this->index_for_hash(hash_code);
         std::uint8_t ctrl_hash = this->get_ctrl_hash(hash_code);
-        size_type start_slot = slot_index;
-        std::int8_t distance = 0;
         ctrl_type dist_and_hash(2, ctrl_hash);
 
         const ctrl_type * ctrl = this->ctrl_at(slot_index);
@@ -3085,9 +3069,9 @@ private:
             if (mask32.maskEmpty != 0) {
                 break;
             }
+            dist_and_hash.incDist(kGroupWidth);
             ctrl += kGroupWidth;
             slot += kGroupWidth;
-            dist_and_hash.incDist(kGroupWidth);
         } while (slot < last_slot);
 
         return last_slot;
@@ -3199,7 +3183,7 @@ private:
                 size_type index = group.index(0, pos);
                 slot_type * target = slot + index;
                 if (this->key_equal_(target->value.first, key)) {
-                    dist_and_hash.dist += std::int8_t(index);
+                    dist_and_hash.dist += std::uint8_t(index);
                     return { target, kIsExists };
                 }
             }
@@ -3210,7 +3194,7 @@ private:
                 size_type index = group_type::index(0, pos);
                 ctrl = ctrl + index;
                 slot = slot + index;
-                dist_and_hash.dist += std::int8_t(index);
+                dist_and_hash.dist += std::uint8_t(index);
                 break;
             }
             ctrl += kGroupWidth;
@@ -3295,7 +3279,7 @@ InsertOrGrow_Start:
 
         slot_type * last_slot = this->last_slot();
         while (target < last_slot) {
-            if (ctrl->isEmptyOnly()) {
+            if (ctrl->isEmpty()) {
                 this->emplace_rich_slot(ctrl, target, insert, to_insert.value);
                 this->destroy_empty_slot(empty);
                 return true;
@@ -3628,12 +3612,12 @@ InsertOrGrow_Start:
         std::uint8_t ctrl_hash = this->get_ctrl_hash(hash_code);
 
         ctrl_type * ctrl = this->ctrl_at(slot_index);
-        slot_type * slot;
+        slot_type * slot = this->slot_at(slot_index);
         ctrl_type dist_and_0(0, 0);
 
-        while (ctrl->value >= dist_and_0.value) {
-            ctrl++;
+        while (dist_and_0.value <= ctrl->value) {
             dist_and_0.incDist();
+            ctrl++;
         }
 
         if (this->need_grow() || (dist_and_0.uvalue >= this->max_distance())) {
@@ -3644,8 +3628,7 @@ InsertOrGrow_Start:
             ctrl = find_info.first;
             slot = find_info.second;
         } else {
-            slot_index = this->index_of(ctrl);
-            slot = this->slot_at(slot_index);
+            slot += dist_and_0.dist;
         }
 
         slot_type * last_slot = this->last_slot();
@@ -3662,7 +3645,7 @@ InsertOrGrow_Start:
                 size_type index = group.index(0, pos);
                 ctrl += index;
                 slot += index;
-                dist_and_hash.dist += std::int8_t(index);
+                dist_and_hash.dist += std::uint8_t(index);
                 goto Insert_To_Slot;
             }
             ctrl += kGroupWidth;
@@ -3693,7 +3676,7 @@ Insert_To_Slot:
         this->placement_new_slot(new_slot);
         if (kIsCompatibleLayout) {
             this->mutable_allocator_.construct(&new_slot->mutable_value,
-                                               std::move(*static_cast<mutable_value_type *>(&slot->mutable_value)));
+                                               std::move(slot->mutable_value));
         } else {
             this->allocator_.construct(&new_slot->value, std::move(slot->value));
         }
@@ -3781,7 +3764,7 @@ Insert_To_Slot:
         ctrl_type * next_ctrl = curr_ctrl + std::ptrdiff_t(1);
         slot_type * next_slot = curr_slot + std::ptrdiff_t(1);
 
-        while (!next_ctrl->isEmptyOrZero()) {
+        while (!next_ctrl->isUnusedOrZero()) {
             ctrl_type dist_and_hash(*next_ctrl);
             assert(dist_and_hash.dist > 0);
             dist_and_hash.decDist();
@@ -3795,7 +3778,7 @@ Insert_To_Slot:
             next_slot++;
         }
 
-        this->setUnusedCtrl(curr_ctrl, kEmptySlot16);
+        this->setUnusedCtrl(curr_ctrl);
     }
 
     void swap_content(this_type & other) {
