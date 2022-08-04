@@ -704,7 +704,7 @@ public:
                 std::uint32_t maskUsed = (std::uint32_t)_mm256_movepi16_mask(match_mask);
                 return maskUsed;
             } else {
-                __m256i ctrl_bits  = _mm256_loadu_si256((const __m256i *)data);
+                __m256i ctrl_bits  = _mm256_loadu_si256((const __m256i *)this->ctrl);
                 __m256i tag_bits   = _mm256_set1_epi16(kEmptySlot16);
                 __m256i ones_bits  = _mm256_setones_si256();
                 __m256i match_mask = _mm256_cmpeq_epi8(tag_bits, ctrl_bits);
