@@ -309,8 +309,6 @@ public:
             std::uint16_t uvalue;
         };
 
-        static constexpr std::uint8_t kMinUnusedSlot = cmin(kEmptySlot, kEndOfMark);
-
         ctrl_data() noexcept {
         }
 
@@ -578,8 +576,6 @@ public:
     };
 
     typedef ctrl_data ctrl_type;
-
-    static constexpr size_type kGroupSize = kGroupWidth * sizeof(ctrl_type);
 
     template <typename T>
     struct MatchMask2 {
@@ -1260,7 +1256,13 @@ public:
         using pointer = ValueType *;
         using reference = ValueType &;
 
-        using remove_const_value_type = typename std::remove_const<ValueType>::type;
+        using mutable_value_type = typename std::remove_const<ValueType>::type;
+        using const_value_type = typename std::add_const<mutable_value_type>::type;
+
+        using opp_value_type = typename std::conditional<std::is_const<ValueType>::value,
+                                                         mutable_value_type,
+                                                         const_value_type>::type;
+        using opp_basic_iterator = basic_iterator<opp_value_type>;
 
         using size_type = std::size_t;
         using difference_type = std::ptrdiff_t;
@@ -1278,10 +1280,19 @@ public:
         basic_iterator(const basic_iterator & src) noexcept
             : owner_(src.owner_), index_(src.index_) {
         }
+        basic_iterator(const opp_basic_iterator & src) noexcept
+            : owner_(src.owner()), index_(src.index()) {
+        }
 
         basic_iterator & operator = (const basic_iterator & rhs) {
             this->owner_ = rhs.owner_;
             this->index_ = rhs.index_;
+            return *this;
+        }
+
+        basic_iterator & operator = (const opp_basic_iterator & rhs) {
+            this->owner_ = rhs.owner();
+            this->index_ = rhs.index();
             return *this;
         }
 
@@ -1319,15 +1330,15 @@ public:
             return std::addressof(slot->value);
         }
 
-        operator basic_iterator<const remove_const_value_type>() const {
+        operator basic_iterator<const mutable_value_type>() const {
             return { this->owner_, this->index_ };
         }
 
-        this_type * onwer() {
+        this_type * owner() {
             return this->owner_;
         }
 
-        const this_type * onwer() const {
+        const this_type * owner() const {
             return this->owner_;
         }
 
@@ -1339,14 +1350,24 @@ public:
             return this->index_;
         }
 
-        slot_type * value() {
-            slot_type * slot = this->owner_->slot_at(this->index);
-            return slot;
+        ctrl_type * ctrl() {
+            ctrl_type * _ctrl = this->owner_->ctrl_at(this->index);
+            return _ctrl;
         }
 
-        const slot_type * value() const {
-            slot_type * slot = this->owner_->slot_at(this->index);
-            return slot;
+        const ctrl_type * ctrl() const {
+            ctrl_type * _ctrl = this->owner_->ctrl_at(this->index);
+            return _ctrl;
+        }
+
+        slot_type * slot() {
+            slot_type * _slot = this->owner_->slot_at(this->index);
+            return _slot;
+        }
+
+        const slot_type * slot() const {
+            slot_type * _slot = this->owner_->slot_at(this->index);
+            return _slot;
         }
     };
 #else
@@ -1359,7 +1380,13 @@ public:
         using pointer = ValueType *;
         using reference = ValueType &;
 
-        using remove_const_value_type = typename std::remove_const<ValueType>::type;
+        using mutable_value_type = typename std::remove_const<ValueType>::type;
+        using const_value_type = typename std::add_const<mutable_value_type>::type;
+
+        using opp_value_type = typename std::conditional<std::is_const<ValueType>::value,
+                                                         mutable_value_type,
+                                                         const_value_type>::type;
+        using opp_basic_iterator = basic_iterator<opp_value_type>;
 
         using size_type = std::size_t;
         using difference_type = std::ptrdiff_t;
@@ -1377,10 +1404,19 @@ public:
         basic_iterator(const basic_iterator & src) noexcept
             : ctrl_(src.ctrl_), slot_(src.slot_) {
         }
+        basic_iterator(const opp_basic_iterator & src) noexcept
+            : owner_(src.ctrl()), index_(src.slot()) {
+        }
 
         basic_iterator & operator = (const basic_iterator & rhs) {
             this->ctrl_ = rhs.ctrl_;
             this->slot_ = rhs.slot_;
+            return *this;
+        }
+
+        basic_iterator & operator = (const opp_basic_iterator & rhs) {
+            this->ctrl_ = rhs.ctrl();
+            this->slot_ = rhs.slot();
             return *this;
         }
 
@@ -1414,15 +1450,23 @@ public:
             return std::addressof(this->slot_->value);
         }
 
-        operator basic_iterator<const remove_const_value_type>() const {
+        operator basic_iterator<const mutable_value_type>() const {
             return { this->ctrl_, this->slot_ };
         }
 
-        slot_type * value() {
+        ctrl_type * ctrl() {
+            return this->ctrl_;
+        }
+
+        const ctrl_type * ctrl() const {
+            return this->ctrl_;
+        }
+
+        slot_type * slot() {
             return this->slot_;
         }
 
-        const slot_type * value() const {
+        const slot_type * slot() const {
             return this->slot_;
         }
     };
@@ -1976,8 +2020,7 @@ public:
     }
 
     iterator find(const key_type & key) {
-        const slot_type * slot = this->find_impl(key);
-        return this->iterator_at(this->index_of(slot));
+        return const_cast<const this_type *>(this)->find(key);
     }
 
     const_iterator find(const key_type & key) const {
@@ -3294,9 +3337,9 @@ private:
                 dist_and_hash.dist += std::uint8_t(index);
                 break;
             }
+            dist_and_hash.incDist(kGroupWidth);
             ctrl += kGroupWidth;
             slot += kGroupWidth;
-            dist_and_hash.incDist(kGroupWidth);
         }
 
         dist_and_0.dist = dist_and_hash.dist;
