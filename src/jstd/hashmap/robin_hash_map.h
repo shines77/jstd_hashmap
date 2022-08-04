@@ -1304,6 +1304,14 @@ public:
             return (lhs.index_ != rhs.index_) || (lhs.owner_ != rhs.owner_);
         }
 
+        friend bool operator == (const basic_iterator & lhs, const opp_basic_iterator & rhs) noexcept {
+            return (lhs.index() == rhs.index()) && (lhs.owner() == rhs.owner());
+        }
+
+        friend bool operator != (const basic_iterator & lhs, const opp_basic_iterator & rhs) noexcept {
+            return (lhs.index() != rhs.index()) || (lhs.owner() != rhs.owner());
+        }
+
         basic_iterator & operator ++ () {
             const ctrl_type * ctrl = this->owner_->ctrl_at(this->index_);
             size_type max_index = this->owner_->max_slot_capacity();
@@ -1426,6 +1434,14 @@ public:
 
         friend bool operator != (const basic_iterator & lhs, const basic_iterator & rhs) noexcept {
             return (lhs.slot_ != rhs.slot_);
+        }
+
+        friend bool operator == (const basic_iterator & lhs, const opp_basic_iterator & rhs) noexcept {
+            return (lhs.slot() == rhs.slot());
+        }
+
+        friend bool operator != (const basic_iterator & lhs, const opp_basic_iterator & rhs) noexcept {
+            return (lhs.slot() != rhs.slot());
         }
 
         basic_iterator & operator ++ () {
