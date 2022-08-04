@@ -89,7 +89,8 @@
 #define USE_JSTD_FLAT16_HASH_MAP    1
 #define USE_JSTD_ROBIN16_HASH_MAP   1
 #define USE_JSTD_ROBIN_HASH_MAP     1
-#define USE_JSTD_ROBIN_HASH_MAP_V1  1
+#define USE_JSTD_ROBIN_HASH_MAP_V1  0
+#define USE_JSTD_ROBIN_HASH_MAP_V2  1
 #else
 #define USE_STD_HASH_MAP            0
 #define USE_STD_UNORDERED_MAP       0
@@ -97,6 +98,7 @@
 #define USE_JSTD_ROBIN16_HASH_MAP   0
 #define USE_JSTD_ROBIN_HASH_MAP     1
 #define USE_JSTD_ROBIN_HASH_MAP_V1  0
+#define USE_JSTD_ROBIN_HASH_MAP_V2  0
 #endif // _DEBUG
 
 #ifdef __SSE4_2__
@@ -146,6 +148,9 @@
 #endif
 #if USE_JSTD_ROBIN_HASH_MAP_V1
 #include <jstd/hashmap/robin_hash_map_v1.h>
+#endif
+#if USE_JSTD_ROBIN_HASH_MAP_V2
+#include <jstd/hashmap/robin_hash_map_v2.h>
 #endif
 #include <jstd/hashmap/hashmap_analyzer.h>
 #include <jstd/hasher/hashes.h>
@@ -1147,6 +1152,15 @@ static void test_all_hashmaps(std::size_t obj_size, std::size_t iters) {
                         jstd::v1::robin_hash_map<HashObj *, Value, HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>
                         >(
             "jstd::v1::robin_hash_map<K, V>", obj_size, 0, iters, has_stress_hash_function);
+    }
+#endif
+
+#if USE_JSTD_ROBIN_HASH_MAP_V2
+    if (FLAGS_test_jstd_v1_robin_hash_map) {
+        measure_hashmap<jstd::v2::robin_hash_map<HashObj,   Value, HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>,
+                        jstd::v2::robin_hash_map<HashObj *, Value, HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>
+                        >(
+            "jstd::v2::robin_hash_map<K, V>", obj_size, 0, iters, has_stress_hash_function);
     }
 #endif
 }

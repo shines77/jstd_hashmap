@@ -271,6 +271,9 @@
     <ClInclude Include="..\..\..\src\jstd\hashmap\robin_hash_map_v1.h">
       <Filter>src\hashmap</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\hashmap\robin_hash_map_v2.h">
+      <Filter>src\hashmap</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\src\jstd\dll_main.cpp">
