@@ -1338,11 +1338,11 @@ public:
             slot_type * slot = const_cast<this_type *>(this->owner_)->slot_at(this->index_);
             return std::addressof(slot->value);
         }
-
+#if 0
         operator basic_iterator<const mutable_value_type>() const {
             return { this->owner_, this->index_ };
         }
-
+#endif
         this_type * owner() {
             return this->owner_;
         }
