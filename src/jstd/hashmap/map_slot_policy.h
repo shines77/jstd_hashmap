@@ -40,7 +40,7 @@ public:
     key_type            mutable_key;
 
     map_slot_type() {}
-    ~map_slot_type() {}
+    ~map_slot_type() = delete;
 };
 
 template <typename Key, typename Value, typename SlotType>

@@ -164,7 +164,7 @@ public:
         key_type            mutable_key;
 
         map_slot_type() {}
-        ~map_slot_type() {}
+        ~map_slot_type() = delete;
     };
 
     typedef map_slot_type<Key, Value>               slot_type;
@@ -1284,23 +1284,23 @@ public:
             : owner_(src.owner()), index_(src.index()) {
         }
 
-        basic_iterator & operator = (const basic_iterator & rhs) {
+        basic_iterator & operator = (const basic_iterator & rhs) noexcept {
             this->owner_ = rhs.owner_;
             this->index_ = rhs.index_;
             return *this;
         }
 
-        basic_iterator & operator = (const opp_basic_iterator & rhs) {
+        basic_iterator & operator = (const opp_basic_iterator & rhs) noexcept {
             this->owner_ = rhs.owner();
             this->index_ = rhs.index();
             return *this;
         }
 
-        friend bool operator == (const basic_iterator & lhs, const basic_iterator & rhs) {
+        friend bool operator == (const basic_iterator & lhs, const basic_iterator & rhs) noexcept {
             return (lhs.index_ == rhs.index_) && (lhs.owner_ == rhs.owner_);
         }
 
-        friend bool operator != (const basic_iterator & lhs, const basic_iterator & rhs) {
+        friend bool operator != (const basic_iterator & lhs, const basic_iterator & rhs) noexcept {
             return (lhs.index_ != rhs.index_) || (lhs.owner_ != rhs.owner_);
         }
 
@@ -1408,23 +1408,23 @@ public:
             : owner_(src.ctrl()), index_(src.slot()) {
         }
 
-        basic_iterator & operator = (const basic_iterator & rhs) {
+        basic_iterator & operator = (const basic_iterator & rhs) noexcept {
             this->ctrl_ = rhs.ctrl_;
             this->slot_ = rhs.slot_;
             return *this;
         }
 
-        basic_iterator & operator = (const opp_basic_iterator & rhs) {
+        basic_iterator & operator = (const opp_basic_iterator & rhs) noexcept {
             this->ctrl_ = rhs.ctrl();
             this->slot_ = rhs.slot();
             return *this;
         }
 
-        friend bool operator == (const basic_iterator & lhs, const basic_iterator & rhs) {
+        friend bool operator == (const basic_iterator & lhs, const basic_iterator & rhs) noexcept {
             return (lhs.slot_ == rhs.slot_);
         }
 
-        friend bool operator != (const basic_iterator & lhs, const basic_iterator & rhs) {
+        friend bool operator != (const basic_iterator & lhs, const basic_iterator & rhs) noexcept {
             return (lhs.slot_ != rhs.slot_);
         }
 
@@ -1514,8 +1514,7 @@ public:
                             const key_equal & equal = key_equal(),
                             const allocator_type & alloc = allocator_type()) :
         ctrls_(this_type::default_empty_ctrls()),
-        slots_(this_type::default_empty_slots()),
-        last_slot_(this_type::default_last_empty_slot()),
+        slots_(nullptr), last_slot_(nullptr),
         slot_size_(0), slot_mask_(0), max_lookups_(kMinLookups),
         slot_threshold_(0), n_mlf_(kDefaultLoadFactorInt),
         n_mlf_rev_(kDefaultLoadFactorRevInt),
@@ -1538,8 +1537,7 @@ public:
                    const key_equal & equal = key_equal(),
                    const allocator_type & alloc = allocator_type()) :
         ctrls_(this_type::default_empty_ctrls()),
-        slots_(this_type::default_empty_slots()),
-        last_slot_(this_type::default_last_empty_slot()),
+        slots_(nullptr), last_slot_(nullptr),
         slot_size_(0), slot_mask_(0), max_lookups_(kMinLookups),
         slot_threshold_(0), n_mlf_(kDefaultLoadFactorInt),
         n_mlf_rev_(kDefaultLoadFactorRevInt),
@@ -1570,13 +1568,12 @@ public:
 
     robin_hash_map(const robin_hash_map & other)
         : robin_hash_map(other, std::allocator_traits<allocator_type>::
-                                select_on_container_copy_construction(other.get_allocator())) {
+                                select_on_container_copy_construction(other.get_allocator_ref())) {
     }
 
     robin_hash_map(const robin_hash_map & other, const Allocator & alloc) :
         ctrls_(this_type::default_empty_ctrls()),
-        slots_(this_type::default_empty_slots()),
-        last_slot_(this_type::default_last_empty_slot()),
+        slots_(nullptr), last_slot_(nullptr),
         slot_size_(0), slot_mask_(0), max_lookups_(kMinLookups),
         slot_threshold_(0), n_mlf_(kDefaultLoadFactorInt),
         n_mlf_rev_(kDefaultLoadFactorRevInt),
@@ -1605,8 +1602,8 @@ public:
             std::is_nothrow_copy_constructible<key_equal>::value &&
             std::is_nothrow_copy_constructible<allocator_type>::value) :
         ctrls_(jstd_exchange(other.ctrls_, this_type::default_empty_ctrls())),
-        slots_(jstd_exchange(other.slots_, this_type::default_empty_slots())),
-        last_slot_(jstd_exchange(other.last_slot_, this_type::default_last_empty_slot())),
+        slots_(jstd_exchange(other.slots_, nullptr)),
+        last_slot_(jstd_exchange(other.last_slot_, nullptr)),
         slot_size_(jstd_exchange(other.slot_size_, 0)),
         slot_mask_(jstd_exchange(other.slot_mask_, 0)),
         max_lookups_(jstd_exchange(other.max_lookups_, kMinLookups)),
@@ -1628,8 +1625,7 @@ public:
 
     robin_hash_map(robin_hash_map && other, const Allocator & alloc) :
         ctrls_(this_type::default_empty_ctrls()),
-        slots_(this_type::default_empty_slots()),
-        last_slot_(this_type::default_last_empty_slot()),
+        slots_(nullptr), last_slot_(nullptr),
         slot_size_(0), slot_mask_(0), max_lookups_(kMinLookups),
         slot_threshold_(0), n_mlf_(kDefaultLoadFactorInt),
         n_mlf_rev_(kDefaultLoadFactorRevInt),
@@ -1670,8 +1666,7 @@ public:
                    const key_equal & equal = key_equal(),
                    const allocator_type & alloc = allocator_type()) :
         ctrls_(this_type::default_empty_ctrls()),
-        slots_(this_type::default_empty_slots()),
-        last_slot_(this_type::default_last_empty_slot()),
+        slots_(nullptr), last_slot_(nullptr),
         slot_size_(0), slot_mask_(0), max_lookups_(kMinLookups),
         slot_threshold_(0), n_mlf_(kDefaultLoadFactorInt),
         n_mlf_rev_(kDefaultLoadFactorRevInt),
@@ -2199,17 +2194,6 @@ private:
         return const_cast<ctrl_type *>(s_empty_ctrls);
     }
 
-    static slot_type * default_empty_slots() {
-        alignas(32) static const slot_type s_empty_slots[kMinLookups] = {
-            {}, {}, {}, {}
-        };
-        return const_cast<slot_type *>(s_empty_slots);
-    }
-
-    static slot_type * default_last_empty_slot() {
-        return (default_empty_slots() + kMinLookups);
-    }
-
     JSTD_FORCED_INLINE
     size_type calc_capacity(size_type init_capacity) const noexcept {
         size_type new_capacity = (std::max)(init_capacity, kMinimumCapacity);
@@ -2540,11 +2524,11 @@ private:
     void destroy_slots() noexcept {
         this->clear_slots();
 
-        if (this->slots_ != this_type::default_empty_slots()) {
+        if (this->slots_ != nullptr) {
             this->slot_allocator_.deallocate(this->slots_, this->max_slot_capacity());
         }
-        this->slots_ = this_type::default_empty_slots();
-        this->last_slot_ = this_type::default_last_empty_slot();
+        this->slots_ = nullptr;
+        this->last_slot_ = nullptr;
 
         this->slot_size_ = 0;
     }
@@ -2621,8 +2605,8 @@ private:
     void reset() noexcept {
         if (initialize) {
             this->ctrls_ = this_type::default_empty_ctrls();
-            this->slots_ = this_type::default_empty_slots();
-            this->last_slot_ = this_type::default_last_empty_slot();
+            this->slots_ = nullptr;
+            this->last_slot_ = nullptr;
             this->slot_size_ = 0;
         }
         this->slot_mask_ = 0;
@@ -2759,7 +2743,7 @@ private:
                 size_type old_max_ctrl_capacity = (old_group_count + 1) * kGroupWidth;
                 this->ctrl_allocator_.deallocate(old_ctrls, old_max_ctrl_capacity);
             }
-            if (old_slots != this->default_empty_slots()) {
+            if (old_slots != nullptr) {
                 this->slot_allocator_.deallocate(old_slots, old_max_slot_capacity);
             }
         }
@@ -3193,7 +3177,7 @@ private:
         dist_and_hash.setValue(2, ctrl_hash);
         const slot_type * last_slot = this->last_slot();
 
-        do {
+        while (slot < last_slot) {
             group_type group(ctrl);
             auto mask32 = group.matchHashAndDistance(dist_and_hash.value);
             std::uint32_t maskHash = mask32.maskHash;
@@ -3212,7 +3196,7 @@ private:
             dist_and_hash.incDist(kGroupWidth);
             ctrl += kGroupWidth;
             slot += kGroupWidth;
-        } while (slot < last_slot);
+        }
 
         return last_slot;
     }
