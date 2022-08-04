@@ -612,7 +612,7 @@ public:
 
         pointer ctrl;
 
-        BitMask256_AVX2() noexcept : ctrl(nullptr) {
+        BitMask256_AVX2Ex() noexcept : ctrl(nullptr) {
         }
         explicit BitMask256_AVX2Ex(pointer ctrl) noexcept : ctrl(ctrl) {
         }
