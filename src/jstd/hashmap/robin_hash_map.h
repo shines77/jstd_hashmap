@@ -1693,13 +1693,6 @@ public:
         return const_cast<const ctrl_type *>(this->ctrls_);
     }
 
-    group_type * groups() {
-        return reinterpret_cast<group_type *>(this->ctrls_);
-    }
-    const group_type * groups() const {
-        return const_cast<const group_type *>(reinterpret_cast<group_type *>(this->ctrls_));
-    }
-
     size_type group_mask() const { return (this->slot_mask() / kGroupWidth); }
     size_type group_count() const {
         return ((this->max_slot_capacity() + kGroupWidth - 1) / kGroupWidth);
@@ -2665,7 +2658,6 @@ private:
             }
 
             ctrl_type * old_ctrls = this->ctrls();
-            group_type * old_groups = this->groups();
             size_type old_group_count = this->group_count();
             size_type old_group_capacity = this->group_capacity();
 
@@ -2689,14 +2681,16 @@ private:
                 }
             } else {
                 if (old_slot_capacity >= kGroupWidth) {
-                    group_type * last_group = old_groups + old_group_count;
+                    ctrl_type * ctrl = old_ctrls;
+                    ctrl_type * last_ctrl = old_ctrls + old_group_count * kGroupWidth;
+                    group_type group(ctrl), last_group(last_ctrl);
                     size_type start_index = 0;
-                    for (group_type * group = old_groups; group != last_group; group++) {
-                        std::uint32_t maskUsed = group->matchUsed();
+                    for (; group < last_group; ++group) {
+                        std::uint32_t maskUsed = group.matchUsed();
                         while (maskUsed != 0) {
                             size_type pos = BitUtils::bsf32(maskUsed);
                             maskUsed = BitUtils::clearLowBit32(maskUsed);
-                            size_type old_index = group->index(start_index, pos);
+                            size_type old_index = group.index(start_index, pos);
                             slot_type * old_slot = old_slots + old_index;
                             this->unique_insert_no_grow(old_slot);
                             this->destroy_slot(old_slot);
