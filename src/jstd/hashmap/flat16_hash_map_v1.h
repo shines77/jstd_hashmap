@@ -1830,14 +1830,15 @@ private:
 
     JSTD_FORCED_INLINE
     size_type find_impl(const key_type & key, index_type & first_cluster,
-                        index_type & last_cluster, std::uint8_t & ctrl_hash) const {
+                        index_type & last_cluster, std::uint8_t & o_ctrl_hash) const {
         hash_code_t hash_code = this->get_hash(key);
         hash_code_t hash_code_2nd = this->get_second_hash(hash_code);
         std::uint8_t ctrl_hash = this->get_ctrl_hash(hash_code_2nd);
         index_type cluster_index = this->index_for(hash_code);
         index_type start_cluster = cluster_index;
         first_cluster = start_cluster;
-        ctrl_hash = ctrl_hash;
+        o_ctrl_hash = ctrl_hash;
+
         do {
             const cluster_type & cluster = this->get_cluster(cluster_index);
             std::uint32_t mask16 = cluster.matchHash(ctrl_hash);
@@ -1864,13 +1865,13 @@ private:
     }
 
     JSTD_FORCED_INLINE
-    size_type find_first_unused_entry(const key_type & key, std::uint8_t & ctrl_hash) {
+    size_type find_first_unused_entry(const key_type & key, std::uint8_t & o_ctrl_hash) {
         hash_code_t hash_code = this->get_hash(key);
         hash_code_t hash_code_2nd = this->get_second_hash(hash_code);
         std::uint8_t ctrl_hash = this->get_ctrl_hash(hash_code_2nd);
         index_type cluster_index = this->index_for(hash_code);
         index_type first_cluster = cluster_index;
-        ctrl_hash = ctrl_hash;
+        o_ctrl_hash = ctrl_hash;
 
         // Find the first unused entry and insert
         do {
@@ -1890,13 +1891,13 @@ private:
     }
 
     JSTD_FORCED_INLINE
-    size_type find_first_empty_entry(const key_type & key, std::uint8_t & ctrl_hash) {
+    size_type find_first_empty_entry(const key_type & key, std::uint8_t & o_ctrl_hash) {
         hash_code_t hash_code = this->get_hash(key);
         hash_code_t hash_code_2nd = this->get_second_hash(hash_code);
         std::uint8_t ctrl_hash = this->get_ctrl_hash(hash_code_2nd);
         index_type cluster_index = this->index_for(hash_code);
         index_type first_cluster = cluster_index;
-        ctrl_hash = ctrl_hash;
+        o_ctrl_hash = ctrl_hash;
 
         // Find the first empty entry and insert
         do {
@@ -1971,7 +1972,7 @@ private:
     }
 
     std::pair<size_type, bool>
-    find_and_prepare_insert(const key_type & key, std::uint8_t & ctrl_hash) {
+    find_and_prepare_insert(const key_type & key, std::uint8_t & o_ctrl_hash) {
         hash_code_t hash_code = this->get_hash(key);
         hash_code_t hash_code_2nd = this->get_second_hash(hash_code);
         std::uint8_t ctrl_hash = this->get_ctrl_hash(hash_code_2nd);
@@ -1979,7 +1980,7 @@ private:
         index_type first_cluster = cluster_index;
         index_type last_cluster = npos;
         std::uint32_t maskEmpty;
-        ctrl_hash = ctrl_hash;
+        o_ctrl_hash = ctrl_hash;
 
         do {
             const cluster_type & cluster = this->get_cluster(cluster_index);

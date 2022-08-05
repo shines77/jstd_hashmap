@@ -2014,14 +2014,14 @@ private:
 
     JSTD_FORCED_INLINE
     size_type find_impl(const key_type & key, size_type & first_slot,
-                        size_type & last_slot, std::uint8_t & ctrl_hash) const {
+                        size_type & last_slot, std::uint8_t & o_ctrl_hash) const {
         hash_code_t hash_code = this->get_hash(key);
         hash_code_t hash_code_2nd = this->get_second_hash(hash_code);
         std::uint8_t ctrl_hash = this->get_ctrl_hash(hash_code_2nd);
         size_type slot_index = this->index_for(hash_code);
         size_type start_slot = slot_index;
         first_slot = start_slot;
-        ctrl_hash = ctrl_hash;
+        o_ctrl_hash = ctrl_hash;
         do {
             const group_type & group = this->get_group(slot_index);
             std::uint32_t mask16 = group.matchHash(ctrl_hash);
@@ -2064,13 +2064,13 @@ private:
     }
 
     JSTD_FORCED_INLINE
-    size_type find_first_non_used_slot(const key_type & key, std::uint8_t & ctrl_hash) {
+    size_type find_first_non_used_slot(const key_type & key, std::uint8_t & o_ctrl_hash) {
         hash_code_t hash_code = this->get_hash(key);
         hash_code_t hash_code_2nd = this->get_second_hash(hash_code);
         std::uint8_t ctrl_hash = this->get_ctrl_hash(hash_code_2nd);
         size_type slot_index = this->index_for(hash_code);
         size_type first_slot = slot_index;
-        ctrl_hash = ctrl_hash;
+        o_ctrl_hash = ctrl_hash;
 
         // Find the first empty or deleted slot and insert
         if (this->group_count() > 2) {
@@ -2113,13 +2113,13 @@ private:
     }
 
     JSTD_FORCED_INLINE
-    size_type find_first_empty_slot(const key_type & key, std::uint8_t & ctrl_hash) {
+    size_type find_first_empty_slot(const key_type & key, std::uint8_t & o_ctrl_hash) {
         hash_code_t hash_code = this->get_hash(key);
         hash_code_t hash_code_2nd = this->get_second_hash(hash_code);
         std::uint8_t ctrl_hash = this->get_ctrl_hash(hash_code_2nd);
         size_type slot_index = this->index_for(hash_code);
         size_type first_slot = slot_index;
-        ctrl_hash = ctrl_hash;
+        o_ctrl_hash = ctrl_hash;
 
         // Find the first empty slot and insert
         if (this->group_count() > 2) {
@@ -2216,7 +2216,7 @@ private:
     }
 
     std::pair<size_type, bool>
-    find_and_prepare_insert(const key_type & key, std::uint8_t & ctrl_hash) {
+    find_and_prepare_insert(const key_type & key, std::uint8_t & o_ctrl_hash) {
         hash_code_t hash_code = this->get_hash(key);
         hash_code_t hash_code_2nd = this->get_second_hash(hash_code);
         std::uint8_t ctrl_hash = this->get_ctrl_hash(hash_code_2nd);
@@ -2224,7 +2224,7 @@ private:
         size_type first_slot = slot_index;
         size_type last_slot = npos;
         std::uint32_t maskEmpty;
-        ctrl_hash = ctrl_hash;
+        o_ctrl_hash = ctrl_hash;
 
         do {
             const group_type & group = this->get_group(slot_index);
