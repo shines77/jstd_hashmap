@@ -1178,7 +1178,7 @@ public:
         using pointer = ValueType *;
         using reference = ValueType &;
 
-        using remove_const_value_type = typename std::remove_const<ValueType>::type;
+        using mutable_value_type = typename std::remove_const<ValueType>::type;
 
         using size_type = std::size_t;
         using difference_type = std::ptrdiff_t;
@@ -1237,7 +1237,7 @@ public:
             return std::addressof(slot->value);
         }
 
-        operator basic_iterator<const remove_const_value_type>() const {
+        operator basic_iterator<const mutable_value_type>() const {
             return { this->owner_, this->index_ };
         }
 
@@ -1277,7 +1277,7 @@ public:
         using pointer = ValueType *;
         using reference = ValueType &;
 
-        using remove_const_value_type = typename std::remove_const<ValueType>::type;
+        using mutable_value_type = typename std::remove_const<ValueType>::type;
 
         using size_type = std::size_t;
         using difference_type = std::ptrdiff_t;
@@ -1332,7 +1332,7 @@ public:
             return std::addressof(this->slot_->value);
         }
 
-        operator basic_iterator<const remove_const_value_type>() const {
+        operator basic_iterator<const mutable_value_type>() const {
             return { this->ctrl_, this->slot_ };
         }
 

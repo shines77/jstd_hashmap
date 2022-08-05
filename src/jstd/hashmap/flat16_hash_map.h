@@ -249,7 +249,7 @@ public:
         }
     };
 
-    typedef control_byte control_type;
+    typedef control_byte ctrl_type;
 
 #ifdef __SSE2__
 
@@ -445,7 +445,7 @@ public:
     //
     // Google - cwisstable: Google's Swiss Table for C
     //
-    // See: https://github.com/google/cwisstable/blob/main/cwisstable/internal/control_type.h
+    // See: https://github.com/google/cwisstable/blob/main/cwisstable/internal/ctrl_type.h
     //
     template <typename T>
     struct BitMask128_u64 {
@@ -694,11 +694,11 @@ public:
 #endif // __SSE2__
 
     struct map_group {
-        typedef BitMask128<control_type>                        bitmask128_type;
-        typedef typename BitMask128<control_type>::bitmask_type bitmask_type;
+        typedef BitMask128<ctrl_type>                        bitmask128_type;
+        typedef typename BitMask128<ctrl_type>::bitmask_type bitmask_type;
 
         union {
-            control_type controls[kGroupWidth];
+            ctrl_type controls[kGroupWidth];
             bitmask128_type bitmask;
         };
 
@@ -823,20 +823,23 @@ public:
         using pointer = ValueType *;
         using reference = ValueType &;
 
-        using remove_const_value_type = typename std::remove_const<ValueType>::type;
+        using mutable_value_type = typename std::remove_const<ValueType>::type;
 
         using size_type = std::size_t;
         using difference_type = std::ptrdiff_t;
 
     private:
-        control_type * ctrl_;
-        slot_type *    slot_;
+        ctrl_type * ctrl_;
+        slot_type * slot_;
 
     public:
         basic_iterator() noexcept : ctrl_(nullptr), slot_(nullptr) {
         }
-        basic_iterator(control_type * ctrl, slot_type * slot) noexcept
+        basic_iterator(ctrl_type * ctrl, slot_type * slot) noexcept
             : ctrl_(ctrl), slot_(slot) {
+        }
+        basic_iterator(const ctrl_type * ctrl, const slot_type * slot) noexcept
+            : ctrl_(const_cast<ctrl_type *>(ctrl)), slot_(const_cast<slot_type *>(slot)) {
         }
         basic_iterator(const basic_iterator & src) noexcept
             : ctrl_(src.ctrl_), slot_(src.slot_) {
@@ -878,7 +881,7 @@ public:
             return std::addressof(this->slot_->value);
         }
 
-        operator basic_iterator<const remove_const_value_type>() const {
+        operator basic_iterator<const mutable_value_type>() const {
             return { this->ctrl_, this->slot_ };
         }
 
@@ -1082,8 +1085,8 @@ public:
     group_type * groups() { return groups_; }
     const group_type * groups() const { return groups_; }
 
-    control_type * controls() { return (control_type *)this->groups(); }
-    const control_type * controls() const { return (const control_type *)this->groups(); }
+    ctrl_type * controls() { return (ctrl_type *)this->groups(); }
+    const ctrl_type * controls() const { return (const ctrl_type *)this->groups(); }
 
     size_type group_mask() const { return group_mask_; }
     size_type group_count() const { return (group_mask_ + 1); }
@@ -1191,7 +1194,7 @@ public:
 
         return this->iterator_at(this->slot_capacity());
 #else
-        control_type * control = this->controls();
+        ctrl_type * control = this->controls();
         size_type index;
         for (index = 0; index <= this->slot_mask(); index++) {
             if (control->isUsed()) {
@@ -1600,22 +1603,22 @@ private:
         return ((slot_index + kGroupWidth) & this->slot_mask());
     }
 
-    control_type * control_at(size_type slot_index) noexcept {
+    ctrl_type * control_at(size_type slot_index) noexcept {
         assert(slot_index <= this->slot_capacity());
         return (this->controls() + slot_index);
     }
 
-    const control_type * control_at(size_type slot_index) const noexcept {
+    const ctrl_type * control_at(size_type slot_index) const noexcept {
         assert(slot_index <= this->slot_capacity());
         return (this->controls() + slot_index);
     }
 
-    control_type * control_at_ex(size_type slot_index) noexcept {
+    ctrl_type * control_at_ex(size_type slot_index) noexcept {
         assert(slot_index <= (this->slot_capacity() + kGroupWidth));
         return (this->controls() + slot_index);
     }
 
-    const control_type * control_at_ex(size_type slot_index) const noexcept {
+    const ctrl_type * control_at_ex(size_type slot_index) const noexcept {
         assert(slot_index <= (this->slot_capacity() + kGroupWidth));
         return (this->controls() + slot_index);
     }
@@ -1650,15 +1653,15 @@ private:
         return (this->slots() + slot_index);
     }
 
-    control_type & get_control(size_type slot_index) {
+    ctrl_type & get_control(size_type slot_index) {
         assert(slot_index < this->slot_capacity());
-        control_type * controls = this->controls();
+        ctrl_type * controls = this->controls();
         return controls[slot_index];
     }
 
-    const control_type & get_control(size_type slot_index) const {
+    const ctrl_type & get_control(size_type slot_index) const {
         assert(slot_index < this->slot_capacity());
-        control_type * controls = this->controls();
+        ctrl_type * controls = this->controls();
         return controls[slot_index];
     }
 
@@ -1747,7 +1750,7 @@ private:
         // Destroy all slots.
         if (this->slots_ != nullptr) {
             if (!is_slot_trivial_destructor) {
-                control_type * control = this->controls();
+                ctrl_type * control = this->controls();
                 assert(control != nullptr);
                 for (size_type index = 0; index <= this->slot_mask(); index++) {
                     if (control->isUsed()) {
@@ -1796,15 +1799,15 @@ private:
     void copy_and_mirror_controls() {
         // Copy and mirror the beginning control bytes.
         size_type copy_size = (std::min)(this->slot_capacity(), kGroupWidth);
-        control_type * controls = this->controls();
+        ctrl_type * controls = this->controls();
         std::memcpy((void *)&controls[this->slot_capacity()], (const void *)&controls[0],
-                    sizeof(control_type) * copy_size);
+                    sizeof(ctrl_type) * copy_size);
 
         if (WriteEndofMark) {
             // Set the end of mark
-            control_type * ctrl_0 = controls;
+            ctrl_type * ctrl_0 = controls;
             if (ctrl_0->isEmptyOrDeleted()) {
-                control_type * ctrl_mirror = this->control_at(this->slot_capacity());
+                ctrl_type * ctrl_mirror = this->control_at(this->slot_capacity());
                 ctrl_mirror->setEndOf();
             }
         }
@@ -1814,10 +1817,10 @@ private:
     JSTD_FORCED_INLINE
     void setMirrorCtrl(size_type index, std::uint8_t tag) {
         if (index < kGroupWidth) {
-            control_type * ctrl_mirror = this->control_at_ex(index + this->slot_capacity());
+            ctrl_type * ctrl_mirror = this->control_at_ex(index + this->slot_capacity());
             ctrl_mirror->value = tag;
             if (index == 0) {
-                if (control_type::isEmptyOrDeleted(tag)) {
+                if (ctrl_type::isEmptyOrDeleted(tag)) {
                     ctrl_mirror->setEndOf();
                 }
             }
@@ -1827,9 +1830,9 @@ private:
 
     JSTD_FORCED_INLINE
     void setUsedMirrorCtrl(size_type index, std::uint8_t ctrl_hash) {
-        assert(control_type::isUsed(ctrl_hash));
+        assert(ctrl_type::isUsed(ctrl_hash));
         if (index < kGroupWidth) {
-            control_type * ctrl_mirror = this->control_at_ex(index + this->slot_capacity());
+            ctrl_type * ctrl_mirror = this->control_at_ex(index + this->slot_capacity());
             ctrl_mirror->value = ctrl_hash;
         }
     }
@@ -1837,10 +1840,10 @@ private:
     JSTD_FORCED_INLINE
     void setUnusedMirrorCtrl(size_type index, std::uint8_t tag) {
         if (index < kGroupWidth) {
-            control_type * ctrl_mirror = this->control_at_ex(index + this->slot_capacity());
+            ctrl_type * ctrl_mirror = this->control_at_ex(index + this->slot_capacity());
             ctrl_mirror->value = tag;
             if (index == 0) {
-                assert(control_type::isEmptyOrDeleted(tag));
+                assert(ctrl_type::isEmptyOrDeleted(tag));
                 ctrl_mirror->setEndOf();
             }
         }
@@ -1901,8 +1904,8 @@ private:
             new_groups[group_count].template fillAll8<kEndOfMark>();
         }
 
-        control_type * new_controls = (control_type *)new_groups;
-        control_type * endof_ctrl = new_controls + new_capacity;
+        ctrl_type * new_controls = (ctrl_type *)new_groups;
+        ctrl_type * endof_ctrl = new_controls + new_capacity;
         endof_ctrl->setEndOf();
 
         slot_type * slots = slot_allocator_.allocate(new_capacity);
@@ -1930,7 +1933,7 @@ private:
             }
 
             group_type * old_groups = this->groups();
-            control_type * old_controls = this->controls();
+            ctrl_type * old_controls = this->controls();
             size_type old_group_count = this->group_count();
             size_type old_group_capacity = this->group_capacity();
 
@@ -1943,9 +1946,9 @@ private:
             this->create_group<false>(new_capacity);
 
             if ((this->max_load_factor() < 0.5f) && false) {
-                control_type * last_control = old_controls + old_slot_capacity;
+                ctrl_type * last_control = old_controls + old_slot_capacity;
                 slot_type * old_slot = old_slots;
-                for (control_type * control = old_controls; control != last_control; control++) {
+                for (ctrl_type * control = old_controls; control != last_control; control++) {
                     if (likely(control->isUsed())) {
                         this->move_insert_unique(old_slot);
                         if (!is_slot_trivial_destructor) {
@@ -1992,9 +1995,9 @@ private:
                     }
 #endif
                 } else {
-                    control_type * last_control = old_controls + old_slot_capacity;
+                    ctrl_type * last_control = old_controls + old_slot_capacity;
                     slot_type * old_slot = old_slots;
-                    for (control_type * control = old_controls; control != last_control; control++) {
+                    for (ctrl_type * control = old_controls; control != last_control; control++) {
                         if (likely(control->isUsed())) {
                             this->move_insert_unique(old_slot);
                             if (!is_slot_trivial_destructor) {
@@ -2124,7 +2127,7 @@ private:
         slot_type * tmp_slot = reinterpret_cast<slot_type *>(&raw);
 
         for (size_type index = 0; index < this->slot_capacity(); index++) {
-            control_type * ctrl = this->control_at(index);
+            ctrl_type * ctrl = this->control_at(index);
             if (ctrl->isDeleted()) {
                 continue;
             }
@@ -2140,7 +2143,7 @@ private:
                 continue;
             }
 
-            control_type * new_ctrl = this->control_at(target);
+            ctrl_type * new_ctrl = this->control_at(target);
             slot_type * new_slot = this->slot_at(target);
             if (new_ctrl->isEmpty()) {
                 // Transfer the old slot to the new (Empty) slot.
@@ -2290,7 +2293,7 @@ private:
         assert(target != npos);
 
         // Found a [DeletedEntry] or [EmptyEntry] to insert
-        control_type * control = this->control_at(target);
+        ctrl_type * control = this->control_at(target);
         assert(control->isEmpty());
         control->setUsed(ctrl_hash);
         this->setUsedMirrorCtrl(target, ctrl_hash);
@@ -2312,7 +2315,7 @@ private:
         assert(target != npos);
 
         // Found a [DeletedEntry] or [EmptyEntry] to insert
-        control_type * control = this->control_at(target);
+        ctrl_type * control = this->control_at(target);
         assert(control->isEmpty());
         control->setUsed(ctrl_hash);
         this->setUsedMirrorCtrl(target, ctrl_hash);
@@ -2333,7 +2336,7 @@ private:
         assert(target != npos);
 
         // Found a [DeletedEntry] or [EmptyEntry] to insert
-        control_type * control = this->control_at(target);
+        ctrl_type * control = this->control_at(target);
         assert(control->isEmpty());
         control->setUsed(ctrl_hash);
         this->setUsedMirrorCtrl(target, ctrl_hash);
@@ -2452,7 +2455,7 @@ private:
             assert(target != npos);
 
             // Found a [DeletedEntry] or [EmptyEntry] to insert
-            control_type * control = this->control_at(target);
+            ctrl_type * control = this->control_at(target);
             assert(control->isEmptyOrDeleted());
             control->setUsed(ctrl_hash);
             this->setUsedMirrorCtrl(target, ctrl_hash);
@@ -2481,7 +2484,7 @@ private:
             assert(target != npos);
 
             // Found a [DeletedEntry] or [EmptyEntry] to insert
-            control_type * control = this->control_at(target);
+            ctrl_type * control = this->control_at(target);
             assert(control->isEmptyOrDeleted());
             control->setUsed(ctrl_hash);
             this->setUsedMirrorCtrl(target, ctrl_hash);
@@ -2526,7 +2529,7 @@ private:
             assert(target != npos);
 
             // Found a [DeletedEntry] or [EmptyEntry] to insert
-            control_type * control = this->control_at(target);
+            ctrl_type * control = this->control_at(target);
             assert(control->isEmptyOrDeleted());
             control->setUsed(ctrl_hash);
             this->setUsedMirrorCtrl(target, ctrl_hash);
@@ -2577,7 +2580,7 @@ private:
             assert(target != npos);
 
             // Found a [DeletedEntry] or [EmptyEntry] to insert
-            control_type * control = this->control_at(target);
+            ctrl_type * control = this->control_at(target);
             assert(control->isEmptyOrDeleted());
             control->setUsed(ctrl_hash);
             this->setUsedMirrorCtrl(target, ctrl_hash);
@@ -2628,7 +2631,7 @@ private:
             assert(target != npos);
 
             // Found a [DeletedEntry] or [EmptyEntry] to insert
-            control_type * control = this->control_at(target);
+            ctrl_type * control = this->control_at(target);
             assert(control->isEmptyOrDeleted());
             control->setUsed(ctrl_hash);
             this->setUsedMirrorCtrl(target, ctrl_hash);
@@ -2677,7 +2680,7 @@ private:
             assert(target != npos);
 
             // Found a [DeletedEntry] or [EmptyEntry] to insert
-            control_type * control = this->control_at(target);
+            ctrl_type * control = this->control_at(target);
             assert(control->isEmptyOrDeleted());
             control->setUsed(ctrl_hash);
             this->setUsedMirrorCtrl(target, ctrl_hash);
@@ -2732,7 +2735,7 @@ private:
     JSTD_FORCED_INLINE
     void erase_slot(size_type index) {
         assert(index <= this->slot_capacity());
-        control_type & control = this->get_control(index);
+        ctrl_type & control = this->get_control(index);
         assert(control.isUsed());
         size_type start_slot = index;
 

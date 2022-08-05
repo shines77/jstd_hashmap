@@ -1274,6 +1274,9 @@ public:
     public:
         basic_iterator() noexcept : owner_(nullptr), index_(0) {
         }
+        basic_iterator(this_type * owner, size_type index) noexcept
+            : owner_(const_cast<const this_type *>(owner)), index_(index) {
+        }
         basic_iterator(const this_type * owner, size_type index) noexcept
             : owner_(owner), index_(index) {
         }
@@ -1408,6 +1411,9 @@ public:
         }
         basic_iterator(ctrl_type * ctrl, slot_type * slot) noexcept
             : ctrl_(ctrl), slot_(slot) {
+        }
+        basic_iterator(const ctrl_type * ctrl, const slot_type * slot) noexcept
+            : ctrl_(const_cast<ctrl_type *>(ctrl)), slot_(const_cast<slot_type *>(slot)) {
         }
         basic_iterator(const basic_iterator & src) noexcept
             : ctrl_(src.ctrl_), slot_(src.slot_) {

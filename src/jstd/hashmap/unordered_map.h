@@ -605,7 +605,7 @@ public:
         using reference = ValueType &;
         using const_reference = const ValueType &;
 
-        using remove_const_value_type = typename std::remove_const<ValueType>::type;
+        using mutable_value_type = typename std::remove_const<ValueType>::type;
 
         using size_type = std::size_t;
         using difference_type = std::ptrdiff_t;
@@ -657,7 +657,7 @@ public:
             return std::addressof(this->entry_->value);
         }
 
-        operator basic_iterator<const remove_const_value_type>() const {
+        operator basic_iterator<const mutable_value_type>() const {
             return { this->entry_, this->owner_ };
         }
 
@@ -702,7 +702,7 @@ public:
         using reference = ValueType &;
         using const_reference = const ValueType &;
 
-        using remove_const_value_type = typename std::remove_const<ValueType>::type;
+        using mutable_value_type = typename std::remove_const<ValueType>::type;
 
         using size_type = std::size_t;
         using difference_type = std::ptrdiff_t;
@@ -754,7 +754,7 @@ public:
             return std::addressof(*this->node_);
         }
 
-        operator basic_iterator<const remove_const_value_type>() const {
+        operator basic_iterator<const mutable_value_type>() const {
             return { this->node_, this->owner_ };
         }
 
