@@ -498,7 +498,7 @@ template <typename T>
 struct has_member_swap {
     template <typename U>
     static constexpr auto check(void *)
-        -> decltype(std::declval<U>().swap(std::declval(U &)), std::true_type()) {
+        -> decltype(std::declval<U>().swap(std::declval<U &>), std::true_type()) {
         return std::true_type();
     }
 
