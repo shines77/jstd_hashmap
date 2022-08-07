@@ -19,6 +19,7 @@
 #pragma once
 
 #include <type_traits>
+#include "jstd/traits/has_member.h"
 
 namespace jstd {
 
@@ -27,6 +28,11 @@ namespace detail {
 template <typename T>
 struct is_plain_type {
     static constexpr bool value = (std::is_arithmetic<T>::value || std::is_enum<T>::value);
+};
+
+template <typename T>
+struct is_swappable {
+    static constexpr bool value = is_plain_type<T>::value || has_member_swap<T>::value;
 };
 
 } // namespace detail

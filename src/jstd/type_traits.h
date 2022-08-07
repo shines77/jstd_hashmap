@@ -6,7 +6,7 @@
 #pragma once
 #endif
 
-#include <stddef.h>     // For offsetof
+#include <stddef.h>     // For offsetof()
 
 #include <cstdint>
 #include <cstddef>
@@ -490,6 +490,22 @@ struct has_mapped_type {
 
     template <typename U>
     static constexpr std::false_type check(...);
+
+    static constexpr bool value = std::is_same<decltype(check<T>(nullptr)), std::true_type>::value;
+};
+
+template <typename T>
+struct has_member_swap {
+    template <typename U>
+    static constexpr auto check(void *)
+        -> decltype(std::declval<U>().swap(std::declval(U &)), std::true_type()) {
+        return std::true_type();
+    }
+
+    template <typename>
+    static constexpr std::false_type check(...) {
+        return std::false_type();
+    }
 
     static constexpr bool value = std::is_same<decltype(check<T>(nullptr)), std::true_type>::value;
 };

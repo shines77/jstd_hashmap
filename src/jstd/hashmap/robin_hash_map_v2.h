@@ -1727,7 +1727,7 @@ public:
                            std::allocator_traits<allocator_type>::propagate_on_container_copy_assignment::value
                            ? other.get_allocator_ref()
                            : this->get_allocator_ref());
-        this->swap(tmp);
+        this->swap_impl(tmp);
         return *this;
     }
 
