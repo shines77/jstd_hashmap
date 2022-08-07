@@ -2923,33 +2923,29 @@ private:
 
     template <typename T>
     struct swap_pair<T, true, true> {
-        template <typename Allocator, typename SlotType>
-        static void swap(Allocator * alloc, SlotType * slot1, SlotType * slot2)
+        template <typename Alloc, typename SlotType>
+        static void swap(Alloc * alloc, SlotType * slot1, SlotType * slot2)
             noexcept(std::is_nothrow_move_constructible<T>::value &&
                      std::is_nothrow_move_assignable<T>::value)
         {
             using std::swap;
-            if (isCompatibleLayout) {
-                swap(slot1->mutable_value, slot2->mutable_value);
-            }
+            swap(slot1->mutable_value, slot2->mutable_value);
         }
 
-        template <typename Allocator, typename SlotType>
-        static void swap(Allocator * alloc, SlotType * slot1, SlotType * slot2, SlotType * tmp)
+        template <typename Alloc, typename SlotType>
+        static void swap(Alloc * alloc, SlotType * slot1, SlotType * slot2, SlotType * tmp)
             noexcept(std::is_nothrow_move_constructible<T>::value &&
                      std::is_nothrow_move_assignable<T>::value)
         {
             using std::swap;
-            if (isCompatibleLayout) {
-                swap(slot1->mutable_value, slot2->mutable_value);
-            }
+            swap(slot1->mutable_value, slot2->mutable_value);
         }
     };
 
     template <typename T>
     struct swap_pair<T, true, false> {
-        template <typename Allocator, typename SlotType>
-        static void swap(Allocator * alloc, SlotType * slot1, SlotType * slot2, SlotType * tmp)
+        template <typename Alloc, typename SlotType>
+        static void swap(Alloc * alloc, SlotType * slot1, SlotType * slot2, SlotType * tmp)
             noexcept(std::is_nothrow_move_constructible<T>::value)
         {
             alloc.construct(&tmp->mutable_value, std::move(slot2->mutable_value));
@@ -2973,8 +2969,8 @@ private:
             return launder(const_cast<mutable_first_type *>(std::addressof(value->first)));
         }
 
-        template <typename Allocator, typename SlotType>
-        static void swap(Allocator * alloc, SlotType * slot1, SlotType * slot2, SlotType * tmp)
+        template <typename Alloc, typename SlotType>
+        static void swap(Alloc * alloc, SlotType * slot1, SlotType * slot2, SlotType * tmp)
             noexcept(std::is_nothrow_move_constructible<mutable_first_type>::value &&
                      std::is_nothrow_move_assignable<mutable_first_type>::value &&
                      std::is_nothrow_move_constructible<second_type>::value &&
@@ -2998,8 +2994,8 @@ private:
             return launder(const_cast<mutable_first_type *>(std::addressof(value->first)));
         }
 
-        template <typename Allocator, typename SlotType>
-        static void swap(Allocator * alloc, SlotType * slot1, SlotType * slot2, SlotType * tmp)
+        template <typename Alloc, typename SlotType>
+        static void swap(Alloc * alloc, SlotType * slot1, SlotType * slot2, SlotType * tmp)
             noexcept(std::is_nothrow_move_constructible<T>::value &&
                      std::is_nothrow_move_constructible<second_type>::value &&
                      std::is_nothrow_move_assignable<second_type>::value)
@@ -3047,8 +3043,8 @@ private:
 
     template <typename T>
     struct swap_traits<T, true, true> {
-        template <typename Allocator>
-        static void swap(Allocator * alloc, T * obj1, T * obj2)
+        template <typename Alloc>
+        static void swap(Alloc * alloc, T * obj1, T * obj2)
             noexcept(noexcept(std::declval<T>().swap(*obj2)))
         {
             // hasSwapMethod = true
@@ -3058,8 +3054,8 @@ private:
 
     template <typename T>
     struct swap_traits<T, true, false> {
-        template <typename Allocator>
-        static void swap(Allocator * alloc, T * obj1, T * obj2)
+        template <typename Alloc>
+        static void swap(Alloc * alloc, T * obj1, T * obj2)
             noexcept(noexcept(std::declval<T>().swap(*obj2)))
         {
             // hasSwapMethod = true
@@ -3069,8 +3065,8 @@ private:
 
     template <typename T>
     struct swap_traits<T, false, true> {
-        template <typename Allocator>
-        static void swap(Allocator * alloc, T * obj1, T * obj2)
+        template <typename Alloc>
+        static void swap(Alloc * alloc, T * obj1, T * obj2)
             noexcept(std::is_nothrow_move_constructible<T>::value &&
                      std::is_nothrow_move_assignable<T>::value)
         {
@@ -3082,8 +3078,8 @@ private:
 
     template <typename T>
     struct swap_traits<T, false, false> {
-        template <typename Allocator>
-        static void swap(Allocator * alloc, T * obj1, T * obj2)
+        template <typename Alloc>
+        static void swap(Alloc * alloc, T * obj1, T * obj2)
             noexcept(std::is_nothrow_move_constructible<T>::value)
         {
             // hasSwapMethod = false, isNoexceptMoveAssign = false
@@ -3107,8 +3103,8 @@ private:
         typedef typename T::second_type                         second_type;
         typedef typename std::remove_const<first_type>::type    mutable_first_type;
 
-        template <typename Allocator, typename SlotType>
-        static void swap(Allocator * alloc, SlotType * slot1, SlotType * slot2)
+        template <typename Alloc, typename SlotType>
+        static void swap(Alloc * alloc, SlotType * slot1, SlotType * slot2)
             noexcept(std::is_nothrow_move_constructible<T>::value &&
                      std::is_nothrow_move_assignable<T>::value)
         {
@@ -3126,8 +3122,8 @@ private:
 #endif
         }
 
-        template <typename Allocator, typename SlotType>
-        static void swap(Allocator * alloc, SlotType * slot1, SlotType * slot2, SlotType * tmp)
+        template <typename Alloc, typename SlotType>
+        static void swap(Alloc * alloc, SlotType * slot1, SlotType * slot2, SlotType * tmp)
             noexcept(std::is_nothrow_move_constructible<T>::value)
         {
             SlotPolicyTraits::construct(alloc, tmp, slot2);
@@ -3138,8 +3134,8 @@ private:
             SlotPolicyTraits::destroy(alloc, tmp);
         }
 
-        template <typename Allocator, typename SlotType>
-        static void swap_plain(Allocator * alloc, SlotType * slot1, SlotType * slot2, SlotType * tmp)
+        template <typename Alloc, typename SlotType>
+        static void swap_plain(Alloc * alloc, SlotType * slot1, SlotType * slot2, SlotType * tmp)
             noexcept(std::is_nothrow_move_assignable<T>::value)
         {
 #if 1
@@ -3157,8 +3153,8 @@ private:
 #endif
         }
 
-        template <typename Allocator, typename SlotType>
-        static void exchange(Allocator * alloc, SlotType * src, SlotType * dest, SlotType * empty)
+        template <typename Alloc, typename SlotType>
+        static void exchange(Alloc * alloc, SlotType * src, SlotType * dest, SlotType * empty)
             noexcept(std::is_nothrow_move_constructible<T>::value)
         {
             SlotPolicyTraits::construct(alloc, empty, dest);
@@ -3174,8 +3170,8 @@ private:
         typedef typename T::second_type                         second_type;
         typedef typename std::remove_const<first_type>::type    mutable_first_type;
 
-        template <typename Allocator, typename SlotType>
-        static void swap(Allocator * alloc, SlotType * slot1, SlotType * slot2)
+        template <typename Alloc, typename SlotType>
+        static void swap(Alloc * alloc, SlotType * slot1, SlotType * slot2)
             noexcept(std::is_nothrow_move_constructible<T>::value &&
                      std::is_nothrow_move_assignable<T>::value)
         {
@@ -3193,8 +3189,8 @@ private:
 #endif
         }
 
-        template <typename Allocator, typename SlotType>
-        static void swap(Allocator * alloc, SlotType * slot1, SlotType * slot2, SlotType * tmp)
+        template <typename Alloc, typename SlotType>
+        static void swap(Alloc * alloc, SlotType * slot1, SlotType * slot2, SlotType * tmp)
             noexcept(std::is_nothrow_move_constructible<T>::value)
         {
             SlotPolicyTraits::construct(alloc, tmp, slot2);
@@ -3205,15 +3201,15 @@ private:
             SlotPolicyTraits::destroy(alloc, tmp);
         }
 
-        template <typename Allocator, typename SlotType>
-        static void swap_plain(Allocator * alloc, SlotType * slot1, SlotType * slot2, SlotType * tmp)
+        template <typename Alloc, typename SlotType>
+        static void swap_plain(Alloc * alloc, SlotType * slot1, SlotType * slot2, SlotType * tmp)
             noexcept(std::is_nothrow_move_constructible<T>::value)
         {
             swap(alloc, slot1, slot2, tmp);
         }
 
-        template <typename Allocator, typename SlotType>
-        static void exchange(Allocator * alloc, SlotType * src, SlotType * dest, SlotType * empty)
+        template <typename Alloc, typename SlotType>
+        static void exchange(Alloc * alloc, SlotType * src, SlotType * dest, SlotType * empty)
             noexcept(std::is_nothrow_move_constructible<T>::value)
         {
             SlotPolicyTraits::construct(alloc, empty, dest);
@@ -3235,8 +3231,8 @@ private:
             return launder(const_cast<mutable_first_type *>(std::addressof(value->first)));
         }
 
-        template <typename Allocator, typename SlotType>
-        static void swap(Allocator * alloc, SlotType * slot1, SlotType * slot2)
+        template <typename Alloc, typename SlotType>
+        static void swap(Alloc * alloc, SlotType * slot1, SlotType * slot2)
             noexcept(std::is_nothrow_move_constructible<T>::value &&
                      std::is_nothrow_move_assignable<T>::value)
         {
@@ -3255,8 +3251,8 @@ private:
 #endif
         }
 
-        template <typename Allocator, typename SlotType>
-        static void swap(Allocator * alloc, SlotType * slot1, SlotType * slot2, SlotType * tmp)
+        template <typename Alloc, typename SlotType>
+        static void swap(Alloc * alloc, SlotType * slot1, SlotType * slot2, SlotType * tmp)
             noexcept(std::is_nothrow_move_constructible<T>::value)
         {
             SlotPolicyTraits::construct(alloc, tmp, slot2);
@@ -3267,8 +3263,8 @@ private:
             SlotPolicyTraits::destroy(alloc, tmp);
         }
 
-        template <typename Allocator, typename SlotType>
-        static void swap_plain(Allocator * alloc, SlotType * slot1, SlotType * slot2, SlotType * tmp)
+        template <typename Alloc, typename SlotType>
+        static void swap_plain(Alloc * alloc, SlotType * slot1, SlotType * slot2, SlotType * tmp)
             noexcept(std::is_nothrow_move_assignable<T>::value)
         {
 #if 1
@@ -3286,8 +3282,8 @@ private:
 #endif
         }
 
-        template <typename Allocator, typename SlotType>
-        static void exchange(Allocator * alloc, SlotType * src, SlotType * dest, SlotType * empty)
+        template <typename Alloc, typename SlotType>
+        static void exchange(Alloc * alloc, SlotType * src, SlotType * dest, SlotType * empty)
             noexcept(std::is_nothrow_move_constructible<T>::value)
         {
             SlotPolicyTraits::construct(alloc, empty, dest);
@@ -3309,8 +3305,8 @@ private:
             return launder(const_cast<mutable_first_type *>(std::addressof(value->first)));
         }
 
-        template <typename Allocator, typename SlotType>
-        static void swap(Allocator * alloc, SlotType * slot1, SlotType * slot2)
+        template <typename Alloc, typename SlotType>
+        static void swap(Alloc * alloc, SlotType * slot1, SlotType * slot2)
             noexcept(std::is_nothrow_move_constructible<T>::value &&
                      std::is_nothrow_move_assignable<T>::value)
         {
@@ -3329,8 +3325,8 @@ private:
 #endif
         }
 
-        template <typename Allocator, typename SlotType>
-        static void swap(Allocator * alloc, SlotType * slot1, SlotType * slot2, SlotType * tmp)
+        template <typename Alloc, typename SlotType>
+        static void swap(Alloc * alloc, SlotType * slot1, SlotType * slot2, SlotType * tmp)
             noexcept(std::is_nothrow_move_constructible<T>::value)
         {
             SlotPolicyTraits::construct(alloc, tmp, slot2);
@@ -3341,15 +3337,15 @@ private:
             SlotPolicyTraits::destroy(alloc, tmp);
         }
 
-        template <typename Allocator, typename SlotType>
-        static void swap_plain(Allocator * alloc, SlotType * slot1, SlotType * slot2, SlotType * tmp)
+        template <typename Alloc, typename SlotType>
+        static void swap_plain(Alloc * alloc, SlotType * slot1, SlotType * slot2, SlotType * tmp)
             noexcept(std::is_nothrow_move_constructible<T>::value)
         {
             swap(alloc, slot1, slot2, tmp);
         }
 
-        template <typename Allocator, typename SlotType>
-        static void exchange(Allocator * alloc, SlotType * src, SlotType * dest, SlotType * empty)
+        template <typename Alloc, typename SlotType>
+        static void exchange(Alloc * alloc, SlotType * src, SlotType * dest, SlotType * empty)
             noexcept(std::is_nothrow_move_constructible<T>::value)
         {
             SlotPolicyTraits::construct(alloc, empty, dest);

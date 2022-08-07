@@ -193,7 +193,7 @@ private:
     template <typename Alloc, typename Policy = SlotPolicy>
     static auto assign_impl(Alloc * alloc, slot_type * dest_slot, const slot_type * src_slot, int)
         -> decltype((void)Policy::assign(alloc, dest_slot, src_slot)) {
-        Policy::assign(alloc, new_slot, src_slot);
+        Policy::assign(alloc, dest_slot, src_slot);
     }
 
     template <typename Alloc>
