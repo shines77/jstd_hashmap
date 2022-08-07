@@ -3002,8 +3002,6 @@ private:
         {
             typedef typename std::allocator_traits<Allocator>::template rebind_alloc<mutable_first_type>
                                                             mutable_first_allocator_type;
-            typedef typename std::allocator_traits<Allocator>::template rebind_alloc<second_type>
-                                                            second_allocator_type;
 #if 1
             mutable_first_allocator_type first_allocator;
 
@@ -3017,6 +3015,8 @@ private:
             using std::swap;
             swap(slot1->value.second, slot2->value.second);
 #else
+            typedef typename std::allocator_traits<Allocator>::template rebind_alloc<second_type>
+                                                            second_allocator_type;
             mutable_first_allocator_type first_allocator;
             second_allocator_type second_allocator;
 
