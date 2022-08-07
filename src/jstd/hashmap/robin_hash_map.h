@@ -2948,12 +2948,12 @@ private:
         static void swap(Alloc * alloc, SlotType * slot1, SlotType * slot2, SlotType * tmp)
             noexcept(std::is_nothrow_move_constructible<T>::value)
         {
-            alloc.construct(&tmp->mutable_value, std::move(slot2->mutable_value));
-            alloc.destroy(&slot2->mutable_value);
-            alloc.construct(&slot2->mutable_value, std::move(slot1->mutable_value));
-            alloc.destroy(&slot1->mutable_value);
-            alloc.construct(&slot1->mutable_value, std::move(tmp->mutable_value));
-            alloc.destroy(&tmp->mutable_value);
+            alloc->construct(&tmp->mutable_value, std::move(slot2->mutable_value));
+            alloc->destroy(&slot2->mutable_value);
+            alloc->construct(&slot2->mutable_value, std::move(slot1->mutable_value));
+            alloc->destroy(&slot1->mutable_value);
+            alloc->construct(&slot1->mutable_value, std::move(tmp->mutable_value));
+            alloc->destroy(&tmp->mutable_value);
         }
     };
 
