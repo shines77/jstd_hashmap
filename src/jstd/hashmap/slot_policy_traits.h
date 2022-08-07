@@ -137,6 +137,21 @@ public:
     }
 
     //
+    // Assign the `src_slot` to `dest_slot`.
+    //
+    // OPTIONAL: defaults to:
+    //
+    //     dest_slot = std::move(src_slot);
+    //
+    // PRECONDITION:  `dest_slot` is UNINITIALIZED and `src_slot` is INITIALIZED
+    // POSTCONDITION: `dest_slot` is INITIALIZED   and `src_slot` is UNINITIALIZED
+    //
+    template <typename Alloc>
+    static void move_assign(Alloc * alloc, slot_type * dest_slot, slot_type * src_slot) {
+        slot_policy_traits::move_assign_impl(alloc, dest_slot, src_slot, 0);
+    }
+
+    //
     // Transfers the `old_slot` to `new_slot`. Any memory allocated by the
     // allocator inside `old_slot` to `new_slot` can be transferred.
     //
@@ -183,6 +198,19 @@ private:
 
     template <typename Alloc>
     static void assign_impl(Alloc * alloc, slot_type * dest_slot, const slot_type * src_slot, char) {
+        slot_policy_traits::construct(alloc, dest_slot, std::move(element(src_slot)));
+        slot_policy_traits::destroy(alloc, src_slot);
+    }
+
+    // Use auto -> decltype as an enabler.
+    template <typename Alloc, typename Policy = SlotPolicy>
+    static auto move_assign_impl(Alloc * alloc, slot_type * dest_slot, slot_type * src_slot, int)
+        -> decltype((void)Policy::move_assign(alloc, dest_slot, src_slot)) {
+        Policy::move_assign(alloc, dest_slot, src_slot);
+    }
+
+    template <typename Alloc>
+    static void move_assign_impl(Alloc * alloc, slot_type * dest_slot, slot_type * src_slot, char) {
         slot_policy_traits::construct(alloc, dest_slot, std::move(element(src_slot)));
         slot_policy_traits::destroy(alloc, src_slot);
     }

@@ -115,6 +115,15 @@ public:
     }
 
     template <typename Allocator>
+    static void move_assign(Allocator * alloc, slot_type * dest_slot, slot_type * src_slot) {
+        if (kIsCompatibleLayout) {
+            dest_slot->mutable_value = std::move(src_slot->mutable_value);
+        } else {
+            dest_slot->value = std::move(src_slot->value);
+        }
+    }
+
+    template <typename Allocator>
     static void assign(Allocator * alloc, slot_type * dest_slot, slot_type * src_slot) {
         if (kIsCompatibleLayout) {
             dest_slot->mutable_value = std::move(src_slot->mutable_value);
