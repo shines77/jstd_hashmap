@@ -115,15 +115,6 @@ public:
     }
 
     template <typename Allocator>
-    static void move_assign(Allocator * alloc, slot_type * dest_slot, slot_type * src_slot) {
-        if (kIsCompatibleLayout) {
-            dest_slot->mutable_value = std::move(src_slot->mutable_value);
-        } else {
-            dest_slot->value = std::move(src_slot->value);
-        }
-    }
-
-    template <typename Allocator>
     static void assign(Allocator * alloc, slot_type * dest_slot, slot_type * src_slot) {
         if (kIsCompatibleLayout) {
             dest_slot->mutable_value = std::move(src_slot->mutable_value);
@@ -152,6 +143,26 @@ public:
                                                         std::move(old_slot->value));
         }
         this_type::destroy(alloc, old_slot);
+    }
+
+    template <typename Allocator>
+    static void swap(Allocator * alloc, slot_type * slot1, slot_type * slot2, slot_type * tmp) {
+        transfer(alloc, tmp, slot2);
+        transfer(alloc, slot2, slot1);
+        transfer(alloc, slot1, tmp);
+    }
+
+    template <typename Allocator>
+    static void exchange(Allocator * alloc, slot_type * src, slot_type * dest, slot_type * empty) {
+        transfer(alloc, empty, dest);
+        transfer(alloc, dest, src);
+    }
+
+    template <typename Allocator>
+    static void move_assign_swap(Allocator * alloc, slot_type * slot1, slot_type * slot2, slot_type * tmp) {
+        assign(alloc, tmp, slot2);
+        assign(alloc, slot2, slot1);
+        assign(alloc, slot1, tmp);
     }
 
 private:

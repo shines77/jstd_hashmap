@@ -137,21 +137,6 @@ public:
     }
 
     //
-    // Assign the `src_slot` to `dest_slot`.
-    //
-    // OPTIONAL: defaults to:
-    //
-    //     dest_slot = std::move(src_slot);
-    //
-    // PRECONDITION:  `dest_slot` is UNINITIALIZED and `src_slot` is INITIALIZED
-    // POSTCONDITION: `dest_slot` is INITIALIZED   and `src_slot` is UNINITIALIZED
-    //
-    template <typename Alloc>
-    static void move_assign(Alloc * alloc, slot_type * dest_slot, slot_type * src_slot) {
-        slot_policy_traits::move_assign_impl(alloc, dest_slot, src_slot, 0);
-    }
-
-    //
     // Transfers the `old_slot` to `new_slot`. Any memory allocated by the
     // allocator inside `old_slot` to `new_slot` can be transferred.
     //
@@ -166,6 +151,51 @@ public:
     template <typename Alloc>
     static void transfer(Alloc * alloc, slot_type * new_slot, slot_type * old_slot) {
         slot_policy_traits::transfer_impl(alloc, new_slot, old_slot, 0);
+    }
+
+    //
+    // Swap the `slot1` and `slot2` by 'tmp`.
+    //
+    // OPTIONAL: defaults to:
+    //
+    //     swap(slot1, slot2, tmp);
+    //
+    // PRECONDITION:  `slot1` is INITIALIZED, `slot2` is INITIALIZED and `tmp` is UNINITIALIZED
+    // POSTCONDITION: `slot1` is INITIALIZED, `slot2` is INITIALIZED and `tmp` is UNINITIALIZED
+    //
+    template <typename Alloc>
+    static void swap(Alloc * alloc, slot_type * slot1, slot_type * slot2, slot_type * tmp) {
+        slot_policy_traits::swap_impl(alloc, slot1, slot2, tmp, 0);
+    }
+
+    //
+    // Swap the `slot1` and `slot2` by 'tmp` use move assignment.
+    //
+    // OPTIONAL: defaults to:
+    //
+    //     swap(slot1, slot2, tmp);
+    //
+    // PRECONDITION:  `slot1` is INITIALIZED, `slot2` is INITIALIZED and `tmp` is UNINITIALIZED
+    // POSTCONDITION: `slot1` is INITIALIZED, `slot2` is INITIALIZED and `tmp` is UNINITIALIZED
+    //
+    template <typename Alloc>
+    static void move_assign_swap(Alloc * alloc, slot_type * slot1, slot_type * slot2, slot_type * tmp) {
+        slot_policy_traits::move_assign_swap_impl(alloc, slot1, slot2, tmp, 0);
+    }
+
+    //
+    // Swap the `slot1` and `slot2` by 'tmp`.
+    //
+    // OPTIONAL: defaults to:
+    //
+    //     swap(slot1, slot2, tmp);
+    //
+    // PRECONDITION:  `slot1` is INITIALIZED, `slot2` is INITIALIZED and `tmp` is UNINITIALIZED
+    // POSTCONDITION: `slot1` is INITIALIZED, `slot2` is INITIALIZED and `tmp` is UNINITIALIZED
+    //
+    template <typename Alloc>
+    static void exchange(Alloc * alloc, slot_type * src, slot_type * dest, slot_type * empty) {
+        slot_policy_traits::exchange_impl(alloc, src, dest, empty, 0);
     }
 
     // PRECONDITION:  `slot` is INITIALIZED
@@ -204,19 +234,6 @@ private:
 
     // Use auto -> decltype as an enabler.
     template <typename Alloc, typename Policy = SlotPolicy>
-    static auto move_assign_impl(Alloc * alloc, slot_type * dest_slot, slot_type * src_slot, int)
-        -> decltype((void)Policy::move_assign(alloc, dest_slot, src_slot)) {
-        Policy::move_assign(alloc, dest_slot, src_slot);
-    }
-
-    template <typename Alloc>
-    static void move_assign_impl(Alloc * alloc, slot_type * dest_slot, slot_type * src_slot, char) {
-        slot_policy_traits::construct(alloc, dest_slot, std::move(element(src_slot)));
-        slot_policy_traits::destroy(alloc, src_slot);
-    }
-
-    // Use auto -> decltype as an enabler.
-    template <typename Alloc, typename Policy = SlotPolicy>
     static auto transfer_impl(Alloc * alloc, slot_type * new_slot, slot_type * old_slot, int)
         -> decltype((void)Policy::transfer(alloc, new_slot, old_slot)) {
         Policy::transfer(alloc, new_slot, old_slot);
@@ -226,6 +243,52 @@ private:
     static void transfer_impl(Alloc * alloc, slot_type * new_slot, slot_type * old_slot, char) {
         slot_policy_traits::construct(alloc, new_slot, std::move(element(old_slot)));
         slot_policy_traits::destroy(alloc, old_slot);
+    }
+
+    // Use auto -> decltype as an enabler.
+    template <typename Alloc, typename Policy = SlotPolicy>
+    static auto swap_impl(Alloc * alloc, slot_type * slot1, slot_type * slot2, slot_type * tmp, int)
+        -> decltype((void)Policy::swap(alloc, slot1, slot2, tmp)) {
+        Policy::swap(alloc, slot1, slot2, tmp);
+    }
+
+    template <typename Alloc>
+    static void swap_impl(Alloc * alloc, slot_type * slot1, slot_type * slot2, slot_type * tmp, char) {
+        slot_policy_traits::construct(alloc, tmp, std::move(element(slot2)));
+        slot_policy_traits::destroy(alloc, slot2);
+        slot_policy_traits::construct(alloc, slot2, std::move(element(slot1)));
+        slot_policy_traits::destroy(alloc, slot1);
+        slot_policy_traits::construct(alloc, slot1, std::move(element(tmp)));
+        slot_policy_traits::destroy(alloc, tmp);
+    }
+
+    // Use auto -> decltype as an enabler.
+    template <typename Alloc, typename Policy = SlotPolicy>
+    static auto exchange_impl(Alloc * alloc, slot_type * src, slot_type * dest, slot_type * empty, int)
+        -> decltype((void)Policy::exchange(alloc, src, dest, empty)) {
+        Policy::exchange(alloc, src, dest, empty);
+    }
+
+    template <typename Alloc>
+    static void exchange_impl(Alloc * alloc,  slot_type * src, slot_type * dest, slot_type * empty, char) {
+        slot_policy_traits::construct(alloc, empty, std::move(element(dest)));
+        slot_policy_traits::destroy(alloc, dest);
+        slot_policy_traits::construct(alloc, dest, std::move(element(src)));
+        slot_policy_traits::destroy(alloc, src);
+    }
+
+    // Use auto -> decltype as an enabler.
+    template <typename Alloc, typename Policy = SlotPolicy>
+    static auto move_assign_swap_impl(Alloc * alloc, slot_type * slot1, slot_type * slot2, slot_type * tmp, int)
+        -> decltype((void)Policy::move_assign_swap(alloc, slot1, slot2, tmp)) {
+        Policy::move_assign_swap(alloc, slot1, slot2, tmp);
+    }
+
+    template <typename Alloc>
+    static void move_assign_swap_impl(Alloc * alloc, slot_type * slot1, slot_type * slot2, slot_type * tmp, char) {
+        slot_policy_traits::assign(alloc, tmp, slot2);
+        slot_policy_traits::assign(alloc, slot2, slot1);
+        slot_policy_traits::assign(alloc, slot1, tmp);
     }
 };
 

@@ -132,13 +132,23 @@ struct robin_hash_map_slot_policy {
     }
 
     template <typename Allocator>
-    static void move_assign(Allocator * alloc, slot_type * dest_slot, slot_type * src_slot) {
-        slot_policy::move_assign(alloc, dest_slot, src_slot);
+    static void transfer(Allocator * alloc, slot_type * new_slot, slot_type * old_slot) {
+        slot_policy::transfer(alloc, new_slot, old_slot);
     }
 
     template <typename Allocator>
-    static void transfer(Allocator * alloc, slot_type * new_slot, slot_type * old_slot) {
-        slot_policy::transfer(alloc, new_slot, old_slot);
+    static void swap(Allocator * alloc, slot_type * slot1, slot_type * slot2, slot_type * tmp) {
+        slot_policy::swap(alloc, slot1, slot2, tmp);
+    }
+
+    template <typename Allocator>
+    static void exchange(Allocator * alloc, slot_type * src, slot_type * dest, slot_type * empty) {
+        slot_policy::exchange(alloc, src, dest, empty);
+    }
+
+    template <typename Allocator>
+    static void move_assign_swap(Allocator * alloc, slot_type * slot1, slot_type * slot2, slot_type * tmp) {
+        slot_policy::move_assign_swap(alloc, slot1, slot2, tmp);
     }
 
     static std::size_t extra_space(const slot_type *) {
@@ -2832,106 +2842,90 @@ private:
         this->destroy_slot(slot);
     }
 
-    template <typename Alloc, typename T, bool isCompatibleLayout,
-              bool is_noexcept_move = is_noexcept_move_assignable<T>::value>
-    struct exchange_pair {
-        static void exchange(Alloc & alloc, T & src, T & dest, T & empty)
+    template <typename T, bool isCompatibleLayout, bool isNoexceptMoveAssign>
+    struct exchange_pair;
+
+    template <typename T>
+    struct exchange_pair<T, true, true> {
+        template <typename Alloc, typename SlotType>
+        static void exchange(Alloc * alloc, SlotType * src, SlotType * dest, SlotType * empty)
             noexcept(std::is_nothrow_move_assignable<T>::value)
         {
-            empty = std::move(dest);
-            dest = std::move(src);
+            empty->mutable_value = std::move(dest->mutable_value);
+            dest->mutable_value = std::move(src->mutable_value);
         }
     };
 
-    template <typename Alloc, typename T>
-    struct exchange_pair<Alloc, T, true, false> {
-        static void exchange(Alloc & alloc, T & src, T & dest, T & empty)
+    template <typename T>
+    struct exchange_pair<T, true, false> {
+        template <typename Alloc, typename SlotType>
+        static void exchange(Alloc * alloc, SlotType * src, SlotType * dest, SlotType * empty)
             noexcept(std::is_nothrow_move_constructible<T>::value)
         {
-            alloc.construct(&empty, std::move(dest));
-            alloc.destroy(&dest);
-            alloc.construct(&dest, std::move(src));
-            alloc.destroy(&src);
+            SlotPolicyTraits::exchange(alloc, src, dest, empty);
         }
     };
 
-    template <typename Alloc, typename T>
-    struct exchange_pair<Alloc, T, false, true> {
-        typedef typename T::first_type                      first_type;
-        typedef typename T::second_type                     second_type;
-        typedef typename std::remove_cv<first_type>::type   mutable_first_type;
-        typedef typename std::allocator_traits<Alloc>::template rebind_alloc<mutable_first_type>
-                                                            mutable_first_allocator_type;
-        typedef typename std::allocator_traits<Alloc>::template rebind_alloc<second_type>
-                                                            second_allocator_type;
+    template <typename T>
+    struct exchange_pair<T, false, true> {
+        typedef typename T::first_type                          first_type;
+        typedef typename T::second_type                         second_type;
+        typedef typename std::remove_const<first_type>::type    mutable_first_type;
+
         static mutable_first_type * mutable_key(T * value) {
             // Still check for isCompatibleLayout so that we can avoid calling jstd::launder
             // unless necessary because it can interfere with optimizations.
             return launder(const_cast<mutable_first_type *>(std::addressof(value->first)));
         }
-
-        static void exchange(Alloc & alloc, T & src, T & dest, T & empty)
-            noexcept(std::is_nothrow_move_assignable<mutable_first_type>::value &&
-                     std::is_nothrow_move_assignable<second_type>::value)
-        {
-            *mutable_key(&empty) = std::move(*mutable_key(&dest));
-            empty.second = std::move(dest.second);
-
-            *mutable_key(&dest) = std::move(*mutable_key(&src));
-            dest.second = std::move(src.second);
-        }
-    };
-
-    template <typename Alloc, typename T>
-    struct exchange_pair<Alloc, T, false, false> {
-        typedef typename T::first_type                      first_type;
-        typedef typename T::second_type                     second_type;
-        typedef typename std::remove_cv<first_type>::type   mutable_first_type;
-        typedef typename std::allocator_traits<Alloc>::template rebind_alloc<mutable_first_type>
-                                                            mutable_first_allocator_type;
-        typedef typename std::allocator_traits<Alloc>::template rebind_alloc<second_type>
-                                                            second_allocator_type;
-        static mutable_first_type * mutable_key(T * value) {
-            // Still check for isCompatibleLayout so that we can avoid calling jstd::launder
-            // unless necessary because it can interfere with optimizations.
-            return launder(const_cast<mutable_first_type *>(std::addressof(value->first)));
-        }
-
-        static void exchange(Alloc & alloc, T & src, T & dest, T & empty)
+#if 1
+        template <typename Alloc, typename SlotType>
+        static void exchange(Alloc * alloc, SlotType * src, SlotType * dest, SlotType * empty)
             noexcept(std::is_nothrow_move_constructible<mutable_first_type>::value &&
                      std::is_nothrow_move_constructible<second_type>::value)
         {
-            mutable_first_allocator_type first_allocator;
-            second_allocator_type second_allocator;
+            SlotPolicyTraits::exchange(alloc, src, dest, empty);
+        }
+#else
+        template <typename Alloc, typename SlotType>
+        static void exchange(Alloc * alloc, SlotType * src, SlotType * dest, SlotType * empty)
+            noexcept(std::is_nothrow_move_assignable<mutable_first_type>::value &&
+                     std::is_nothrow_move_assignable<second_type>::value)
+        {
+            *mutable_key(&empty->value) = std::move(*mutable_key(&dest->value));
+            empty->value.second = std::move(dest->value.second);
 
-            first_allocator.construct(mutable_key(&empty), std::move(*mutable_key(&dest)));
-            second_allocator.construct(&empty.second, std::move(dest.second));
+            *mutable_key(&dest->value) = std::move(*mutable_key(&src->value));
+            dest->value.second = std::move(src->value.second);
+        }
+#endif
+    };
 
-            first_allocator.destroy(mutable_key(&dest));
-            second_allocator.destroy(&dest.second);
+    template <typename T>
+    struct exchange_pair<T, false, false> {
+        typedef typename T::first_type                          first_type;
+        typedef typename T::second_type                         second_type;
+        typedef typename std::remove_const<first_type>::type    mutable_first_type;
 
-            first_allocator.construct(mutable_key(&dest), std::move(*mutable_key(&src)));
-            second_allocator.construct(&dest.second, std::move(src.second));
+        static mutable_first_type * mutable_key(T * value) {
+            // Still check for isCompatibleLayout so that we can avoid calling jstd::launder
+            // unless necessary because it can interfere with optimizations.
+            return launder(const_cast<mutable_first_type *>(std::addressof(value->first)));
+        }
 
-            first_allocator.destroy(mutable_key(&src));
-            second_allocator.destroy(&src.second);
+        template <typename Alloc, typename SlotType>
+        static void exchange(Alloc * alloc, SlotType * src, SlotType * dest, SlotType * empty)
+            noexcept(std::is_nothrow_move_constructible<mutable_first_type>::value &&
+                     std::is_nothrow_move_constructible<second_type>::value)
+        {
+            SlotPolicyTraits::exchange(alloc, src, dest, empty);
         }
     };
 
-    template <typename T, bool isCompatibleLayout, bool is_noexcept_move>
+    template <typename T, bool isCompatibleLayout, bool isNoexceptMoveAssign>
     struct swap_pair;
 
     template <typename T>
     struct swap_pair<T, true, true> {
-        template <typename Alloc, typename SlotType>
-        static void swap(Alloc * alloc, SlotType * slot1, SlotType * slot2)
-            noexcept(std::is_nothrow_move_constructible<T>::value &&
-                     std::is_nothrow_move_assignable<T>::value)
-        {
-            using std::swap;
-            swap(slot1->mutable_value, slot2->mutable_value);
-        }
-
         template <typename Alloc, typename SlotType>
         static void swap(Alloc * alloc, SlotType * slot1, SlotType * slot2, SlotType * tmp)
             noexcept(std::is_nothrow_move_constructible<T>::value &&
@@ -2948,12 +2942,12 @@ private:
         static void swap(Alloc * alloc, SlotType * slot1, SlotType * slot2, SlotType * tmp)
             noexcept(std::is_nothrow_move_constructible<T>::value)
         {
-            alloc->construct(&tmp->mutable_value, std::move(slot2->mutable_value));
-            alloc->destroy(&slot2->mutable_value);
-            alloc->construct(&slot2->mutable_value, std::move(slot1->mutable_value));
-            alloc->destroy(&slot1->mutable_value);
-            alloc->construct(&slot1->mutable_value, std::move(tmp->mutable_value));
-            alloc->destroy(&tmp->mutable_value);
+            SlotPolicyTraits::construct(alloc, tmp, slot2);
+            SlotPolicyTraits::destroy(alloc, slot2);
+            SlotPolicyTraits::construct(alloc, slot2, slot1);
+            SlotPolicyTraits::destroy(alloc, slot1);
+            SlotPolicyTraits::construct(alloc, slot1, tmp);
+            SlotPolicyTraits::destroy(alloc, tmp);
         }
     };
 
@@ -3000,40 +2994,38 @@ private:
                      std::is_nothrow_move_constructible<second_type>::value &&
                      std::is_nothrow_move_assignable<second_type>::value)
         {
-            typedef typename std::allocator_traits<Allocator>::template rebind_alloc<mutable_first_type>
-                                                            mutable_first_allocator_type;
-#if 1
-            mutable_first_allocator_type first_allocator;
-
-            first_allocator.construct(mutable_key(&tmp->value), std::move(*mutable_key(&slot1->value)));
-            first_allocator.destroy(mutable_key(&slot1->value));
-            first_allocator.construct(mutable_key(&slot1->value), std::move(*mutable_key(&slot2->value)));
-            first_allocator.destroy(mutable_key(&slot2->value));
-            first_allocator.construct(mutable_key(&slot2->value), std::move(*mutable_key(&tmp->value)));
-            first_allocator.destroy(mutable_key(&tmp->value));
+            typedef typename std::allocator_traits<Allocator>::template rebind_traits<mutable_first_type>
+                                                            MutableFirstTypeTraits;
+#if 2
+            MutableFirstTypeTraits::construct(*alloc, mutable_key(&tmp->value), std::move(*mutable_key(&slot1->value)));
+            MutableFirstTypeTraits::destroy(*alloc, mutable_key(&slot1->value));
+            MutableFirstTypeTraits::construct(*alloc, mutable_key(&slot1->value), std::move(*mutable_key(&slot2->value)));
+            MutableFirstTypeTraits::destroy(*alloc, mutable_key(&slot2->value));
+            MutableFirstTypeTraits::construct(*alloc, mutable_key(&slot2->value), std::move(*mutable_key(&tmp->value)));
+            MutableFirstTypeTraits::destroy(*alloc, mutable_key(&tmp->value));
 
             using std::swap;
             swap(slot1->value.second, slot2->value.second);
 #else
-            typedef typename std::allocator_traits<Allocator>::template rebind_alloc<second_type>
-                                                            second_allocator_type;
+            typedef typename std::allocator_traits<Allocator>::template rebind_traits<second_type>
+                                                            SecondTypeTraits;
             mutable_first_allocator_type first_allocator;
             second_allocator_type second_allocator;
 
-            first_allocator.construct(mutable_key(&tmp->value), std::move(*mutable_key(&slot1->value)));
-            second_allocator.construct(&tmp->value.second, std::move(slot1->value.second));
-            first_allocator.destroy(mutable_key(&slot1->value));
-            second_allocator.destroy((&slot1->value.second);
+            MutableFirstTypeTraits::construct(*alloc, mutable_key(&tmp->value), std::move(*mutable_key(&slot1->value)));
+            SecondTypeTraits::construct(*alloc, &tmp->value.second, std::move(slot1->value.second));
+            MutableFirstTypeTraits::destroy(*alloc, mutable_key(&slot1->value));
+            SecondTypeTraits::destroy(*alloc, &slot1->value.second);
 
-            first_allocator.construct(mutable_key(&slot1->value), std::move(*mutable_key(&slot2->value)));
-            second_allocator.construct(&slot1->value.second, std::move(slot2->value.second));
-            first_allocator.destroy(mutable_key(&slot2->value));
-            second_allocator.destroy((&slot2->value.second);
+            MutableFirstTypeTraits::construct(*alloc, mutable_key(&slot1->value), std::move(*mutable_key(&slot2->value)));
+            SecondTypeTraits::construct(*alloc, &slot1->value.second, std::move(slot2->value.second));
+            MutableFirstTypeTraits::destroy(*alloc, mutable_key(&slot2->value));
+            SecondTypeTraits::destroy(*alloc, &slot2->value.second);
 
-            first_allocator.construct(mutable_key(&slot2->value), std::move(*mutable_key(&tmp->value)));
-            second_allocator.construct(&slot2->value.second, std::move(tmp->value.second));
-            first_allocator.destroy(mutable_key(&tmp->value));
-            second_allocator.destroy((&tmp->value.second);
+            MutableFirstTypeTraits::construct(*alloc, mutable_key(&slot2->value), std::move(*mutable_key(&tmp->value)));
+            SecondTypeTraits::construct(*alloc, &slot2->value.second, std::move(tmp->value.second));
+            MutableFirstTypeTraits::destroy(*alloc, mutable_key(&tmp->value));
+            SecondTypeTraits::destroy(*alloc, &tmp->value.second);
 #endif
         }
     };
@@ -3084,7 +3076,7 @@ private:
         {
             // hasSwapMethod = false, isNoexceptMoveAssign = false
             alignas(T) char raw[sizeof(T)];
-            T * tmp = launder(reinterpret_cast<T *>(&raw));
+            T * tmp = reinterpret_cast<T *>(&raw);
             AllocatorTraits::construct(*alloc, tmp, std::move(*obj2));
             AllocatorTraits::destroy(*alloc, obj2);
             AllocatorTraits::construct(*alloc, obj2, std::move(*obj1));
@@ -3141,15 +3133,9 @@ private:
 #if 1
             swap(alloc, slot1, slot2, tmp);
 #else
-            if (kIsCompatibleLayout) {
-                SlotPolicyTraits::move_assign(alloc, tmp, slot2);
-                SlotPolicyTraits::move_assign(alloc, slot2, slot1);
-                SlotPolicyTraits::move_assign(alloc, slot1, tmp);
-            } else {
-                SlotPolicyTraits::assign(alloc, tmp, slot2);
-                SlotPolicyTraits::assign(alloc, slot2, slot1);
-                SlotPolicyTraits::assign(alloc, slot1, tmp);
-            }
+            SlotPolicyTraits::assign(alloc, tmp, slot2);
+            SlotPolicyTraits::assign(alloc, slot2, slot1);
+            SlotPolicyTraits::assign(alloc, slot1, tmp);
 #endif
         }
 
@@ -3193,12 +3179,7 @@ private:
         static void swap(Alloc * alloc, SlotType * slot1, SlotType * slot2, SlotType * tmp)
             noexcept(std::is_nothrow_move_constructible<T>::value)
         {
-            SlotPolicyTraits::construct(alloc, tmp, slot2);
-            SlotPolicyTraits::destroy(alloc, slot2);
-            SlotPolicyTraits::construct(alloc, slot2, slot1);
-            SlotPolicyTraits::destroy(alloc, slot1);
-            SlotPolicyTraits::construct(alloc, slot1, tmp);
-            SlotPolicyTraits::destroy(alloc, tmp);
+            SlotPolicyTraits::swap(alloc, slot1, slot2, tmp);
         }
 
         template <typename Alloc, typename SlotType>
@@ -3212,10 +3193,7 @@ private:
         static void exchange(Alloc * alloc, SlotType * src, SlotType * dest, SlotType * empty)
             noexcept(std::is_nothrow_move_constructible<T>::value)
         {
-            SlotPolicyTraits::construct(alloc, empty, dest);
-            SlotPolicyTraits::destroy(alloc, dest);
-            SlotPolicyTraits::construct(alloc, dest, src);
-            SlotPolicyTraits::destroy(alloc, src);
+            SlotPolicyTraits::exchange(alloc, src, dest, empty);
         }
     };
 
@@ -3255,12 +3233,7 @@ private:
         static void swap(Alloc * alloc, SlotType * slot1, SlotType * slot2, SlotType * tmp)
             noexcept(std::is_nothrow_move_constructible<T>::value)
         {
-            SlotPolicyTraits::construct(alloc, tmp, slot2);
-            SlotPolicyTraits::destroy(alloc, slot2);
-            SlotPolicyTraits::construct(alloc, slot2, slot1);
-            SlotPolicyTraits::destroy(alloc, slot1);
-            SlotPolicyTraits::construct(alloc, slot1, tmp);
-            SlotPolicyTraits::destroy(alloc, tmp);
+            SlotPolicyTraits::swap(alloc, slot1, slot2, tmp);
         }
 
         template <typename Alloc, typename SlotType>
@@ -3269,16 +3242,8 @@ private:
         {
 #if 1
             swap(alloc, slot1, slot2, tmp);
-#else
-            if (kIsCompatibleLayout) {
-                SlotPolicyTraits::move_assign(alloc, tmp, slot2);
-                SlotPolicyTraits::move_assign(alloc, slot2, slot1);
-                SlotPolicyTraits::move_assign(alloc, slot1, tmp);
-            } else {
-                SlotPolicyTraits::assign(alloc, tmp, slot2);
-                SlotPolicyTraits::assign(alloc, slot2, slot1);
-                SlotPolicyTraits::assign(alloc, slot1, tmp);
-            }
+#else 
+            SlotPolicyTraits::move_assign_swap(alloc, slot1, slot2, tmp);
 #endif
         }
 
@@ -3286,10 +3251,7 @@ private:
         static void exchange(Alloc * alloc, SlotType * src, SlotType * dest, SlotType * empty)
             noexcept(std::is_nothrow_move_constructible<T>::value)
         {
-            SlotPolicyTraits::construct(alloc, empty, dest);
-            SlotPolicyTraits::destroy(alloc, dest);
-            SlotPolicyTraits::construct(alloc, dest, src);
-            SlotPolicyTraits::destroy(alloc, src);
+            SlotPolicyTraits::exchange(alloc, src, dest, empty);
         }
     };
 
@@ -3329,12 +3291,7 @@ private:
         static void swap(Alloc * alloc, SlotType * slot1, SlotType * slot2, SlotType * tmp)
             noexcept(std::is_nothrow_move_constructible<T>::value)
         {
-            SlotPolicyTraits::construct(alloc, tmp, slot2);
-            SlotPolicyTraits::destroy(alloc, slot2);
-            SlotPolicyTraits::construct(alloc, slot2, slot1);
-            SlotPolicyTraits::destroy(alloc, slot1);
-            SlotPolicyTraits::construct(alloc, slot1, tmp);
-            SlotPolicyTraits::destroy(alloc, tmp);
+            SlotPolicyTraits::swap(alloc, slot1, slot2, tmp);
         }
 
         template <typename Alloc, typename SlotType>
@@ -3348,10 +3305,7 @@ private:
         static void exchange(Alloc * alloc, SlotType * src, SlotType * dest, SlotType * empty)
             noexcept(std::is_nothrow_move_constructible<T>::value)
         {
-            SlotPolicyTraits::construct(alloc, empty, dest);
-            SlotPolicyTraits::destroy(alloc, dest);
-            SlotPolicyTraits::construct(alloc, dest, src);
-            SlotPolicyTraits::destroy(alloc, src);
+             SlotPolicyTraits::exchange(alloc, src, dest, empty);
         }
     };
 
@@ -3367,18 +3321,17 @@ private:
 
     JSTD_FORCED_INLINE
     void exchange_slot(slot_type * src, slot_type * dest, slot_type * empty) {
-#if 1
         static constexpr bool isNoexceptMoveAssign = is_noexcept_move_assignable<actual_value_type>::value;
+#if 0
         slot_adapter<actual_value_type, kIsCompatibleLayout, isNoexceptMoveAssign>
             ::exchange(&this->allocator_, src, dest, empty);
 #else
         if (kIsCompatibleLayout) {
-            exchange_pair<mutable_allocator_type, mutable_value_type, true>::exchange(
-                this->mutable_allocator_,
-                src->mutable_value, dest->mutable_value, empty->mutable_value);
+            exchange_pair<actual_value_type, true, isNoexceptMoveAssign>::exchange(
+                &this->allocator_, src, dest, empty);
         } else {
-            exchange_pair<allocator_type, value_type, false>::exchange(
-                this->allocator_, src->value, dest->value, empty->value);
+            exchange_pair<actual_value_type, false, isNoexceptMoveAssign>::exchange(
+                &this->allocator_, src, dest, empty);
         }
 #endif
     }
@@ -3769,10 +3722,10 @@ InsertOrGrow_Start:
         alignas(kAlignment) char slot_raw1[sizeof(slot_type)];
         alignas(kAlignment) char slot_raw2[sizeof(slot_type)];
 
-        slot_type * empty = launder(reinterpret_cast<slot_type *>(&slot_raw1));
+        slot_type * empty = reinterpret_cast<slot_type *>(&slot_raw1);
         slot_type * insert;
         if (kIsPlainKV) {
-            insert = launder(reinterpret_cast<slot_type *>(&slot_raw2));
+            insert = reinterpret_cast<slot_type *>(&slot_raw2);
             this->transfer_slot(insert, target);
         } else {
             insert = insert_slot;
