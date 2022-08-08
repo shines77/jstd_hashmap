@@ -3108,7 +3108,7 @@ private:
             noexcept(std::is_nothrow_move_constructible<T>::value &&
                      std::is_nothrow_move_assignable<T>::value)
         {
-            static constexpr bool isNoexceptMoveAssignKey    = is_noexcept_move_assignable<first_type>::value;
+            static constexpr bool isNoexceptMoveAssignKey    = is_noexcept_move_assignable<mutable_first_type>::value;
             static constexpr bool isNoexceptMoveAssignMapped = is_noexcept_move_assignable<second_type>::value;
 #if ROBIN_USE_SWAP_TRAITS
             swap_traits<mutable_first_type, kHasSwapKey, isNoexceptMoveAssignKey>::
@@ -3175,7 +3175,7 @@ private:
             noexcept(std::is_nothrow_move_constructible<T>::value &&
                      std::is_nothrow_move_assignable<T>::value)
         {
-            static constexpr bool isNoexceptMoveAssignKey    = is_noexcept_move_assignable<first_type>::value;
+            static constexpr bool isNoexceptMoveAssignKey    = is_noexcept_move_assignable<mutable_first_type>::value;
             static constexpr bool isNoexceptMoveAssignMapped = is_noexcept_move_assignable<second_type>::value;
 #if ROBIN_USE_SWAP_TRAITS
             swap_traits<mutable_first_type, kHasSwapKey, isNoexceptMoveAssignKey>::
@@ -3401,7 +3401,7 @@ private:
     void swap_plain_slot(slot_type * slot1, slot_type * slot2, slot_type * tmp) {
         static constexpr bool isNoexceptMoveAssign = is_noexcept_move_assignable<actual_value_type>::value;
         slot_adapter<actual_value_type, kIsCompatibleLayout, isNoexceptMoveAssign>
-            ::swap_plain(&this->allocator_, slot1, slot2, tmp);
+            ::swap(&this->allocator_, slot1, slot2, tmp);
     }
 
     JSTD_FORCED_INLINE
@@ -3775,7 +3775,7 @@ InsertOrGrow_Start:
             insert = launder(reinterpret_cast<slot_type *>(&slot_raw2));
             this->transfer_slot(insert, target);
         } else {
-            insert = target;
+            insert = insert_slot;
         }
         target++;
 
@@ -3790,8 +3790,6 @@ InsertOrGrow_Start:
                 return true;
             } else if (rich_ctrl.dist > ctrl->dist) {
                 std::swap(rich_ctrl.value, ctrl->value);
-                rich_ctrl.incDist();
-                assert(rich_ctrl.dist <= kMaxDist);
                 if (kIsPlainKV) {
                     this->swap_plain_slot(insert, target, empty);
                 } else if (kIsSwappableKV) {
@@ -3802,6 +3800,8 @@ InsertOrGrow_Start:
                 }
             }
 
+            rich_ctrl.incDist();
+            assert(rich_ctrl.dist <= kMaxDist);
             ctrl++;
             target++;
 
