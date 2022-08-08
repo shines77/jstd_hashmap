@@ -2995,36 +2995,34 @@ private:
                      std::is_nothrow_move_assignable<second_type>::value)
         {
             typedef typename std::allocator_traits<Allocator>::template rebind_traits<mutable_first_type>
-                                                            MutableFirstTypeTraits;
-#if 2
-            MutableFirstTypeTraits::construct(*alloc, mutable_key(&tmp->value), std::move(*mutable_key(&slot1->value)));
-            MutableFirstTypeTraits::destroy(*alloc, mutable_key(&slot1->value));
-            MutableFirstTypeTraits::construct(*alloc, mutable_key(&slot1->value), std::move(*mutable_key(&slot2->value)));
-            MutableFirstTypeTraits::destroy(*alloc, mutable_key(&slot2->value));
-            MutableFirstTypeTraits::construct(*alloc, mutable_key(&slot2->value), std::move(*mutable_key(&tmp->value)));
-            MutableFirstTypeTraits::destroy(*alloc, mutable_key(&tmp->value));
+                                                            FirstTypeTraits;
+#if 1
+            FirstTypeTraits::construct(*alloc, mutable_key(&tmp->value), std::move(*mutable_key(&slot1->value)));
+            FirstTypeTraits::destroy(*alloc, mutable_key(&slot1->value));
+            FirstTypeTraits::construct(*alloc, mutable_key(&slot1->value), std::move(*mutable_key(&slot2->value)));
+            FirstTypeTraits::destroy(*alloc, mutable_key(&slot2->value));
+            FirstTypeTraits::construct(*alloc, mutable_key(&slot2->value), std::move(*mutable_key(&tmp->value)));
+            FirstTypeTraits::destroy(*alloc, mutable_key(&tmp->value));
 
             using std::swap;
             swap(slot1->value.second, slot2->value.second);
 #else
             typedef typename std::allocator_traits<Allocator>::template rebind_traits<second_type>
                                                             SecondTypeTraits;
-            mutable_first_allocator_type first_allocator;
-            second_allocator_type second_allocator;
 
-            MutableFirstTypeTraits::construct(*alloc, mutable_key(&tmp->value), std::move(*mutable_key(&slot1->value)));
+            FirstTypeTraits::construct(*alloc, mutable_key(&tmp->value), std::move(*mutable_key(&slot1->value)));
             SecondTypeTraits::construct(*alloc, &tmp->value.second, std::move(slot1->value.second));
-            MutableFirstTypeTraits::destroy(*alloc, mutable_key(&slot1->value));
+            FirstTypeTraits::destroy(*alloc, mutable_key(&slot1->value));
             SecondTypeTraits::destroy(*alloc, &slot1->value.second);
 
-            MutableFirstTypeTraits::construct(*alloc, mutable_key(&slot1->value), std::move(*mutable_key(&slot2->value)));
+            FirstTypeTraits::construct(*alloc, mutable_key(&slot1->value), std::move(*mutable_key(&slot2->value)));
             SecondTypeTraits::construct(*alloc, &slot1->value.second, std::move(slot2->value.second));
-            MutableFirstTypeTraits::destroy(*alloc, mutable_key(&slot2->value));
+            FirstTypeTraits::destroy(*alloc, mutable_key(&slot2->value));
             SecondTypeTraits::destroy(*alloc, &slot2->value.second);
 
-            MutableFirstTypeTraits::construct(*alloc, mutable_key(&slot2->value), std::move(*mutable_key(&tmp->value)));
+            FirstTypeTraits::construct(*alloc, mutable_key(&slot2->value), std::move(*mutable_key(&tmp->value)));
             SecondTypeTraits::construct(*alloc, &slot2->value.second, std::move(tmp->value.second));
-            MutableFirstTypeTraits::destroy(*alloc, mutable_key(&tmp->value));
+            FirstTypeTraits::destroy(*alloc, mutable_key(&tmp->value));
             SecondTypeTraits::destroy(*alloc, &tmp->value.second);
 #endif
         }

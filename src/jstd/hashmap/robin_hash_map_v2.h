@@ -2802,23 +2802,6 @@ private:
         this->destroy_slot(slot);
     }
 
-    JSTD_FORCED_INLINE
-    void transfer_slot(size_type new_index, size_type old_index) {
-        slot_type * new_slot = this->slot_at(new_index);
-        slot_type * old_slot = this->slot_at(old_index);
-        this->transfer_slot(new_slot, old_slot);
-    }
-
-    JSTD_FORCED_INLINE
-    void transfer_slot(slot_type * new_slot, slot_type * old_slot) {
-        SlotPolicyTraits::transfer(&this->allocator_, new_slot, old_slot);
-    }
-
-    JSTD_FORCED_INLINE
-    void transfer_slot(slot_type * new_slot, const slot_type * old_slot) {
-        SlotPolicyTraits::transfer(this->allocator_, new_slot, old_slot);
-    }
-
     template <typename Alloc, typename T, bool isCompatibleLayout,
               bool is_noexcept_move = is_noexcept_move_assignable<T>::value>
     struct exchange_pair {
@@ -2904,26 +2887,6 @@ private:
             second_allocator.destroy(&src.second);
         }
     };
-
-    JSTD_FORCED_INLINE
-    void exchange_slot(size_type src_index, size_type dest_index, size_type empty_index) {
-        slot_type * src   = this->slot_at(src_index);
-        slot_type * dest  = this->slot_at(dest_index);
-        slot_type * empty = this->slot_at(empty_index);
-        this->exchange_slot(src, dest, empty);
-    }
-
-    JSTD_FORCED_INLINE
-    void exchange_slot(slot_type * src, slot_type * dest, slot_type * empty) {
-        if (kIsCompatibleLayout) {
-            exchange_pair<mutable_allocator_type, mutable_value_type, true>::exchange(
-                this->mutable_allocator_,
-                src->mutable_value, dest->mutable_value, empty->mutable_value);
-        } else {
-            exchange_pair<allocator_type, value_type, false>::exchange(
-                this->allocator_, src->value, dest->value, empty->value);
-        }
-    }
 
     template <typename Alloc, typename T, bool isCompatibleLayout,
               bool is_noexcept_move = is_noexcept_move_assignable<T>::value>
@@ -3029,10 +2992,25 @@ private:
     };
 
     JSTD_FORCED_INLINE
-    void swap_slot(size_type index1, size_type index2, slot_type * tmp) {
-        slot_type * slot1 = this->slot_at(index1);
-        slot_type * slot2 = this->slot_at(index2);
-        this->swap_slot(slot1, slot2, tmp);
+    void transfer_slot(slot_type * new_slot, slot_type * old_slot) {
+        SlotPolicyTraits::transfer(&this->allocator_, new_slot, old_slot);
+    }
+
+    JSTD_FORCED_INLINE
+    void transfer_slot(slot_type * new_slot, const slot_type * old_slot) {
+        SlotPolicyTraits::transfer(this->allocator_, new_slot, old_slot);
+    }
+
+    JSTD_FORCED_INLINE
+    void exchange_slot(slot_type * src, slot_type * dest, slot_type * empty) {
+        if (kIsCompatibleLayout) {
+            exchange_pair<mutable_allocator_type, mutable_value_type, true>::exchange(
+                this->mutable_allocator_,
+                src->mutable_value, dest->mutable_value, empty->mutable_value);
+        } else {
+            exchange_pair<allocator_type, value_type, false>::exchange(
+                this->allocator_, src->value, dest->value, empty->value);
+        }
     }
 
     JSTD_FORCED_INLINE
