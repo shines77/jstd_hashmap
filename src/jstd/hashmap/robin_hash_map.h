@@ -3118,12 +3118,7 @@ private:
         static void swap(Alloc * alloc, SlotType * slot1, SlotType * slot2, SlotType * tmp)
             noexcept(std::is_nothrow_move_constructible<T>::value)
         {
-            SlotPolicyTraits::construct(alloc, tmp, slot2);
-            SlotPolicyTraits::destroy(alloc, slot2);
-            SlotPolicyTraits::construct(alloc, slot2, slot1);
-            SlotPolicyTraits::destroy(alloc, slot1);
-            SlotPolicyTraits::construct(alloc, slot1, tmp);
-            SlotPolicyTraits::destroy(alloc, tmp);
+            SlotPolicyTraits::swap(alloc, slot1, slot2, tmp);
         }
 
         template <typename Alloc, typename SlotType>
@@ -3133,9 +3128,7 @@ private:
 #if 1
             swap(alloc, slot1, slot2, tmp);
 #else
-            SlotPolicyTraits::assign(alloc, tmp, slot2);
-            SlotPolicyTraits::assign(alloc, slot2, slot1);
-            SlotPolicyTraits::assign(alloc, slot1, tmp);
+            SlotPolicyTraits::move_assign_swap(alloc, slot1, slot2, tmp);
 #endif
         }
 
@@ -3143,10 +3136,7 @@ private:
         static void exchange(Alloc * alloc, SlotType * src, SlotType * dest, SlotType * empty)
             noexcept(std::is_nothrow_move_constructible<T>::value)
         {
-            SlotPolicyTraits::construct(alloc, empty, dest);
-            SlotPolicyTraits::destroy(alloc, dest);
-            SlotPolicyTraits::construct(alloc, dest, src);
-            SlotPolicyTraits::destroy(alloc, src);
+            SlotPolicyTraits::exchange(alloc, src, dest, empty);
         }
     };
 
@@ -3322,7 +3312,7 @@ private:
     JSTD_FORCED_INLINE
     void exchange_slot(slot_type * src, slot_type * dest, slot_type * empty) {
         static constexpr bool isNoexceptMoveAssign = is_noexcept_move_assignable<actual_value_type>::value;
-#if 0
+#if 1
         slot_adapter<actual_value_type, kIsCompatibleLayout, isNoexceptMoveAssign>
             ::exchange(&this->allocator_, src, dest, empty);
 #else
