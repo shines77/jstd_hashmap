@@ -133,6 +133,16 @@ public:
     }
 
     template <typename Allocator>
+    static void mutable_assign(Allocator * alloc, slot_type * dest_slot, slot_type * src_slot) {
+        dest_slot->mutable_value = std::move(src_slot->mutable_value);
+    }
+
+    template <typename Allocator>
+    static void mutable_assign(Allocator * alloc, slot_type * dest_slot, const slot_type * src_slot) {
+        dest_slot->mutable_value = src_slot->mutable_value;
+    }
+
+    template <typename Allocator>
     static void transfer(Allocator * alloc, slot_type * new_slot, slot_type * old_slot) {
         this_type::emplace(new_slot);
         if (kIsCompatibleLayout) {
@@ -160,9 +170,15 @@ public:
 
     template <typename Allocator>
     static void move_assign_swap(Allocator * alloc, slot_type * slot1, slot_type * slot2, slot_type * tmp) {
+#if defined(_MSC_VER)
+        mutable_assign(alloc, tmp, slot2);
+        mutable_assign(alloc, slot2, slot1);
+        mutable_assign(alloc, slot1, tmp);
+#else
         assign(alloc, tmp, slot2);
         assign(alloc, slot2, slot1);
         assign(alloc, slot1, tmp);
+#endif
     }
 
 private:

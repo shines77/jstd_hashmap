@@ -3032,11 +3032,12 @@ private:
 
     JSTD_FORCED_INLINE
     void exchange_slot(slot_type * src, slot_type * dest, slot_type * empty) {
-        static constexpr bool isNoexceptMoveAssign = is_noexcept_move_assignable<actual_value_type>::value;
         if (kIsCompatibleLayout) {
+            static constexpr bool isNoexceptMoveAssign = is_noexcept_move_assignable<mutable_value_type>::value;
             exchange_pair<mutable_value_type, true, isNoexceptMoveAssign>::exchange(
                 &this->allocator_, src, dest, empty);
         } else {
+            static constexpr bool isNoexceptMoveAssign = is_noexcept_move_assignable<value_type>::value;
             exchange_pair<value_type, false, isNoexceptMoveAssign>::exchange(
                 &this->allocator_, src, dest, empty);
         }
@@ -3044,11 +3045,12 @@ private:
 
     JSTD_FORCED_INLINE
     void swap_slot(slot_type * slot1, slot_type * slot2, slot_type * tmp) {
-        static constexpr bool isNoexceptMoveAssign = is_noexcept_move_assignable<actual_value_type>::value;
         if (kIsCompatibleLayout) {
+            static constexpr bool isNoexceptMoveAssign = is_noexcept_move_assignable<mutable_value_type>::value;
             swap_pair<mutable_value_type, true, isNoexceptMoveAssign>::swap(
                 &this->allocator_, slot1, slot2, tmp);
         } else {
+            static constexpr bool isNoexceptMoveAssign = is_noexcept_move_assignable<value_type>::value;
             swap_pair<value_type, false, isNoexceptMoveAssign>::swap(
                 &this->allocator_, slot1, slot2, tmp);
         }

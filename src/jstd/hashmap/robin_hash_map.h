@@ -2952,7 +2952,7 @@ private:
         }
     };
 
-    template <typename T /*, bool isCompatibleLayout, bool isNoexceptMoveAssign */>
+    template <typename T /* , bool isCompatibleLayout, bool isNoexceptMoveAssign */>
     struct slot_adapter<T, true, false> {
         typedef typename T::first_type                          first_type;
         typedef typename T::second_type                         second_type;
@@ -3042,11 +3042,7 @@ private:
         static void swap_plain(Alloc * alloc, SlotType * slot1, SlotType * slot2, SlotType * tmp)
             noexcept(std::is_nothrow_move_assignable<T>::value)
         {
-#if 1
             swap(alloc, slot1, slot2, tmp);
-#else 
-            SlotPolicyTraits::move_assign_swap(alloc, slot1, slot2, tmp);
-#endif
         }
 
         template <typename Alloc, typename SlotType>
@@ -3123,11 +3119,12 @@ private:
 
     JSTD_FORCED_INLINE
     void exchange_slot(slot_type * src, slot_type * dest, slot_type * empty) {
-        static constexpr bool isNoexceptMoveAssign = is_noexcept_move_assignable<actual_value_type>::value;
         if (kIsCompatibleLayout) {
+            static constexpr bool isNoexceptMoveAssign = is_noexcept_move_assignable<mutable_value_type>::value;
             slot_adapter<mutable_value_type, true, isNoexceptMoveAssign>
                 ::exchange(&this->allocator_, src, dest, empty);
         } else {
+            static constexpr bool isNoexceptMoveAssign = is_noexcept_move_assignable<value_type>::value;
             slot_adapter<value_type, false, isNoexceptMoveAssign>
                 ::exchange(&this->allocator_, src, dest, empty);
         }
@@ -3135,11 +3132,12 @@ private:
 
     JSTD_FORCED_INLINE
     void swap_slot(slot_type * slot1, slot_type * slot2) {
-        static constexpr bool isNoexceptMoveAssign = is_noexcept_move_assignable<actual_value_type>::value;
         if (kIsCompatibleLayout) {
+            static constexpr bool isNoexceptMoveAssign = is_noexcept_move_assignable<mutable_value_type>::value;
             slot_adapter<mutable_value_type, true, isNoexceptMoveAssign>
                 ::swap(&this->allocator_, slot1, slot2);
         } else {
+            static constexpr bool isNoexceptMoveAssign = is_noexcept_move_assignable<value_type>::value;
             slot_adapter<value_type, false, isNoexceptMoveAssign>
                 ::swap(&this->allocator_, slot1, slot2);
         }
@@ -3147,11 +3145,12 @@ private:
 
     JSTD_FORCED_INLINE
     void swap_slot(slot_type * slot1, slot_type * slot2, slot_type * tmp) {
-        static constexpr bool isNoexceptMoveAssign = is_noexcept_move_assignable<actual_value_type>::value;
         if (kIsCompatibleLayout) {
+            static constexpr bool isNoexceptMoveAssign = is_noexcept_move_assignable<mutable_value_type>::value;
             slot_adapter<mutable_value_type, true, isNoexceptMoveAssign>
                 ::swap(&this->allocator_, slot1, slot2, tmp);
         } else {
+            static constexpr bool isNoexceptMoveAssign = is_noexcept_move_assignable<value_type>::value;
             slot_adapter<value_type, false, isNoexceptMoveAssign>
                 ::swap(&this->allocator_, slot1, slot2, tmp);
         }
@@ -3159,13 +3158,14 @@ private:
 
     JSTD_FORCED_INLINE
     void swap_plain_slot(slot_type * slot1, slot_type * slot2, slot_type * tmp) {
-        static constexpr bool isNoexceptMoveAssign = is_noexcept_move_assignable<actual_value_type>::value;
         if (kIsCompatibleLayout) {
+            static constexpr bool isNoexceptMoveAssign = is_noexcept_move_assignable<mutable_value_type>::value;
             slot_adapter<mutable_value_type, true, isNoexceptMoveAssign>
-                ::swap(&this->allocator_, slot1, slot2, tmp);
+                ::swap_plain(&this->allocator_, slot1, slot2, tmp);
         } else {
+            static constexpr bool isNoexceptMoveAssign = is_noexcept_move_assignable<value_type>::value;
             slot_adapter<value_type, false, isNoexceptMoveAssign>
-                ::swap(&this->allocator_, slot1, slot2, tmp);
+                ::swap_plain(&this->allocator_, slot1, slot2, tmp);
         }
     }
 
@@ -3531,6 +3531,12 @@ InsertOrGrow_Start:
         static constexpr size_type kMinAlignment = 16;
         static constexpr size_type kAlignment = cmax(std::alignment_of<slot_type>::value, kMinAlignment);
 
+#if 1
+        alignas(kAlignment) char slot_raw[sizeof(slot_type)];
+
+        slot_type * empty  = reinterpret_cast<slot_type *>(&slot_raw);
+        slot_type * insert = insert_slot;
+#else
         alignas(kAlignment) char slot_raw1[sizeof(slot_type)];
         alignas(kAlignment) char slot_raw2[sizeof(slot_type)];
 
@@ -3542,6 +3548,7 @@ InsertOrGrow_Start:
         } else {
             insert = insert_slot;
         }
+#endif
         target++;
 
         // Initialize the empty slot use default constructor if necessary
@@ -3759,8 +3766,8 @@ InsertOrGrow_Start:
             if (is_exists == kNeedGrow) {
                 this->grow_if_necessary();
                 return this->emplace(std::piecewise_construct,
-                                        std::forward_as_tuple(std::forward<KeyT>(key)),
-                                        std::forward_as_tuple(std::forward<Args>(args)...));
+                                     std::forward_as_tuple(std::forward<KeyT>(key)),
+                                     std::forward_as_tuple(std::forward<Args>(args)...));
             }
 
             this->placement_new_slot(slot);
