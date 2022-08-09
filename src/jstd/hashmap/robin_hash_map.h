@@ -3622,8 +3622,8 @@ InsertOrGrow_Start:
                 }
             }
         }
-        this->placement_new_slot(empty);
 #endif
+        this->placement_new_slot(empty);
     }
 
     JSTD_FORCED_INLINE
