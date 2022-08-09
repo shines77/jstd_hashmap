@@ -2940,7 +2940,7 @@ private:
         static void swap_plain(Alloc * alloc, SlotType * slot1, SlotType * slot2, SlotType * tmp)
             noexcept(std::is_nothrow_move_assignable<T>::value)
         {
-#if 0
+#if 1
             swap(alloc, slot1, slot2, tmp);
 #else
             SlotPolicyTraits::move_assign_swap(alloc, slot1, slot2, tmp);
