@@ -377,7 +377,7 @@ private:
 
 public:
     HashObject() noexcept : key_(0) {
-        std::memset(this->buffer_, 0, kBufLen * sizeof(char));
+        std::memset(&this->buffer_[0], 0, kBufLen * sizeof(char));
 #if (USE_STAT_COUNTER != 0) && (USE_CTOR_COUNTER != 0)
         g_num_constructor++;
 #endif
@@ -405,7 +405,7 @@ public:
     }
 
     HashObject(const this_type & that) noexcept : key_(that.key_) {
-        std::memcpy(this->buffer_, that.buffer_, kBufLen * sizeof(char));
+        std::memcpy(&this->buffer_[0], &that.buffer_[0], kBufLen * sizeof(char));
 #if USE_STAT_COUNTER
         g_num_copies++;
 #endif
@@ -415,7 +415,7 @@ public:
 
     this_type & operator = (const this_type & that) noexcept {
         this->key_ = that.key_;
-        std::memcpy(this->buffer_, that.buffer_, kBufLen * sizeof(char));
+        std::memcpy(&this->buffer_[0], &that.buffer_[0], kBufLen * sizeof(char));
 #if USE_STAT_COUNTER
         g_num_assigns++;
 #endif
@@ -1186,7 +1186,7 @@ void benchmark_all_hashmaps(std::size_t iters)
     }
 
     if (FLAGS_test_256_bytes) {
-        test_all_hashmaps<HashObject<std::size_t, 256, 32>, std::size_t>(256, iters / 32);
+        test_all_hashmaps<HashObject<std::size_t, 256, 64>, std::size_t>(256, iters / 32);
     }
 }
 
