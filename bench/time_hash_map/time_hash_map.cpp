@@ -153,6 +153,7 @@
 #endif
 #include <jstd/hashmap/hashmap_analyzer.h>
 #include <jstd/hasher/hashes.h>
+#include <jstd/hasher/fnv1a.h>
 #include <jstd/hasher/hash_helper.h>
 #include <jstd/string/string_view.h>
 #include <jstd/string/string_view_array.h>
@@ -431,11 +432,12 @@ public:
     }
 
     std::size_t Hash() const noexcept {
-        std::size_t hash_val = static_cast<std::size_t>(this->key_);
 #if 0
-        for (std::size_t i = 0; i < kHashLen; ++i) {
-            hash_val += this->buffer_[i];
-        }
+        std::size_t hash_val = static_cast<std::size_t>(this->key_);
+#else
+        std::size_t hash_val = static_cast<std::size_t>(
+            jstd::hashes::FNV1A_Yoshimitsu_TRIADii_xmm(&this->buffer_[0], kBufLen * sizeof(char))
+        );
 #endif
 #if USE_STAT_COUNTER
         g_num_hashes++;
