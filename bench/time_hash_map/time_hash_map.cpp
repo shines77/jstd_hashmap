@@ -406,7 +406,13 @@ public:
     }
 
     HashObject(const this_type & that) noexcept : key_(that.key_) {
-        std::memcpy(&this->buffer_[0], &that.buffer_[0], kBufLen * sizeof(char));
+        if (kBufLen == sizeof(key_type)) {
+            key_type * dest = (key_type *)&this->buffer_[0];
+            key_type * src  = (key_type *)&that.buffer_[0];
+            *dest = *src;
+        } else {
+            std::memcpy(&this->buffer_[0], &that.buffer_[0], kBufLen * sizeof(char));
+        }
 #if USE_STAT_COUNTER
         g_num_copies++;
 #endif
@@ -416,7 +422,13 @@ public:
 
     this_type & operator = (const this_type & that) noexcept {
         this->key_ = that.key_;
-        std::memcpy(&this->buffer_[0], &that.buffer_[0], kBufLen * sizeof(char));
+        if (kBufLen == sizeof(key_type)) {
+            key_type * dest = (key_type *)&this->buffer_[0];
+            key_type * src  = (key_type *)&that.buffer_[0];
+            *dest = *src;
+        } else {
+            std::memcpy(&this->buffer_[0], &that.buffer_[0], kBufLen * sizeof(char));
+        }
 #if USE_STAT_COUNTER
         g_num_assigns++;
 #endif
