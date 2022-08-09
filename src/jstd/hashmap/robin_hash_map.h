@@ -97,7 +97,7 @@
 #endif
 #endif // _MSC_VER
 
-#define ROBIN_USE_HASH_POLICY       1
+#define ROBIN_USE_HASH_POLICY       0
 #define ROBIN_USE_SWAP_TRAITS       1
 
 namespace jstd {
@@ -3567,7 +3567,7 @@ InsertOrGrow_Start:
                 std::swap(rich_ctrl.value, ctrl->value);
                 if (kIsPlainKV) {
                     this->swap_plain_slot(insert, target, empty);
-                } else if (kIsSwappableKV || true) {
+                } else if (kIsSwappableKV) {
                     this->swap_slot(insert, target);
                 } else {
                     this->exchange_slot(insert, target, empty);
@@ -3575,10 +3575,10 @@ InsertOrGrow_Start:
                 }
             }
 
-            rich_ctrl.incDist();
-            assert(rich_ctrl.dist <= kMaxDist);
             ctrl++;
             target++;
+            rich_ctrl.incDist();
+            assert(rich_ctrl.dist <= kMaxDist);
 
             if (isRehashing) {
                 assert(rich_ctrl.uvalue < this->max_distance());
@@ -3605,7 +3605,7 @@ InsertOrGrow_Start:
 
     JSTD_FORCED_INLINE
     void construct_empty_slot(slot_type * empty) {
-#if 0
+#if 1
         static constexpr bool isNoexceptMoveAssignable = is_noexcept_move_assignable<value_type>::value;
         static constexpr bool isMutableNoexceptMoveAssignable = is_noexcept_move_assignable<mutable_value_type>::value;
 
@@ -3628,7 +3628,7 @@ InsertOrGrow_Start:
 
     JSTD_FORCED_INLINE
     void destroy_empty_slot(slot_type * empty) {
-#if 0
+#if 1
         static constexpr bool isNoexceptMoveAssignable = is_noexcept_move_assignable<value_type>::value;
         static constexpr bool isMutableNoexceptMoveAssignable = is_noexcept_move_assignable<mutable_value_type>::value;
 

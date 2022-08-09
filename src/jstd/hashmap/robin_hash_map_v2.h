@@ -97,7 +97,7 @@
 #endif
 #endif // _MSC_VER
 
-#define ROBIN_V2_USE_HASH_POLICY    1
+#define ROBIN_V2_USE_HASH_POLICY    0
 
 namespace jstd {
 namespace v2 {
@@ -3486,13 +3486,16 @@ InsertOrGrow_Start:
             if (kIsCompatibleLayout) {
                 if (isMutableNoexceptMoveAssignable) {
                     this->construct_slot(empty);
+                    return;
                 }
             } else {
                 if (isNoexceptMoveAssignable) {
                     this->construct_slot(empty);
+                    return;
                 }
             }
         }
+        this->placement_new_slot(empty);
     }
 
     JSTD_FORCED_INLINE

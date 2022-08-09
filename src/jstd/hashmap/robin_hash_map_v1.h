@@ -97,7 +97,7 @@
 #endif
 #endif // _MSC_VER
 
-#define ROBIN_V1_USE_HASH_POLICY    1
+#define ROBIN_V1_USE_HASH_POLICY    0
 
 namespace jstd {
 namespace v1 {
