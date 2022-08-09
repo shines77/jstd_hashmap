@@ -73,7 +73,7 @@
 #include "jstd/iterator.h"
 #include "jstd/utility.h"
 #include "jstd/hasher/hashes.h"
-#include "jstd/hasher/hash_crc32c.h"
+#include "jstd/hasher/hash_crc32.h"
 #include "jstd/support/BitUtils.h"
 #include "jstd/support/Power2.h"
 #include "jstd/support/BitVec.h"
@@ -1536,7 +1536,7 @@ private:
 
     inline hash_code_t get_second_hash(hash_code_t value) const noexcept {
 #if 1
-        return (size_type)hashes::simple_int_hash_crc32c((size_type)value);
+        return (size_type)hashes::simple_int_hash_crc32((size_type)value);
 #else
         hash_code_t hash_code;
         if (sizeof(size_type) == 4)

@@ -16,7 +16,7 @@
 #include <type_traits>
 
 #include "jstd/hasher/hashes.h"
-#include "jstd/hasher/hash_crc32c.h"
+#include "jstd/hasher/hash_crc32.h"
 #include "jstd/string/string_libc.h"
 #include "jstd/string/string_stl.h"
 
@@ -139,13 +139,13 @@ struct hash_helper {
 
     static ResultType getHashCode(const key_type & key) {
         if (HashFunc == HashFunc_CRC32C)
-            return static_cast<result_type>(hashes::hash_crc32c((const char *)&key, sizeof(key)));
+            return static_cast<result_type>(hashes::hash_crc32((const char *)&key, sizeof(key)));
         else if (HashFunc == HashFunc_Time31)
             return static_cast<result_type>(hashes::Times31((const char *)&key, sizeof(key)));
         else if (HashFunc == HashFunc_Time31Std)
             return static_cast<result_type>(hashes::Times31Std((const char *)&key, sizeof(key)));
         else
-            return static_cast<result_type>(hashes::hash_crc32c((const char *)&key, sizeof(key)));
+            return static_cast<result_type>(hashes::hash_crc32((const char *)&key, sizeof(key)));
     }
 };
 
@@ -163,13 +163,13 @@ struct hash_helper<T *, ResultType, HashFunc> {
 
     static result_type getHashCode(const key_type * key) {
         if (HashFunc == HashFunc_CRC32C)
-            return static_cast<result_type>(hashes::hash_crc32c((const char *)key, sizeof(key_type *)));
+            return static_cast<result_type>(hashes::hash_crc32((const char *)key, sizeof(key_type *)));
         else if (HashFunc == HashFunc_Time31)
             return static_cast<result_type>(hashes::Times31((const char *)key, sizeof(key_type *)));
         else if (HashFunc == HashFunc_Time31Std)
             return static_cast<result_type>(hashes::Times31Std((const char *)key, sizeof(key_type *)));
         else
-            return static_cast<result_type>(hashes::hash_crc32c((const char *)key, sizeof(key_type *)));
+            return static_cast<result_type>(hashes::hash_crc32((const char *)key, sizeof(key_type *)));
     }
 };
 
@@ -190,13 +190,13 @@ struct string_hash_helper {
     static ResultType getHashCode(const key_type & key) {
         if (key.c_str() != nullptr) {
             if (HashFunc == HashFunc_CRC32C)
-                return static_cast<result_type>(hashes::hash_crc32c((const char *)key.c_str(), key.size() * sizeof(char_type)));
+                return static_cast<result_type>(hashes::hash_crc32((const char *)key.c_str(), key.size() * sizeof(char_type)));
             else if (HashFunc == HashFunc_Time31)
                 return static_cast<result_type>(hashes::Times31(key.c_str(), key.size()));
             else if (HashFunc == HashFunc_Time31Std)
                 return static_cast<result_type>(hashes::Times31Std(key.c_str(), key.size()));
             else
-                return static_cast<result_type>(hashes::hash_crc32c((const char *)key.c_str(), key.size() * sizeof(char_type)));
+                return static_cast<result_type>(hashes::hash_crc32((const char *)key.c_str(), key.size() * sizeof(char_type)));
         }
         else {
             return static_cast<ResultType>(0);
@@ -210,14 +210,14 @@ struct string_hash_helper {
 template <>
 struct hash_helper<const char *, std::uint32_t, HashFunc_CRC32C> {
     static std::uint32_t getHashCode(const char * data, size_t length) {
-        return hashes::hash_crc32c(data, length);
+        return hashes::hash_crc32(data, length);
     }
 };
 ****************************************************************************/
 
-HASH_HELPER_CHAR_ALL(HASH_HELPER_CHAR, std::uint32_t, HashFunc_CRC32C, jstd::hashes::hash_crc32c);
+HASH_HELPER_CHAR_ALL(HASH_HELPER_CHAR, std::uint32_t, HashFunc_CRC32C, jstd::hashes::hash_crc32);
 HASH_HELPER_INTEGRAL_ALL(HASH_HELPER_INTEGRAL, std::uint32_t, HashFunc_CRC32C);
-HASH_HELPER_FLOAT_ALL(HASH_HELPER_FLOAT, std::uint32_t, HashFunc_CRC32C, jstd::hashes::hash_crc32c);
+HASH_HELPER_FLOAT_ALL(HASH_HELPER_FLOAT, std::uint32_t, HashFunc_CRC32C, jstd::hashes::hash_crc32);
 
 template <>
 struct hash_helper<std::string, std::uint32_t, HashFunc_CRC32C> {
@@ -225,7 +225,7 @@ struct hash_helper<std::string, std::uint32_t, HashFunc_CRC32C> {
 
     static std::uint32_t getHashCode(const std::string & key) {
         if (likely(key.c_str() != nullptr))
-            return hashes::hash_crc32c(key.c_str(), key.size());
+            return hashes::hash_crc32(key.c_str(), key.size());
         else
             return 0;
     }
@@ -237,7 +237,7 @@ struct hash_helper<std::wstring, std::uint32_t, HashFunc_CRC32C> {
 
     static std::uint32_t getHashCode(const std::wstring & key) {
         if (likely(key.c_str() != nullptr))
-            return hashes::hash_crc32c((const char *)key.c_str(), key.size() * sizeof(wchar_t));
+            return hashes::hash_crc32((const char *)key.c_str(), key.size() * sizeof(wchar_t));
         else
             return 0;
     }

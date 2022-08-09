@@ -64,7 +64,7 @@ static const uint32_t kInitPrime32 = 0x165667C5UL;
 
 #ifdef __SSE4_2__
 
-static size_t intel_simple_int_hash_crc32c(size_t value)
+static size_t intel_simple_int_crc32(size_t value)
 {
 #if JSTD_IS_X86_64
     uint64_t crc32 = ~uint64_t(0);
@@ -77,7 +77,7 @@ static size_t intel_simple_int_hash_crc32c(size_t value)
 #endif
 }
 
-static uint32_t intel_int_hash_crc32c_x86(uint32_t value)
+static uint32_t intel_int_crc32_x86(uint32_t value)
 {
     uint32_t crc32 = ~uint32_t(0);
     crc32 = _mm_crc32_u32(crc32, value);
@@ -86,7 +86,7 @@ static uint32_t intel_int_hash_crc32c_x86(uint32_t value)
 
 #if JSTD_IS_X86_64
 
-static uint64_t intel_int_hash_crc32c_x64(uint64_t value)
+static uint64_t intel_int_crc32_x64(uint64_t value)
 {
     uint64_t crc32  = ~uint64_t(0);
     uint64_t crc32r =  uint64_t(0);
@@ -97,7 +97,7 @@ static uint64_t intel_int_hash_crc32c_x64(uint64_t value)
 
 #endif // JSTD_IS_X86_64
 
-static uint32_t intel_hash_crc32c_x86(const char * data, size_t length)
+static uint32_t intel_crc32_x86(const char * data, size_t length)
 {
     assert(data != nullptr);
 
@@ -137,7 +137,7 @@ static uint32_t intel_hash_crc32c_x86(const char * data, size_t length)
 
 #if JSTD_IS_X86_64
 
-static uint32_t intel_hash_crc32c_x64(const char * data, size_t length)
+static uint32_t intel_crc32_x64(const char * data, size_t length)
 {
     assert(data != nullptr);
 
@@ -177,7 +177,7 @@ static uint32_t intel_hash_crc32c_x64(const char * data, size_t length)
 
 #endif //JSTD_IS_X86_64
 
-static uint32_t intel_hash_crc32c_simple_x86(const char * data, size_t length)
+static uint32_t intel_crc32_simple_x86(const char * data, size_t length)
 {
     assert(data != nullptr);
     uint32_t crc32 = ~uint32_t(0);
@@ -204,7 +204,7 @@ static uint32_t intel_hash_crc32c_simple_x86(const char * data, size_t length)
 
 #if JSTD_IS_X86_64
 
-static uint32_t intel_hash_crc32c_simple_x64(const char * data, size_t length)
+static uint32_t intel_crc32_simple_x64(const char * data, size_t length)
 {
     assert(data != nullptr);
     uint64_t crc64 = ~uint64_t(0);
@@ -234,36 +234,36 @@ static uint32_t intel_hash_crc32c_simple_x64(const char * data, size_t length)
 
 #endif // __SSE4_2__
 
-static uint32_t hash_crc32c(const char * data, size_t length)
+static uint32_t hash_crc32(const char * data, size_t length)
 {
 #ifdef __SSE4_2__
   #if JSTD_IS_X86_64
-    return intel_hash_crc32c_x64(data, length);
+    return intel_crc32_x64(data, length);
   #else
-    return intel_hash_crc32c_x86(data, length);
+    return intel_crc32_x86(data, length);
   #endif
 #else
     return hashes::Times31(data, length);
 #endif
 }
 
-static size_t int_hash_crc32c(size_t value)
+static size_t int_hash_crc32(size_t value)
 {
 #ifdef __SSE4_2__
   #if JSTD_IS_X86_64
-    return intel_int_hash_crc32c_x64(value);
+    return intel_int_crc32_x64(value);
   #else
-    return intel_int_hash_crc32c_x86(value);
+    return intel_int_crc32_x86(value);
   #endif
 #else
     return hashes::Times31(value, sizeof(value));
 #endif
 }
 
-static size_t simple_int_hash_crc32c(size_t value)
+static size_t simple_int_hash_crc32(size_t value)
 {
 #ifdef __SSE4_2__
-    return intel_simple_int_hash_crc32c(value);
+    return intel_simple_int_crc32(value);
 #else
     return hashes::Times31(value, sizeof(value));
 #endif

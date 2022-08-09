@@ -658,23 +658,23 @@ void int_hash_crc32c_test()
 #if 0
     printf("jstd::hashes::int_hash_crc32c<std::uint32_t>\n\n");
     for (std::uint32_t i = 0; i < 8; i++) {
-        std::uint32_t hash_code = jstd::hashes::intel_int_hash_crc32c_x86(i);
+        std::uint32_t hash_code = jstd::hashes::intel_int_crc32_x86(i);
         printf("key = %3u, hash_code = 0x%08X\n", i, hash_code);
     }
     printf("\n");
 
     printf("jstd::hashes::int_hash_crc32c<std::uint64_t>\n\n");
     for (std::uint64_t i = 0; i < 8; i++) {
-        std::uint64_t hash_code = jstd::hashes::intel_int_hash_crc32c_x64(i);
+        std::uint64_t hash_code = jstd::hashes::intel_int_crc32_x64(i);
         printf("key = %3" PRIuPTR ", hash_code = 0x%08X%08X\n",
                i, UINT64_High(hash_code), UINT64_Low(hash_code));
     }
     printf("\n");
 #endif
 
-    printf("jstd::hashes::simple_int_hash_crc32c<std::size_t>\n\n");
+    printf("jstd::hashes::simple_int_hash_crc32<std::size_t>\n\n");
     for (std::size_t i = 0; i < 8; i++) {
-        std::size_t hash_code = jstd::hashes::simple_int_hash_crc32c(i);
+        std::size_t hash_code = jstd::hashes::simple_int_hash_crc32(i);
         printf("key = %3" PRIuPTR ", hash_code = 0x%08X\n",
                i, UINT64_Low(hash_code));
     }

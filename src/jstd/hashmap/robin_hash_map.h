@@ -75,7 +75,7 @@
 #include "jstd/utility.h"
 #include "jstd/lang/launder.h"
 #include "jstd/hasher/hashes.h"
-#include "jstd/hasher/hash_crc32c.h"
+#include "jstd/hasher/hash_crc32.h"
 #include "jstd/hashmap/map_layout_policy.h"
 #include "jstd/hashmap/map_slot_policy.h"
 #include "jstd/hashmap/slot_policy_traits.h"
@@ -2382,7 +2382,7 @@ private:
 #elif 1
         return (size_type)hashes::fibonacci_hash((size_type)value);
 #elif 1
-        return (size_type)hashes::simple_int_hash_crc32c((size_type)value);
+        return (size_type)hashes::simple_int_crc32((size_type)value);
 #endif
     }
 

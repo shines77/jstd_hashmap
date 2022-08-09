@@ -436,7 +436,7 @@ public:
         std::size_t hash_val = static_cast<std::size_t>(this->key_);
 #else
         std::size_t hash_val = static_cast<std::size_t>(
-            jstd::hashes::hash_crc32c(&this->buffer_[0], kBufLen * sizeof(char))
+            jstd::hashes::hash_crc32(&this->buffer_[0], kBufLen * sizeof(char))
         );
 #endif
 #if USE_STAT_COUNTER
