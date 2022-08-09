@@ -322,15 +322,9 @@ private:
 
     template <typename Alloc>
     static void move_assign_swap_impl(Alloc * alloc, slot_type * slot1, slot_type * slot2, slot_type * tmp, char) {
-#if defined(_MSC_VER)
         slot_policy_traits::mutable_assign(alloc, tmp, slot2);
         slot_policy_traits::mutable_assign(alloc, slot2, slot1);
         slot_policy_traits::mutable_assign(alloc, slot1, tmp);
-#else
-        slot_policy_traits::assign(alloc, tmp, slot2);
-        slot_policy_traits::assign(alloc, slot2, slot1);
-        slot_policy_traits::assign(alloc, slot1, tmp);
-#endif
     }
 };
 

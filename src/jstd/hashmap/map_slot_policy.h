@@ -170,15 +170,9 @@ public:
 
     template <typename Allocator>
     static void move_assign_swap(Allocator * alloc, slot_type * slot1, slot_type * slot2, slot_type * tmp) {
-#if defined(_MSC_VER)
         mutable_assign(alloc, tmp, slot2);
         mutable_assign(alloc, slot2, slot1);
         mutable_assign(alloc, slot1, tmp);
-#else
-        assign(alloc, tmp, slot2);
-        assign(alloc, slot2, slot1);
-        assign(alloc, slot1, tmp);
-#endif
     }
 
 private:
