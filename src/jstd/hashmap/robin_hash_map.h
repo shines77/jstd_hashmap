@@ -3528,7 +3528,7 @@ InsertOrGrow_Start:
         ctrl++;
         rich_ctrl.incDist();
 
-        static constexpr size_type kMinAlignment = 16;
+        static constexpr size_type kMinAlignment = 32;
         static constexpr size_type kAlignment = cmax(std::alignment_of<slot_type>::value, kMinAlignment);
 
 #if 1
@@ -3564,7 +3564,7 @@ InsertOrGrow_Start:
                 std::swap(rich_ctrl.value, ctrl->value);
                 if (kIsPlainKV) {
                     this->swap_plain_slot(insert, target, empty);
-                } else if (kIsSwappableKV) {
+                } else if (kIsSwappableKV || true) {
                     this->swap_slot(insert, target);
                 } else {
                     this->exchange_slot(insert, target, empty);
@@ -3602,24 +3602,31 @@ InsertOrGrow_Start:
 
     JSTD_FORCED_INLINE
     void construct_empty_slot(slot_type * empty) {
+#if 0
         static constexpr bool isNoexceptMoveAssignable = is_noexcept_move_assignable<value_type>::value;
         static constexpr bool isMutableNoexceptMoveAssignable = is_noexcept_move_assignable<mutable_value_type>::value;
 
+        return;
         if ((!is_slot_trivial_destructor) && (!kIsPlainKV)) {
             if (kIsCompatibleLayout) {
                 if (isMutableNoexceptMoveAssignable) {
                     this->construct_slot(empty);
+                    return;
                 }
             } else {
                 if (isNoexceptMoveAssignable) {
                     this->construct_slot(empty);
+                    return;
                 }
             }
         }
+        this->placement_new_slot(empty);
+#endif
     }
 
     JSTD_FORCED_INLINE
     void destroy_empty_slot(slot_type * empty) {
+#if 0
         static constexpr bool isNoexceptMoveAssignable = is_noexcept_move_assignable<value_type>::value;
         static constexpr bool isMutableNoexceptMoveAssignable = is_noexcept_move_assignable<mutable_value_type>::value;
 
@@ -3634,6 +3641,7 @@ InsertOrGrow_Start:
                 }
             }
         }
+#endif
     }
 
     template <bool AlwaysUpdate>
@@ -3678,6 +3686,7 @@ InsertOrGrow_Start:
                 return this->emplace_impl<AlwaysUpdate>(std::forward<value_type>(value));
             }
 
+            this->placement_new_slot(slot);
             if (kIsCompatibleLayout)
                 this->mutable_allocator_.construct(&slot->mutable_value, std::forward<value_type>(value));
             else
