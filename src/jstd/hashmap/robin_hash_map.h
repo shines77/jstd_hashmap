@@ -2887,7 +2887,10 @@ private:
             noexcept(std::is_nothrow_move_constructible<T>::value)
         {
             // hasSwapMethod = false, isNoexceptMoveAssign = false
-            alignas(T) char raw[sizeof(T)];
+            static constexpr size_type kMinAlignment = 32;
+            static constexpr size_type kAlignment = cmax(std::alignment_of<T>::value, kMinAlignment);
+
+            alignas(kAlignment) char raw[sizeof(T)];
             T * tmp = reinterpret_cast<T *>(&raw);
             AllocatorTraits::construct(*alloc, tmp, std::move(*obj2));
             AllocatorTraits::destroy(*alloc, obj2);
@@ -2937,7 +2940,7 @@ private:
         static void swap_plain(Alloc * alloc, SlotType * slot1, SlotType * slot2, SlotType * tmp)
             noexcept(std::is_nothrow_move_assignable<T>::value)
         {
-#if 1
+#if 0
             swap(alloc, slot1, slot2, tmp);
 #else
             SlotPolicyTraits::move_assign_swap(alloc, slot1, slot2, tmp);
@@ -3606,8 +3609,7 @@ InsertOrGrow_Start:
         static constexpr bool isNoexceptMoveAssignable = is_noexcept_move_assignable<value_type>::value;
         static constexpr bool isMutableNoexceptMoveAssignable = is_noexcept_move_assignable<mutable_value_type>::value;
 
-        return;
-        if ((!is_slot_trivial_destructor) && (!kIsPlainKV)) {
+        if ((!is_slot_trivial_destructor) && (!kIsPlainKV) && (!kIsSwappableKV)) {
             if (kIsCompatibleLayout) {
                 if (isMutableNoexceptMoveAssignable) {
                     this->construct_slot(empty);
@@ -3630,7 +3632,7 @@ InsertOrGrow_Start:
         static constexpr bool isNoexceptMoveAssignable = is_noexcept_move_assignable<value_type>::value;
         static constexpr bool isMutableNoexceptMoveAssignable = is_noexcept_move_assignable<mutable_value_type>::value;
 
-        if ((!is_slot_trivial_destructor) && (!kIsPlainKV)) {
+        if ((!is_slot_trivial_destructor) && (!kIsPlainKV) && (!kIsSwappableKV)) {
             if (kIsCompatibleLayout) {
                 if (isMutableNoexceptMoveAssignable) {
                     this->destroy_slot(empty);
