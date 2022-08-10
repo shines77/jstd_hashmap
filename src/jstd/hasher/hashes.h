@@ -6,10 +6,6 @@
 #pragma once
 #endif
 
-#include "jstd/basic/stddef.h"
-#include "jstd/basic/stdint.h"
-#include "jstd/basic/stdsize.h"
-
 #include <string.h>
 #include <memory.h>
 #include <assert.h>
@@ -18,6 +14,9 @@
 #include <cstddef>
 #include <string>
 
+#include "jstd/basic/stddef.h"
+#include "jstd/basic/stdint.h"
+#include "jstd/basic/stdsize.h"
 #include "jstd/string/char_traits.h"
 #include "jstd/type_traits.h"
 #include "jstd/support/BitUtils.h"
@@ -1256,6 +1255,59 @@ HashUtils<std::uint64_t>::decodeValue<8U>(const char * data, std::uint32_t missa
 #endif
     return value;
 }
+
+//////////////////////////////////////////////////////////////////////////////////////
+
+template <typename T>
+struct SimpleHash {
+    typedef T           argument_type;
+    typedef std::size_t result_type;
+
+    template <typename Hasher, typename Integer,
+                               typename std::enable_if<
+                                (std::is_integral<Integer>::value &&
+                                (sizeof(Integer) <= 8))>::type * = nullptr>
+    result_type operator () (const Hasher & hasher, Integer value) const noexcept {
+        result_type hash = static_cast<result_type>(value);
+        return hash;
+    }
+
+    template <typename Hasher, typename Argument,
+                               typename std::enable_if<
+                                  (!std::is_integral<Argument>::value ||
+                                  sizeof(Argument) > 8)>::type * = nullptr>
+    result_type operator () (const Hasher & hasher, const Argument & value) const
+        noexcept(noexcept(hasher(value)))
+    {
+        return static_cast<result_type>(hasher(value));
+    }
+};
+
+template <typename T>
+struct MumHash
+{
+    typedef T           argument_type;
+    typedef std::size_t result_type;
+
+    template <typename Hasher, typename Integer,
+                               typename std::enable_if<
+                                (std::is_integral<Integer>::value &&
+                                (sizeof(Integer) <= 8))>::type * = nullptr>
+    result_type operator () (const Hasher & hasher, Integer value) const noexcept {
+        result_type hash = (result_type)(jstd::hashes::mum_hash64((std::uint64_t)value, 11400714819323198485ull));
+        return hash;
+    }
+
+    template <typename Hasher, typename Argument,
+                               typename std::enable_if<
+                                  (!std::is_integral<Argument>::value ||
+                                  sizeof(Argument) > 8)>::type * = nullptr>
+    result_type operator () (const Hasher & hasher, const Argument & value) const
+        noexcept(noexcept(hasher(value)))
+    {
+        return static_cast<result_type>(hasher(value));
+    }
+};
 
 //////////////////////////////////////////////////////////////////////////////////////
 

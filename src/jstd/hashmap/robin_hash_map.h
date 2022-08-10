@@ -82,6 +82,7 @@
 #include "jstd/support/BitUtils.h"
 #include "jstd/support/Power2.h"
 #include "jstd/support/BitVec.h"
+#include "jstd/support/CPUPrefetch.h"
 
 #ifdef _MSC_VER
 #ifndef __SSE2__
@@ -2363,7 +2364,7 @@ private:
 #elif 1
         return (size_type)hashes::fibonacci_hash((size_type)value);
 #elif 1
-        return (size_type)hashes::int_hash_crc32c((size_type)value);
+        return (size_type)hashes::int_hash_crc32((size_type)value);
 #else
         hash_code_t hash_code;
         if (sizeof(size_type) == 4)
@@ -2382,7 +2383,7 @@ private:
 #elif 1
         return (size_type)hashes::fibonacci_hash((size_type)value);
 #elif 1
-        return (size_type)hashes::simple_int_crc32((size_type)value);
+        return (size_type)hashes::simple_int_hash_crc32((size_type)value);
 #endif
     }
 
@@ -3218,6 +3219,9 @@ private:
     }
 
     const slot_type * find_impl(const key_type & key) const {
+        // Prefetch for resolve potential ctrls TLB misses.
+        Prefetch_Read_T2(this->ctrls());
+
         hash_code_t hash_code = this->get_hash(key);
         size_type slot_index = this->index_for_hash(hash_code);
         std::uint8_t ctrl_hash = this->get_ctrl_hash(hash_code);
@@ -3358,6 +3362,9 @@ private:
     JSTD_NO_INLINE
     std::pair<slot_type *, FindResult>
     find_or_insert(const key_type & key) {
+        // Prefetch for resolve potential ctrls TLB misses.
+        Prefetch_Read_T2(this->ctrls());
+
         hash_code_t hash_code = this->get_hash(key);
         size_type slot_index = this->index_for_hash(hash_code);
         std::uint8_t ctrl_hash = this->get_ctrl_hash(hash_code);

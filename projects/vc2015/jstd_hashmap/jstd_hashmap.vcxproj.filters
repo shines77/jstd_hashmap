@@ -274,6 +274,9 @@
     <ClInclude Include="..\..\..\src\jstd\hasher\hash_crc32.h">
       <Filter>src\hasher</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\support\CPUPrefetch.h">
+      <Filter>src\support</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\src\jstd\dll_main.cpp">

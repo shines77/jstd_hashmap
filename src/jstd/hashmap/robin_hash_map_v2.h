@@ -2348,7 +2348,7 @@ private:
 #elif 1
         return (size_type)hashes::fibonacci_hash((size_type)value);
 #elif 1
-        return (size_type)hashes::int_hash_crc32c((size_type)value);
+        return (size_type)hashes::int_hash_crc32((size_type)value);
 #else
         hash_code_t hash_code;
         if (sizeof(size_type) == 4)
@@ -2367,7 +2367,7 @@ private:
 #elif 1
         return (size_type)hashes::fibonacci_hash((size_type)value);
 #elif 1
-        return (size_type)hashes::simple_int_crc32((size_type)value);
+        return (size_type)hashes::simple_int_hash_crc32((size_type)value);
 #endif
     }
 
