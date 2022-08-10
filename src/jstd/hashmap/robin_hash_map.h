@@ -3220,7 +3220,7 @@ private:
 
     const slot_type * find_impl(const key_type & key) const {
         // Prefetch for resolve potential ctrls TLB misses.
-        Prefetch_Read_T2(this->ctrls());
+        //Prefetch_Read_T2(this->ctrls());
 
         hash_code_t hash_code = this->get_hash(key);
         size_type slot_index = this->index_for_hash(hash_code);
@@ -3363,7 +3363,7 @@ private:
     std::pair<slot_type *, FindResult>
     find_or_insert(const key_type & key) {
         // Prefetch for resolve potential ctrls TLB misses.
-        Prefetch_Read_T2(this->ctrls());
+        //Prefetch_Read_T2(this->ctrls());
 
         hash_code_t hash_code = this->get_hash(key);
         size_type slot_index = this->index_for_hash(hash_code);
@@ -3508,7 +3508,7 @@ InsertOrGrow_Start:
         }
     }
 
-    JSTD_FORCED_INLINE
+    JSTD_NO_INLINE
     std::pair<ctrl_type *, slot_type *>
     find_failed(hash_code_t hash_code, ctrl_type & o_dist_and_0) {
         size_type slot_index = this->index_for_hash(hash_code);
