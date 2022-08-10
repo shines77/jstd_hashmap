@@ -3508,7 +3508,7 @@ InsertOrGrow_Start:
         }
     }
 
-    JSTD_NO_INLINE
+    JSTD_FORCED_INLINE
     std::pair<ctrl_type *, slot_type *>
     find_failed(hash_code_t hash_code, ctrl_type & o_dist_and_0) {
         size_type slot_index = this->index_for_hash(hash_code);
