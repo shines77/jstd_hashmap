@@ -230,7 +230,7 @@ public:
 
     static constexpr bool kUseIndexSalt = false;
 
-    static constexpr bool kEnableExchange = true;
+    static constexpr bool kEnableExchange = false;
     static constexpr bool kIsSmallValueType = (sizeof(value_type) <= sizeof(std::size_t) * 2);
 
     static constexpr size_type npos = size_type(-1);
@@ -2741,7 +2741,7 @@ private:
 
         slot_type * new_slots = SlotAllocTraits::allocate(this->slot_allocator_, new_ctrl_capacity);
         // Prefetch for resolve potential ctrls TLB misses.
-        //Prefetch_Write_T0(new_slots);
+        Prefetch_Write_T2(new_slots);
 
         this->slots_ = new_slots;
         this->last_slot_ = new_slots + new_ctrl_capacity;
