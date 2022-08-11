@@ -549,7 +549,7 @@ public:
 
         template <CompareOp CmpOp>
         constexpr bool cmp_hash(const ctrl_data & ctrl) const {
-            (void)ctrl;
+            /* (void)ctrl; */
             if (CmpOp == opEQ)
                 return true;
             else if (CmpOp == opNE)
