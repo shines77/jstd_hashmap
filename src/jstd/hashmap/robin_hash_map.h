@@ -3846,6 +3846,14 @@ private:
         ctrl->setUnused();
     }
 
+    JSTD_FORCED_INLINE
+    slot_type * find_impl(const key_type & key) {
+        return const_cast<slot_type *>(
+            const_cast<const this_type *>(this)->find_impl(key)
+        );
+    }
+
+    JSTD_FORCED_INLINE
     const slot_type * find_impl(const key_type & key) const {
         // Prefetch for resolve potential ctrls TLB misses.
         //Prefetch_Read_T2(this->ctrls());
@@ -4706,7 +4714,7 @@ Insert_To_Slot:
 
     JSTD_FORCED_INLINE
     size_type find_and_erase(const key_type & key) {
-        const slot_type * slot = this->find_impl(key);
+        slot_type * slot = this->find_impl(key);
         if (likely(slot != this->last_slot())) {
             size_type to_erase = this->index_of(slot);
             this->erase_slot(to_erase);
