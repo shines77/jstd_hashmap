@@ -2761,7 +2761,15 @@ private:
             size_type old_slot_capacity = this->slot_capacity();
             size_type old_max_slot_capacity = this->max_slot_capacity();
 
+            // Prefetch for resolve potential ctrls TLB misses.
+            Prefetch_Read_T1(old_ctrls);
+            Prefetch_Read_T1(old_slots);
+
             this->create_slots<false>(new_capacity);
+
+            // Prefetch for resolve potential ctrls TLB misses.
+            Prefetch_Write_T2(this->ctrls());
+            Prefetch_Write_T2(this->slots());
 
             if ((this->max_load_factor() < 0.5f) && false) {
                 ctrl_type * last_ctrl = old_ctrls + old_max_slot_capacity;
@@ -3223,7 +3231,7 @@ private:
 
     const slot_type * find_impl(const key_type & key) const {
         // Prefetch for resolve potential ctrls TLB misses.
-        Prefetch_Read_T2(this->ctrls());
+        //Prefetch_Read_T2(this->ctrls());
 
         hash_code_t hash_code = this->get_hash(key);
         size_type slot_index = this->index_for_hash(hash_code);
@@ -3366,7 +3374,7 @@ private:
     std::pair<slot_type *, FindResult>
     find_or_insert(const key_type & key) {
         // Prefetch for resolve potential ctrls TLB misses.
-        Prefetch_Read_T2(this->ctrls());
+        //Prefetch_Read_T2(this->ctrls());
 
         hash_code_t hash_code = this->get_hash(key);
         size_type slot_index = this->index_for_hash(hash_code);
