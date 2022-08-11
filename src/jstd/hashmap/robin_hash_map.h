@@ -230,6 +230,9 @@ public:
 
     static constexpr bool kUseIndexSalt = false;
 
+    static constexpr bool kEnableExchange = false;
+    static constexpr bool kIsSmallValueType = (sizeof(value_type) <= sizeof(std::size_t) * 2);
+
     static constexpr size_type npos = size_type(-1);
 
     static constexpr size_type kCtrlHashMask = 0x000000FFul;
@@ -2888,7 +2891,7 @@ private:
             noexcept(std::is_nothrow_move_constructible<T>::value)
         {
             // hasSwapMethod = false, isNoexceptMoveAssign = false
-            static constexpr size_type kMinAlignment = 32;
+            static constexpr size_type kMinAlignment = 16;
             static constexpr size_type kAlignment = cmax(std::alignment_of<T>::value, kMinAlignment);
 
             alignas(kAlignment) char raw[sizeof(T)];
@@ -3220,7 +3223,7 @@ private:
 
     const slot_type * find_impl(const key_type & key) const {
         // Prefetch for resolve potential ctrls TLB misses.
-        //Prefetch_Read_T2(this->ctrls());
+        Prefetch_Read_T2(this->ctrls());
 
         hash_code_t hash_code = this->get_hash(key);
         size_type slot_index = this->index_for_hash(hash_code);
@@ -3363,7 +3366,7 @@ private:
     std::pair<slot_type *, FindResult>
     find_or_insert(const key_type & key) {
         // Prefetch for resolve potential ctrls TLB misses.
-        //Prefetch_Read_T2(this->ctrls());
+        Prefetch_Read_T2(this->ctrls());
 
         hash_code_t hash_code = this->get_hash(key);
         size_type slot_index = this->index_for_hash(hash_code);
@@ -3538,7 +3541,7 @@ InsertOrGrow_Start:
         ctrl++;
         rich_ctrl.incDist();
 
-        static constexpr size_type kMinAlignment = 32;
+        static constexpr size_type kMinAlignment = 16;
         static constexpr size_type kAlignment = cmax(std::alignment_of<slot_type>::value, kMinAlignment);
 
 #if 1
@@ -3574,7 +3577,7 @@ InsertOrGrow_Start:
                 std::swap(rich_ctrl.value, ctrl->value);
                 if (kIsPlainKV) {
                     this->swap_plain_slot(insert, target, empty);
-                } else if (kIsSwappableKV) {
+                } else if (kIsSwappableKV || !kEnableExchange || kIsSmallValueType) {
                     this->swap_slot(insert, target);
                 } else {
                     this->exchange_slot(insert, target, empty);
@@ -3612,11 +3615,11 @@ InsertOrGrow_Start:
 
     JSTD_FORCED_INLINE
     void construct_empty_slot(slot_type * empty) {
-#if 1
         static constexpr bool isNoexceptMoveAssignable = is_noexcept_move_assignable<value_type>::value;
         static constexpr bool isMutableNoexceptMoveAssignable = is_noexcept_move_assignable<mutable_value_type>::value;
 
-        if ((!is_slot_trivial_destructor) && (!kIsPlainKV) && (!kIsSwappableKV)) {
+        if ((!is_slot_trivial_destructor) && (!kIsPlainKV) &&
+            (!kIsSwappableKV) && (!kEnableExchange) && (!kIsSmallValueType)) {
             if (kIsCompatibleLayout) {
                 if (isMutableNoexceptMoveAssignable) {
                     this->construct_slot(empty);
@@ -3629,17 +3632,16 @@ InsertOrGrow_Start:
                 }
             }
         }
-#endif
         this->placement_new_slot(empty);
     }
 
     JSTD_FORCED_INLINE
     void destroy_empty_slot(slot_type * empty) {
-#if 1
         static constexpr bool isNoexceptMoveAssignable = is_noexcept_move_assignable<value_type>::value;
         static constexpr bool isMutableNoexceptMoveAssignable = is_noexcept_move_assignable<mutable_value_type>::value;
 
-        if ((!is_slot_trivial_destructor) && (!kIsPlainKV) && (!kIsSwappableKV)) {
+        if ((!is_slot_trivial_destructor) && (!kIsPlainKV) &&
+            (!kIsSwappableKV) && (!kEnableExchange) && (!kIsSmallValueType)) {
             if (kIsCompatibleLayout) {
                 if (isMutableNoexceptMoveAssignable) {
                     this->destroy_slot(empty);
@@ -3650,7 +3652,6 @@ InsertOrGrow_Start:
                 }
             }
         }
-#endif
     }
 
     template <bool AlwaysUpdate>
