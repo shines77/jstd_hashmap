@@ -273,7 +273,7 @@ public:
                                            std::is_same<Hash, std::hash<key_type>>::value &&
                                           (detail::is_plain_type<key_type>::value);
 
-    static constexpr bool kDetectStoreHash = detail::is_plain_type<key_type>::value;
+    static constexpr bool kDetectStoreHash = !detail::is_plain_type<key_type>::value;
 
     static constexpr bool kNeedStoreHash =
         (!layout_policy_t::autoDetectStoreHash && layout_policy_t::needStoreHash) ||

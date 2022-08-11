@@ -267,7 +267,7 @@ public:
                                            std::is_same<Hash, std::hash<key_type>>::value &&
                                           (detail::is_plain_type<key_type>::value);
 
-    static constexpr bool kDetectStoreHash = detail::is_plain_type<key_type>::value;
+    static constexpr bool kDetectStoreHash = !detail::is_plain_type<key_type>::value;
 
     static constexpr bool kNeedStoreHash =
         (!layout_policy_t::autoDetectStoreHash && layout_policy_t::needStoreHash) ||
@@ -302,7 +302,7 @@ public:
             (detail::is_plain_type<key_type>::value &&
              detail::is_plain_type<mapped_type>::value));
 
-    static constexpr size_type kGroupBits   = (kNeedStoreHash ? 5 : 4);
+    static constexpr size_type kGroupBits   = (kNeedStoreHash ? 4 : 5);
     static constexpr size_type kGroupWidth  = size_type(1) << kGroupBits;
 
     static constexpr std::int8_t kEmptySlot     = (std::int8_t)0b11111111;
@@ -2922,8 +2922,13 @@ private:
     }
 
     inline std::uint8_t get_ctrl_hash(hash_code_t hash_code) const noexcept {
-        std::uint8_t ctrl_hash = static_cast<std::uint8_t>(
-                this->get_third_hash((size_type)hash_code) & kCtrlHashMask);
+        std::uint8_t ctrl_hash;
+        if (kNeedStoreHash) {
+            ctrl_hash = static_cast<std::uint8_t>(
+                    this->get_third_hash((size_type)hash_code) & kCtrlHashMask);
+        } else {
+            ctrl_hash = std::uint8_t(0);
+        }
         return ctrl_hash;
     }
 
@@ -3402,7 +3407,7 @@ private:
                         }
                         slot_base += kGroupWidth;
                     }
-                } else {
+                } else if (old_ctrls != default_empty_ctrls()) {
                     ctrl_type * last_ctrl = old_ctrls + old_max_slot_capacity;
                     slot_type * old_slot = old_slots;
                     for (ctrl_type * ctrl = old_ctrls; ctrl != last_ctrl; ctrl++) {
@@ -4013,7 +4018,7 @@ private:
             slot = find_info.second;
         }
 
-        dist_and_hash.uvalue = dist_and_0.uvalue | ctrl_hash;
+        dist_and_hash.setValue(dist_and_0.dist, ctrl_hash);
         //return { slot, kIsNotExists };
 #elif 1
         while (dist_and_0.value <= ctrl->value) {
@@ -4038,7 +4043,7 @@ private:
             slot = find_info.second;
         }
 
-        dist_and_hash.uvalue = dist_and_0.uvalue | ctrl_hash;
+        dist_and_hash.setValue(dist_and_0.dist, ctrl_hash);
         //return { slot, kIsNotExists };
 #else
         const slot_type * last_slot;
@@ -4106,7 +4111,7 @@ private:
         goto InsertOrGrow_Start;
 
 InsertOrGrow:
-        dist_and_hash.uvalue = dist_and_0.uvalue | ctrl_hash;
+        dist_and_hash.setValue(dist_and_0.dist, ctrl_hash);
 
 InsertOrGrow_Start:
         if (this->need_grow() || (dist_and_0.uvalue >= this->max_distance())) {
@@ -4552,8 +4557,7 @@ InsertOrGrow_Start:
             slot += dist_and_0.dist;
         }
 
-        ctrl_type dist_and_hash;
-        dist_and_hash.uvalue = dist_and_0.uvalue | ctrl_hash;
+        ctrl_type dist_and_hash(dist_and_0.dist, ctrl_hash);
 
 #if 0
         slot_type * last_slot = this->last_slot();
@@ -4608,8 +4612,7 @@ Insert_To_Slot:
 
         slot += dist_and_0.dist;
 
-        ctrl_type dist_and_hash;
-        dist_and_hash.uvalue = dist_and_0.uvalue | ctrl_hash;
+        ctrl_type dist_and_hash(dist_and_0.dist, ctrl_hash);
 
         if (ctrl->isEmpty()) {
             this->setUsedCtrl(ctrl, dist_and_hash);

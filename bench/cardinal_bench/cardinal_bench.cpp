@@ -508,7 +508,7 @@ void benchmark_insert_random(std::size_t iters)
 
     printf("DataSize = %u, std::hash<T>\n\n", (uint32_t)DataSize);
 
-#ifndef _DEBUG
+#ifndef _DEBUG_
     benchmark_insert_random_impl<Key, Value, DataSize, Cardinal0>();
     printf("-----------------------------------------------------------------------\n\n");
     benchmark_insert_random_impl<Key, Value, DataSize, Cardinal1>();

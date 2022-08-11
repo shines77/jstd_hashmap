@@ -1201,7 +1201,7 @@ void benchmark_all_hashmaps(std::size_t iters)
     // a HashObject as it would be to use just a straight int/char
     // buffer.  To keep memory use similar, we normalize the number of
     // iterations based on size.
-#ifndef _DEBUG
+#ifndef _DEBUG_
     if (FLAGS_test_4_bytes) {
         test_all_hashmaps<HashObject<std::uint32_t, 4, 4>, std::uint32_t>(4, iters / 1);
     }
