@@ -343,7 +343,9 @@ public:
     template <bool bStoreHash>
     struct ctrl_data;
 
+#ifdef _MSC_VER
     template <>
+#endif
     struct ctrl_data<false> {
         typedef std::int8_t  value_type;
         typedef std::uint8_t uvalue_type;
@@ -624,7 +626,9 @@ public:
         }
     };
 
+#ifdef _MSC_VER
     template <>
+#endif
     struct ctrl_data<true> {
         typedef std::int16_t  value_type;
         typedef std::uint16_t uvalue_type;
@@ -904,8 +908,8 @@ public:
         }
     };
 
-    typedef ctrl_data<kNeedStoreHash>                       ctrl_type;
-    typedef typename ctrl_data<kNeedStoreHash>::value_type  ctrl_value_t;
+    typedef ctrl_data<kNeedStoreHash>       ctrl_type;
+    typedef typename ctrl_type::value_type  ctrl_value_t;
 
     template <typename T>
     struct MatchMask2 {
@@ -1081,7 +1085,7 @@ public:
             assert(distance <= kMaxDist);
             __m256i dist_0      = _mm256_set1_epi8((char)distance);
             __m256i ctrl_bits   = _mm256_loadu_si256((const __m256i *)this->ctrl);
-            __m256i dist_and_0  = _mm256_adds_epi8(dist_0, kDistanceBase)
+            __m256i dist_and_0  = _mm256_adds_epi8(dist_0, kDistanceBase);
             __m256i result_mask = _mm256_cmpgt_epi8(dist_and_0, ctrl_bits);
             std::uint32_t maskEmpty = (std::uint32_t)_mm256_movemask_epi8(result_mask);
             return maskEmpty;
@@ -3887,7 +3891,7 @@ private:
         } while (dist_and_hash.dist <= ctrl->dist);
 
         return this->last_slot();
-#elif 1
+#elif 0
         ctrl_type dist_and_0(0, 0);
 
         while (dist_and_0.value <= ctrl->value) {
@@ -3900,7 +3904,7 @@ private:
         }
 
         return this->last_slot();
-#elif 0
+#elif 1
         ctrl_type dist_and_0(0, 0);
 
         while (dist_and_0.value <= ctrl->value) {
@@ -3994,7 +3998,7 @@ private:
         slot_type * slot = this->slot_at(slot_index);
         ctrl_type dist_and_0(0, 0);
         ctrl_type dist_and_hash;
-#if 1
+#if 0
         while (dist_and_0.value <= ctrl->value) {
             if (this->key_equal_(slot->value.first, key)) {
                 return { slot, kIsExists };
@@ -4003,6 +4007,7 @@ private:
             ctrl++;
             slot++;
             dist_and_0.incDist();
+            assert(slot < this->last_slot());
         }
 
         if (this->need_grow() || (dist_and_0.uvalue >= this->max_distance())) {
@@ -4016,13 +4021,14 @@ private:
 
         dist_and_hash.uvalue = dist_and_0.uvalue | ctrl_hash;
         //return { slot, kIsNotExists };
-#elif 0
+#elif 1
         while (dist_and_0.value <= ctrl->value) {
             if (ctrl->hash_equals(ctrl_hash)) {
                 if (this->key_equal_(slot->value.first, key)) {
                     return { slot, kIsExists };
                 }
             }
+
             ctrl++;
             slot++;
             dist_and_0.incDist();
