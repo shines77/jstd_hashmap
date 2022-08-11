@@ -2798,7 +2798,7 @@ private:
                 if (old_slot_capacity >= kGroupWidth) {
                     static constexpr size_type kSlotSetp = sizeof(value_type) * kGroupWidth;
                     static constexpr size_type kCacheLine = 64;
-                    static constexpr size_type kPrefetchOffset = 0 + (kSlotSetp / 256) * kCacheLine;
+                    static constexpr size_type kPrefetchOffset = 128 + (kSlotSetp / 256) * kCacheLine;
                     static constexpr size_type kTailGroupCount =
                         ((kPrefetchOffset + kSlotSetp + (kCacheLine - 1)) / kCacheLine * kCacheLine) /
                         (kGroupWidth * sizeof(ctrl_type));
