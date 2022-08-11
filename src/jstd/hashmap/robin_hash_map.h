@@ -2220,6 +2220,15 @@ public:
         return num_deleted;
     }
 
+    template <typename InputIter>
+    size_type erase(InputIter first, InputIter last) {
+        size_type num_deleted = 0;
+        for (; first != last; ++first) {
+            num_deleted += static_cast<size_type>(this->erase(*first));
+        }
+        return num_deleted;
+    }
+
     iterator erase(iterator pos) {
         size_type index = this->index_of(pos);
         this->erase_slot(index);
@@ -3504,7 +3513,7 @@ private:
             dist_and_0.incDist();
         }
 
-        if (this->need_grow() || (dist_and_0.uvalue >= this->max_distance())) {
+        if (unlikely(this->need_grow() || (dist_and_0.uvalue >= this->max_distance()))) {
             // The size of slot reach the slot threshold or hashmap is full.
             this->grow_if_necessary();
 
@@ -3528,7 +3537,7 @@ private:
             assert(slot < this->last_slot());
         }
 
-        if (this->need_grow() || (dist_and_0.uvalue >= this->max_distance())) {
+        if (unlikely(this->need_grow() || (dist_and_0.uvalue >= this->max_distance()))) {
             // The size of slot reach the slot threshold or hashmap is full.
             this->grow_if_necessary();
 
@@ -3608,7 +3617,7 @@ InsertOrGrow:
         dist_and_hash.uvalue = dist_and_0.uvalue | ctrl_hash;
 
 InsertOrGrow_Start:
-        if (this->need_grow() || (dist_and_0.uvalue >= this->max_distance())) {
+        if (unlikely(this->need_grow() || (dist_and_0.uvalue >= this->max_distance()))) {
             // The size of slot reach the slot threshold or hashmap is full.
             this->grow_if_necessary();
 
@@ -3776,10 +3785,10 @@ InsertOrGrow_Start:
         auto find_info = this->find_or_insert(value.first);
         slot_type * slot = find_info.first;
         size_type is_exists = find_info.second;
-        if (is_exists != kIsExists) {
+        if (likely(is_exists != kIsExists)) {
             // The key to be inserted is not exists.
             assert(slot != nullptr);
-            if (is_exists == kNeedGrow) {
+            if (unlikely(is_exists == kNeedGrow)) {
                 this->grow_if_necessary();
                 return this->emplace_impl<AlwaysUpdate>(value);
             }
@@ -3805,10 +3814,10 @@ InsertOrGrow_Start:
         auto find_info = this->find_or_insert(value.first);
         slot_type * slot = find_info.first;
         size_type is_exists = find_info.second;
-        if (is_exists != kIsExists) {
+        if (likely(is_exists != kIsExists)) {
             // The key to be inserted is not exists.
             assert(slot != nullptr);
-            if (is_exists == kNeedGrow) {
+            if (unlikely(is_exists == kNeedGrow)) {
                 this->grow_if_necessary();
                 return this->emplace_impl<AlwaysUpdate>(std::forward<value_type>(value));
             }
@@ -3847,10 +3856,10 @@ InsertOrGrow_Start:
         auto find_info = this->find_or_insert(key);
         slot_type * slot = find_info.first;
         size_type is_exists = find_info.second;
-        if (is_exists != kIsExists) {
+        if (likely(is_exists != kIsExists)) {
             // The key to be inserted is not exists.
             assert(slot != nullptr);
-            if (is_exists == kNeedGrow) {
+            if (unlikely(is_exists == kNeedGrow)) {
                 this->grow_if_necessary();
                 return this->emplace_impl<AlwaysUpdate, KeyT, MappedT>(
                         std::forward<KeyT>(key), std::forward<MappedT>(value)
@@ -3896,10 +3905,10 @@ InsertOrGrow_Start:
         auto find_info = this->find_or_insert(key);
         slot_type * slot = find_info.first;
         size_type is_exists = find_info.second;
-        if (is_exists != kIsExists) {
+        if (likely(is_exists != kIsExists)) {
             // The key to be inserted is not exists.
             assert(slot != nullptr);
-            if (is_exists == kNeedGrow) {
+            if (unlikely(is_exists == kNeedGrow)) {
                 this->grow_if_necessary();
                 return this->emplace(std::piecewise_construct,
                                      std::forward_as_tuple(std::forward<KeyT>(key)),
@@ -3946,10 +3955,10 @@ InsertOrGrow_Start:
         auto find_info = this->find_or_insert(key_wrapper.value());
         slot_type * slot = find_info.first;
         size_type is_exists = find_info.second;
-        if (is_exists != kIsExists) {
+        if (likely(is_exists != kIsExists)) {
             // The key to be inserted is not exists.
             assert(slot != nullptr);
-            if (is_exists == kNeedGrow) {
+            if (unlikely(is_exists == kNeedGrow)) {
                 this->grow_if_necessary();
                 return this->emplace(std::piecewise_construct,
                                         std::forward<std::tuple<Ts1...>>(first),
@@ -3994,10 +4003,10 @@ InsertOrGrow_Start:
         auto find_info = this->find_or_insert(value.first);
         slot_type * slot = find_info.first;
         size_type is_exists = find_info.second;
-        if (is_exists != kIsExists) {
+        if (likely(is_exists != kIsExists)) {
             // The key to be inserted is not exists.
             assert(slot != nullptr);
-            if (is_exists == kNeedGrow) {
+            if (unlikely(is_exists == kNeedGrow)) {
                 this->grow_if_necessary();
                 return this->emplace(std::move(value));
             }
@@ -4035,7 +4044,7 @@ InsertOrGrow_Start:
             ctrl++;
         }
 
-        if (this->need_grow() || (dist_and_0.uvalue >= this->max_distance())) {
+        if (unlikely(this->need_grow() || (dist_and_0.uvalue >= this->max_distance()))) {
             // The size of slot reach the slot threshold or hashmap is full.
             this->grow_if_necessary();
 
@@ -4138,7 +4147,7 @@ Insert_To_Slot:
         slot_type * slot = find_info.first;
         bool need_grow = find_info.second;
 
-        if (need_grow) {
+        if (unlikely(need_grow)) {
             this->grow_if_necessary();
             this->unique_insert(value);
             return;
@@ -4159,7 +4168,7 @@ Insert_To_Slot:
         slot_type * slot = find_info.first;
         bool need_grow = find_info.second;
 
-        if (need_grow) {
+        if (unlikely(need_grow)) {
             this->grow_if_necessary();
             this->unique_insert(std::forward<value_type>(value));
             return;
@@ -4187,7 +4196,7 @@ Insert_To_Slot:
     JSTD_FORCED_INLINE
     size_type find_and_erase(const key_type & key) {
         const slot_type * slot = this->find_impl(key);
-        if (slot != this->last_slot()) {
+        if (likely(slot != this->last_slot())) {
             size_type to_erase = this->index_of(slot);
             this->erase_slot(to_erase);
             return 1;

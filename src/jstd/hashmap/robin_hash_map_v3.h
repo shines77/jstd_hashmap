@@ -2221,6 +2221,15 @@ public:
         return num_deleted;
     }
 
+    template <typename InputIter>
+    size_type erase(InputIter first, InputIter last) {
+        size_type num_deleted = 0;
+        for (; first != last; ++first) {
+            num_deleted += static_cast<size_type>(this->erase(*first));
+        }
+        return num_deleted;
+    }
+
     iterator erase(iterator pos) {
         size_type index = this->index_of(pos);
         this->erase_slot(index);
