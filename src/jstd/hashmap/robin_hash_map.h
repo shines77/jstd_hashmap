@@ -340,13 +340,11 @@ public:
         opLE    // <=
     };
 
-    template <bool bStoreHash>
+    template <typename T, bool bStoreHash>
     struct ctrl_data;
 
-#ifdef _MSC_VER
-    template <>
-#endif
-    struct ctrl_data<false> {
+    template <typename T>
+    struct ctrl_data<T, false> {
         typedef std::int8_t  value_type;
         typedef std::uint8_t uvalue_type;
 
@@ -626,10 +624,8 @@ public:
         }
     };
 
-#ifdef _MSC_VER
-    template <>
-#endif
-    struct ctrl_data<true> {
+    template <typename T>
+    struct ctrl_data<T, true> {
         typedef std::int16_t  value_type;
         typedef std::uint16_t uvalue_type;
 
@@ -908,7 +904,7 @@ public:
         }
     };
 
-    typedef ctrl_data<kNeedStoreHash>       ctrl_type;
+    typedef ctrl_data<void, kNeedStoreHash> ctrl_type;
     typedef typename ctrl_type::value_type  ctrl_value_t;
 
     template <typename T>
