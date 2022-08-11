@@ -230,7 +230,7 @@ public:
 
     static constexpr bool kUseIndexSalt = false;
 
-    static constexpr bool kEnableExchange = false;
+    static constexpr bool kEnableExchange = true;
     static constexpr bool kIsSmallValueType = (sizeof(value_type) <= sizeof(std::size_t) * 2);
 
     static constexpr size_type npos = size_type(-1);
@@ -2768,6 +2768,7 @@ private:
             }
 
             ctrl_type * old_ctrls = this->ctrls();
+            size_type old_group_mask = this->group_mask();
             size_type old_group_count = this->group_count();
             size_type old_group_capacity = this->group_capacity();
 
@@ -2796,12 +2797,12 @@ private:
             } else {
                 if (old_slot_capacity >= kGroupWidth) {
                     ctrl_type * ctrl = old_ctrls;
-                    ctrl_type * last_ctrl = old_ctrls + old_group_count * kGroupWidth;
-                    group_type group(ctrl), last_group(last_ctrl);
+                    ctrl_type * end_ctrl = old_ctrls + old_group_mask * kGroupWidth;
+                    group_type group(ctrl), end_group(end_ctrl);
                     slot_type * slot_base = old_slots;
-                    for (; group < last_group; ++group) {
-                        static constexpr size_type kPrefetchOffset = 128;
+                    for (; group < end_group; ++group) {
                         static constexpr size_type kSlotSetp = sizeof(value_type) * kGroupWidth;
+                        static constexpr size_type kPrefetchOffset = 64;
 
                         // Prefetch for read old ctrl
                         Prefetch_Read_T0(PtrOffset(group.ctrl(), kPrefetchOffset));
@@ -2873,6 +2874,21 @@ private:
                             }
                         }
 
+                        std::uint32_t maskUsed = group.matchUsed();
+                        while (maskUsed != 0) {
+                            size_type pos = BitUtils::bsf32(maskUsed);
+                            maskUsed = BitUtils::clearLowBit32(maskUsed);
+                            size_type index = group.index(0, pos);
+                            slot_type * old_slot = slot_base + index;
+                            this->unique_insert_no_grow(old_slot);
+                            this->destroy_slot(old_slot);
+                        }
+                        slot_base += kGroupWidth;
+                    }
+
+                    ctrl_type * last_ctrl = old_ctrls + old_group_count * kGroupWidth;
+                    group_type last_group(last_ctrl);
+                    for (; group < last_group; ++group) {
                         std::uint32_t maskUsed = group.matchUsed();
                         while (maskUsed != 0) {
                             size_type pos = BitUtils::bsf32(maskUsed);
@@ -3712,7 +3728,7 @@ InsertOrGrow_Start:
         static constexpr bool isMutableNoexceptMoveAssignable = is_noexcept_move_assignable<mutable_value_type>::value;
 
         if ((!is_slot_trivial_destructor) && (!kIsPlainKV) &&
-            (!kIsSwappableKV) && (!kEnableExchange) && (!kIsSmallValueType)) {
+            (!kIsSwappableKV) && (!kIsSmallValueType) && kEnableExchange) {
             if (kIsCompatibleLayout) {
                 if (isMutableNoexceptMoveAssignable) {
                     this->construct_slot(empty);
@@ -3734,7 +3750,7 @@ InsertOrGrow_Start:
         static constexpr bool isMutableNoexceptMoveAssignable = is_noexcept_move_assignable<mutable_value_type>::value;
 
         if ((!is_slot_trivial_destructor) && (!kIsPlainKV) &&
-            (!kIsSwappableKV) && (!kEnableExchange) && (!kIsSmallValueType)) {
+            (!kIsSwappableKV) && (!kIsSmallValueType) && kEnableExchange) {
             if (kIsCompatibleLayout) {
                 if (isMutableNoexceptMoveAssignable) {
                     this->destroy_slot(empty);
