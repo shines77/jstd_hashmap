@@ -367,7 +367,7 @@ public:
 
         ctrl_data(std::int8_t dist, std::uint8_t hash) noexcept
             : dist(dist) {
-            (void)hash;
+            /* (void)hash; */
         }
 
         ctrl_data(const ctrl_data & src) noexcept : value(src.value) {
@@ -381,12 +381,12 @@ public:
         }
 
         static value_type make(std::int8_t dist, std::uint8_t hash) {
-            (void)hash;
+            /* (void)hash; */
             return static_cast<value_type>(dist);
         }
 
         static uvalue_type makeu(std::int8_t dist, std::uint8_t hash) {
-            (void)hash;
+            /* (void)hash; */
             return static_cast<uvalue_type>(dist);
         }
 
@@ -460,12 +460,12 @@ public:
         }
 
         void setHash(std::uint8_t ctrl_hash) {
-            (void)ctrl_hash;
+            /* (void)ctrl_hash; */
         }
 
         void setValue(std::int8_t dist, std::uint8_t hash) {
             assert(dist >= 0 && dist <= kMaxDist);
-            (void)hash;
+            /* (void)hash; */
             this->setDist(dist);
         }
 
@@ -482,7 +482,7 @@ public:
         }
 
         void mergeHash(const ctrl_data & ctrl, std::uint8_t hash) {
-            (void)hash;
+            /* (void)hash; */
             this->uvalue = ctrl.uvalue;
         }
 
@@ -503,12 +503,12 @@ public:
         }
 
         constexpr bool hash_equals(std::uint8_t ctrl_hash) const {
-            (void)ctrl_hash;
+            /* (void)ctrl_hash; */
             return true;
         }
 
         constexpr bool hash_equals(const ctrl_data & ctrl) const {
-            (void)ctrl;
+            /* (void)ctrl; */
             return true;
         }
 
@@ -543,6 +543,8 @@ public:
                 return false;
             else if (CmpOp == opLE)
                 return true;
+            else
+                return true;
         }
 
         template <CompareOp CmpOp>
@@ -560,6 +562,8 @@ public:
                 return false;
             else if (CmpOp == opLE)
                 return true;
+            else
+                return true;
         }
 
         template <CompareOp CmpOp>
@@ -576,6 +580,8 @@ public:
                 return (this->dist <  dist);
             else if (CmpOp == opLE)
                 return (this->dist <= dist);
+            else
+                return true;
         }
 
         template <CompareOp CmpOp>
@@ -592,6 +598,8 @@ public:
                 return (this->dist <  ctrl.dist);
             else if (CmpOp == opLE)
                 return (this->dist <= ctrl.dist);
+            else
+                return true;
         }
 
         template <CompareOp CmpOp>
@@ -608,6 +616,8 @@ public:
                 return (this->value <  value);
             else if (CmpOp == opLE)
                 return (this->value <= value);
+            else
+                return true;
         }
 
         template <CompareOp CmpOp>
@@ -624,6 +634,8 @@ public:
                 return (this->value <  ctrl.value);
             else if (CmpOp == opLE)
                 return (this->value <= ctrl.value);
+            else
+                return true;
         }
     };
 
@@ -828,6 +840,8 @@ public:
                 return (this->hash <  ctrl_hash);
             else if (CmpOp == opLE)
                 return (this->hash <= ctrl_hash);
+            else
+                return true;
         }
 
         template <CompareOp CmpOp>
@@ -844,6 +858,8 @@ public:
                 return (this->hash <  ctrl.hash);
             else if (CmpOp == opLE)
                 return (this->hash <= ctrl.hash);
+            else
+                return true;
         }
 
         template <CompareOp CmpOp>
@@ -860,6 +876,8 @@ public:
                 return (this->dist <  dist);
             else if (CmpOp == opLE)
                 return (this->dist <= dist);
+            else
+                return true;
         }
 
         template <CompareOp CmpOp>
@@ -876,6 +894,8 @@ public:
                 return (this->dist <  ctrl.dist);
             else if (CmpOp == opLE)
                 return (this->dist <= ctrl.dist);
+            else
+                return true;
         }
 
         template <CompareOp CmpOp>
@@ -892,6 +912,8 @@ public:
                 return (this->value <  value);
             else if (CmpOp == opLE)
                 return (this->value <= value);
+            else
+                return true;
         }
 
         template <CompareOp CmpOp>
@@ -908,6 +930,8 @@ public:
                 return (this->value <  ctrl.value);
             else if (CmpOp == opLE)
                 return (this->value <= ctrl.value);
+            else
+                return true;
         }
     };
 
