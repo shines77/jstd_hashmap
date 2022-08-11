@@ -2800,74 +2800,76 @@ private:
                     group_type group(ctrl), last_group(last_ctrl);
                     slot_type * slot_base = old_slots;
                     for (; group < last_group; ++group) {
+                        static constexpr size_type kPrefetchOffset = 128;
+                        static constexpr size_type kSlotSetp = sizeof(value_type) * kGroupWidth;
+
                         // Prefetch for read old ctrl
-                        Prefetch_Read_T0(group.ctrl() + kGroupWidth * 2);
+                        Prefetch_Read_T0(PtrOffset(group.ctrl(), kPrefetchOffset));
 
                         // Prefetch for read old slot
-                        static constexpr size_type kSlotSetp = sizeof(value_type) * kGroupWidth;
                         if (kSlotSetp < 64) {
                             // sizeof(value_type) = [1, 4)
-                            Prefetch_Read_T0(PtrOffset(slot_base, 64));
+                            Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64));
                         } else {
                             if (kSlotSetp < 64 * 2) {   // 128
                                 // sizeof(value_type) = [4, 8)
-                                Prefetch_Read_T0(PtrOffset(slot_base, 64));
+                                Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64));
                             }
                             if (kSlotSetp < 64 * 3) {   // 192
                                 // sizeof(value_type) = [8, 12)
-                                Prefetch_Read_T0(PtrOffset(slot_base, 64 * 2));
+                                Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 2));
                             }
                             if (kSlotSetp < 64 * 4) {   // 256
                                 // sizeof(value_type) = [12, 16)
-                                Prefetch_Read_T0(PtrOffset(slot_base, 64 * 3));
+                                Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 3));
                             }
                             if (kSlotSetp < 64 * 5) {   // 320
                                 // sizeof(value_type) = [16, 20)
-                                Prefetch_Read_T0(PtrOffset(slot_base, 64 * 4));
+                                Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 4));
                             }
                             if (kSlotSetp < 64 * 6) {   // 384
                                 // sizeof(value_type) = [20, 24)
-                                Prefetch_Read_T0(PtrOffset(slot_base, 64 * 5));
+                                Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 5));
                             }
                             if (kSlotSetp < 64 * 7) {   // 448
                                 // sizeof(value_type) = [24, 28)
-                                Prefetch_Read_T0(PtrOffset(slot_base, 64 * 6));
+                                Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 6));
                             }
                             if (kSlotSetp < 64 * 8) {   // 512
                                 // sizeof(value_type) = [28, 32)
-                                Prefetch_Read_T0(PtrOffset(slot_base, 64 * 7));
+                                Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 7));
                             }
                             if (kSlotSetp < 64 * 9) {   // 576
                                 // sizeof(value_type) = [32, 36)
-                                Prefetch_Read_T0(PtrOffset(slot_base, 64 * 8));
+                                Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 8));
                             }
                             if (kSlotSetp < 64 * 10) {   // 640
                                 // sizeof(value_type) = [36, 40)
-                                Prefetch_Read_T0(PtrOffset(slot_base, 64 * 9));
+                                Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 9));
                             }
                             if (kSlotSetp < 64 * 11) {   // 704
                                 // sizeof(value_type) = [40, 44)
-                                Prefetch_Read_T0(PtrOffset(slot_base, 64 * 10));
+                                Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 10));
                             }
                             if (kSlotSetp < 64 * 12) {   // 768
                                 // sizeof(value_type) = [44, 48)
-                                Prefetch_Read_T0(PtrOffset(slot_base, 64 * 11));
+                                Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 11));
                             }
                             if (kSlotSetp < 64 * 13) {   // 832
                                 // sizeof(value_type) = [48, 52)
-                                Prefetch_Read_T0(PtrOffset(slot_base, 64 * 12));
+                                Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 12));
                             }
                             if (kSlotSetp < 64 * 14) {   // 896
                                 // sizeof(value_type) = [52, 56)
-                                Prefetch_Read_T0(PtrOffset(slot_base, 64 * 13));
+                                Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 13));
                             }
                             if (kSlotSetp < 64 * 15) {   // 960
                                 // sizeof(value_type) = [56, 60)
-                                Prefetch_Read_T0(PtrOffset(slot_base, 64 * 14));
+                                Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 14));
                             }
                             if (kSlotSetp < 64 * 16) {   // 1024
                                 // sizeof(value_type) = [60, 64)
-                                Prefetch_Read_T0(PtrOffset(slot_base, 64 * 15));
+                                Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 15));
                             }
                         }
 
