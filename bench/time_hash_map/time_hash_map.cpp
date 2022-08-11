@@ -1166,12 +1166,12 @@ static void test_all_hashmaps(std::size_t obj_size, std::size_t iters) {
     }
 #endif
 
-#if USE_JSTD_ROBIN_HASH_MAP_V1
-    if (FLAGS_test_jstd_v1_robin_hash_map) {
-        measure_hashmap<jstd::v1::robin_hash_map<HashObj,   Value, HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>,
-                        jstd::v1::robin_hash_map<HashObj *, Value, HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>
+#if USE_JSTD_ROBIN_HASH_MAP_V3
+    if (FLAGS_test_jstd_v3_robin_hash_map) {
+        measure_hashmap<jstd::v3::robin_hash_map<HashObj,   Value, HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>,
+                        jstd::v3::robin_hash_map<HashObj *, Value, HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>
                         >(
-            "jstd::v1::robin_hash_map<K, V>", obj_size, 0, iters, has_stress_hash_function);
+            "jstd::v3::robin_hash_map<K, V>", obj_size, 0, iters, has_stress_hash_function);
     }
 #endif
 
@@ -1184,12 +1184,12 @@ static void test_all_hashmaps(std::size_t obj_size, std::size_t iters) {
     }
 #endif
 
-#if USE_JSTD_ROBIN_HASH_MAP_V3
-    if (FLAGS_test_jstd_v3_robin_hash_map) {
-        measure_hashmap<jstd::v3::robin_hash_map<HashObj,   Value, HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>,
-                        jstd::v3::robin_hash_map<HashObj *, Value, HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>
+#if USE_JSTD_ROBIN_HASH_MAP_V1
+    if (FLAGS_test_jstd_v1_robin_hash_map) {
+        measure_hashmap<jstd::v1::robin_hash_map<HashObj,   Value, HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>,
+                        jstd::v1::robin_hash_map<HashObj *, Value, HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>
                         >(
-            "jstd::v3::robin_hash_map<K, V>", obj_size, 0, iters, has_stress_hash_function);
+            "jstd::v1::robin_hash_map<K, V>", obj_size, 0, iters, has_stress_hash_function);
     }
 #endif
 }
