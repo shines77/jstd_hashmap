@@ -2796,14 +2796,19 @@ private:
                 }
             } else {
                 if (old_slot_capacity >= kGroupWidth) {
+                    static constexpr size_type kSlotSetp = sizeof(value_type) * kGroupWidth;
+                    static constexpr size_type kCacheLine = 64;
+                    static constexpr size_type kPrefetchOffset = 64;
+                    static constexpr size_type kTailGroupCount =
+                        ((kPrefetchOffset + kSlotSetp + (kCacheLine - 1)) / kCacheLine * kCacheLine) /
+                        (kGroupWidth * sizeof(ctrl_type));
+
                     ctrl_type * ctrl = old_ctrls;
-                    ctrl_type * end_ctrl = old_ctrls + old_group_mask * kGroupWidth;
+                    ctrl_type * last_ctrl = old_ctrls + old_group_count * kGroupWidth;
+                    ctrl_type * end_ctrl = last_ctrl - kTailGroupCount * kGroupWidth;
                     group_type group(ctrl), end_group(end_ctrl);
                     slot_type * slot_base = old_slots;
                     for (; group < end_group; ++group) {
-                        static constexpr size_type kSlotSetp = sizeof(value_type) * kGroupWidth;
-                        static constexpr size_type kPrefetchOffset = 64;
-
                         // Prefetch for read old ctrl
                         Prefetch_Read_T0(PtrOffset(group.ctrl(), kPrefetchOffset));
 
@@ -2886,7 +2891,6 @@ private:
                         slot_base += kGroupWidth;
                     }
 
-                    ctrl_type * last_ctrl = old_ctrls + old_group_count * kGroupWidth;
                     group_type last_group(last_ctrl);
                     for (; group < last_group; ++group) {
                         std::uint32_t maskUsed = group.matchUsed();
