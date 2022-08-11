@@ -3518,11 +3518,13 @@ private:
             dist_and_0.incDist();
         }
 
-        if (unlikely(this->need_grow() || (dist_and_0.uvalue >= this->max_distance()))) {
+        if (this->need_grow() || (dist_and_0.uvalue >= this->max_distance())) {
             // The size of slot reach the slot threshold or hashmap is full.
             this->grow_if_necessary();
 
-            return this->find_or_insert(key, hash_code);
+            auto find_info = this->find_failed(hash_code, dist_and_0);
+            ctrl = find_info.first;
+            slot = find_info.second;
         }
 
         dist_and_hash.uvalue = dist_and_0.uvalue | ctrl_hash;
@@ -3540,11 +3542,13 @@ private:
             assert(slot < this->last_slot());
         }
 
-        if (unlikely(this->need_grow() || (dist_and_0.uvalue >= this->max_distance()))) {
+        if (this->need_grow() || (dist_and_0.uvalue >= this->max_distance())) {
             // The size of slot reach the slot threshold or hashmap is full.
             this->grow_if_necessary();
 
-            return this->find_or_insert(key, hash_code);
+            auto find_info = this->find_failed(hash_code, dist_and_0);
+            ctrl = find_info.first;
+            slot = find_info.second;
         }
 
         dist_and_hash.uvalue = dist_and_0.uvalue | ctrl_hash;
@@ -3618,11 +3622,13 @@ InsertOrGrow:
         dist_and_hash.uvalue = dist_and_0.uvalue | ctrl_hash;
 
 InsertOrGrow_Start:
-        if (unlikely(this->need_grow() || (dist_and_0.uvalue >= this->max_distance()))) {
+        if (this->need_grow() || (dist_and_0.uvalue >= this->max_distance())) {
             // The size of slot reach the slot threshold or hashmap is full.
             this->grow_if_necessary();
 
-            return this->find_or_insert(key, hash_code);
+            auto find_info = this->find_failed(hash_code, dist_and_0);
+            ctrl = find_info.first;
+            slot = find_info.second;
         }
 #endif
 
