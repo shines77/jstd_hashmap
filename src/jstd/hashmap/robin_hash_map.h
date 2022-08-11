@@ -2578,7 +2578,7 @@ private:
 
     template <typename U>
     const char * PtrOffset(U * ptr, std::ptrdiff_t offset) const {
-        return const_cast<const char *>(reinterpret_cast<char *>(slot) + offset);
+        return const_cast<const char *>(reinterpret_cast<char *>(ptr) + offset);
     }
 
     static void placement_new_slot(slot_type * slot) {
