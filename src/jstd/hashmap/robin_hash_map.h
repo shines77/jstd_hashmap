@@ -529,8 +529,8 @@ public:
         }
 
         template <CompareOp CmpOp>
-        constexpr bool cmp_hash(std::uint8_t ctrl_hash) const {
-            (void)ctrl_hash;
+        bool cmp_hash(std::uint8_t ctrl_hash) const {
+            /* (void)ctrl_hash; */
             if (CmpOp == opEQ)
                 return true;
             else if (CmpOp == opNE)
@@ -548,7 +548,7 @@ public:
         }
 
         template <CompareOp CmpOp>
-        constexpr bool cmp_hash(const ctrl_data & ctrl) const {
+        bool cmp_hash(const ctrl_data & ctrl) const {
             /* (void)ctrl; */
             if (CmpOp == opEQ)
                 return true;
