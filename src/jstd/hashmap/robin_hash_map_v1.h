@@ -612,7 +612,7 @@ public:
         typedef std::uint32_t bitmask_type;
 
         void clear(pointer data) {
-            this->template fillAll16<kEmptySlot16>(data);
+            this->template fillAll<kEmptySlot16>(data);
         }
 
         void setAllZeros(pointer data) {
@@ -621,7 +621,7 @@ public:
         }
 
         template <std::int16_t ControlTag>
-        void fillAll16(pointer data) {
+        void fillAll(pointer data) {
             const __m256i tag_bits = _mm256_set1_epi16((short)ControlTag);
             _mm256_storeu_si256((__m256i *)data, tag_bits);
         }
@@ -836,7 +836,7 @@ public:
         typedef std::uint32_t bitmask_type;
 
         void clear(pointer data) {
-            this->template fillAll16<kEmptySlot16>(data);
+            this->template fillAll<kEmptySlot16>(data);
         }
 
         void setAllZeros(pointer data) {
@@ -845,7 +845,7 @@ public:
         }
 
         template <std::int16_t ControlTag>
-        void fillAll16(pointer data) {
+        void fillAll(pointer data) {
             const __m256i tag_bits = _mm256_set1_epi16((short)ControlTag);
             _mm256_storeu_si256((__m256i *)data, tag_bits);
         }
@@ -1084,8 +1084,8 @@ public:
         }
 
         template <std::int16_t ControlTag>
-        void fillAll16() {
-            bitmask.template fillAll16<ControlTag>(&this->ctrls[0]);
+        void fillAll() {
+            bitmask.template fillAll<ControlTag>(&this->ctrls[0]);
         }
 
         bitmask_type matchTag(std::int16_t ctrl_tag) const {
@@ -2470,16 +2470,16 @@ private:
         group_type * group = reinterpret_cast<group_type *>(ctrls);
         group_type * last_group = group + group_count;
         for (; group < last_group; ++group) {
-            group->template fillAll16<kEmptySlot16>();
+            group->template fillAll<kEmptySlot16>();
         }
         if (slot_capacity >= kGroupWidth) {
-            group->template fillAll16<kEmptySlot16>();
+            group->template fillAll<kEmptySlot16>();
         } else {
             assert(slot_capacity < kGroupWidth);
             group_type * tail_group = reinterpret_cast<group_type *>(ctrls + (slot_capacity + max_lookups));
-            tail_group->template fillAll16<kEndOfMark16>();
+            tail_group->template fillAll<kEndOfMark16>();
 
-            group->template fillAll16<kEndOfMark16>();
+            group->template fillAll<kEndOfMark16>();
         }
     }
 

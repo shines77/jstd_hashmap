@@ -646,7 +646,7 @@ public:
         ~BitMask256_AVX2Ex() = default;
 
         template <std::int16_t ControlTag>
-        void fillAll16(pointer ptr) {
+        void fillAll(pointer ptr) {
             const __m256i tag_bits = _mm256_set1_epi16((short)ControlTag);
             _mm256_storeu_si256((__m256i *)ptr, tag_bits);
         }
@@ -657,11 +657,11 @@ public:
         }
 
         void fillAllEmpty() {
-            fillAll16<kEmptySlot16>(this->ctrl);
+            fillAll<kEmptySlot16>(this->ctrl);
         }
 
         void fillAllEndOf() {
-            fillAll16<kEndOfMark16>(this->ctrl);
+            fillAll<kEndOfMark16>(this->ctrl);
         }
 
         std::uint32_t matchTag(std::int16_t ctrl_tag) const {
@@ -880,7 +880,7 @@ public:
         ~BitMask256_AVX2() = default;
 
         template <std::int16_t ControlTag>
-        void fillAll16(pointer ptr) {
+        void fillAll(pointer ptr) {
             const __m256i tag_bits = _mm256_set1_epi16((short)ControlTag);
             _mm256_storeu_si256((__m256i *)ptr, tag_bits);
         }
@@ -891,11 +891,11 @@ public:
         }
 
         void fillAllEmpty() {
-            fillAll16<kEmptySlot16>(this->ctrl);
+            fillAll<kEmptySlot16>(this->ctrl);
         }
 
         void fillAllEndOf() {
-            fillAll16<kEndOfMark16>(this->ctrl);
+            fillAll<kEndOfMark16>(this->ctrl);
         }
 
         std::uint32_t matchTag(std::int16_t ctrl_tag) const {
@@ -1156,8 +1156,8 @@ public:
         }
 
         template <std::int16_t ControlTag>
-        void fillAll16() {
-            bitmask.template fillAll16<ControlTag>();
+        void fillAll() {
+            bitmask.template fillAll<ControlTag>();
         }
 
         void fillAllEmpty() {

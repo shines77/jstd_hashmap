@@ -466,7 +466,7 @@ public:
         typedef std::uint32_t bitmask_type;
 
         void clear(pointer data) {
-            this->template fillAll16<kEmptySlot>(data);
+            this->template fillAll<kEmptySlot>(data);
         }
 
         void setAllZeros(pointer data) {
@@ -475,7 +475,7 @@ public:
         }
 
         template <std::uint16_t ControlTag>
-        void fillAll16(pointer data) {
+        void fillAll(pointer data) {
             const __m256i tag_bits = _mm256_set1_epi16(ControlTag);
             _mm256_storeu_si256((__m256i *)data, tag_bits);
         }
@@ -695,7 +695,7 @@ public:
         typedef std::uint32_t bitmask_type;
 
         void clear(pointer data) {
-            this->template fillAll16<kEmptySlot>(data);
+            this->template fillAll<kEmptySlot>(data);
         }
 
         void setAllZeros(pointer data) {
@@ -704,7 +704,7 @@ public:
         }
 
         template <std::uint16_t ControlTag>
-        void fillAll16(pointer data) {
+        void fillAll(pointer data) {
             const __m256i tag_bits = _mm256_set1_epi16((short)ControlTag);
             _mm256_storeu_si256((__m256i *)data, tag_bits);
         }
@@ -992,8 +992,8 @@ public:
         }
 
         template <std::uint8_t ControlTag>
-        void fillAll16() {
-            bitmask.template fillAll16<ControlTag>(&this->ctrls[0]);
+        void fillAll() {
+            bitmask.template fillAll<ControlTag>(&this->ctrls[0]);
         }
 
         bitmask_type matchTag(std::uint8_t ctrl_tag) const {
@@ -2364,16 +2364,16 @@ private:
         group_mask_ = group_count - 1;
 
         for (size_type index = 0; index < group_count; index++) {
-            new_groups[index].template fillAll16<kEmptySlot>();
+            new_groups[index].template fillAll<kEmptySlot>();
         }
         if (new_capacity >= kGroupWidth) {
-            new_groups[group_count].template fillAll16<kEmptySlot>();
+            new_groups[group_count].template fillAll<kEmptySlot>();
         } else {
             assert(new_capacity < kGroupWidth);
             group_type * tail_group = (group_type *)((char *)new_groups + new_capacity * 2 * sizeof(ctrl_type));
-            (*tail_group).template fillAll16<kEndOfMark>();
+            (*tail_group).template fillAll<kEndOfMark>();
 
-            new_groups[group_count].template fillAll16<kEndOfMark>();
+            new_groups[group_count].template fillAll<kEndOfMark>();
         }
 
         slot_type * slots = slot_allocator_.allocate(new_capacity);
