@@ -3965,8 +3965,8 @@ InsertOrGrow_Start:
             if (unlikely(is_exists == kNeedGrow)) {
                 this->grow_if_necessary();
                 return this->emplace(std::piecewise_construct,
-                                        std::forward<std::tuple<Ts1...>>(first),
-                                        std::forward<std::tuple<Ts2...>>(second));
+                                     std::forward<std::tuple<Ts1...>>(first),
+                                     std::forward<std::tuple<Ts2...>>(second));
             }
 
             this->placement_new_slot(slot);
@@ -4053,11 +4053,13 @@ InsertOrGrow_Start:
             ctrl++;
         }
 
-        if (unlikely(this->need_grow() || (dist_and_0.uvalue >= this->max_distance()))) {
+        if (this->need_grow() || (dist_and_0.uvalue >= this->max_distance())) {
             // The size of slot reach the slot threshold or hashmap is full.
             this->grow_if_necessary();
 
-            return this->unique_find_or_insert(key, hash_code);
+            auto find_info = this->find_failed(hash_code, dist_and_0);
+            ctrl = find_info.first;
+            slot = find_info.second;
         } else {
             slot += dist_and_0.dist;
         }
