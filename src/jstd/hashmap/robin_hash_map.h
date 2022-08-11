@@ -2592,7 +2592,7 @@ private:
         this->clear_slots();
 
         if (this->slots_ != nullptr) {
-            this->slot_allocator_.deallocate(this->slots_, this->max_slot_capacity());
+            SlotAllocTraits::deallocate(this->slot_allocator_, this->slots_, this->max_slot_capacity());
         }
         this->slots_ = nullptr;
         this->last_slot_ = nullptr;
@@ -2603,7 +2603,7 @@ private:
     void destroy_ctrls() noexcept {
         if (this->ctrls_ != this_type::default_empty_ctrls()) {
             size_type max_ctrl_capacity = (this->group_count() + 1) * kGroupWidth;
-            this->ctrl_allocator_.deallocate(this->ctrls_, max_ctrl_capacity);
+            CtrlAllocTraits::deallocate(this->ctrl_allocator_, this->ctrls_, max_ctrl_capacity);
         }
         this->ctrls_ = this_type::default_empty_ctrls();
     }
@@ -2719,14 +2719,20 @@ private:
         assert(new_group_count > 0);
         size_type ctrl_alloc_size = (new_group_count + 1) * kGroupWidth;
 
-        ctrl_type * new_ctrls = this->ctrl_allocator_.allocate(ctrl_alloc_size);
+        ctrl_type * new_ctrls = CtrlAllocTraits::allocate(this->ctrl_allocator_, ctrl_alloc_size);
+        // Prefetch for resolve potential ctrls TLB misses.
+        Prefetch_Write_T2(new_ctrls);
+
         this->ctrls_ = new_ctrls;
         this->max_lookups_ = new_max_lookups;
 
         // Reset ctrls to default state
         this->clear_ctrls(new_ctrls, new_capacity, new_max_lookups, new_group_count);
 
-        slot_type * new_slots = this->slot_allocator_.allocate(new_ctrl_capacity);
+        slot_type * new_slots = SlotAllocTraits::allocate(this->slot_allocator_, new_ctrl_capacity);
+        // Prefetch for resolve potential ctrls TLB misses.
+        Prefetch_Write_T1(new_slots);
+
         this->slots_ = new_slots;
         this->last_slot_ = new_slots + new_ctrl_capacity;
         if (initialize) {
@@ -2762,14 +2768,10 @@ private:
             size_type old_max_slot_capacity = this->max_slot_capacity();
 
             // Prefetch for resolve potential ctrls TLB misses.
-            Prefetch_Read_T1(old_ctrls);
-            Prefetch_Read_T1(old_slots);
+            Prefetch_Read_T0(old_ctrls);
+            Prefetch_Read_T0(old_slots);
 
             this->create_slots<false>(new_capacity);
-
-            // Prefetch for resolve potential ctrls TLB misses.
-            Prefetch_Write_T2(this->ctrls());
-            Prefetch_Write_T2(this->slots());
 
             if ((this->max_load_factor() < 0.5f) && false) {
                 ctrl_type * last_ctrl = old_ctrls + old_max_slot_capacity;
@@ -2816,10 +2818,10 @@ private:
 
             if (old_ctrls != this->default_empty_ctrls()) {
                 size_type old_max_ctrl_capacity = (old_group_count + 1) * kGroupWidth;
-                this->ctrl_allocator_.deallocate(old_ctrls, old_max_ctrl_capacity);
+                CtrlAllocTraits::deallocate(this->ctrl_allocator_, old_ctrls, old_max_ctrl_capacity);
             }
             if (old_slots != nullptr) {
-                this->slot_allocator_.deallocate(old_slots, old_max_slot_capacity);
+                SlotAllocTraits::deallocate(this->slot_allocator_, old_slots, old_max_slot_capacity);
             }
         }
     }
