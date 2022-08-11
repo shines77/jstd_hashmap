@@ -2798,7 +2798,8 @@ private:
                 if (old_slot_capacity >= kGroupWidth) {
                     static constexpr size_type kSlotSetp = sizeof(value_type) * kGroupWidth;
                     static constexpr size_type kCacheLine = 64;
-                    static constexpr size_type kPrefetchOffset = 64 + ((kSlotSetp < kCacheLine) ? kCacheLine : kSlotSetp);
+                    static constexpr size_type kPrefetchSteps = 2 + ((kSlotSetp < kCacheLine) ? 0 : (kSlotSetp / 256 * kCacheLine));
+                    static constexpr size_type kPrefetchOffset = kPrefetchSteps * ((kSlotSetp < kCacheLine) ? kCacheLine : kSlotSetp);
                     static constexpr size_type kTailGroupCount = (kPrefetchOffset + (kSlotSetp - 1)) / kSlotSetp;
 
                     ctrl_type * ctrl = old_ctrls;
@@ -2808,7 +2809,7 @@ private:
                     slot_type * slot_base = old_slots;
                     for (; group < end_group; ++group) {
                         // Prefetch for read old ctrl
-                        Prefetch_Read_T0(PtrOffset(group.ctrl(), 64 + kCacheLine));
+                        Prefetch_Read_T0(PtrOffset(group.ctrl(), kCacheLine * 2));
 
                         // Prefetch for read old slot
                         if (kSlotSetp < 64) {
