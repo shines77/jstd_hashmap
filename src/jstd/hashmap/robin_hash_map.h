@@ -2571,6 +2571,16 @@ private:
         return this->index_of((ctrl_type *)ctrl);
     }
 
+    template <typename U>
+    char * PtrOffset(U * ptr, std::ptrdiff_t offset) {
+        return (reinterpret_cast<char *>(ptr) + offset);
+    }
+
+    template <typename U>
+    const char * PtrOffset(U * ptr, std::ptrdiff_t offset) const {
+        return const_cast<const char *>(reinterpret_cast<char *>(slot) + offset);
+    }
+
     static void placement_new_slot(slot_type * slot) {
         // The construction of union doesn't do anything at runtime but it allows us
         // to access its members without violating aliasing rules.
@@ -2721,7 +2731,7 @@ private:
 
         ctrl_type * new_ctrls = CtrlAllocTraits::allocate(this->ctrl_allocator_, ctrl_alloc_size);
         // Prefetch for resolve potential ctrls TLB misses.
-        Prefetch_Write_T2(new_ctrls);
+        //Prefetch_Write_T2(new_ctrls);
 
         this->ctrls_ = new_ctrls;
         this->max_lookups_ = new_max_lookups;
@@ -2731,7 +2741,7 @@ private:
 
         slot_type * new_slots = SlotAllocTraits::allocate(this->slot_allocator_, new_ctrl_capacity);
         // Prefetch for resolve potential ctrls TLB misses.
-        Prefetch_Write_T1(new_slots);
+        //Prefetch_Write_T0(new_slots);
 
         this->slots_ = new_slots;
         this->last_slot_ = new_slots + new_ctrl_capacity;
@@ -2788,18 +2798,89 @@ private:
                     ctrl_type * ctrl = old_ctrls;
                     ctrl_type * last_ctrl = old_ctrls + old_group_count * kGroupWidth;
                     group_type group(ctrl), last_group(last_ctrl);
-                    size_type start_index = 0;
+                    slot_type * slot_base = old_slots;
                     for (; group < last_group; ++group) {
+                        // Prefetch for read old ctrl
+                        Prefetch_Read_T0(group.ctrl() + kGroupWidth * 2);
+
+                        // Prefetch for read old slot
+                        static constexpr size_type kSlotSetp = sizeof(value_type) * kGroupWidth;
+                        if (kSlotSetp < 64) {
+                            // sizeof(value_type) = [1, 4)
+                            Prefetch_Read_T0(PtrOffset(slot_base, 64));
+                        } else {
+                            if (kSlotSetp < 64 * 2) {   // 128
+                                // sizeof(value_type) = [4, 8)
+                                Prefetch_Read_T0(PtrOffset(slot_base, 64));
+                            }
+                            if (kSlotSetp < 64 * 3) {   // 192
+                                // sizeof(value_type) = [8, 12)
+                                Prefetch_Read_T0(PtrOffset(slot_base, 64 * 2));
+                            }
+                            if (kSlotSetp < 64 * 4) {   // 256
+                                // sizeof(value_type) = [12, 16)
+                                Prefetch_Read_T0(PtrOffset(slot_base, 64 * 3));
+                            }
+                            if (kSlotSetp < 64 * 5) {   // 320
+                                // sizeof(value_type) = [16, 20)
+                                Prefetch_Read_T0(PtrOffset(slot_base, 64 * 4));
+                            }
+                            if (kSlotSetp < 64 * 6) {   // 384
+                                // sizeof(value_type) = [20, 24)
+                                Prefetch_Read_T0(PtrOffset(slot_base, 64 * 5));
+                            }
+                            if (kSlotSetp < 64 * 7) {   // 448
+                                // sizeof(value_type) = [24, 28)
+                                Prefetch_Read_T0(PtrOffset(slot_base, 64 * 6));
+                            }
+                            if (kSlotSetp < 64 * 8) {   // 512
+                                // sizeof(value_type) = [28, 32)
+                                Prefetch_Read_T0(PtrOffset(slot_base, 64 * 7));
+                            }
+                            if (kSlotSetp < 64 * 9) {   // 576
+                                // sizeof(value_type) = [32, 36)
+                                Prefetch_Read_T0(PtrOffset(slot_base, 64 * 8));
+                            }
+                            if (kSlotSetp < 64 * 10) {   // 640
+                                // sizeof(value_type) = [36, 40)
+                                Prefetch_Read_T0(PtrOffset(slot_base, 64 * 9));
+                            }
+                            if (kSlotSetp < 64 * 11) {   // 704
+                                // sizeof(value_type) = [40, 44)
+                                Prefetch_Read_T0(PtrOffset(slot_base, 64 * 10));
+                            }
+                            if (kSlotSetp < 64 * 12) {   // 768
+                                // sizeof(value_type) = [44, 48)
+                                Prefetch_Read_T0(PtrOffset(slot_base, 64 * 11));
+                            }
+                            if (kSlotSetp < 64 * 13) {   // 832
+                                // sizeof(value_type) = [48, 52)
+                                Prefetch_Read_T0(PtrOffset(slot_base, 64 * 12));
+                            }
+                            if (kSlotSetp < 64 * 14) {   // 896
+                                // sizeof(value_type) = [52, 56)
+                                Prefetch_Read_T0(PtrOffset(slot_base, 64 * 13));
+                            }
+                            if (kSlotSetp < 64 * 15) {   // 960
+                                // sizeof(value_type) = [56, 60)
+                                Prefetch_Read_T0(PtrOffset(slot_base, 64 * 14));
+                            }
+                            if (kSlotSetp < 64 * 16) {   // 1024
+                                // sizeof(value_type) = [60, 64)
+                                Prefetch_Read_T0(PtrOffset(slot_base, 64 * 15));
+                            }
+                        }
+
                         std::uint32_t maskUsed = group.matchUsed();
                         while (maskUsed != 0) {
                             size_type pos = BitUtils::bsf32(maskUsed);
                             maskUsed = BitUtils::clearLowBit32(maskUsed);
-                            size_type old_index = group.index(start_index, pos);
-                            slot_type * old_slot = old_slots + old_index;
+                            size_type index = group.index(0, pos);
+                            slot_type * old_slot = slot_base + index;
                             this->unique_insert_no_grow(old_slot);
                             this->destroy_slot(old_slot);
                         }
-                        start_index += kGroupWidth;
+                        slot_base += kGroupWidth;
                     }
                 } else {
                     ctrl_type * last_ctrl = old_ctrls + old_max_slot_capacity;
