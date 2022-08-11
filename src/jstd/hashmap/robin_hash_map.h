@@ -3792,7 +3792,7 @@ InsertOrGrow_Start:
         if (likely(is_exists != kIsExists)) {
             // The key to be inserted is not exists.
             assert(slot != nullptr);
-            if (unlikely(is_exists == kNeedGrow)) {
+            if (is_exists == kNeedGrow) {
                 this->grow_if_necessary();
                 return this->emplace_impl<AlwaysUpdate>(value);
             }
@@ -3821,7 +3821,7 @@ InsertOrGrow_Start:
         if (likely(is_exists != kIsExists)) {
             // The key to be inserted is not exists.
             assert(slot != nullptr);
-            if (unlikely(is_exists == kNeedGrow)) {
+            if (is_exists == kNeedGrow) {
                 this->grow_if_necessary();
                 return this->emplace_impl<AlwaysUpdate>(std::forward<value_type>(value));
             }
@@ -3863,7 +3863,7 @@ InsertOrGrow_Start:
         if (likely(is_exists != kIsExists)) {
             // The key to be inserted is not exists.
             assert(slot != nullptr);
-            if (unlikely(is_exists == kNeedGrow)) {
+            if (is_exists == kNeedGrow) {
                 this->grow_if_necessary();
                 return this->emplace_impl<AlwaysUpdate, KeyT, MappedT>(
                         std::forward<KeyT>(key), std::forward<MappedT>(value)
@@ -3912,7 +3912,7 @@ InsertOrGrow_Start:
         if (likely(is_exists != kIsExists)) {
             // The key to be inserted is not exists.
             assert(slot != nullptr);
-            if (unlikely(is_exists == kNeedGrow)) {
+            if (is_exists == kNeedGrow) {
                 this->grow_if_necessary();
                 return this->emplace(std::piecewise_construct,
                                      std::forward_as_tuple(std::forward<KeyT>(key)),
@@ -3962,7 +3962,7 @@ InsertOrGrow_Start:
         if (likely(is_exists != kIsExists)) {
             // The key to be inserted is not exists.
             assert(slot != nullptr);
-            if (unlikely(is_exists == kNeedGrow)) {
+            if (is_exists == kNeedGrow) {
                 this->grow_if_necessary();
                 return this->emplace(std::piecewise_construct,
                                      std::forward<std::tuple<Ts1...>>(first),
@@ -4010,7 +4010,7 @@ InsertOrGrow_Start:
         if (likely(is_exists != kIsExists)) {
             // The key to be inserted is not exists.
             assert(slot != nullptr);
-            if (unlikely(is_exists == kNeedGrow)) {
+            if (is_exists == kNeedGrow) {
                 this->grow_if_necessary();
                 return this->emplace(std::move(value));
             }
@@ -4156,7 +4156,7 @@ Insert_To_Slot:
         slot_type * slot = find_info.first;
         bool need_grow = find_info.second;
 
-        if (unlikely(need_grow)) {
+        if (need_grow) {
             this->grow_if_necessary();
             this->unique_insert(value);
             return;
@@ -4177,7 +4177,7 @@ Insert_To_Slot:
         slot_type * slot = find_info.first;
         bool need_grow = find_info.second;
 
-        if (unlikely(need_grow)) {
+        if (need_grow) {
             this->grow_if_necessary();
             this->unique_insert(std::forward<value_type>(value));
             return;
