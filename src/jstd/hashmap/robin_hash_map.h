@@ -3488,13 +3488,18 @@ private:
         kIsExists = 2
     };
 
-    JSTD_NO_INLINE
     std::pair<slot_type *, FindResult>
     find_or_insert(const key_type & key) {
         // Prefetch for resolve potential ctrls TLB misses.
         //Prefetch_Read_T2(this->ctrls());
 
         hash_code_t hash_code = this->get_hash(key);
+        return this->find_or_insert(key, hash_code);
+    }
+
+    JSTD_NO_INLINE
+    std::pair<slot_type *, FindResult>
+    find_or_insert(const key_type & key, hash_code_t hash_code) {
         size_type slot_index = this->index_for_hash(hash_code);
         std::uint8_t ctrl_hash = this->get_ctrl_hash(hash_code);
 
@@ -3517,9 +3522,7 @@ private:
             // The size of slot reach the slot threshold or hashmap is full.
             this->grow_if_necessary();
 
-            auto find_info = this->find_failed(hash_code, dist_and_0);
-            ctrl = find_info.first;
-            slot = find_info.second;
+            return this->find_or_insert(key, hash_code);
         }
 
         dist_and_hash.uvalue = dist_and_0.uvalue | ctrl_hash;
@@ -3541,9 +3544,7 @@ private:
             // The size of slot reach the slot threshold or hashmap is full.
             this->grow_if_necessary();
 
-            auto find_info = this->find_failed(hash_code, dist_and_0);
-            ctrl = find_info.first;
-            slot = find_info.second;
+            return this->find_or_insert(key, hash_code);
         }
 
         dist_and_hash.uvalue = dist_and_0.uvalue | ctrl_hash;
@@ -3621,10 +3622,7 @@ InsertOrGrow_Start:
             // The size of slot reach the slot threshold or hashmap is full.
             this->grow_if_necessary();
 
-            auto find_info = this->find_failed(hash_code, dist_and_0);
-            ctrl = find_info.first;
-            slot = find_info.second;
-            dist_and_hash.uvalue = dist_and_0.uvalue | ctrl_hash;
+            return this->find_or_insert(key, hash_code);
         }
 #endif
 
@@ -4028,10 +4026,15 @@ InsertOrGrow_Start:
         }
     }
 
-    JSTD_FORCED_INLINE
     std::pair<slot_type *, bool>
     unique_find_or_insert(const key_type & key) {
         hash_code_t hash_code = this->get_hash(key);
+        return this->unique_find_or_insert(key, hash_code);
+    }
+
+    JSTD_NO_INLINE
+    std::pair<slot_type *, bool>
+    unique_find_or_insert(const key_type & key, hash_code_t hash_code) {
         size_type slot_index = this->index_for_hash(hash_code);
         std::uint8_t ctrl_hash = this->get_ctrl_hash(hash_code);
 
@@ -4048,9 +4051,7 @@ InsertOrGrow_Start:
             // The size of slot reach the slot threshold or hashmap is full.
             this->grow_if_necessary();
 
-            auto find_info = this->find_failed(hash_code, dist_and_0);
-            ctrl = find_info.first;
-            slot = find_info.second;
+            return this->unique_find_or_insert(key, hash_code);
         } else {
             slot += dist_and_0.dist;
         }
@@ -4088,7 +4089,7 @@ Insert_To_Slot:
             this->setUsedCtrl(ctrl, dist_and_hash);
             return { slot, false };
         } else {
-            bool neednt_grow = this->insert_to_place<true>(ctrl, slot, dist_and_hash);
+            bool neednt_grow = this->insert_to_place<false>(ctrl, slot, dist_and_hash);
             return { slot, !neednt_grow };
         }
     }
