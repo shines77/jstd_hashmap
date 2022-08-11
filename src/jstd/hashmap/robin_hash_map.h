@@ -2798,10 +2798,8 @@ private:
                 if (old_slot_capacity >= kGroupWidth) {
                     static constexpr size_type kSlotSetp = sizeof(value_type) * kGroupWidth;
                     static constexpr size_type kCacheLine = 64;
-                    static constexpr size_type kPrefetchOffset = 128 + (kSlotSetp / 256) * kCacheLine;
-                    static constexpr size_type kTailGroupCount =
-                        ((kPrefetchOffset + kSlotSetp + (kCacheLine - 1)) / kCacheLine * kCacheLine) /
-                        (kGroupWidth * sizeof(ctrl_type));
+                    static constexpr size_type kPrefetchOffset = 64 + ((kSlotSetp < kCacheLine) ? kCacheLine : kSlotSetp);
+                    static constexpr size_type kTailGroupCount = (kPrefetchOffset + (kSlotSetp - 1)) / kSlotSetp;
 
                     ctrl_type * ctrl = old_ctrls;
                     ctrl_type * last_ctrl = old_ctrls + old_group_count * kGroupWidth;
@@ -2810,71 +2808,75 @@ private:
                     slot_type * slot_base = old_slots;
                     for (; group < end_group; ++group) {
                         // Prefetch for read old ctrl
-                        Prefetch_Read_T0(PtrOffset(group.ctrl(), kPrefetchOffset));
+                        Prefetch_Read_T0(PtrOffset(group.ctrl(), 64 + kCacheLine));
 
                         // Prefetch for read old slot
                         if (kSlotSetp < 64) {
                             // sizeof(value_type) = [1, 4)
-                            Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64));
+                            Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 0));
                         } else {
-                            if (kSlotSetp < 64 * 2) {   // 128
+                            if (kSlotSetp >= 64 * 1) {   // >= 64
                                 // sizeof(value_type) = [4, 8)
-                                Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64));
+                                Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 0));
                             }
-                            if (kSlotSetp < 64 * 3) {   // 192
+                            if (kSlotSetp >= 64 * 2) {   // >= 128
                                 // sizeof(value_type) = [8, 12)
+                                Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 1));
+                            }
+                            if (kSlotSetp >= 64 * 3) {   // >= 192
+                                // sizeof(value_type) = [12, 16)
                                 Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 2));
                             }
-                            if (kSlotSetp < 64 * 4) {   // 256
-                                // sizeof(value_type) = [12, 16)
+                            if (kSlotSetp >= 64 * 4) {   // >= 256
+                                // sizeof(value_type) = [16, 20)
                                 Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 3));
                             }
-                            if (kSlotSetp < 64 * 5) {   // 320
-                                // sizeof(value_type) = [16, 20)
+                            if (kSlotSetp >= 64 * 5) {   // >= 320
+                                // sizeof(value_type) = [20, 24)
                                 Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 4));
                             }
-                            if (kSlotSetp < 64 * 6) {   // 384
-                                // sizeof(value_type) = [20, 24)
+                            if (kSlotSetp >= 64 * 6) {   // >= 384
+                                // sizeof(value_type) = [24, 28)
                                 Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 5));
                             }
-                            if (kSlotSetp < 64 * 7) {   // 448
-                                // sizeof(value_type) = [24, 28)
+                            if (kSlotSetp >= 64 * 7) {   // >= 448
+                                // sizeof(value_type) = [28, 32)
                                 Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 6));
                             }
-                            if (kSlotSetp < 64 * 8) {   // 512
-                                // sizeof(value_type) = [28, 32)
+                            if (kSlotSetp >= 64 * 8) {   // >= 512
+                                // sizeof(value_type) = [32, 36)
                                 Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 7));
                             }
-                            if (kSlotSetp < 64 * 9) {   // 576
-                                // sizeof(value_type) = [32, 36)
+                            if (kSlotSetp >= 64 * 9) {   // >= 576
+                                // sizeof(value_type) = [36, 40)
                                 Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 8));
                             }
-                            if (kSlotSetp < 64 * 10) {   // 640
-                                // sizeof(value_type) = [36, 40)
+                            if (kSlotSetp >= 64 * 10) {   // >= 640
+                                // sizeof(value_type) = [40, 44)
                                 Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 9));
                             }
-                            if (kSlotSetp < 64 * 11) {   // 704
-                                // sizeof(value_type) = [40, 44)
+                            if (kSlotSetp >= 64 * 11) {   // >= 704
+                                // sizeof(value_type) = [44, 48)
                                 Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 10));
                             }
-                            if (kSlotSetp < 64 * 12) {   // 768
-                                // sizeof(value_type) = [44, 48)
+                            if (kSlotSetp >= 64 * 12) {   // >= 768
+                                // sizeof(value_type) = [48, 52)
                                 Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 11));
                             }
-                            if (kSlotSetp < 64 * 13) {   // 832
-                                // sizeof(value_type) = [48, 52)
+                            if (kSlotSetp >= 64 * 13) {   // >= 832
+                                // sizeof(value_type) = [52, 56)
                                 Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 12));
                             }
-                            if (kSlotSetp < 64 * 14) {   // 896
-                                // sizeof(value_type) = [52, 56)
+                            if (kSlotSetp >= 64 * 14) {   // >= 896
+                                // sizeof(value_type) = [56, 60)
                                 Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 13));
                             }
-                            if (kSlotSetp < 64 * 15) {   // 960
-                                // sizeof(value_type) = [56, 60)
+                            if (kSlotSetp >= 64 * 15) {   // >= 960
+                                // sizeof(value_type) = [60, 64)
                                 Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 14));
                             }
-                            if (kSlotSetp < 64 * 16) {   // 1024
-                                // sizeof(value_type) = [60, 64)
+                            if (kSlotSetp >= 64 * 16) {   // >= 1024
+                                // sizeof(value_type) = [64, Max)
                                 Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 15));
                             }
                         }
