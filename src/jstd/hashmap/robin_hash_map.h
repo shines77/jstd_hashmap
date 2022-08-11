@@ -2799,7 +2799,7 @@ private:
                     static constexpr size_type kSlotSetp = sizeof(value_type) * kGroupWidth;
                     static constexpr size_type kCacheLine = 64;
                     static constexpr size_type kPrefetchMaxOffset = 1024;
-                    static constexpr size_type kPrefetchSteps = 2;
+                    static constexpr size_type kPrefetchSteps = 3;
                     static constexpr size_type kPrefetchOffset = cmin(kPrefetchSteps * cmax(kSlotSetp, kCacheLine), kPrefetchMaxOffset);
                     static constexpr size_type kTailGroupCount = (kPrefetchOffset + (kSlotSetp - 1)) / kSlotSetp;
 
