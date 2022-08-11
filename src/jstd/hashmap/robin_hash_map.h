@@ -238,11 +238,6 @@ public:
     static constexpr size_type kCtrlHashMask = 0x000000FFul;
     static constexpr size_type kCtrlShift    = 8;
 
-    static constexpr size_type kGroupBits   = 4;
-    static constexpr size_type kGroupWidth  = size_type(1) << kGroupBits;
-    static constexpr size_type kGroupMask   = kGroupWidth - 1;
-    static constexpr size_type kGroupShift  = kCtrlShift + kGroupBits;
-
     static constexpr size_type kDefaultCapacity = 0;
     // kMinimumCapacity must be >= 2
     static constexpr size_type kMinimumCapacity = 4;
@@ -306,6 +301,9 @@ public:
              std::is_trivially_destructible<mapped_type>::value) ||
             (detail::is_plain_type<key_type>::value &&
              detail::is_plain_type<mapped_type>::value));
+
+    static constexpr size_type kGroupBits   = (kNeedStoreHash ? 5 : 4);
+    static constexpr size_type kGroupWidth  = size_type(1) << kGroupBits;
 
     static constexpr std::int8_t kEmptySlot     = (std::int8_t)0b11111111;
     static constexpr std::int8_t kEndOfMark     = (std::int8_t)0b11111110;
@@ -1050,7 +1048,7 @@ public:
                                  0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F,
                                  0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17,
                                  0x18, 0x19, 0x1A, 0x1B, 0x1C, 0x1D, 0x1E, 0x1F);
-            assert(dist_and_hash <= kMaxDist);
+            assert(distance <= kMaxDist);
             __m256i dist_0      = _mm256_set1_epi8(distance);
             __m256i ctrl_bits   = _mm256_loadu_si256((const __m256i *)this->ctrl);
             __m256i dist_and_0  = _mm256_adds_epi8(dist_0, kDistanceBase);
