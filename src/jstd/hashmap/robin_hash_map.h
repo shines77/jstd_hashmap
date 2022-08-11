@@ -357,11 +357,11 @@ public:
         ctrl_data() noexcept {
         }
 
-        explicit ctrl_data(std::int16_t value) noexcept
+        explicit ctrl_data(value_type value) noexcept
             : value(static_cast<value_type>(value)) {
         }
 
-        explicit ctrl_data(std::uint16_t value) noexcept
+        explicit ctrl_data(uvalue_type value) noexcept
             : uvalue(static_cast<uvalue_type>(value)) {
         }
 
@@ -481,6 +481,11 @@ public:
             this->value = ctrl.value;
         }
 
+        void mergeHash(const ctrl_data & ctrl, std::uint8_t hash) {
+            (void)hash;
+            this->uvalue = ctrl.uvalue;
+        }
+
         void incDist() {
             this->uvalue += uvalue_type(1);
         }
@@ -497,12 +502,12 @@ public:
             this->uvalue -= static_cast<uvalue_type>(width);
         }
 
-        bool hash_equals(std::uint8_t ctrl_hash) const {
+        constexpr bool hash_equals(std::uint8_t ctrl_hash) const {
             (void)ctrl_hash;
             return true;
         }
 
-        bool hash_equals(const ctrl_data & ctrl) const {
+        constexpr bool hash_equals(const ctrl_data & ctrl) const {
             (void)ctrl;
             return true;
         }
@@ -524,7 +529,7 @@ public:
         }
 
         template <CompareOp CmpOp>
-        bool cmp_hash(std::uint8_t ctrl_hash) const {
+        constexpr bool cmp_hash(std::uint8_t ctrl_hash) const {
             (void)ctrl_hash;
             if (CmpOp == opEQ)
                 return true;
@@ -541,7 +546,7 @@ public:
         }
 
         template <CompareOp CmpOp>
-        bool cmp_hash(const ctrl_data & ctrl) const {
+        constexpr bool cmp_hash(const ctrl_data & ctrl) const {
             (void)ctrl;
             if (CmpOp == opEQ)
                 return true;
@@ -763,6 +768,10 @@ public:
 
         void setValue(const ctrl_data & ctrl) {
             this->value = ctrl.value;
+        }
+
+        void mergeHash(const ctrl_data & ctrl, std::uint8_t hash) {
+            this->uvalue = ctrl.uvalue | static_cast<uvalue_type>(hash);
         }
 
         void incDist() {
@@ -3907,7 +3916,7 @@ private:
         ctrl_type dist_and_0(0, 0);
 
         while (dist_and_0.value <= ctrl->value) {
-            if (ctrl->hash_equals(ctrl_hash)) {
+            if (!kNeedStoreHash || ctrl->hash_equals(ctrl_hash)) {
                 if (this->key_equal_(slot->value.first, key)) {
                     return slot;
                 }
@@ -3919,8 +3928,8 @@ private:
 
         return this->last_slot();
 #else
-        if (ctrl->value >= std::int16_t(0)) {
-            if (ctrl->hash_equals(ctrl_hash)) {
+        if (ctrl->value >= ctrl_type::make_dist(0)) {
+            if (!kNeedStoreHash || ctrl->hash_equals(ctrl_hash)) {
                 if (this->key_equal_(slot->value.first, key)) {
                     return slot;
                 }
@@ -3932,7 +3941,7 @@ private:
         ctrl++;
         slot++;
 
-        if (ctrl->value >= kDistInc16) {
+        if (ctrl->value >= ctrl_type::make_dist(1)) {
             if (ctrl->hash_equals(ctrl_hash)) {
                 if (this->key_equal_(slot->value.first, key)) {
                     return slot;
@@ -4003,10 +4012,10 @@ private:
                 return { slot, kIsExists };
             }
 
-            ctrl++;
-            slot++;
             dist_and_0.incDist();
             assert(slot < this->last_slot());
+            ctrl++;
+            slot++;
         }
 
         if (this->need_grow() || (dist_and_0.uvalue >= this->max_distance())) {
@@ -4018,20 +4027,20 @@ private:
             slot = find_info.second;
         }
 
-        dist_and_hash.setValue(dist_and_0.dist, ctrl_hash);
+        dist_and_hash.mergeHash(dist_and_0, ctrl_hash);
         //return { slot, kIsNotExists };
 #elif 1
         while (dist_and_0.value <= ctrl->value) {
-            if (ctrl->hash_equals(ctrl_hash)) {
+            if (!kNeedStoreHash || ctrl->hash_equals(ctrl_hash)) {
                 if (this->key_equal_(slot->value.first, key)) {
                     return { slot, kIsExists };
                 }
             }
 
-            ctrl++;
-            slot++;
             dist_and_0.incDist();
             assert(slot < this->last_slot());
+            ctrl++;
+            slot++;
         }
 
         if (this->need_grow() || (dist_and_0.uvalue >= this->max_distance())) {
@@ -4043,13 +4052,13 @@ private:
             slot = find_info.second;
         }
 
-        dist_and_hash.setValue(dist_and_0.dist, ctrl_hash);
+        dist_and_hash.mergeHash(dist_and_0, ctrl_hash);
         //return { slot, kIsNotExists };
 #else
         const slot_type * last_slot;
 
         if (dist_and_0.value <= ctrl->value) {
-            if (ctrl->hash_equals(ctrl_hash)) {
+            if (!kNeedStoreHash || ctrl->hash_equals(ctrl_hash)) {
                 if (this->key_equal_(slot->value.first, key)) {
                     return { slot, kIsExists };
                 }
@@ -4063,7 +4072,7 @@ private:
         dist_and_0.incDist();
 
         if (dist_and_0.value <= ctrl->value) {
-            if (ctrl->hash_equals(ctrl_hash)) {
+            if (!kNeedStoreHash || ctrl->hash_equals(ctrl_hash)) {
                 if (this->key_equal_(slot->value.first, key)) {
                     return { slot, kIsExists };
                 }
@@ -4111,7 +4120,7 @@ private:
         goto InsertOrGrow_Start;
 
 InsertOrGrow:
-        dist_and_hash.setValue(dist_and_0.dist, ctrl_hash);
+        dist_and_hash.mergeHash(dist_and_0, ctrl_hash);
 
 InsertOrGrow_Start:
         if (this->need_grow() || (dist_and_0.uvalue >= this->max_distance())) {
@@ -4557,7 +4566,8 @@ InsertOrGrow_Start:
             slot += dist_and_0.dist;
         }
 
-        ctrl_type dist_and_hash(dist_and_0.dist, ctrl_hash);
+        ctrl_type dist_and_hash;
+        dist_and_hash.mergeHash(dist_and_0, ctrl_hash);
 
 #if 0
         slot_type * last_slot = this->last_slot();
@@ -4612,7 +4622,8 @@ Insert_To_Slot:
 
         slot += dist_and_0.dist;
 
-        ctrl_type dist_and_hash(dist_and_0.dist, ctrl_hash);
+        ctrl_type dist_and_hash;
+        dist_and_hash.mergeHash(dist_and_0, ctrl_hash);
 
         if (ctrl->isEmpty()) {
             this->setUsedCtrl(ctrl, dist_and_hash);
