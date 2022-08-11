@@ -354,7 +354,7 @@ public:
             uvalue_type uvalue;
         };
 
-        ctrl_data() noexcept {
+        ctrl_data() noexcept : uvalue(static_cast<uvalue_type>(0)) {
         }
 
         explicit ctrl_data(value_type value) noexcept
@@ -641,7 +641,7 @@ public:
             uvalue_type uvalue;
         };
 
-        ctrl_data() noexcept {
+        ctrl_data() noexcept : uvalue(static_cast<uvalue_type>(0)) {
         }
 
         explicit ctrl_data(value_type value) noexcept
@@ -3814,7 +3814,7 @@ private:
     }
 
     JSTD_FORCED_INLINE
-    void setUsedCtrl(size_type index, ctrl_type new_ctrl) {
+    void setUsedCtrl(size_type index, const ctrl_type & new_ctrl) {
         ctrl_type * ctrl = this->ctrl_at(index);
         this->setUsedCtrl(ctrl, new_ctrl);
     }
@@ -3830,7 +3830,7 @@ private:
     }
 
     JSTD_FORCED_INLINE
-    void setUsedCtrl(ctrl_type * ctrl, ctrl_type new_ctrl) {
+    void setUsedCtrl(ctrl_type * ctrl, const ctrl_type & new_ctrl) {
         ctrl->setValue(new_ctrl);
     }
 
@@ -3858,7 +3858,7 @@ private:
         const ctrl_type * ctrl = this->ctrl_at(slot_index);
         const slot_type * slot = this->slot_at(slot_index);
 #if 0
-        dist_and_hash.setValue(0, ctrl_hash);
+        dist_and_hash.setHash(ctrl_hash);
 
         while (dist_and_hash.value < ctrl->value) {
             dist_and_hash.incDist();
@@ -3880,7 +3880,7 @@ private:
 
         return this->last_slot();
 #elif 0
-        dist_and_hash.setValue(0, ctrl_hash);
+        dist_and_hash.setHash(ctrl_hash);
 
         while (dist_and_hash.value < ctrl->value) {
             dist_and_hash.incDist();
@@ -3900,7 +3900,7 @@ private:
 
         return this->last_slot();
 #elif 0
-        ctrl_type dist_and_0(0, 0);
+        ctrl_type dist_and_0;
 
         while (dist_and_0.value <= ctrl->value) {
             if (this->key_equal_(slot->value.first, key)) {
@@ -3913,7 +3913,7 @@ private:
 
         return this->last_slot();
 #elif 1
-        ctrl_type dist_and_0(0, 0);
+        ctrl_type dist_and_0;
 
         while (dist_and_0.value <= ctrl->value) {
             if (!kNeedStoreHash || ctrl->hash_equals(ctrl_hash)) {
@@ -4004,7 +4004,7 @@ private:
 
         ctrl_type * ctrl = this->ctrl_at(slot_index);
         slot_type * slot = this->slot_at(slot_index);
-        ctrl_type dist_and_0(0, 0);
+        ctrl_type dist_and_0;
         ctrl_type dist_and_hash;
 #if 0
         while (dist_and_0.value <= ctrl->value) {
@@ -4149,7 +4149,7 @@ InsertOrGrow_Start:
         size_type slot_index = this->index_for_hash(hash_code);
         ctrl_type * ctrl = this->ctrl_at(slot_index);
 
-        ctrl_type dist_and_0(0, 0);
+        ctrl_type dist_and_0;
         while (dist_and_0.value <= ctrl->value) {
             dist_and_0.incDist();
             ctrl++;
@@ -4163,7 +4163,7 @@ InsertOrGrow_Start:
 
     template <bool isRehashing>
     JSTD_FORCED_INLINE
-    bool insert_to_place(ctrl_type * insert_ctrl, slot_type * insert_slot, ctrl_type dist_and_hash) {
+    bool insert_to_place(ctrl_type * insert_ctrl, slot_type * insert_slot, const ctrl_type & dist_and_hash) {
         ctrl_type * ctrl = insert_ctrl;
         slot_type * target = insert_slot;
         ctrl_type rich_ctrl(dist_and_hash);
@@ -4240,7 +4240,7 @@ InsertOrGrow_Start:
 
     JSTD_FORCED_INLINE
     void emplace_rich_slot(ctrl_type * ctrl, slot_type * slot, slot_type * insert,
-                           ctrl_type & dist_and_hash) {
+                           const ctrl_type & dist_and_hash) {
         this->setUsedCtrl(ctrl, dist_and_hash);
         this->transfer_slot(slot, insert);
     }
@@ -4548,7 +4548,7 @@ InsertOrGrow_Start:
 
         ctrl_type * ctrl = this->ctrl_at(slot_index);
         slot_type * slot = this->slot_at(slot_index);
-        ctrl_type dist_and_0(0, 0);
+        ctrl_type dist_and_0;
 
         while (dist_and_0.value <= ctrl->value) {
             dist_and_0.incDist();
@@ -4613,7 +4613,7 @@ Insert_To_Slot:
 
         ctrl_type * ctrl = this->ctrl_at(slot_index);
         slot_type * slot = this->slot_at(slot_index);
-        ctrl_type dist_and_0(0, 0);
+        ctrl_type dist_and_0;
 
         while (dist_and_0.value <= ctrl->value) {
             dist_and_0.incDist();
