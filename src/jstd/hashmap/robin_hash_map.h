@@ -3629,6 +3629,7 @@ InsertOrGrow_Start:
             auto find_info = this->find_failed(hash_code, dist_and_0);
             ctrl = find_info.first;
             slot = find_info.second;
+            dist_and_hash.uvalue = dist_and_0.uvalue | ctrl_hash;
         }
 #endif
 
@@ -4085,7 +4086,7 @@ InsertOrGrow_Start:
             }
             dist_and_hash.incDist(kGroupWidth);
             ctrl += kGroupWidth;
-            slot += kGroupWidth;            
+            slot += kGroupWidth;
             assert(dist_and_hash.value >= 0 && dist_and_hash.uvalue < this->max_distance());
         }
 
