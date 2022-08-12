@@ -3870,14 +3870,12 @@ private:
         ctrl->setUnused();
     }
 
-    JSTD_FORCED_INLINE
     slot_type * find_impl(const key_type & key) {
         return const_cast<slot_type *>(
             const_cast<const this_type *>(this)->find_impl(key)
         );
     }
 
-    JSTD_FORCED_INLINE
     const slot_type * find_impl(const key_type & key) const {
         // Prefetch for resolve potential ctrls TLB misses.
         //Prefetch_Read_T2(this->ctrls());
@@ -3986,6 +3984,8 @@ private:
         ctrl++;
         slot++;
 #endif
+
+#if 0
         dist_and_hash.setValue(2, ctrl_hash);
         const slot_type * last_slot = this->last_slot();
 
@@ -4011,6 +4011,7 @@ private:
         }
 
         return last_slot;
+#endif
     }
 
     enum FindResult {
@@ -4162,7 +4163,8 @@ InsertOrGrow_Start:
             auto find_info = this->find_failed(hash_code, dist_and_0);
             ctrl = find_info.first;
             slot = find_info.second;
-            dist_and_hash.uvalue = dist_and_0.uvalue | ctrl_hash;
+
+            dist_and_hash.mergeHash(dist_and_0, ctrl_hash);
         }
 #endif
 
@@ -4323,7 +4325,7 @@ InsertOrGrow_Start:
         auto find_info = this->find_or_insert(value.first);
         slot_type * slot = find_info.first;
         size_type is_exists = find_info.second;
-        if (likely(is_exists != kIsExists)) {
+        if (is_exists != kIsExists) {
             // The key to be inserted is not exists.
             assert(slot != nullptr);
             if (is_exists == kNeedGrow) {
@@ -4352,7 +4354,7 @@ InsertOrGrow_Start:
         auto find_info = this->find_or_insert(value.first);
         slot_type * slot = find_info.first;
         size_type is_exists = find_info.second;
-        if (likely(is_exists != kIsExists)) {
+        if (is_exists != kIsExists) {
             // The key to be inserted is not exists.
             assert(slot != nullptr);
             if (is_exists == kNeedGrow) {
@@ -4394,7 +4396,7 @@ InsertOrGrow_Start:
         auto find_info = this->find_or_insert(key);
         slot_type * slot = find_info.first;
         size_type is_exists = find_info.second;
-        if (likely(is_exists != kIsExists)) {
+        if (is_exists != kIsExists) {
             // The key to be inserted is not exists.
             assert(slot != nullptr);
             if (is_exists == kNeedGrow) {
@@ -4443,7 +4445,7 @@ InsertOrGrow_Start:
         auto find_info = this->find_or_insert(key);
         slot_type * slot = find_info.first;
         size_type is_exists = find_info.second;
-        if (likely(is_exists != kIsExists)) {
+        if (is_exists != kIsExists) {
             // The key to be inserted is not exists.
             assert(slot != nullptr);
             if (is_exists == kNeedGrow) {
@@ -4493,7 +4495,7 @@ InsertOrGrow_Start:
         auto find_info = this->find_or_insert(key_wrapper.value());
         slot_type * slot = find_info.first;
         size_type is_exists = find_info.second;
-        if (likely(is_exists != kIsExists)) {
+        if (is_exists != kIsExists) {
             // The key to be inserted is not exists.
             assert(slot != nullptr);
             if (is_exists == kNeedGrow) {
@@ -4541,7 +4543,7 @@ InsertOrGrow_Start:
         auto find_info = this->find_or_insert(value.first);
         slot_type * slot = find_info.first;
         size_type is_exists = find_info.second;
-        if (likely(is_exists != kIsExists)) {
+        if (is_exists != kIsExists) {
             // The key to be inserted is not exists.
             assert(slot != nullptr);
             if (is_exists == kNeedGrow) {
@@ -4837,11 +4839,49 @@ Insert_To_Slot:
     }
 };
 
-template <class Key, class Value, class Hash, class KeyEqual, class LayoutPolicy, class Alloc, class Pred>
-typename robin_hash_map<Key, Value, Hash, KeyEqual, LayoutPolicy, Alloc>::size_type
+/**
+ * Specializes the @c std::swap algorithm for @c robin_hash_map. Calls @c lhs.swap(rhs).
+ *
+ * @param lhs the map on the left side to swap
+ * @param lhs the map on the right side to swap
+ */
+
+template <class Key, class Value, class Hash, class KeyEqual, class LayoutPolicy, class Alloc>
 inline
-erase_if(robin_hash_map<Key, Value, Hash, KeyEqual, LayoutPolicy, Alloc> & hash_map, Pred pred)
+void swap(robin_hash_map<Key, Value, Hash, KeyEqual, LayoutPolicy, Alloc> & lhs,
+          robin_hash_map<Key, Value, Hash, KeyEqual, LayoutPolicy, Alloc> & rhs) noexcept
 {
+    lhs.swap(rhs);
+}
+
+} // namespace jstd
+
+///////////////////////////////////////////////////////////
+// std extensions: std::erase_if()
+///////////////////////////////////////////////////////////
+
+namespace std {
+
+template <class Key, class Value, class Hash, class KeyEqual, class LayoutPolicy, class Alloc, class Pred>
+typename jstd::robin_hash_map<Key, Value, Hash, KeyEqual, LayoutPolicy, Alloc>::size_type
+inline
+erase_if(jstd::robin_hash_map<Key, Value, Hash, KeyEqual, LayoutPolicy, Alloc> & hash_map, Pred pred)
+{
+#if 1
+    auto old_size = hash_map.size();
+
+    auto first = hash_map.begin();
+    auto last = hash_map.end();
+    auto iter = last;
+    while (iter != first) {
+        --iter;
+        if (pred(*iter)) {
+            hash_map.erase(iter);
+        }
+    }
+
+    return (old_size - hash_map.size());
+#else
     auto old_size = hash_map.size();
     for (auto it = hash_map.begin(), last = hash_map.end(); it != last; ) {
         if (pred(*it)) {
@@ -4851,6 +4891,7 @@ erase_if(robin_hash_map<Key, Value, Hash, KeyEqual, LayoutPolicy, Alloc> & hash_
         }
     }
     return (old_size - hash_map.size());
+#endif
 }
 
-} // namespace jstd
+} // namespace std
