@@ -1317,7 +1317,7 @@ void print_need_store_hash(const std::string & key, const std::string & value)
     static constexpr bool bIsPlainType = jstd::detail::is_plain_type<Key>::value;
     static constexpr bool bNeedStoreHash = jstd::robin_hash_map<Key, Value>::kDetectStoreHash;
 
-    printf("jstd::detail::is_plain_type<%s>::value               = %s\n",
+    printf("jstd::detail::is_plain_type<%s>::value = %s\n",
            key.c_str(), (bIsPlainType ? "True" : "False"));
     printf("jstd::robin_hash_map<%s, %s>::kDetectStoreHash = %s\n",
            key.c_str(), value.c_str(), (bNeedStoreHash ? "True" : "False"));
