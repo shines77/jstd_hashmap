@@ -365,7 +365,7 @@ public:
             : uvalue(static_cast<uvalue_type>(value)) {
         }
 
-        explicit ctrl_data(no_init_t &) noexcept {
+        explicit ctrl_data(no_init_t) noexcept {
             /* Do nothing!! */
         }
 
@@ -673,7 +673,7 @@ public:
             : uvalue(value) {
         }
 
-        explicit ctrl_data(no_init_t &) noexcept {
+        explicit ctrl_data(no_init_t) noexcept {
             /* Do nothing!! */
         }
 
