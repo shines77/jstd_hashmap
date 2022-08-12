@@ -54,7 +54,7 @@
 #include <assert.h>
 
 #include <cstdint>
-#include <cstddef>      // For std::ptrdiff_t, std::size_t
+#include <cstddef>      // For std::ptrdiff_t, std::size_t, std::nullptr_t
 #include <cstdbool>
 #include <cassert>
 #include <cmath>        // For std::ceil()
@@ -365,8 +365,17 @@ public:
             : uvalue(static_cast<uvalue_type>(value)) {
         }
 
+        explicit ctrl_data(no_init_t &) noexcept {
+            /* Do nothing!! */
+        }
+
         ctrl_data(std::int8_t dist, std::uint8_t hash) noexcept
             : dist(dist) {
+            /* (void)hash; */
+        }
+
+        ctrl_data(const ctrl_data & other, std::uint8_t hash) noexcept
+            : value(other.value) {
             /* (void)hash; */
         }
 
@@ -664,8 +673,16 @@ public:
             : uvalue(value) {
         }
 
+        explicit ctrl_data(no_init_t &) noexcept {
+            /* Do nothing!! */
+        }
+
         ctrl_data(std::int8_t dist, std::uint8_t hash) noexcept
             : hash(hash), dist(dist) {
+        }
+
+        ctrl_data(const ctrl_data & other, std::uint8_t hash) noexcept
+            : uvalue(other.uvalue | static_cast<uvalue_type>(hash)) {
         }
 
         ctrl_data(const ctrl_data & src) noexcept : value(src.value) {
@@ -1805,7 +1822,6 @@ public:
 
     typedef group_mask  group_type;
 
-#if 1
     template <typename ValueType>
     class basic_iterator {
     public:
@@ -1890,6 +1906,23 @@ public:
             return copy;
         }
 
+        basic_iterator & operator -- () {
+            const ctrl_type * ctrl = this->owner_->ctrl_at(this->index_);
+            while (this->index_ != 0) {
+                --(this->index_);
+                --ctrl;
+                if (!ctrl->isEmpty())
+                    break;
+            }  
+            return *this;
+        }
+
+        basic_iterator operator -- (int) {
+            basic_iterator copy(*this);
+            --*this;
+            return copy;
+        }
+
         reference operator * () const {
             slot_type * slot = const_cast<this_type *>(this->owner_)->slot_at(this->index_);
             return slot->value;
@@ -1940,118 +1973,6 @@ public:
             return _slot;
         }
     };
-#else
-    template <typename ValueType>
-    class basic_iterator {
-    public:
-        using iterator_category = std::forward_iterator_tag;
-
-        using value_type = ValueType;
-        using pointer = ValueType *;
-        using reference = ValueType &;
-
-        using mutable_value_type = typename std::remove_const<ValueType>::type;
-        using const_value_type = typename std::add_const<mutable_value_type>::type;
-
-        using opp_value_type = typename std::conditional<std::is_const<ValueType>::value,
-                                                         mutable_value_type,
-                                                         const_value_type>::type;
-        using opp_basic_iterator = basic_iterator<opp_value_type>;
-
-        using size_type = std::size_t;
-        using difference_type = std::ptrdiff_t;
-
-    private:
-        ctrl_type * ctrl_;
-        slot_type * slot_;
-
-    public:
-        basic_iterator() noexcept : ctrl_(nullptr), slot_(nullptr) {
-        }
-        basic_iterator(ctrl_type * ctrl, slot_type * slot) noexcept
-            : ctrl_(ctrl), slot_(slot) {
-        }
-        basic_iterator(const ctrl_type * ctrl, const slot_type * slot) noexcept
-            : ctrl_(const_cast<ctrl_type *>(ctrl)), slot_(const_cast<slot_type *>(slot)) {
-        }
-        basic_iterator(const basic_iterator & src) noexcept
-            : ctrl_(src.ctrl_), slot_(src.slot_) {
-        }
-        basic_iterator(const opp_basic_iterator & src) noexcept
-            : owner_(src.ctrl()), index_(src.slot()) {
-        }
-
-        basic_iterator & operator = (const basic_iterator & rhs) noexcept {
-            this->ctrl_ = rhs.ctrl_;
-            this->slot_ = rhs.slot_;
-            return *this;
-        }
-
-        basic_iterator & operator = (const opp_basic_iterator & rhs) noexcept {
-            this->ctrl_ = rhs.ctrl();
-            this->slot_ = rhs.slot();
-            return *this;
-        }
-
-        friend bool operator == (const basic_iterator & lhs, const basic_iterator & rhs) noexcept {
-            return (lhs.slot_ == rhs.slot_);
-        }
-
-        friend bool operator != (const basic_iterator & lhs, const basic_iterator & rhs) noexcept {
-            return (lhs.slot_ != rhs.slot_);
-        }
-
-        friend bool operator == (const basic_iterator & lhs, const opp_basic_iterator & rhs) noexcept {
-            return (lhs.slot() == rhs.slot());
-        }
-
-        friend bool operator != (const basic_iterator & lhs, const opp_basic_iterator & rhs) noexcept {
-            return (lhs.slot() != rhs.slot());
-        }
-
-        basic_iterator & operator ++ () {
-            do {
-                ++(this->ctrl_);
-                ++(this->slot_);
-            } while (ctrl_->isEmpty());
-            return *this;
-        }
-
-        basic_iterator operator ++ (int) {
-            basic_iterator copy(*this);
-            ++*this;
-            return copy;
-        }
-
-        reference operator * () const {
-            return this->slot_->value;
-        }
-
-        pointer operator -> () const {
-            return std::addressof(this->slot_->value);
-        }
-
-        operator basic_iterator<const mutable_value_type>() const {
-            return { this->ctrl_, this->slot_ };
-        }
-
-        ctrl_type * ctrl() {
-            return this->ctrl_;
-        }
-
-        const ctrl_type * ctrl() const {
-            return this->ctrl_;
-        }
-
-        slot_type * slot() {
-            return this->slot_;
-        }
-
-        const slot_type * slot() const {
-            return this->slot_;
-        }
-    };
-#endif
 
     using iterator       = basic_iterator<value_type>;
     using const_iterator = basic_iterator<const value_type>;
@@ -3883,12 +3804,12 @@ private:
         hash_code_t hash_code = this->get_hash(key);
         size_type slot_index = this->index_for_hash(hash_code);
         std::uint8_t ctrl_hash = this->get_ctrl_hash(hash_code);
-        ctrl_type dist_and_hash;
+        ctrl_type dist_and_hash(no_init_t{});
 
         const ctrl_type * ctrl = this->ctrl_at(slot_index);
         const slot_type * slot = this->slot_at(slot_index);
 #if 0
-        dist_and_hash.setHash(ctrl_hash);
+        dist_and_hash.setValue(static_cast<ctrl_value_t>(ctrl_hash));
 
         while (dist_and_hash.value < ctrl->value) {
             dist_and_hash.incDist();
@@ -3910,7 +3831,7 @@ private:
 
         return this->last_slot();
 #elif 0
-        dist_and_hash.setHash(ctrl_hash);
+        dist_and_hash.setValue(static_cast<ctrl_value_t>(ctrl_hash));
 
         while (dist_and_hash.value < ctrl->value) {
             dist_and_hash.incDist();
@@ -4020,35 +3941,27 @@ private:
         kIsExists = 2
     };
 
-    std::pair<slot_type *, FindResult>
-    find_or_insert(const key_type & key) {
-        // Prefetch for resolve potential ctrls TLB misses.
-        //Prefetch_Read_T2(this->ctrls());
-
-        hash_code_t hash_code = this->get_hash(key);
-        return this->find_or_insert(key, hash_code);
-    }
-
     JSTD_NO_INLINE
     std::pair<slot_type *, FindResult>
-    find_or_insert(const key_type & key, hash_code_t hash_code) {
+    find_or_insert(const key_type & key) {
+        hash_code_t hash_code = this->get_hash(key);
         size_type slot_index = this->index_for_hash(hash_code);
         std::uint8_t ctrl_hash = this->get_ctrl_hash(hash_code);
 
         ctrl_type * ctrl = this->ctrl_at(slot_index);
         slot_type * slot = this->slot_at(slot_index);
         ctrl_type dist_and_0;
-        ctrl_type dist_and_hash;
+        ctrl_type dist_and_hash(no_init_t{});
 #if 0
         while (dist_and_0.value <= ctrl->value) {
             if (this->key_equal_(slot->value.first, key)) {
                 return { slot, kIsExists };
             }
 
-            dist_and_0.incDist();
-            assert(slot < this->last_slot());
             ctrl++;
             slot++;
+            dist_and_0.incDist();
+            assert(slot < this->last_slot());
         }
 
         if (this->need_grow() || (dist_and_0.uvalue >= this->max_distance())) {
@@ -4070,10 +3983,10 @@ private:
                 }
             }
 
-            dist_and_0.incDist();
-            assert(slot < this->last_slot());
             ctrl++;
             slot++;
+            dist_and_0.incDist();
+            assert(slot < this->last_slot());
         }
 
         if (this->need_grow() || (dist_and_0.uvalue >= this->max_distance())) {
@@ -4209,7 +4122,6 @@ InsertOrGrow_Start:
 
         static constexpr size_type kMinAlignment = 16;
         static constexpr size_type kAlignment = cmax(std::alignment_of<slot_type>::value, kMinAlignment);
-
 #if 1
         alignas(kAlignment) char slot_raw[sizeof(slot_type)];
 
@@ -4600,8 +4512,7 @@ InsertOrGrow_Start:
             slot += dist_and_0.dist;
         }
 
-        ctrl_type dist_and_hash;
-        dist_and_hash.mergeHash(dist_and_0, ctrl_hash);
+        ctrl_type dist_and_hash(dist_and_0, ctrl_hash);
 
 #if 0
         slot_type * last_slot = this->last_slot();
@@ -4656,8 +4567,7 @@ Insert_To_Slot:
 
         slot += dist_and_0.dist;
 
-        ctrl_type dist_and_hash;
-        dist_and_hash.mergeHash(dist_and_0, ctrl_hash);
+        ctrl_type dist_and_hash(dist_and_0, ctrl_hash);
 
         if (ctrl->isEmpty()) {
             this->setUsedCtrl(ctrl, dist_and_hash);
@@ -4670,7 +4580,6 @@ Insert_To_Slot:
 
     // Use in rehash_impl()
     bool unique_insert_no_grow(slot_type * slot) {
-        ctrl_type dist_and_hash;
         auto find_info = this->unique_find_or_insert_no_grow(slot->value.first);
         slot_type * new_slot = find_info.first;
         bool need_grow = find_info.second;
@@ -4867,7 +4776,6 @@ typename jstd::robin_hash_map<Key, Value, Hash, KeyEqual, LayoutPolicy, Alloc>::
 inline
 erase_if(jstd::robin_hash_map<Key, Value, Hash, KeyEqual, LayoutPolicy, Alloc> & hash_map, Pred pred)
 {
-#if 1
     auto old_size = hash_map.size();
 
     auto first = hash_map.begin();
@@ -4881,17 +4789,6 @@ erase_if(jstd::robin_hash_map<Key, Value, Hash, KeyEqual, LayoutPolicy, Alloc> &
     }
 
     return (old_size - hash_map.size());
-#else
-    auto old_size = hash_map.size();
-    for (auto it = hash_map.begin(), last = hash_map.end(); it != last; ) {
-        if (pred(*it)) {
-            it = hash_map.erase(it);
-        } else {
-            ++it;
-        }
-    }
-    return (old_size - hash_map.size());
-#endif
 }
 
 } // namespace std

@@ -22,6 +22,8 @@
 
 namespace jstd {
 
+struct no_init_t {};
+
 struct false_type {
     typedef false_type type;
     static const bool value = false;

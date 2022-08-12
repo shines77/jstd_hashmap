@@ -1373,6 +1373,23 @@ public:
             return copy;
         }
 
+        basic_iterator & operator -- () {
+            const ctrl_type * ctrl = this->owner_->ctrl_at(this->index_);
+            while (this->index_ != 0) {
+                --(this->index_);
+                --ctrl;
+                if (!ctrl->isEmpty())
+                    break;
+            }  
+            return *this;
+        }
+
+        basic_iterator operator -- (int) {
+            basic_iterator copy(*this);
+            --*this;
+            return copy;
+        }
+
         reference operator * () const {
             slot_type * slot = const_cast<this_type *>(this->owner_)->slot_at(this->index_);
             return slot->value;
@@ -4126,7 +4143,6 @@ Insert_To_Slot:
 
     // Use in rehash_impl()
     bool unique_insert_no_grow(slot_type * slot) {
-        ctrl_type dist_and_hash;
         auto find_info = this->unique_find_or_insert_no_grow(slot->value.first);
         slot_type * new_slot = find_info.first;
         bool need_grow = find_info.second;
@@ -4295,11 +4311,50 @@ Insert_To_Slot:
     }
 };
 
-template <class Key, class Value, class Hash, class KeyEqual, class LayoutPolicy, class Alloc, class Pred>
-typename robin_hash_map<Key, Value, Hash, KeyEqual, LayoutPolicy, Alloc>::size_type
+/**
+ * Specializes the @c std::swap algorithm for @c robin_hash_map. Calls @c lhs.swap(rhs).
+ *
+ * @param lhs the map on the left side to swap
+ * @param lhs the map on the right side to swap
+ */
+
+template <class Key, class Value, class Hash, class KeyEqual, class LayoutPolicy, class Alloc>
 inline
-erase_if(robin_hash_map<Key, Value, Hash, KeyEqual, LayoutPolicy, Alloc> & hash_map, Pred pred)
+void swap(robin_hash_map<Key, Value, Hash, KeyEqual, LayoutPolicy, Alloc> & lhs,
+          robin_hash_map<Key, Value, Hash, KeyEqual, LayoutPolicy, Alloc> & rhs) noexcept
 {
+    lhs.swap(rhs);
+}
+
+} // namespace v3
+} // namespace jstd
+
+///////////////////////////////////////////////////////////
+// std extensions: std::erase_if()
+///////////////////////////////////////////////////////////
+
+namespace std {
+
+template <class Key, class Value, class Hash, class KeyEqual, class LayoutPolicy, class Alloc, class Pred>
+typename jstd::v3::robin_hash_map<Key, Value, Hash, KeyEqual, LayoutPolicy, Alloc>::size_type
+inline
+erase_if(jstd::v3::robin_hash_map<Key, Value, Hash, KeyEqual, LayoutPolicy, Alloc> & hash_map, Pred pred)
+{
+#if 1
+    auto old_size = hash_map.size();
+
+    auto first = hash_map.begin();
+    auto last = hash_map.end();
+    auto iter = last;
+    while (iter != first) {
+        --iter;
+        if (pred(*iter)) {
+            hash_map.erase(iter);
+        }
+    }
+
+    return (old_size - hash_map.size());
+#else
     auto old_size = hash_map.size();
     for (auto it = hash_map.begin(), last = hash_map.end(); it != last; ) {
         if (pred(*it)) {
@@ -4309,7 +4364,7 @@ erase_if(robin_hash_map<Key, Value, Hash, KeyEqual, LayoutPolicy, Alloc> & hash_
         }
     }
     return (old_size - hash_map.size());
+#endif
 }
 
-} // namespace v3
-} // namespace jstd
+} // namespace std
