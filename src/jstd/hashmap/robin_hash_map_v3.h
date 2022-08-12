@@ -273,12 +273,6 @@ public:
                                            std::is_same<Hash, std::hash<key_type>>::value &&
                                           (detail::is_plain_type<key_type>::value);
 
-    static constexpr bool kDetectStoreHash = !detail::is_plain_type<key_type>::value;
-
-    static constexpr bool kNeedStoreHash =
-        (!layout_policy_t::autoDetectStoreHash && layout_policy_t::needStoreHash) ||
-         (layout_policy_t::autoDetectStoreHash && (kDetectStoreHash));
-
     static constexpr bool kIsPlainKey    = detail::is_plain_type<key_type>::value;
     static constexpr bool kIsPlainMapped = detail::is_plain_type<mapped_type>::value;
 
@@ -307,6 +301,15 @@ public:
              std::is_trivially_destructible<mapped_type>::value) ||
             (detail::is_plain_type<key_type>::value &&
              detail::is_plain_type<mapped_type>::value));
+
+    static constexpr bool kDetectStoreHash = !(detail::is_plain_type<key_type>::value ||
+                                              (sizeof(key_type) <= sizeof(std::size_t)) ||
+                                             ((sizeof(key_type) <= (sizeof(std::size_t) * 2)) &&
+                                               is_slot_trivial_destructor));
+
+    static constexpr bool kNeedStoreHash =
+        (!layout_policy_t::autoDetectStoreHash && layout_policy_t::needStoreHash) ||
+         (layout_policy_t::autoDetectStoreHash && (kDetectStoreHash));
 
     static constexpr std::int8_t kEmptySlot     = (std::int8_t)0b11111111;
     static constexpr std::int8_t kEndOfMark     = (std::int8_t)0b11111110;

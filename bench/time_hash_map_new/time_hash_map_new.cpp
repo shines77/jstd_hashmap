@@ -134,6 +134,7 @@
 #endif
 #endif // USE_STD_HASH_MAP
 
+#include <string>
 #if USE_STD_UNORDERED_MAP
 #include <unordered_map>
 #endif
@@ -232,7 +233,7 @@ static const bool FLAGS_test_map = true;
 static constexpr bool FLAGS_test_4_bytes = true;
 static constexpr bool FLAGS_test_8_bytes = true;
 static constexpr bool FLAGS_test_16_bytes = true;
-static constexpr bool FLAGS_test_256_bytes = true;
+static constexpr bool FLAGS_test_32_bytes = true;
 
 #ifndef _DEBUG
 static constexpr std::size_t kDefaultIters = 10000000;
@@ -278,6 +279,51 @@ std::size_t CurrentMemoryUsage()
     __COMPILER_BARRIER();
     return usedMemory;
 }
+
+namespace std {
+
+template <>
+struct hash<jstd::string_view> {
+    typedef jstd::string_view   argument_type;
+    typedef std::uint32_t       result_type;
+
+    typedef jstd::string_hash_helper<jstd::string_view,
+                                     std::uint32_t, jstd::HashFunc_CRC32C> hasher;
+
+    result_type operator () (const argument_type & key) const noexcept {
+        return static_cast<result_type>(hasher::getHashCode(key));
+    }
+};
+
+template <>
+struct hash<jstd::wstring_view> {
+    typedef jstd::wstring_view  argument_type;
+    typedef std::uint32_t       result_type;
+
+    typedef jstd::string_hash_helper<jstd::wstring_view,
+                                     std::uint32_t, jstd::HashFunc_CRC32C> hasher;
+
+    result_type operator () (const argument_type & key) const noexcept {
+
+        return static_cast<result_type>(hasher::getHashCode(key));
+    }
+};
+
+template <typename CharT, typename Traits>
+struct hash<jstd::basic_string_view<CharT, Traits>> {
+    typedef jstd::basic_string_view<CharT, Traits>  argument_type;
+    typedef std::uint32_t                           result_type;
+
+    typedef jstd::string_hash_helper<jstd::basic_string_view<CharT, Traits>,
+                                     std::uint32_t, jstd::HashFunc_CRC32C> hasher;
+
+    result_type operator () (const argument_type & key) const noexcept {
+
+        return static_cast<result_type>(hasher::getHashCode(key));
+    }
+};
+
+} // namespace std
 
 namespace test {
 
@@ -691,7 +737,7 @@ public:
     }
 };
 
-#if 1
+#if 0
 
 namespace std {
 
@@ -752,7 +798,7 @@ struct hash<HashObject<Key, Size, HashSize>> {
 
 #endif
 
-#if 1
+#if 0
 
 namespace std {
 
@@ -779,9 +825,6 @@ struct is_trivially_copyable< HashObject<std::size_t, 16, 16> > : true_type { };
 template <>
 struct is_trivially_copyable< HashObject<std::size_t, 256, 32> > : true_type { };
 
-template <>
-struct is_trivially_copyable< HashObject<std::size_t, 256, 64> > : true_type { };
-
 // is_trivially_destructible
 
 template <std::size_t Size, std::size_t HashSize>
@@ -801,9 +844,6 @@ struct is_trivially_destructible< HashObject<std::size_t, 16, 16> > : true_type 
 
 template <>
 struct is_trivially_destructible< HashObject<std::size_t, 256, 32> > : true_type { };
-
-template <>
-struct is_trivially_destructible< HashObject<std::size_t, 256, 64> > : true_type { };
 
 } // namespace std
 
@@ -1123,14 +1163,14 @@ static void measure_hashmap(const char * name, std::size_t obj_size, std::size_t
 #endif
 }
 
-template <typename HashObj, typename Value>
+template <typename Key, typename Value>
 static void test_all_hashmaps(std::size_t obj_size, std::size_t iters) {
     const bool has_stress_hash_function = (obj_size <= 8);
 
 #if USE_STD_HASH_MAP
     if (FLAGS_test_std_hash_map) {
-        measure_hashmap<StdHashMap<HashObj,   Value, HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>,
-                        StdHashMap<HashObj *, Value, HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>
+        measure_hashmap<StdHashMap<Key,   Value, HASH_MAP_FUNCTION<Key>>,
+                        StdHashMap<Key *, Value, HASH_MAP_FUNCTION<Key *>>
                         >(
             "stdext::hash_map<K, V>", obj_size, 0, iters, has_stress_hash_function);
     }
@@ -1138,8 +1178,8 @@ static void test_all_hashmaps(std::size_t obj_size, std::size_t iters) {
 
 #if USE_STD_UNORDERED_MAP
     if (FLAGS_test_std_unordered_map) {
-        measure_hashmap<std::unordered_map<HashObj,   Value, HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>,
-                        std::unordered_map<HashObj *, Value, HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>
+        measure_hashmap<std::unordered_map<Key,   Value, HASH_MAP_FUNCTION<Key>>,
+                        std::unordered_map<Key *, Value, HASH_MAP_FUNCTION<Key *>>
                         >(
             "std::unordered_map<K, V>", obj_size, 0, iters, has_stress_hash_function);
     }
@@ -1147,8 +1187,8 @@ static void test_all_hashmaps(std::size_t obj_size, std::size_t iters) {
 
 #if USE_JSTD_FLAT16_HASH_MAP
     if (FLAGS_test_jstd_flat16_hash_map) {
-        measure_hashmap<jstd::flat16_hash_map<HashObj,   Value, HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>,
-                        jstd::flat16_hash_map<HashObj *, Value, HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>
+        measure_hashmap<jstd::flat16_hash_map<Key,   Value, HASH_MAP_FUNCTION<Key>>,
+                        jstd::flat16_hash_map<Key *, Value, HASH_MAP_FUNCTION<Key *>>
                         >(
             "jstd::flat16_hash_map<K, V>", obj_size, 0, iters, has_stress_hash_function);
     }
@@ -1156,8 +1196,8 @@ static void test_all_hashmaps(std::size_t obj_size, std::size_t iters) {
 
 #if USE_JSTD_ROBIN16_HASH_MAP
     if (FLAGS_test_jstd_robin16_hash_map) {
-        measure_hashmap<jstd::robin16_hash_map<HashObj,   Value, HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>,
-                        jstd::robin16_hash_map<HashObj *, Value, HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>
+        measure_hashmap<jstd::robin16_hash_map<Key,   Value, HASH_MAP_FUNCTION<Key>>,
+                        jstd::robin16_hash_map<Key *, Value, HASH_MAP_FUNCTION<Key *>>
                         >(
             "jstd::robin16_hash_map<K, V>", obj_size, 0, iters, has_stress_hash_function);
     }
@@ -1165,8 +1205,8 @@ static void test_all_hashmaps(std::size_t obj_size, std::size_t iters) {
 
 #if USE_JSTD_ROBIN_HASH_MAP
     if (FLAGS_test_jstd_robin_hash_map) {
-        measure_hashmap<jstd::robin_hash_map<HashObj,   Value, HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>,
-                        jstd::robin_hash_map<HashObj *, Value, HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>
+        measure_hashmap<jstd::robin_hash_map<Key,   Value, HASH_MAP_FUNCTION<Key>>,
+                        jstd::robin_hash_map<Key *, Value, HASH_MAP_FUNCTION<Key *>>
                         >(
             "jstd::robin_hash_map<K, V>", obj_size, 0, iters, has_stress_hash_function);
     }
@@ -1174,8 +1214,8 @@ static void test_all_hashmaps(std::size_t obj_size, std::size_t iters) {
 
 #if USE_JSTD_ROBIN_HASH_MAP_V3
     if (FLAGS_test_jstd_v3_robin_hash_map) {
-        measure_hashmap<jstd::v3::robin_hash_map<HashObj,   Value, HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>,
-                        jstd::v3::robin_hash_map<HashObj *, Value, HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>
+        measure_hashmap<jstd::v3::robin_hash_map<Key,   Value, HASH_MAP_FUNCTION<Key>>,
+                        jstd::v3::robin_hash_map<Key *, Value, HASH_MAP_FUNCTION<Key *>>
                         >(
             "jstd::v3::robin_hash_map<K, V>", obj_size, 0, iters, has_stress_hash_function);
     }
@@ -1183,8 +1223,8 @@ static void test_all_hashmaps(std::size_t obj_size, std::size_t iters) {
 
 #if USE_JSTD_ROBIN_HASH_MAP_V2
     if (FLAGS_test_jstd_v2_robin_hash_map) {
-        measure_hashmap<jstd::v2::robin_hash_map<HashObj,   Value, HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>,
-                        jstd::v2::robin_hash_map<HashObj *, Value, HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>
+        measure_hashmap<jstd::v2::robin_hash_map<Key,   Value, HASH_MAP_FUNCTION<Key>>,
+                        jstd::v2::robin_hash_map<Key *, Value, HASH_MAP_FUNCTION<Key *>>
                         >(
             "jstd::v2::robin_hash_map<K, V>", obj_size, 0, iters, has_stress_hash_function);
     }
@@ -1192,12 +1232,24 @@ static void test_all_hashmaps(std::size_t obj_size, std::size_t iters) {
 
 #if USE_JSTD_ROBIN_HASH_MAP_V1
     if (FLAGS_test_jstd_v1_robin_hash_map) {
-        measure_hashmap<jstd::v1::robin_hash_map<HashObj,   Value, HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>,
-                        jstd::v1::robin_hash_map<HashObj *, Value, HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>
+        measure_hashmap<jstd::v1::robin_hash_map<Key,   Value, HASH_MAP_FUNCTION<Key>>,
+                        jstd::v1::robin_hash_map<Key *, Value, HASH_MAP_FUNCTION<Key *>>
                         >(
             "jstd::v1::robin_hash_map<K, V>", obj_size, 0, iters, has_stress_hash_function);
     }
 #endif
+}
+
+template <typename Key, typename Value>
+void test_all_hashmaps_for_string_view(std::size_t obj_size, std::size_t iters)
+{
+
+}
+
+template <typename Key, typename Value>
+void test_all_hashmaps_for_std_string(std::size_t obj_size, std::size_t iters)
+{
+
 }
 
 void benchmark_all_hashmaps(std::size_t iters)
@@ -1207,22 +1259,22 @@ void benchmark_all_hashmaps(std::size_t iters)
     // a HashObject as it would be to use just a straight int/char
     // buffer.  To keep memory use similar, we normalize the number of
     // iterations based on size.
-#ifndef _DEBUG_
     if (FLAGS_test_4_bytes) {
-        test_all_hashmaps<HashObject<std::uint32_t, 4, 4>, std::uint32_t>(4, iters / 1);
+        test_all_hashmaps<std::uint32_t, std::uint32_t>(4, iters / 1);
     }
 
     if (FLAGS_test_8_bytes) {
-        test_all_hashmaps<HashObject<std::uint64_t, 8, 8>, std::uint64_t>(8, iters / 2);
+        test_all_hashmaps<std::uint64_t, std::uint64_t>(8, iters / 2);
     }
-#endif
 
     if (FLAGS_test_16_bytes) {
-        test_all_hashmaps<HashObject<std::size_t, 16, 16>, std::size_t>(16, iters / 4);
+        test_all_hashmaps_for_string_view<
+            jstd::string_view, jstd::string_view>(sizeof(jstd::string_view), iters / 4);
     }
 
-    if (FLAGS_test_256_bytes) {
-        test_all_hashmaps<HashObject<std::size_t, 256, 64>, std::size_t>(256, iters / 32);
+    if (FLAGS_test_32_bytes) {
+        test_all_hashmaps_for_std_string<
+            std::string, std::string>(sizeof(std::string), iters / 16);
     }
 }
 
@@ -1275,42 +1327,6 @@ void std_hash_test()
 #endif // HASH_FUNCTION_ID == ID_STD_HASH
 }
 
-void is_noexcept_move_test()
-{
-    static constexpr bool v1_0 = jstd::is_noexcept_move_assignable<HashObject<std::uint32_t, 4, 4>>::value;
-    static constexpr bool v2_0 = jstd::is_noexcept_move_assignable<HashObject<std::uint64_t, 8, 8>>::value;
-    static constexpr bool v3_0 = jstd::is_noexcept_move_assignable<HashObject<std::size_t, 16, 16>>::value;
-    static constexpr bool v4_0 = jstd::is_noexcept_move_assignable<HashObject<std::size_t, 256, 32>>::value;
-
-    static constexpr bool v1_1 = jstd::is_noexcept_move_assignable<std::pair<HashObject<std::uint32_t, 4, 4>, std::uint32_t>>::value;
-    static constexpr bool v2_1 = jstd::is_noexcept_move_assignable<std::pair<HashObject<std::uint64_t, 8, 8>, std::uint64_t>>::value;
-    static constexpr bool v3_1 = jstd::is_noexcept_move_assignable<std::pair<HashObject<std::size_t, 16, 16>, std::size_t>>::value;
-    static constexpr bool v4_1 = jstd::is_noexcept_move_assignable<std::pair<HashObject<std::size_t, 256, 32>, std::size_t>>::value;
-
-    static constexpr bool v1_2 = jstd::is_noexcept_move_assignable<std::pair<const HashObject<std::uint32_t, 4, 4>, std::uint32_t>>::value;
-    static constexpr bool v2_2 = jstd::is_noexcept_move_assignable<std::pair<const HashObject<std::uint64_t, 8, 8>, std::uint64_t>>::value;
-    static constexpr bool v3_2 = jstd::is_noexcept_move_assignable<std::pair<const HashObject<std::size_t, 16, 16>, std::size_t>>::value;
-    static constexpr bool v4_2 = jstd::is_noexcept_move_assignable<std::pair<const HashObject<std::size_t, 256, 32>, std::size_t>>::value;
-
-    printf("v1_0 = %s\n", v1_0 ? "true" : "false");
-    printf("v2_0 = %s\n", v2_0 ? "true" : "false");
-    printf("v3_0 = %s\n", v3_0 ? "true" : "false");
-    printf("v4_0 = %s\n", v4_0 ? "true" : "false");
-    printf("\n");
-
-    printf("v1_1 = %s\n", v1_1 ? "true" : "false");
-    printf("v2_1 = %s\n", v2_1 ? "true" : "false");
-    printf("v3_1 = %s\n", v3_1 ? "true" : "false");
-    printf("v4_1 = %s\n", v4_1 ? "true" : "false");
-    printf("\n");
-
-    printf("v1_2 = %s\n", v1_2 ? "true" : "false");
-    printf("v2_2 = %s\n", v2_2 ? "true" : "false");
-    printf("v3_2 = %s\n", v3_2 ? "true" : "false");
-    printf("v4_2 = %s\n", v4_2 ? "true" : "false");
-    printf("\n");
-}
-
 template <typename Key, typename Value>
 void print_need_store_hash(const std::string & key, const std::string & value)
 {
@@ -1326,14 +1342,10 @@ void print_need_store_hash(const std::string & key, const std::string & value)
 
 void need_store_hash_test()
 {
-    print_need_store_hash<HashObject<std::uint32_t, 4, 4>,  std::uint32_t>(
-        "HashObject<std::uint32_t, 4, 4>",  "std::uint32_t");
-    print_need_store_hash<HashObject<std::uint64_t, 8, 8>,  std::uint64_t>(
-        "HashObject<std::uint64_t, 8, 8>",  "std::uint64_t");
-    print_need_store_hash<HashObject<std::size_t, 16, 16>,  std::size_t>(
-        "HashObject<std::size_t, 16, 16>",  "std::size_t");
-    print_need_store_hash<HashObject<std::size_t, 256, 64>, std::size_t>(
-        "HashObject<std::size_t, 256, 64>", "std::size_t");
+    print_need_store_hash<std::uint32_t, std::uint32_t>("std::uint32_t", "std::uint32_t");
+    print_need_store_hash<std::uint64_t, std::uint64_t>("std::uint64_t", "std::uint64_t");
+    print_need_store_hash<jstd::string_view, jstd::string_view>("jstd::string_view", "jstd::string_view");
+    print_need_store_hash<std::string, std::string>("std::string", "std::string");
 }
 
 int main(int argc, char * argv[])
@@ -1350,7 +1362,6 @@ int main(int argc, char * argv[])
     jtest::CPU::warm_up(1000);
 
     if (1) { std_hash_test(); }
-    if (0) { is_noexcept_move_test(); }
     if (1) { need_store_hash_test(); }
 
     if (1)

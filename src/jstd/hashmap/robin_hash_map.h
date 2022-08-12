@@ -267,12 +267,6 @@ public:
                                            std::is_same<Hash, std::hash<key_type>>::value &&
                                           (detail::is_plain_type<key_type>::value);
 
-    static constexpr bool kDetectStoreHash = !detail::is_plain_type<key_type>::value;
-
-    static constexpr bool kNeedStoreHash =
-        (!layout_policy_t::autoDetectStoreHash && layout_policy_t::needStoreHash) ||
-         (layout_policy_t::autoDetectStoreHash && (kDetectStoreHash));
-
     static constexpr bool kIsPlainKey    = detail::is_plain_type<key_type>::value;
     static constexpr bool kIsPlainMapped = detail::is_plain_type<mapped_type>::value;
 
@@ -301,6 +295,15 @@ public:
              std::is_trivially_destructible<mapped_type>::value) ||
             (detail::is_plain_type<key_type>::value &&
              detail::is_plain_type<mapped_type>::value));
+
+    static constexpr bool kDetectStoreHash = !(detail::is_plain_type<key_type>::value ||
+                                              (sizeof(key_type) <= sizeof(std::size_t)) ||
+                                             ((sizeof(key_type) <= (sizeof(std::size_t) * 2)) &&
+                                               is_slot_trivial_destructor));
+
+    static constexpr bool kNeedStoreHash =
+        (!layout_policy_t::autoDetectStoreHash && layout_policy_t::needStoreHash) ||
+         (layout_policy_t::autoDetectStoreHash && (kDetectStoreHash));
 
     static constexpr size_type kGroupBits   = (kNeedStoreHash ? 4 : 5);
     static constexpr size_type kGroupWidth  = size_type(1) << kGroupBits;

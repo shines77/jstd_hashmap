@@ -251,14 +251,45 @@ struct hash<jstd::string_view> {
     typedef jstd::string_view   argument_type;
     typedef std::uint32_t       result_type;
 
-    jstd::string_hash_helper<jstd::string_view, std::uint32_t, jstd::HashFunc_CRC32C> hash_helper_;
+    typedef jstd::string_hash_helper<jstd::string_view,
+                                     std::uint32_t, jstd::HashFunc_CRC32C> hasher;
 
-    result_type operator()(const argument_type & key) const {
-        return hash_helper_.getHashCode(key);
+    result_type operator () (const argument_type & key) const noexcept {
+        return static_cast<result_type>(hasher::getHashCode(key));
+    }
+};
+
+template <>
+struct hash<jstd::wstring_view> {
+    typedef jstd::wstring_view  argument_type;
+    typedef std::uint32_t       result_type;
+
+    typedef jstd::string_hash_helper<jstd::wstring_view,
+                                     std::uint32_t, jstd::HashFunc_CRC32C> hasher;
+
+    result_type operator () (const argument_type & key) const noexcept {
+
+        return static_cast<result_type>(hasher::getHashCode(key));
+    }
+};
+
+template <typename CharT, typename Traits>
+struct hash<jstd::basic_string_view<CharT, Traits>> {
+    typedef jstd::basic_string_view<CharT, Traits>  argument_type;
+    typedef std::uint32_t                           result_type;
+
+    typedef jstd::string_hash_helper<jstd::basic_string_view<CharT, Traits>,
+                                     std::uint32_t, jstd::HashFunc_CRC32C> hasher;
+
+    result_type operator () (const argument_type & key) const noexcept {
+
+        return static_cast<result_type>(hasher::getHashCode(key));
     }
 };
 
 } // namespace std
+
+#if 0
 
 namespace jstd {
 
@@ -267,14 +298,45 @@ struct hash<jstd::string_view> {
     typedef jstd::string_view   argument_type;
     typedef std::uint32_t       result_type;
 
-    jstd::string_hash_helper<jstd::string_view, std::uint32_t, jstd::HashFunc_CRC32C> hash_helper_;
+    typedef jstd::string_hash_helper<jstd::string_view,
+                                     std::uint32_t, jstd::HashFunc_CRC32C> hasher;
 
-    result_type operator()(const argument_type & key) const {
-        return hash_helper_.getHashCode(key);
+    result_type operator () (const argument_type & key) const noexcept {
+        return static_cast<result_type>(hasher::getHashCode(key));
+    }
+};
+
+template <>
+struct hash<jstd::wstring_view> {
+    typedef jstd::wstring_view  argument_type;
+    typedef std::uint32_t       result_type;
+
+    typedef jstd::string_hash_helper<jstd::wstring_view,
+                                     std::uint32_t, jstd::HashFunc_CRC32C> hasher;
+
+    result_type operator () (const argument_type & key) const noexcept {
+
+        return static_cast<result_type>(hasher::getHashCode(key));
+    }
+};
+
+template <typename CharT, typename Traits>
+struct hash<jstd::basic_string_view<CharT, Traits>> {
+    typedef jstd::basic_string_view<CharT, Traits>  argument_type;
+    typedef std::uint32_t                           result_type;
+
+    typedef jstd::string_hash_helper<jstd::basic_string_view<CharT, Traits>,
+                                     std::uint32_t, jstd::HashFunc_CRC32C> hasher;
+
+    result_type operator () (const argument_type & key) const noexcept {
+
+        return static_cast<result_type>(hasher::getHashCode(key));
     }
 };
 
 } // namespace jstd
+
+#endif
 
 template <typename Key, typename Value>
 void print_error(std::size_t index, const Key & key, const Value & value)

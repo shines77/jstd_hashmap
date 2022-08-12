@@ -19,6 +19,8 @@
 #include "jstd/hasher/hash_crc32.h"
 #include "jstd/string/string_libc.h"
 #include "jstd/string/string_stl.h"
+#include "jstd/string/string_view.h"
+#include "jstd/string/string_view_array.h"
 
 #define HASH_HELPER_CHAR(KeyType, ResultType, HashFuncId, HashFunc)             \
     template <>                                                                 \
@@ -243,6 +245,54 @@ struct hash_helper<std::wstring, std::uint32_t, HashFunc_CRC32C> {
     }
 };
 
+template <>
+struct hash_helper<jstd::string_view, std::uint32_t, HashFunc_CRC32C> {
+    typedef std::uint32_t  result_type;
+
+    static std::uint32_t getHashCode(const jstd::string_view & key) {
+        if (likely(key.c_str() != nullptr))
+            return hashes::hash_crc32(key.c_str(), key.size());
+        else
+            return 0;
+    }
+};
+
+template <>
+struct hash_helper<jstd::wstring_view, std::uint32_t, HashFunc_CRC32C> {
+    typedef std::uint32_t  result_type;
+
+    static std::uint32_t getHashCode(const jstd::wstring_view & key) {
+        if (likely(key.c_str() != nullptr))
+            return hashes::hash_crc32((const char *)key.c_str(), key.size() * sizeof(wchar_t));
+        else
+            return 0;
+    }
+};
+
+template <>
+struct hash_helper<jstd::basic_string_view<char, jstd::char_traits<char>>, std::uint32_t, HashFunc_CRC32C> {
+    typedef std::uint32_t  result_type;
+
+    static std::uint32_t getHashCode(const jstd::basic_string_view<char, jstd::char_traits<char>> & key) {
+        if (likely(key.c_str() != nullptr))
+            return hashes::hash_crc32(key.c_str(), key.size());
+        else
+            return 0;
+    }
+};
+
+template <>
+struct hash_helper<jstd::basic_string_view<wchar_t, jstd::char_traits<wchar_t>>, std::uint32_t, HashFunc_CRC32C> {
+    typedef std::uint32_t  result_type;
+
+    static std::uint32_t getHashCode(const jstd::basic_string_view<wchar_t, jstd::char_traits<wchar_t>> & key) {
+        if (likely(key.c_str() != nullptr))
+            return hashes::hash_crc32((const char *)key.c_str(), key.size() * sizeof(wchar_t));
+        else
+            return 0;
+    }
+};
+
 #endif // JSTD_HAVE_SSE42_CRC32C
 
 /***************************************************************************
@@ -284,6 +334,54 @@ struct hash_helper<std::wstring, std::uint32_t, HashFunc_Time31> {
     }
 };
 
+template <>
+struct hash_helper<jstd::string_view, std::uint32_t, HashFunc_Time31> {
+    typedef std::uint32_t  result_type;
+
+    static std::uint32_t getHashCode(const jstd::string_view & key) {
+        if (likely(key.c_str() != nullptr))
+            return hashes::Times31(key.c_str(), key.size());
+        else
+            return 0;
+    }
+};
+
+template <>
+struct hash_helper<jstd::wstring_view, std::uint32_t, HashFunc_Time31> {
+    typedef std::uint32_t  result_type;
+
+    static std::uint32_t getHashCode(const jstd::wstring_view & key) {
+        if (likely(key.c_str() != nullptr))
+            return hashes::Times31((const char *)key.c_str(), key.size() * sizeof(wchar_t));
+        else
+            return 0;
+    }
+};
+
+template <>
+struct hash_helper<jstd::basic_string_view<char, jstd::char_traits<char>>, std::uint32_t, HashFunc_Time31> {
+    typedef std::uint32_t  result_type;
+
+    static std::uint32_t getHashCode(const jstd::basic_string_view<char, jstd::char_traits<char>> & key) {
+        if (likely(key.c_str() != nullptr))
+            return hashes::Times31(key.c_str(), key.size());
+        else
+            return 0;
+    }
+};
+
+template <>
+struct hash_helper<jstd::basic_string_view<wchar_t, jstd::char_traits<wchar_t>>, std::uint32_t, HashFunc_Time31> {
+    typedef std::uint32_t  result_type;
+
+    static std::uint32_t getHashCode(const jstd::basic_string_view<wchar_t, jstd::char_traits<wchar_t>> & key) {
+        if (likely(key.c_str() != nullptr))
+            return hashes::Times31((const char *)key.c_str(), key.size() * sizeof(wchar_t));
+        else
+            return 0;
+    }
+};
+
 /***************************************************************************
 template <>
 struct hash_helper<const char *, std::uint32_t, HashFunc_Time31Std> {
@@ -316,6 +414,54 @@ struct hash_helper<std::wstring, std::uint32_t, HashFunc_Time31Std> {
     typedef std::uint32_t  result_type;
 
     static std::uint32_t getHashCode(const std::wstring & key) {
+        if (likely(key.c_str() != nullptr))
+            return hashes::Times31Std((const char *)key.c_str(), key.size() * sizeof(wchar_t));
+        else
+            return 0;
+    }
+};
+
+template <>
+struct hash_helper<jstd::string_view, std::uint32_t, HashFunc_Time31Std> {
+    typedef std::uint32_t  result_type;
+
+    static std::uint32_t getHashCode(const jstd::string_view & key) {
+        if (likely(key.c_str() != nullptr))
+            return hashes::Times31Std(key.c_str(), key.size());
+        else
+            return 0;
+    }
+};
+
+template <>
+struct hash_helper<jstd::wstring_view, std::uint32_t, HashFunc_Time31Std> {
+    typedef std::uint32_t  result_type;
+
+    static std::uint32_t getHashCode(const jstd::wstring_view & key) {
+        if (likely(key.c_str() != nullptr))
+            return hashes::Times31Std((const char *)key.c_str(), key.size() * sizeof(wchar_t));
+        else
+            return 0;
+    }
+};
+
+template <>
+struct hash_helper<jstd::basic_string_view<char, jstd::char_traits<char>>, std::uint32_t, HashFunc_Time31Std> {
+    typedef std::uint32_t  result_type;
+
+    static std::uint32_t getHashCode(const jstd::basic_string_view<char, jstd::char_traits<char>> & key) {
+        if (likely(key.c_str() != nullptr))
+            return hashes::Times31Std(key.c_str(), key.size());
+        else
+            return 0;
+    }
+};
+
+template <>
+struct hash_helper<jstd::basic_string_view<wchar_t, jstd::char_traits<wchar_t>>, std::uint32_t, HashFunc_Time31Std> {
+    typedef std::uint32_t  result_type;
+
+    static std::uint32_t getHashCode(const jstd::basic_string_view<wchar_t, jstd::char_traits<wchar_t>> & key) {
         if (likely(key.c_str() != nullptr))
             return hashes::Times31Std((const char *)key.c_str(), key.size() * sizeof(wchar_t));
         else
