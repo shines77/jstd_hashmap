@@ -13,6 +13,14 @@
 #include <cstdint>
 #include <cstddef>
 #include <string>
+#include <vector>
+#include <thread>
+#include <bitset>
+
+#if (jstd_cplusplus >= 2017L)
+#include <string_view>
+#include <filesystem>
+#endif
 
 #include "jstd/basic/stddef.h"
 #include "jstd/basic/stdint.h"
@@ -1265,6 +1273,21 @@ struct is_excluded_type {
     static constexpr bool value = false;
 };
 
+template <std::size_t N>
+struct is_excluded_type<std::bitset<N>> {
+    static constexpr bool value = true;
+};
+
+template <>
+struct is_excluded_type<std::vector<bool>> {
+    static constexpr bool value = true;
+};
+
+template <>
+struct is_excluded_type<std::thread::id> {
+    static constexpr bool value = true;
+};
+
 template <>
 struct is_excluded_type<std::string> {
     static constexpr bool value = true;
@@ -1280,10 +1303,50 @@ struct is_excluded_type<std::basic_string<CharT, Traits, Allocator>> {
     static constexpr bool value = true;
 };
 
+template <>
+struct is_excluded_type<std::u16string> {
+    static constexpr bool value = true;
+};
+
+template <>
+struct is_excluded_type<std::u32string> {
+    static constexpr bool value = true;
+};
+
 #if (jstd_cplusplus >= 2017L)
 
+template <>
+struct is_excluded_type<std::filesystem::path> {
+    static constexpr bool value = true;
+};
+
+template <>
+struct is_excluded_type<std::pmr::string> {
+    static constexpr bool value = true;
+};
+
+template <>
+struct is_excluded_type<std::pmr::wstring> {
+    static constexpr bool value = true;
+};
+
+template <>
+struct is_excluded_type<std::pmr::u8string> {
+    static constexpr bool value = true;
+};
+
+template <>
+struct is_excluded_type<std::pmr::u16string> {
+    static constexpr bool value = true;
+};
+
+template <>
+struct is_excluded_type<std::pmr::u32string> {
+    static constexpr bool value = true;
+};
+
 template <typename CharT, typename Traits>
-struct is_excluded_type<pmr::basic_string<CharT, Traits>> {
+struct is_excluded_type<std::pmr::basic_string<CharT, Traits>> {
     static constexpr bool value = true;
 };
 
@@ -1297,12 +1360,41 @@ struct is_excluded_type<std::wstring_view> {
     static constexpr bool value = true;
 };
 
+template <>
+struct is_excluded_type<std::u16string_view> {
+    static constexpr bool value = true;
+};
+
+template <>
+struct is_excluded_type<std::u32string_view> {
+    static constexpr bool value = true;
+};
+
 template <typename CharT, typename Traits>
 struct is_excluded_type<std::basic_string_view<CharT, Traits>> {
     static constexpr bool value = true;
 };
 
 #endif // jstd_cplusplus >= 2017L
+
+#if (jstd_cplusplus >= 2020L)
+
+template <>
+struct is_excluded_type<std::u8string> {
+    static constexpr bool value = true;
+};
+
+template <>
+struct is_excluded_type<std::pmr::u8string> {
+    static constexpr bool value = true;
+};
+
+template <>
+struct is_excluded_type<std::u8string_view> {
+    static constexpr bool value = true;
+};
+
+#endif // jstd_cplusplus >= 2020L
 
 template <>
 struct is_excluded_type<string_view> {
