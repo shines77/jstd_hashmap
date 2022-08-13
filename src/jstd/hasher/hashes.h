@@ -237,34 +237,6 @@ See:
 
 namespace hashes {
 
-//
-// Fibonacci hash
-//
-// See: http://www.javashuo.com/article/p-tklmqgvw-hx.html
-// See: https://zhuanlan.zhihu.com/p/141797134
-// See: https://www.jianshu.com/p/421aa9480e42
-//
-// 2^32 * 0.6180339887 = 2654435769.2829335552
-//
-static inline
-std::size_t fibonacci_hash32(std::size_t value)
-{
-    std::size_t hash_code = static_cast<std::size_t>(
-        (static_cast<std::uint64_t>(value) * 2654435769ul) >> 12);
-    return hash_code;
-}
-
-//
-// 2^64 * 0.6180339887 = 11400714818402800990.5250107392
-//
-static inline
-std::size_t fibonacci_hash64(std::size_t value)
-{
-    std::size_t hash_code = static_cast<std::size_t>(
-        (static_cast<std::uint64_t>(value) * 11400714819323198485ull) >> 28);
-    return hash_code;
-}
-
 // This string hash function is from OpenSSL.
 template <typename CharTy>
 static std::uint32_t OpenSSL_Hash(const CharTy * key, std::size_t len)
@@ -600,6 +572,34 @@ _uint128_t uint128_mul(uint64_t multiplicand, uint64_t multiplier)
     uint64_t high64 = product_03 + (uint32_t)(middle >> 32);
     return _uint128_t(low64, high64);
 #endif // __i386__
+}
+
+//
+// Fibonacci hash
+//
+// See: http://www.javashuo.com/article/p-tklmqgvw-hx.html
+// See: https://zhuanlan.zhihu.com/p/141797134
+// See: https://www.jianshu.com/p/421aa9480e42
+//
+// 2^32 * 0.6180339887 = 2654435769.2829335552
+//
+static inline
+std::size_t fibonacci_hash32(std::size_t value)
+{
+    std::size_t hash_code = static_cast<std::size_t>(
+        (static_cast<std::uint64_t>(value) * 2654435769ul) >> 12);
+    return hash_code;
+}
+
+//
+// 2^64 * 0.6180339887 = 11400714818402800990.5250107392
+//
+static inline
+std::size_t fibonacci_hash64(std::size_t value)
+{
+    std::size_t hash_code = static_cast<std::size_t>(
+        (static_cast<std::uint64_t>(value) * 11400714819323198485ull) >> 28);
+    return hash_code;
 }
 
 static inline
@@ -1292,7 +1292,7 @@ struct FibonacciHash
                                 (sizeof(Integer) <= 8))>::type * = nullptr>
     result_type operator () (Integer value) const noexcept {
         result_type hash_code = static_cast<result_type>(
-            hashes::fibonacci_hash64(static_cast<std::uint64_t>(value), 11400714819323198485ull)
+            hashes::fibonacci_hash64(static_cast<std::uint64_t>(value))
         );
         return hash_code;
     }
