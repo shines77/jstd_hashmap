@@ -18,6 +18,8 @@
 #include "jstd/basic/stdint.h"
 #include "jstd/basic/stdsize.h"
 #include "jstd/string/char_traits.h"
+#include "jstd/string/string_view.h"
+#include "jstd/string/string_view_array.h"
 #include "jstd/type_traits.h"
 #include "jstd/support/BitUtils.h"
 #include "jstd/support/Power2.h"
@@ -1256,6 +1258,67 @@ HashUtils<std::uint64_t>::decodeValue<8U>(const char * data, std::uint32_t missa
     return value;
 }
 
+//////////////////////////////////////////////////////////////////////////
+
+template <typename T>
+struct is_excluded_type {
+    static constexpr bool value = false;
+};
+
+template <>
+struct is_excluded_type<std::string> {
+    static constexpr bool value = true;
+};
+
+template <>
+struct is_excluded_type<std::wstring> {
+    static constexpr bool value = true;
+};
+
+template <typename CharT, typename Traits, typename Allocator>
+struct is_excluded_type<std::basic_string<CharT, Traits, Allocator>> {
+    static constexpr bool value = true;
+};
+
+#if (jstd_cplusplus >= 2017L)
+
+template <typename CharT, typename Traits>
+struct is_excluded_type<pmr::basic_string<CharT, Traits>> {
+    static constexpr bool value = true;
+};
+
+template <>
+struct is_excluded_type<std::string_view> {
+    static constexpr bool value = true;
+};
+
+template <>
+struct is_excluded_type<std::wstring_view> {
+    static constexpr bool value = true;
+};
+
+template <typename CharT, typename Traits>
+struct is_excluded_type<std::basic_string_view<CharT, Traits>> {
+    static constexpr bool value = true;
+};
+
+#endif // jstd_cplusplus >= 2017L
+
+template <>
+struct is_excluded_type<string_view> {
+    static constexpr bool value = true;
+};
+
+template <>
+struct is_excluded_type<wstring_view> {
+    static constexpr bool value = true;
+};
+
+template <typename CharT, typename Traits>
+struct is_excluded_type<basic_string_view<CharT, Traits>> {
+    static constexpr bool value = true;
+};
+
 //////////////////////////////////////////////////////////////////////////////////////
 
 template <typename Hasher>
@@ -1378,7 +1441,14 @@ public:
         return hash_code;
     }
 
+    template <typename Key>
     size_type index_for_hash(size_type hash_code, size_type /* mask */) const noexcept {
+        static constexpr bool isExcludedType = is_excluded_type<Key>::value;
+        if (!isExcludedType) {
+            hash_code = static_cast<size_type>(
+                static_cast<std::uint64_t>(hash_code) * 11400714819323198485ull
+            );
+        }
         return (hash_code >> this->shift_);
     }
 
@@ -1432,7 +1502,14 @@ public:
         return hash_code;
     }
 
+    template <typename Key>
     size_type index_for_hash(size_type hash_code, size_type /* mask */) const noexcept {
+        static constexpr bool isExcludedType = is_excluded_type<Key>::value;
+        if (!isExcludedType) {
+            hash_code = static_cast<size_type>(
+                hashes::mum_hash64(static_cast<std::uint64_t>(hash_code), 11400714819323198485ull)
+            );
+        }
         return (hash_code >> this->shift_);
     }
 

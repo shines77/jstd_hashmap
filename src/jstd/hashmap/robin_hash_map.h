@@ -2790,7 +2790,7 @@ private:
     inline hash_code_t get_hash(const key_type & key) const
         noexcept(noexcept(this->hasher_(key)))
         /* noexcept(noexcept(std::declval<hasher &>()(key))) */ {
-#if ROBIN_USE_HASH_POLICY
+#if 0
         hash_code_t hash_code = static_cast<hash_code_t>(
             this->hash_policy_.get_hash_code(key)
         );
@@ -2822,7 +2822,7 @@ private:
         if (kUseIndexSalt) {
             hash_value ^= this->index_salt();
         }
-        size_type index = this->hash_policy_.index_for_hash(hash_value, this->slot_mask());
+        size_type index = this->hash_policy_.index_for_hash<key_type>(hash_value, this->slot_mask());
         return index;
 #else
         hash_value = this->get_second_hash(hash_value);
