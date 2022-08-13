@@ -2957,7 +2957,7 @@ private:
     }
 
     size_type index_of(const_iterator pos) const {
-        return pos.index()
+        return pos.index();
     }
 
     size_type index_of(slot_type * slot) const {
