@@ -2151,7 +2151,7 @@ private:
 #elif 1
         return (size_type)hashes::mum_hash64((std::uint64_t)value, 11400714819323198485ull);
 #elif 1
-        return (size_type)hashes::fibonacci_hash((size_type)value);
+        return (size_type)hashes::fibonacci_hash64((size_type)value);
 #elif 1
         return (size_type)hashes::int_hash_crc32c((size_type)value);
 #else
@@ -2170,7 +2170,7 @@ private:
 #elif 0
         return (size_type)hashes::mum_hash64((std::uint64_t)value, 11400714819323198485ull);
 #elif 1
-        return (size_type)hashes::fibonacci_hash((size_type)value);
+        return (size_type)hashes::fibonacci_hash64((size_type)value);
 #elif 1
         return (size_type)hashes::simple_int_crc32((size_type)value);
 #endif

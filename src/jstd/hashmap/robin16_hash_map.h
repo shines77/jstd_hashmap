@@ -1952,7 +1952,7 @@ private:
 #if 1
         return value;
 #elif 1
-        return (size_type)hashes::fibonacci_hash((size_type)value);
+        return (size_type)hashes::fibonacci_hash64((size_type)value);
 #elif 1
         return (size_type)hashes::int_hash_crc32c((size_type)value);
 #else
@@ -1969,7 +1969,7 @@ private:
 #if ROBIN16_USE_HASH_POLICY
         return value;
 #elif 1
-        return (size_type)hashes::fibonacci_hash((size_type)value);
+        return (size_type)hashes::fibonacci_hash64((size_type)value);
 #elif 1
         return (size_type)hashes::simple_int_crc32((size_type)value);
 #endif
