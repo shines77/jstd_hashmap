@@ -1429,7 +1429,7 @@ public:
     template <typename Key>
     size_type get_hash_code(const Key & key) const noexcept {
         size_type hash_code = static_cast<size_type>(MumHash<Hasher>()(key));
-        return (hash_code >> this->shift_);
+        return hash_code;
     }
 
     size_type index_for_hash(size_type hash_code, size_type /* mask */) const noexcept {
