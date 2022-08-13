@@ -2822,7 +2822,7 @@ private:
         if (kUseIndexSalt) {
             hash_value ^= this->index_salt();
         }
-        size_type index = this->hash_policy_.index_for_hash<key_type>(hash_value, this->slot_mask());
+        size_type index = this->hash_policy_.template index_for_hash<key_type>(hash_value, this->slot_mask());
         return index;
 #else
         hash_value = this->get_second_hash(hash_value);
