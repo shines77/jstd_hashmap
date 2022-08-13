@@ -1981,7 +1981,7 @@ private:
 
     inline size_type index_for_hash(hash_code_t hash_code) const noexcept {
 #if ROBIN16_USE_HASH_POLICY
-        return this->hash_policy_.index_for_hash<key_type>(hash_code, this->slot_mask());
+        return this->hash_policy_.template index_for_hash<key_type>(hash_code, this->slot_mask());
 #else
         if (kUseIndexSalt)
             return ((this->get_second_hash((size_type)hash_code) ^ this->index_salt()) & this->slot_mask());
