@@ -688,15 +688,15 @@ public:
         static const std::uint32_t align_mask = sizeof(hash_type) - 1;
         static const hash_type hash_mask = static_cast<hash_type>(-1);
 
-        register const char * data = key;
+        const char * data = key;
         const char * end = data + len;
 
         static const hash_type m = static_cast<hash_type>(_m & hash_mask);
         hash_type n = static_cast<hash_type>(len);
-        register hash_type hash = static_cast<hash_type>((hash_type)seed ^ (m * n));
+        hash_type hash = static_cast<hash_type>((hash_type)seed ^ (m * n));
 
         // The data address is aligned to sizeof(hash_type) bytes.
-        register const char * limit = (const char *)(data + (len & ~(std::size_t)align_mask));
+        const char * limit = (const char *)(data + (len & ~(std::size_t)align_mask));
         while (data < limit) {
             hash_type val = PrimaryHash<T, 4U>::template decode_value<MissAlign>(data);
             hash += val;
@@ -810,15 +810,15 @@ public:
         static const std::uint32_t align_mask = sizeof(hash_type) - 1;
         static const hash_type hash_mask = static_cast<hash_type>(-1);
 
-        register const char * data = key;
+        const char * data = key;
         const char * end = data + len;
 
         static const hash_type m = static_cast<hash_type>(_m & hash_mask);
         hash_type n = static_cast<hash_type>(len);
-        register hash_type hash = static_cast<hash_type>((hash_type)seed ^ (m * n));
+        hash_type hash = static_cast<hash_type>((hash_type)seed ^ (m * n));
 
         // The data address is aligned to sizeof(hash_type) bytes.
-        register const char * limit = (const char *)(data + (len & ~(std::size_t)align_mask));
+        const char * limit = (const char *)(data + (len & ~(std::size_t)align_mask));
         while (data < limit) {
             hash_type val = PrimaryHash<T, 8U>::template decode_value<MissAlign>(data);
             hash += val;
@@ -932,15 +932,15 @@ public:
         static const std::uint32_t align_mask = sizeof(hash_type) - 1;
         static const hash_type hash_mask = static_cast<hash_type>(-1);
 
-        register const char * data = key;
+        const char * data = key;
         const char * end = data + len;
 
         static const hash_type m = static_cast<hash_type>(_m & hash_mask);
         hash_type n = static_cast<hash_type>(len);
-        register hash_type hash = static_cast<hash_type>((hash_type)seed ^ (m * n));
+        hash_type hash = static_cast<hash_type>((hash_type)seed ^ (m * n));
 
         // The data address is aligned to sizeof(hash_type) bytes.
-        register const char * limit = (const char *)(data + (len & ~(std::size_t)align_mask));
+        const char * limit = (const char *)(data + (len & ~(std::size_t)align_mask));
         while (data < limit) {
             hash_type val = *(hash_type *)data;
             hash += val;
@@ -969,15 +969,15 @@ public:
         static const std::uint32_t align_mask = sizeof(hash_type) - 1;
         static const hash_type hash_mask = static_cast<hash_type>(-1);
 
-        register const char * data = key;
+        const char * data = key;
         const char * end = data + len;
 
         static const hash_type m = static_cast<hash_type>(_m & hash_mask);
         hash_type n = static_cast<hash_type>(len);
-        register hash_type hash = static_cast<hash_type>((hash_type)seed ^ (m * n));
+        hash_type hash = static_cast<hash_type>((hash_type)seed ^ (m * n));
 
         // The data address is not aligned to sizeof(hash_type) bytes.
-        register const char * limit = (const char *)(data + (len & ~(std::size_t)align_mask));
+        const char * limit = (const char *)(data + (len & ~(std::size_t)align_mask));
         while (data < limit) {
             hash_type val = decode_value<sizeof(hash_type), MissAlign>(data);
             hash += val;
@@ -1103,12 +1103,12 @@ public:
         static const std::uint32_t align_mask = sizeof(hash_type) - 1;
         static const hash_type hash_mask = static_cast<hash_type>(-1);
 
-        register const char * data = key;
+        const char * data = key;
         const char * end = data + len;
 
         static const hash_type m = static_cast<hash_type>(_m & hash_mask);
         hash_type n = static_cast<hash_type>(len);
-        register hash_type hash = static_cast<hash_type>((hash_type)seed ^ (m * n));
+        hash_type hash = static_cast<hash_type>((hash_type)seed ^ (m * n));
 
 #if !(defined(_IS_X86_64_) || defined(_IS_X86_32_))
         std::uint32_t missalign = static_cast<std::uint32_t>(reinterpret_cast<std::size_t>(data)) & align_mask;
@@ -1116,7 +1116,7 @@ public:
 #endif
             // The data address is aligned to sizeof(hash_type) bytes.
             // But it don't need care on x86 or amd64 archs.
-            register const char * limit = (const char *)(data + (len & ~(std::size_t)align_mask));
+            const char * limit = (const char *)(data + (len & ~(std::size_t)align_mask));
             while (data < limit) {
                 hash_type val = *(hash_type *)data;
                 hash += val;
@@ -1139,7 +1139,7 @@ public:
         }
         else {
             // The data address is not aligned to sizeof(hash_type) bytes.
-            register const char * limit = (const char *)(data + (len & ~(std::size_t)align_mask));
+            const char * limit = (const char *)(data + (len & ~(std::size_t)align_mask));
             while (data < limit) {
                 hash_type val = decodeValue<sizeof(hash_type)>(data, missalign);
                 hash += val;
@@ -1327,11 +1327,6 @@ struct is_excluded_type<std::pmr::string> {
 
 template <>
 struct is_excluded_type<std::pmr::wstring> {
-    static constexpr bool value = true;
-};
-
-template <>
-struct is_excluded_type<std::pmr::u8string> {
     static constexpr bool value = true;
 };
 

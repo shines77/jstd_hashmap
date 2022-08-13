@@ -696,20 +696,20 @@ constexpr const Element * data(
 
 /////////////////////////////////////////////////////////////////
 
-#if JSTD_IS_CXX_17
+#if (jstd_cplusplus >= 2017L)
 
 // implementation via constexpr if, available in C++17
 template<class Iter>
-constexpr typename std::iterator_traits<It>::difference_type
+constexpr typename std::iterator_traits<Iter>::difference_type
     distance(Iter first, Iter last)
 {
     using category = typename std::iterator_traits<Iter>::iterator_category;
     static_assert(std::is_base_of<std::input_iterator_tag, category>::value);
  
     if constexpr (std::is_base_of<std::random_access_iterator_tag, category>::value) {
-        return last - first;
+        return (last - first);
     } else {
-        typename std::iterator_traits<It>::difference_type result = 0;
+        typename std::iterator_traits<Iter>::difference_type result = 0;
         while (first != last) {
             ++first;
             ++result;
