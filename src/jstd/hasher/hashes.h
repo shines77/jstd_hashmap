@@ -1258,74 +1258,102 @@ HashUtils<std::uint64_t>::decodeValue<8U>(const char * data, std::uint32_t missa
 
 //////////////////////////////////////////////////////////////////////////////////////
 
-template <typename T>
+template <typename Hasher>
 struct SimpleHash {
-    typedef T           argument_type;
-    typedef std::size_t result_type;
+    typedef typename Hasher::argument_type  argument_type;
+    typedef typename Hasher::result_type    result_type;
 
-    template <typename Hasher, typename Integer,
-                               typename std::enable_if<
+    template <typename Integer, typename std::enable_if<
                                 (std::is_integral<Integer>::value &&
                                 (sizeof(Integer) <= 8))>::type * = nullptr>
-    result_type operator () (const Hasher & hasher, Integer value) const noexcept {
-        result_type hash = static_cast<result_type>(value);
-        return hash;
+    result_type operator () (Integer value) const noexcept {
+        result_type hash_code = static_cast<result_type>(value);
+        return hash_code;
     }
 
-    template <typename Hasher, typename Argument,
-                               typename std::enable_if<
-                                  (!std::is_integral<Argument>::value ||
-                                  sizeof(Argument) > 8)>::type * = nullptr>
-    result_type operator () (const Hasher & hasher, const Argument & value) const
-        noexcept(noexcept(hasher(value)))
-    {
+    template <typename Argument, typename std::enable_if<
+                                 (!std::is_integral<Argument>::value ||
+                                 sizeof(Argument) > 8)>::type * = nullptr>
+    result_type operator () (const Argument & value) const
+        noexcept(noexcept(std::declval<Hasher>()(value))) {
+        Hasher hasher;
         return static_cast<result_type>(hasher(value));
     }
 };
 
-template <typename T>
-struct MumHash
+template <typename Hasher>
+struct FibonacciHash
 {
-    typedef T           argument_type;
-    typedef std::size_t result_type;
+    typedef typename Hasher::argument_type  argument_type;
+    typedef typename Hasher::result_type    result_type;
 
-    template <typename Hasher, typename Integer,
-                               typename std::enable_if<
+    template <typename Integer, typename std::enable_if<
                                 (std::is_integral<Integer>::value &&
                                 (sizeof(Integer) <= 8))>::type * = nullptr>
-    result_type operator () (const Hasher & hasher, Integer value) const noexcept {
-        result_type hash = (result_type)(jstd::hashes::mum_hash64((std::uint64_t)value, 11400714819323198485ull));
-        return hash;
+    result_type operator () (Integer value) const noexcept {
+        result_type hash_code = static_cast<result_type>(
+            hashes::fibonacci_hash64(static_cast<std::uint64_t>(value), 11400714819323198485ull)
+        );
+        return hash_code;
     }
 
-    template <typename Hasher, typename Argument,
-                               typename std::enable_if<
-                                  (!std::is_integral<Argument>::value ||
-                                  sizeof(Argument) > 8)>::type * = nullptr>
-    result_type operator () (const Hasher & hasher, const Argument & value) const
-        noexcept(noexcept(hasher(value)))
-    {
+    template <typename Argument, typename std::enable_if<
+                                 (!std::is_integral<Argument>::value ||
+                                 sizeof(Argument) > 8)>::type * = nullptr>
+    result_type operator () (const Argument & value) const
+        noexcept(noexcept(std::declval<Hasher>()(value))) {
+        Hasher hasher;
+        return static_cast<result_type>(hasher(value));
+    }
+};
+
+template <typename Hasher>
+struct MumHash
+{
+    typedef typename Hasher::argument_type  argument_type;
+    typedef typename Hasher::result_type    result_type;
+
+    template <typename Integer, typename std::enable_if<
+                                (std::is_integral<Integer>::value &&
+                                (sizeof(Integer) <= 8))>::type * = nullptr>
+    result_type operator () (Integer value) const noexcept {
+        result_type hash_code = static_cast<result_type>(
+            hashes::mum_hash64(static_cast<std::uint64_t>(value), 11400714819323198485ull)
+        );
+        return hash_code;
+    }
+
+    template <typename Argument, typename std::enable_if<
+                                 (!std::is_integral<Argument>::value ||
+                                 sizeof(Argument) > 8)>::type * = nullptr>
+    result_type operator () (const Argument & value) const
+        noexcept(noexcept(std::declval<Hasher>()(value))) {
+        Hasher hasher;
         return static_cast<result_type>(hasher(value));
     }
 };
 
 //////////////////////////////////////////////////////////////////////////////////////
 
+template <typename Hasher>
 class fibonacci_hash_policy;
+
+template <typename Hasher>
 class mum_hash_policy;
 
-template <typename T, typename = void>
+template <typename Hasher, typename = void>
 struct hash_policy_selector
 {
-    typedef mum_hash_policy type;
+    typedef mum_hash_policy<Hasher> type;
 };
 
-template <typename T>
-struct hash_policy_selector<T, void_t<typename T::hash_policy>>
+template <typename Hasher>
+struct hash_policy_selector<Hasher, void_t<typename Hasher::hash_policy>>
 {
-    typedef typename T::hash_policy type;
+    typedef typename Hasher::hash_policy type;
 };
 
+template <typename Hasher>
 class fibonacci_hash_policy
 {
 public:
@@ -1344,15 +1372,21 @@ public:
 
     ~fibonacci_hash_policy() = default;
 
-    size_type index_for_hash(size_type hash, size_type /* mask */) const {
-        return (size_type)((std::uint64_t)hash * 11400714819323198485ull) >> this->shift_;
+    template <typename Key>
+    size_type get_hash_code(const Key & key) const noexcept {
+        size_type hash_code = static_cast<size_type>(FibonacciHash<Hasher>()(key));
+        return hash_code;
     }
 
-    size_type round_index(size_type index, size_type mask) const {
+    size_type index_for_hash(size_type hash_code, size_type /* mask */) const noexcept {
+        return (hash_code >> this->shift_);
+    }
+
+    size_type round_index(size_type index, size_type mask) const noexcept {
         return (index & mask);
     }
 
-    std::uint8_t calc_next_capacity(size_type & new_capacity) const {
+    std::uint8_t calc_next_capacity(size_type & new_capacity) const noexcept {
         assert(new_capacity > 1);
         assert(pow2::is_pow2(new_capacity));
 #if 1
@@ -1364,15 +1398,16 @@ public:
 #endif
     }
 
-    void commit(std::uint8_t shift) {
+    void commit(std::uint8_t shift) noexcept {
         this->shift_ = shift;
     }
 
-    void reset() {
+    void reset() noexcept {
         this->shift_ = std::uint8_t(63);
     }
 };
 
+template <typename Hasher>
 class mum_hash_policy
 {
 public:
@@ -1391,15 +1426,21 @@ public:
 
     ~mum_hash_policy() = default;
 
-    size_type index_for_hash(size_type hash, size_type /* mask */) const {
-        return (size_type)(hashes::mum_hash64((std::uint64_t)hash, 11400714819323198485ull) >> this->shift_);
+    template <typename Key>
+    size_type get_hash_code(const Key & key) const noexcept {
+        size_type hash_code = static_cast<size_type>(MumHash<Hasher>()(key));
+        return (hash_code >> this->shift_);
     }
 
-    size_type round_index(size_type index, size_type mask) const {
+    size_type index_for_hash(size_type hash_code, size_type /* mask */) const noexcept {
+        return (hash_code >> this->shift_);
+    }
+
+    size_type round_index(size_type index, size_type mask) const noexcept {
         return (index & mask);
     }
 
-    std::uint8_t calc_next_capacity(size_type & new_capacity) const {
+    std::uint8_t calc_next_capacity(size_type & new_capacity) const noexcept {
         assert(new_capacity > 1);
         assert(pow2::is_pow2(new_capacity));
 #if 1
@@ -1411,11 +1452,11 @@ public:
 #endif
     }
 
-    void commit(std::uint8_t shift) {
+    void commit(std::uint8_t shift) noexcept {
         this->shift_ = shift;
     }
 
-    void reset() {
+    void reset() noexcept {
         this->shift_ = std::uint8_t(63);
     }
 };

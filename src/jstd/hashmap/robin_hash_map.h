@@ -98,7 +98,7 @@
 #endif
 #endif // _MSC_VER
 
-#define ROBIN_USE_HASH_POLICY       0
+#define ROBIN_USE_HASH_POLICY       1
 #define ROBIN_USE_SWAP_TRAITS       1
 
 namespace jstd {
@@ -2783,69 +2783,81 @@ private:
         return this->next_valid_iterator(ctrl, iter);
     }
 
-    inline hash_code_t get_hash(const key_type & key) const
-        noexcept(noexcept(this->hasher_(key)))
-        /* noexcept(noexcept(std::declval<hasher &>()(key))) */ {
-        hash_code_t hash_code = static_cast<hash_code_t>(this->hasher_(key));
-        return hash_code;
-    }
-
-    inline hash_code_t get_second_hash(hash_code_t value) const noexcept {
-#if 1
-        return value;
-#elif 1
-        return (size_type)hashes::mum_hash64((std::uint64_t)value, 11400714819323198485ull);
-#elif 1
-        return (size_type)hashes::fibonacci_hash64((size_type)value);
-#elif 1
-        return (size_type)hashes::int_hash_crc32((size_type)value);
-#else
-        hash_code_t hash_code;
-        if (sizeof(size_type) == 4)
-            hash_code = (hash_code_t)(((std::uint64_t)value * 2654435761ul) >> 12);
-        else
-            hash_code = (hash_code_t)(((std::uint64_t)value * 14695981039346656037ull) >> 28);
-        return hash_code;
-#endif
-    }
-
-    inline hash_code_t get_third_hash(hash_code_t value) const noexcept {
-#if ROBIN_USE_HASH_POLICY
-        return value;
-#elif 0
-        return (size_type)hashes::mum_hash64((std::uint64_t)value, 11400714819323198485ull);
-#elif 1
-        return (size_type)hashes::fibonacci_hash64((size_type)value);
-#elif 1
-        return (size_type)hashes::simple_int_hash_crc32((size_type)value);
-#endif
-    }
-
     inline size_type index_salt() const noexcept {
         return (size_type)((std::uintptr_t)this->ctrls() >> 12);
     }
 
-    inline size_type index_for_hash(hash_code_t hash_code) const noexcept {
+    inline hash_code_t get_hash(const key_type & key) const
+        noexcept(noexcept(this->hasher_(key)))
+        /* noexcept(noexcept(std::declval<hasher &>()(key))) */ {
 #if ROBIN_USE_HASH_POLICY
-        return this->hash_policy_.index_for_hash(hash_code, this->slot_mask());
+        hash_code_t hash_code = static_cast<hash_code_t>(
+            this->hash_policy_.get_hash_code(key)
+        );
 #else
-        if (kUseIndexSalt)
-            return ((this->get_second_hash((size_type)hash_code) ^ this->index_salt()) & this->slot_mask());
-        else
-            return  (this->get_second_hash((size_type)hash_code) & this->slot_mask());
+        hash_code_t hash_code = static_cast<hash_code_t>(this->hasher_(key));
+#endif
+        return hash_code;
+    }
+
+    //
+    // Do the second hash on the basis of hash code for the index_for_hash().
+    //
+    inline hash_code_t get_second_hash(hash_code_t value) const noexcept {
+#if 1
+        return value;
+#elif 0
+        return (size_type)hashes::mum_hash64((std::uint64_t)value, 11400714819323198485ull);
+#elif 0
+        return (size_type)hashes::fibonacci_hash64((size_type)value);
+#else
+        return (size_type)hashes::int_hash_crc32((size_type)value);
 #endif
     }
 
-    inline size_type index_for_hash(hash_code_t hash_code, size_type slot_mask) const noexcept {
-        assert(pow2::is_pow2(slot_mask + 1));
+    // Maybe call the second hash
+    inline size_type index_for_hash(hash_code_t hash_code) const noexcept {
+        size_type hash_value = static_cast<size_type>(hash_code);
 #if ROBIN_USE_HASH_POLICY
-        return this->hash_policy_.index_for_hash(hash_code, slot_mask);
+        if (kUseIndexSalt) {
+            hash_value ^= this->index_salt();
+        }
+        size_type index = this->hash_policy_.index_for_hash(hash_value, this->slot_mask());
+        return index;
 #else
-        if (kUseIndexSalt)
-            return ((this->get_second_hash((size_type)hash_code) ^ this->index_salt()) & slot_mask);
-        else
-            return  (this->get_second_hash((size_type)hash_code) & slot_mask);
+        hash_value = this->get_second_hash(hash_value);
+        if (kUseIndexSalt) {
+            hash_value ^= this->index_salt();
+        }
+        return (hash_value & this->slot_mask());
 #endif
+    }
+
+    //
+    // Do the third hash on the basis of hash code for the ctrl hash.
+    //
+    inline hash_code_t get_third_hash(hash_code_t hash_code) const noexcept {
+#if ROBIN_USE_HASH_POLICY
+        return hash_code;
+#elif 0
+        return (size_type)hashes::mum_hash64((std::uint64_t)hash_code, 11400714819323198485ull);
+#elif 1
+        return (size_type)hashes::fibonacci_hash64((size_type)hash_code);
+#elif 1
+        return (size_type)hashes::simple_int_hash_crc32((size_type)hash_code);
+#endif
+    }
+
+    // Maybe call the third hash to calculate the ctrl hash.
+    inline std::uint8_t get_ctrl_hash(hash_code_t hash_code) const noexcept {
+        std::uint8_t ctrl_hash;
+        if (kNeedStoreHash) {
+            ctrl_hash = static_cast<std::uint8_t>(
+                    this->get_third_hash((size_type)hash_code) & kCtrlHashMask);
+        } else {
+            ctrl_hash = std::uint8_t(0);
+        }
+        return ctrl_hash;
     }
 
     inline size_type next_index(size_type index) const noexcept {
@@ -2856,17 +2868,6 @@ private:
     inline size_type next_index(size_type index, size_type slot_mask) const noexcept {
         assert(index < this->max_slot_capacity());
         return (index + 1);
-    }
-
-    inline std::uint8_t get_ctrl_hash(hash_code_t hash_code) const noexcept {
-        std::uint8_t ctrl_hash;
-        if (kNeedStoreHash) {
-            ctrl_hash = static_cast<std::uint8_t>(
-                    this->get_third_hash((size_type)hash_code) & kCtrlHashMask);
-        } else {
-            ctrl_hash = std::uint8_t(0);
-        }
-        return ctrl_hash;
     }
 
     size_type round_index(size_type index) const {
