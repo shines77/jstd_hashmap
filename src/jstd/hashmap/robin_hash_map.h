@@ -1031,23 +1031,11 @@ public:
         }
 
         std::uint32_t matchHash(std::uint8_t ctrl_hash) const {
-#if 1
-            __m256i hash_bits  = _mm256_set1_epi16(ctrl_hash);
-            __m256i ctrl_bits  = _mm256_loadu_si256((const __m256i *)this->ctrl);
-            __m256i match_mask = _mm256_cmpeq_epi8(ctrl_bits, hash_bits);
-                    match_mask = _mm256_slli_epi16(match_mask, 8);
-            std::uint32_t mask = (std::uint32_t)_mm256_movemask_epi8(match_mask);
-            return mask;
-#else
-            return this->matchLowTag(data, ctrl_hash);
-#endif
+            (void)ctrl_hash;
+            return 0;
         }
 
         std::uint32_t matchEmpty() const {
-            return this->matchUnused();
-        }
-
-        std::uint32_t matchEmptyOnly() const {
             if (kEmptySlot == 0b11111111) {
                 __m256i ctrl_bits  = _mm256_loadu_si256((const __m256i *)this->ctrl);
                 __m256i ones_bits  = _mm256_setones_si256();
@@ -1144,7 +1132,7 @@ public:
         }
 
         bool hasAnyEmpty() const {
-            return (this->matchEmptyOnly() != 0);
+            return (this->matchEmpty() != 0);
         }
 
         bool hasAnyUsed() const {
@@ -1156,7 +1144,7 @@ public:
         }
 
         bool isAllEmpty() const {
-            return (this->matchEmptyOnly() == kFullMask32);
+            return (this->matchEmpty() == kFullMask32);
         }
 
         bool isAllUsed() const {
@@ -1375,7 +1363,7 @@ public:
         }
 
         bool hasAnyEmpty() const {
-            return (this->matchEmptyOnly() != 0);
+            return (this->matchEmpty() != 0);
         }
 
         bool hasAnyUsed() const {
@@ -1387,7 +1375,7 @@ public:
         }
 
         bool isAllEmpty() const {
-            return (this->matchEmptyOnly() == kFullMask16);
+            return (this->matchEmpty() == kFullMask16);
         }
 
         bool isAllUsed() const {
@@ -1492,10 +1480,6 @@ public:
         }
 
         std::uint32_t matchEmpty() const {
-            return this->matchUnused();
-        }
-
-        std::uint32_t matchEmptyOnly() const {
             if (kEmptySlot == 0b11111111) {
                 __m256i ctrl_bits  = _mm256_loadu_si256((const __m256i *)this->ctrl);
                 __m256i ones_bits  = _mm256_setones_si256();
@@ -1619,7 +1603,7 @@ public:
         }
 
         bool hasAnyEmpty() const {
-            return (this->matchEmptyOnly() != 0);
+            return (this->matchEmpty() != 0);
         }
 
         bool hasAnyUsed() const {
@@ -1631,7 +1615,7 @@ public:
         }
 
         bool isAllEmpty() const {
-            return (this->matchEmptyOnly() == kFullMask32_Half);
+            return (this->matchEmpty() == kFullMask32_Half);
         }
 
         bool isAllUsed() const {
@@ -1731,10 +1715,6 @@ public:
 
         bitmask_type matchEmpty() const {
             return bitmask.matchEmpty();
-        }
-
-        bitmask_type matchEmptyOnly() const {
-            return bitmask.matchEmptyOnly();
         }
 
         bitmask_type matchNonEmpty() const {
@@ -2241,7 +2221,6 @@ public:
         return const_cast<const ctrl_type *>(this->ctrls_);
     }
 
-    size_type group_mask() const { return (this->slot_mask() / kGroupWidth); }
     size_type group_count() const {
         return ((this->max_slot_capacity() + kGroupWidth - 1) / kGroupWidth);
     }
@@ -2256,6 +2235,7 @@ public:
     size_type slot_size() const { return this->slot_size_; }
     size_type slot_mask() const { return this->slot_mask_; }
     size_type slot_capacity() const { return (this->slot_mask_ + (this->slot_mask_ != 0)); }
+
     size_type slot_threshold() const { return this->slot_threshold_; }
     size_type slot_threshold(size_type now_slow_capacity) const {
         return (now_slow_capacity * this->integral_mlf() / kLoadFactorAmplify);
@@ -2909,22 +2889,6 @@ private:
 #endif
     }
 
-    inline size_type prev_group(size_type group_index) const noexcept {
-        return ((group_index + this->group_mask()) & this->group_mask());
-    }
-
-    inline size_type next_group(size_type group_index) const noexcept {
-        return ((group_index + 1) & this->group_mask());
-    }
-
-    inline size_type slot_prev_group(size_type slot_index) const noexcept {
-        return (slot_index - kGroupWidth);
-    }
-
-    inline size_type slot_next_group(size_type slot_index) const noexcept {
-        return (slot_index + kGroupWidth);
-    }
-
     ctrl_type * ctrl_at(size_type slot_index) noexcept {
         assert(slot_index <= this->max_slot_capacity());
         return (this->ctrls() + ssize_type(slot_index));
@@ -2988,19 +2952,11 @@ private:
     }
 
     size_type index_of(iterator pos) const {
-#if 1
         return pos.index();
-#else
-        return this->index_of(pos.value());
-#endif
     }
 
     size_type index_of(const_iterator pos) const {
-#if 1
-        return pos.index();
-#else
-        return this->index_of(pos.value());
-#endif
+        return pos.index()
     }
 
     size_type index_of(slot_type * slot) const {
@@ -3224,7 +3180,6 @@ private:
             }
 
             ctrl_type * old_ctrls = this->ctrls();
-            size_type old_group_mask = this->group_mask();
             size_type old_group_count = this->group_count();
             size_type old_group_capacity = this->group_capacity();
 
