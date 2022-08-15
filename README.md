@@ -1,37 +1,57 @@
 # jstd_hashmap
 
-## 介绍
+| [中文版](./README.md) | [English Version](./README.en.md) |
 
-C++ 高性能哈希表
+## Chinese / 中文版
 
-## 软件架构
+TODO: //
 
-软件架构说明
+## 编译和使用方法
 
-## 安装教程
+### 1. 克隆 Git 仓库
 
-1. xxxx
-2. xxxx
-3. xxxx
+```bash
+git clone https://gitee.com/shines77/jstd_hashmap.git
+# 或者
+git clone https://github.com/shines77/jstd_hashmap.git
+```
 
-## 使用说明
+### 2. 配置与编译
 
-1. xxxx
-2. xxxx
-3. xxxx
+切换到本仓库的根目录，执行：
 
-## 参与贡献
+```shell
+cmake .
+make
+```
 
-1. Fork 本仓库
-2. 新建 Feat_xxx 分支
-3. 提交代码
-4. 新建 Pull Request
+### 3. 其他脚本
 
-## 特技
+清理 `cmake` 的缓存和编译结果（便于重新配置和编译）：
 
-1. 使用 Readme\_XXX.md 来支持不同的语言，例如 Readme\_en.md, Readme\_zh.md
-2. Gitee 官方博客 [blog.gitee.com](https://blog.gitee.com)
-3. 你可以 [https://gitee.com/explore](https://gitee.com/explore) 这个地址来了解 Gitee 上的优秀开源项目
-4. [GVP](https://gitee.com/gvp) 全称是 Gitee 最有价值开源项目，是综合评定出的优秀开源项目
-5. Gitee 官方提供的使用手册 [https://gitee.com/help](https://gitee.com/help)
-6. Gitee 封面人物是一档用来展示 Gitee 会员风采的栏目 [https://gitee.com/gitee-stars/](https://gitee.com/gitee-stars/)
+```bash
+./cmake-clean.sh
+```
+
+### 4. 运行 benchmark
+
+```bash
+# 跟 Google sprasehash 开源库类似的测试
+
+# 默认迭代次数为 10000000（无参数时）
+./bin/time_hash_map
+
+# 迭代次数 8000000
+./bin/time_hash_map 8000000
+
+
+# 低、中、高、超高 - 基数测试
+./bin/cardinal_bench
+
+
+# 小数据集测试
+./bin/benchmark
+
+# 中数据集测试
+./bin/benchmark ./data/Maven.keys.txt
+```

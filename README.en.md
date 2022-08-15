@@ -1,37 +1,59 @@
 # jstd_hashmap
 
-## Description
+| [中文版](./README.md) | [English Version](./README.en.md) |
 
-C++ high performance hash table
+## English / 英文版
 
-## Software Architecture
+TODO: //
 
-Software architecture description
+## Compile and usage
 
-## Installation
+### 1. Clone git repository
 
-1. xxxx
-2. xxxx
-3. xxxx
+```bash
+git clone https://github.com/shines77/jstd_hashmap.git
+or
+git clone https://gitee.com/shines77/jstd_hashmap.git
+```
 
-## Instructions
+### 2. Configure and Compile
 
-1. xxxx
-2. xxxx
-3. xxxx
+Change to root dir this repository:
 
-## Contribution
+```shell
+cmake .
+make
+```
 
-1. Fork the repository
-2. Create Feat_xxx branch
-3. Commit your code
-4. Create Pull Request
+### 3. Other script
 
-## Gitee Feature
+Clean up the cache and compilation results of cmake (easy to reconfigure and compile).
 
-1. You can use Readme\_XXX.md to support different languages, such as Readme\_en.md, Readme\_zh.md
-2. Gitee blog [blog.gitee.com](https://blog.gitee.com)
-3. Explore open source project [https://gitee.com/explore](https://gitee.com/explore)
-4. The most valuable open source project [GVP](https://gitee.com/gvp)
-5. The manual of Gitee [https://gitee.com/help](https://gitee.com/help)
-6. The most popular members [https://gitee.com/gitee-stars/](https://gitee.com/gitee-stars/)
+You can use following command:
+
+```bash
+./cmake-clean.sh
+```
+
+### 4. Run benchmark
+
+```bash
+# like Google sprasehash benchmark code
+
+# Default iteraters is 10000000 (no argument)
+./bin/time_hash_map
+
+# Set iteraters = 8000000
+./bin/time_hash_map 8000000
+
+
+# Small, Middle, Big, Huge - Cardinal benchmark
+./bin/cardinal_bench
+
+
+# Small test case
+./bin/benchmark
+
+# Middle test case
+./bin/benchmark ./data/Maven.keys.txt
+```
