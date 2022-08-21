@@ -4169,6 +4169,8 @@ InsertOrGrow_Start:
                 }
             }
         }
+
+        // If we don't called construct_slot(empty), then use placement new.
         this->placement_new_slot(empty);
     }
 
@@ -4204,11 +4206,7 @@ InsertOrGrow_Start:
                 return this->emplace_impl<AlwaysUpdate>(value);
             }
 
-            this->placement_new_slot(slot);
-            if (kIsCompatibleLayout)
-                this->mutable_allocator_.construct(&slot->mutable_value, value);
-            else
-                this->allocator_.construct(&slot->value, value);
+            SlotPolicyTraits::construct(&this->allocator_, slot, value);
             this->slot_size_++;
             return { this->iterator_at(slot), true };
         } else {
@@ -4233,11 +4231,7 @@ InsertOrGrow_Start:
                 return this->emplace_impl<AlwaysUpdate>(std::forward<value_type>(value));
             }
 
-            this->placement_new_slot(slot);
-            if (kIsCompatibleLayout)
-                this->mutable_allocator_.construct(&slot->mutable_value, std::forward<value_type>(value));
-            else
-                this->allocator_.construct(&slot->value, std::forward<value_type>(value));
+            SlotPolicyTraits::construct(&this->allocator_, slot, std::forward<value_type>(value));
             this->slot_size_++;
             return { this->iterator_at(slot), true };
         } else {
@@ -4277,15 +4271,9 @@ InsertOrGrow_Start:
                     );
             }
 
-            this->placement_new_slot(slot);
-            if (kIsCompatibleLayout) {
-                this->mutable_allocator_.construct(&slot->mutable_value,
-                                                   std::forward<KeyT>(key),
-                                                   std::forward<MappedT>(value));
-            } else {
-                this->allocator_.construct(&slot->value, std::forward<KeyT>(key),
-                                                         std::forward<MappedT>(value));
-            }
+            SlotPolicyTraits::construct(&this->allocator_, slot,
+                                        std::forward<KeyT>(key),
+                                        std::forward<MappedT>(value));
             this->slot_size_++;
             return { this->iterator_at(slot), true };
         } else {
@@ -4326,18 +4314,10 @@ InsertOrGrow_Start:
                                      std::forward_as_tuple(std::forward<Args>(args)...));
             }
 
-            this->placement_new_slot(slot);
-            if (kIsCompatibleLayout) {
-                this->mutable_allocator_.construct(&slot->mutable_value,
-                                                   std::piecewise_construct,
-                                                   std::forward_as_tuple(std::forward<KeyT>(key)),
-                                                   std::forward_as_tuple(std::forward<Args>(args)...));
-            } else {
-                this->allocator_.construct(&slot->value,
-                                           std::piecewise_construct,
-                                           std::forward_as_tuple(std::forward<KeyT>(key)),
-                                           std::forward_as_tuple(std::forward<Args>(args)...));
-            }
+            SlotPolicyTraits::construct(&this->allocator_, slot,
+                                        std::piecewise_construct,
+                                        std::forward_as_tuple(std::forward<KeyT>(key)),
+                                        std::forward_as_tuple(std::forward<Args>(args)...));
             this->slot_size_++;
             return { this->iterator_at(slot), true };
         } else {
@@ -4376,18 +4356,10 @@ InsertOrGrow_Start:
                                      std::forward<std::tuple<Ts2...>>(second));
             }
 
-            this->placement_new_slot(slot);
-            if (kIsCompatibleLayout) {
-                this->mutable_allocator_.construct(&slot->mutable_value,
-                                                   std::piecewise_construct,
-                                                   std::forward<std::tuple<Ts1...>>(first),
-                                                   std::forward<std::tuple<Ts2...>>(second));
-            } else {
-                this->allocator_.construct(&slot->value,
-                                           std::piecewise_construct,
-                                           std::forward<std::tuple<Ts1...>>(first),
-                                           std::forward<std::tuple<Ts2...>>(second));
-            }
+            SlotPolicyTraits::construct(&this->allocator_, slot,
+                                        std::piecewise_construct,
+                                        std::forward<std::tuple<Ts1...>>(first),
+                                        std::forward<std::tuple<Ts2...>>(second));
             this->slot_size_++;
             return { this->iterator_at(slot), true };
         } else {
@@ -4422,11 +4394,11 @@ InsertOrGrow_Start:
                 return this->emplace(std::move(value));
             }
 
-            this->placement_new_slot(slot);
             if (kIsCompatibleLayout) {
-                this->mutable_allocator_.construct(&slot->mutable_value, std::move(value));
+                SlotPolicyTraits::construct(&this->allocator_, slot,
+                                            std::move(*static_cast<mutable_value_type *>(&value)));
             } else {
-                this->allocator_.construct(&slot->value, std::move(value));
+                SlotPolicyTraits::construct(&this->allocator_, slot, std::move(value));
             }
             this->slot_size_++;
             return { this->iterator_at(slot), true };
@@ -4538,18 +4510,12 @@ Insert_To_Slot:
     }
 
     // Use in rehash_impl()
-    bool unique_insert_no_grow(slot_type * slot) {
-        auto find_info = this->unique_find_or_insert_no_grow(slot->value.first);
+    bool unique_insert_no_grow(slot_type * old_slot) {
+        auto find_info = this->unique_find_or_insert_no_grow(old_slot->value.first);
         slot_type * new_slot = find_info.first;
         bool need_grow = find_info.second;
 
-        this->placement_new_slot(new_slot);
-        if (kIsCompatibleLayout) {
-            this->mutable_allocator_.construct(&new_slot->mutable_value,
-                                               std::move(slot->mutable_value));
-        } else {
-            this->allocator_.construct(&new_slot->value, std::move(slot->value));
-        }
+        SlotPolicyTraits::construct(&this->allocator_, new_slot, old_slot);
         this->slot_size_++;
         assert(this->slot_size() <= this->slot_capacity());
         return need_grow;
@@ -4557,7 +4523,7 @@ Insert_To_Slot:
 
     void unique_insert(const value_type & value) {
         auto find_info = this->unique_find_or_insert(value.first);
-        slot_type * slot = find_info.first;
+        slot_type * new_slot = find_info.first;
         bool need_grow = find_info.second;
 
         if (need_grow) {
@@ -4566,12 +4532,7 @@ Insert_To_Slot:
             return;
         }
 
-        this->placement_new_slot(slot);
-        if (kIsCompatibleLayout) {
-            this->mutable_allocator_.construct(&slot->mutable_value, value);
-        } else {
-            this->allocator_.construct(&slot->value, value);
-        }
+        SlotPolicyTraits::construct(&this->allocator_, new_slot, value);
         this->slot_size_++;
         assert(this->slot_size() <= this->slot_capacity());
     }
@@ -4587,12 +4548,11 @@ Insert_To_Slot:
             return;
         }
 
-        this->placement_new_slot(slot);
         if (kIsCompatibleLayout) {
-            this->mutable_allocator_.construct(&slot->mutable_value,
-                                               std::move(*static_cast<mutable_value_type *>(&value)));
+            SlotPolicyTraits::construct(&this->allocator_, new_slot,
+                                        std::move(*static_cast<mutable_value_type *>(&value)));
         } else {
-            this->allocator_.construct(&slot->value, std::move(value));
+            SlotPolicyTraits::construct(&this->allocator_, new_slot, std::move(value));
         }
         this->slot_size_++;
         assert(this->slot_size() <= this->slot_capacity());
