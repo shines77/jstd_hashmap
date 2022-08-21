@@ -1032,8 +1032,7 @@ static void measure_hashmap(const char * name, std::size_t obj_size, std::size_t
     if (entry_size == 0) {
         printf("%s (%" PRIuPTR " byte objects, %" PRIuPTR " byte ValueType, %" PRIuPTR " iterations):\n",
                name, obj_size, sizeof(typename MapType::value_type), iters);
-    }
-    else {
+    } else {
         printf("%s (%" PRIuPTR " byte objects, %" PRIuPTR " byte ValueType, %" PRIuPTR " iterations):\n",
                name, obj_size, entry_size, iters);
     }

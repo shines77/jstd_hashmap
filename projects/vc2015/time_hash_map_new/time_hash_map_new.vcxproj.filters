@@ -10,6 +10,9 @@
     <ClInclude Include="..\..\..\bench\time_hash_map_new\time_hash_map_func.hpp">
       <Filter>src</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\bench\time_hash_map_new\time_hash_map_object_func.hpp">
+      <Filter>src</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\bench\time_hash_map_new\time_hash_map_new.cpp">

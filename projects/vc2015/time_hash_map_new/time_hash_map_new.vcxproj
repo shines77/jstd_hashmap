@@ -23,6 +23,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\bench\time_hash_map_new\time_hash_map_func.hpp" />
+    <ClInclude Include="..\..\..\bench\time_hash_map_new\time_hash_map_object_func.hpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{A9E988F9-5D9E-4EBF-ADBD-DCBE9B6827FC}</ProjectGuid>

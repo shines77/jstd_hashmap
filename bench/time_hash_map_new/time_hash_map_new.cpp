@@ -135,6 +135,7 @@
 #endif // USE_STD_HASH_MAP
 
 #include <string>
+#include <unordered_set>
 #if USE_STD_UNORDERED_MAP
 #include <unordered_map>
 #endif
@@ -1066,22 +1067,23 @@ void shuffle_vector(Vector & vector, int seed = 0) {
 /* The implementation of test routine */
 #include "time_hash_map_func.hpp"
 
+/* The implementation of test routine */
+#include "time_hash_map_object_func.hpp"
+
 template <class MapType, class StressMapType>
-static void measure_hashmap(const char * name, std::size_t obj_size, std::size_t entry_size,
-                            std::size_t iters, bool is_stress_hash_function) {
-    if (entry_size == 0) {
-        printf("%s (%" PRIuPTR " byte objects, %" PRIuPTR " byte ValueType, %" PRIuPTR " iterations):\n",
-               name, obj_size, sizeof(typename MapType::value_type), iters);
-    }
-    else {
-        printf("%s (%" PRIuPTR " byte objects, %" PRIuPTR " byte ValueType, %" PRIuPTR " iterations):\n",
-               name, obj_size, entry_size, iters);
-    }
+void measure_hashmap(const char * name, std::size_t obj_size,
+                     std::size_t iters, bool is_stress_hash_function)
+{
+    typedef typename MapType::value_type    value_type;
+    typedef typename MapType::key_type      key_type;
+    typedef typename MapType::mapped_type   mapped_type;
+
+    printf("%s (%" PRIuPTR " byte objects, %" PRIuPTR " byte ValueType, %" PRIuPTR " iterations):\n",
+           name, obj_size, sizeof(value_type), iters);
+
     if (1) printf("\n");
 
     //------------------------------------------------------------
-
-    typedef typename MapType::mapped_type mapped_type;
     std::vector<mapped_type> rndIndices;
     rndIndices.reserve(iters);
     for (mapped_type i = 0; i < iters; i++) {
@@ -1166,8 +1168,154 @@ static void measure_hashmap(const char * name, std::size_t obj_size, std::size_t
 #endif
 }
 
+template <typename StringType, std::size_t minLen, std::size_t maxLen>
+StringType generate_random_string(jstd::MtRandomGen & randomGen)
+{
+    typedef StringType                      string_type;
+    typedef typename StringType::value_type value_type;
+
+    static constexpr std::size_t kMinAscii = 32;
+    static constexpr std::size_t kMaxAscii = 126;
+    static const value_type IdentChars[] =
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_";
+    static const value_type BodyChars[] =
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_+-=*\\/ [](){}<>#$%&@!~|,;:?'`";
+    static const std::size_t kMaxIdentChars = sizeof(IdentChars);
+    static const std::size_t kMaxBodyChars = sizeof(BodyChars);
+
+    string_type str;
+    value_type rndChar;
+    std::size_t length = minLen + (randomGen.nextInt() % std::size_t(maxLen - minLen));
+    str.reserve(length);
+
+    // First char: Ident
+    rndChar = IdentChars[randomGen.nextInt() % kMaxIdentChars];
+    str.push_back(rndChar);
+    for (std::size_t i = 0; i < length - 1; i++) {
+        rndChar = BodyChars[randomGen.nextInt() % kMaxBodyChars];
+        str.push_back(rndChar);
+    }
+    if (rndChar == ' ') {
+        rndChar = IdentChars[randomGen.nextInt() % kMaxIdentChars];
+        str.pop_back();
+        str.push_back(rndChar);
+    }
+    return str;
+}
+
+template <typename ValueType, typename Key, typename Value,
+          std::size_t minKeyLen = 5, std::size_t maxKeyLen = 31,
+          std::size_t minValueLen = 1, std::size_t maxValueLen = 31>
+void generate_random_strings(std::size_t length, std::vector<ValueType> & kvs,
+                            std::vector<Key> & keys,
+                            std::vector<Key> & rnd_keys,
+                            std::vector<Key> & miss_keys)
+{
+    typedef typename Key::value_type char_type;
+
+    jstd::MtRandomGen mtRandomGen(20220714);
+    std::unordered_set<Key> key_used;
+
+    kvs.reserve(length);
+    keys.reserve(length);
+    rnd_keys.reserve(length);
+
+    for (std::size_t i = 0; i < length; i++) {
+        std::string key;
+        do {
+            key = generate_random_string<Key, minKeyLen, maxKeyLen>(mtRandomGen);
+        } while (key_used.count(key) != 0);
+        key_used.insert(key);
+
+        std::string value = generate_random_string<Value, minValueLen, maxValueLen>(mtRandomGen);
+
+        kvs.emplace_back(std::make_pair(key, value));
+        keys.emplace_back(key);
+        rnd_keys.emplace_back(key);
+    }
+
+    shuffle_vector(rnd_keys, 20220714);
+
+    std::unordered_set<Key> miss_key_used;
+    miss_keys.reserve(length);
+
+    for (std::size_t i = 0; i < length; i++) {
+        std::string miss_key;
+        do {
+            miss_key = generate_random_string<Key, minKeyLen, maxKeyLen>(mtRandomGen);
+        } while (key_used.count(miss_key) != 0 || miss_key_used.count(miss_key) != 0);
+        miss_key_used.insert(miss_key);
+        miss_keys.emplace_back(miss_key);
+    }
+}
+
+template <typename MapType>
+void measure_string_hashmap(const char * name, std::size_t obj_size, std::size_t iters)
+{
+    typedef typename MapType::value_type    value_type;
+    typedef typename MapType::key_type      key_type;
+    typedef typename MapType::mapped_type   mapped_type;
+
+    printf("%s (%" PRIuPTR " byte objects, %" PRIuPTR " byte ValueType, %" PRIuPTR " iterations):\n",
+           name, obj_size, sizeof(value_type), iters);
+
+    if (1) printf("\n");
+
+    //------------------------------------------------------------
+    typedef std::vector<value_type> PairVector;
+    typedef std::vector<key_type>   KeyVector;
+
+    PairVector kvs;
+    KeyVector keys, rnd_keys, miss_keys;
+
+    generate_random_strings<value_type, key_type, mapped_type, 5u, 31u, 1u, 31u>(
+        iters, kvs, keys, rnd_keys, miss_keys);
+
+    //------------------------------------------------------------
+
+    if (1) map_serial_find_success<MapType, PairVector, KeyVector>(iters, kvs, keys);
+    if (1) map_random_find_success<MapType, PairVector, KeyVector>(iters, kvs, rnd_keys);
+    if (1) map_find_failed<MapType, PairVector, KeyVector>(iters, kvs, miss_keys);
+    if (1) map_find_empty<MapType, PairVector, KeyVector>(iters, kvs, keys);
+    if (1) printf("\n");
+
+    //------------------------------------------------------------
+
+    if (1) map_insert<MapType, PairVector>(iters, kvs);
+    if (1) map_insert_predicted<MapType, PairVector>(iters, kvs);
+    if (1) map_insert_replace<MapType, PairVector>(iters, kvs);
+    if (1) printf("\n");
+
+    if (1) map_emplace<MapType, PairVector>(iters, kvs);
+    if (1) map_emplace_predicted<MapType, PairVector>(iters, kvs);
+    if (1) map_emplace_replace<MapType, PairVector>(iters, kvs);
+    if (1) printf("\n");
+
+    if (1) map_try_emplace<MapType, PairVector>(iters, kvs);
+    if (1) map_try_emplace_predicted<MapType, PairVector>(iters, kvs);
+    if (1) map_try_emplace_replace<MapType, PairVector, KeyVector>(iters, kvs, rnd_keys);
+    if (1) printf("\n");
+
+    if (1) map_operator<MapType, PairVector>(iters, kvs);
+    if (1) map_operator_predicted<MapType, PairVector>(iters, kvs);
+    if (1) map_operator_replace<MapType, PairVector>(iters, kvs);
+    if (1) printf("\n");
+
+    //------------------------------------------------------------
+
+    if (1) map_serial_erase<MapType, PairVector>(iters, kvs);
+    if (1) map_random_erase<MapType, PairVector, KeyVector>(iters, kvs, rnd_keys);
+    if (1) map_erase_failed<MapType, PairVector, KeyVector>(iters, kvs, miss_keys);
+    if (1) printf("\n");
+
+    if (1) map_toggle<MapType, PairVector>(iters, kvs);
+    if (1) map_iterate<MapType, PairVector>(iters, kvs);
+    if (1) printf("\n");
+}
+
 template <typename Key, typename Value>
-static void test_all_hashmaps(std::size_t obj_size, std::size_t iters) {
+void test_all_hashmaps(std::size_t obj_size, std::size_t iters)
+{
     const bool has_stress_hash_function = (obj_size <= 8);
 
 #if USE_STD_HASH_MAP
@@ -1175,7 +1323,7 @@ static void test_all_hashmaps(std::size_t obj_size, std::size_t iters) {
         measure_hashmap<StdHashMap<Key,   Value, HASH_MAP_FUNCTION<Key>>,
                         StdHashMap<Key *, Value, HASH_MAP_FUNCTION<Key *>>
                         >(
-            "stdext::hash_map<K, V>", obj_size, 0, iters, has_stress_hash_function);
+            "stdext::hash_map<K, V>", obj_size, iters, has_stress_hash_function);
     }
 #endif
 
@@ -1184,7 +1332,7 @@ static void test_all_hashmaps(std::size_t obj_size, std::size_t iters) {
         measure_hashmap<std::unordered_map<Key,   Value, HASH_MAP_FUNCTION<Key>>,
                         std::unordered_map<Key *, Value, HASH_MAP_FUNCTION<Key *>>
                         >(
-            "std::unordered_map<K, V>", obj_size, 0, iters, has_stress_hash_function);
+            "std::unordered_map<K, V>", obj_size, iters, has_stress_hash_function);
     }
 #endif
 
@@ -1193,7 +1341,7 @@ static void test_all_hashmaps(std::size_t obj_size, std::size_t iters) {
         measure_hashmap<jstd::flat16_hash_map<Key,   Value, HASH_MAP_FUNCTION<Key>>,
                         jstd::flat16_hash_map<Key *, Value, HASH_MAP_FUNCTION<Key *>>
                         >(
-            "jstd::flat16_hash_map<K, V>", obj_size, 0, iters, has_stress_hash_function);
+            "jstd::flat16_hash_map<K, V>", obj_size, iters, has_stress_hash_function);
     }
 #endif
 
@@ -1202,7 +1350,7 @@ static void test_all_hashmaps(std::size_t obj_size, std::size_t iters) {
         measure_hashmap<jstd::robin16_hash_map<Key,   Value, HASH_MAP_FUNCTION<Key>>,
                         jstd::robin16_hash_map<Key *, Value, HASH_MAP_FUNCTION<Key *>>
                         >(
-            "jstd::robin16_hash_map<K, V>", obj_size, 0, iters, has_stress_hash_function);
+            "jstd::robin16_hash_map<K, V>", obj_size, iters, has_stress_hash_function);
     }
 #endif
 
@@ -1211,7 +1359,7 @@ static void test_all_hashmaps(std::size_t obj_size, std::size_t iters) {
         measure_hashmap<jstd::robin_hash_map<Key,   Value, HASH_MAP_FUNCTION<Key>>,
                         jstd::robin_hash_map<Key *, Value, HASH_MAP_FUNCTION<Key *>>
                         >(
-            "jstd::robin_hash_map<K, V>", obj_size, 0, iters, has_stress_hash_function);
+            "jstd::robin_hash_map<K, V>", obj_size, iters, has_stress_hash_function);
     }
 #endif
 
@@ -1220,7 +1368,7 @@ static void test_all_hashmaps(std::size_t obj_size, std::size_t iters) {
         measure_hashmap<jstd::v3::robin_hash_map<Key,   Value, HASH_MAP_FUNCTION<Key>>,
                         jstd::v3::robin_hash_map<Key *, Value, HASH_MAP_FUNCTION<Key *>>
                         >(
-            "jstd::v3::robin_hash_map<K, V>", obj_size, 0, iters, has_stress_hash_function);
+            "jstd::v3::robin_hash_map<K, V>", obj_size, iters, has_stress_hash_function);
     }
 #endif
 
@@ -1229,7 +1377,7 @@ static void test_all_hashmaps(std::size_t obj_size, std::size_t iters) {
         measure_hashmap<jstd::v2::robin_hash_map<Key,   Value, HASH_MAP_FUNCTION<Key>>,
                         jstd::v2::robin_hash_map<Key *, Value, HASH_MAP_FUNCTION<Key *>>
                         >(
-            "jstd::v2::robin_hash_map<K, V>", obj_size, 0, iters, has_stress_hash_function);
+            "jstd::v2::robin_hash_map<K, V>", obj_size, iters, has_stress_hash_function);
     }
 #endif
 
@@ -1238,7 +1386,7 @@ static void test_all_hashmaps(std::size_t obj_size, std::size_t iters) {
         measure_hashmap<jstd::v1::robin_hash_map<Key,   Value, HASH_MAP_FUNCTION<Key>>,
                         jstd::v1::robin_hash_map<Key *, Value, HASH_MAP_FUNCTION<Key *>>
                         >(
-            "jstd::v1::robin_hash_map<K, V>", obj_size, 0, iters, has_stress_hash_function);
+            "jstd::v1::robin_hash_map<K, V>", obj_size, iters, has_stress_hash_function);
     }
 #endif
 }
@@ -1252,7 +1400,61 @@ void test_all_hashmaps_for_string_view(std::size_t obj_size, std::size_t iters)
 template <typename Key, typename Value>
 void test_all_hashmaps_for_string(std::size_t obj_size, std::size_t iters)
 {
+#if USE_STD_HASH_MAP
+    if (FLAGS_test_std_hash_map) {
+        measure_string_hashmap<StdHashMap<Key, Value>>
+            ("stdext::hash_map<K, V>", obj_size, iters);
+    }
+#endif
 
+#if USE_STD_UNORDERED_MAP
+    if (FLAGS_test_std_unordered_map) {
+        measure_string_hashmap<std::unordered_map<Key, Value>>
+            ("std::unordered_map<K, V>", obj_size, iters);
+    }
+#endif
+
+#if USE_JSTD_FLAT16_HASH_MAP
+    if (FLAGS_test_jstd_flat16_hash_map) {
+        measure_string_hashmap<jstd::flat16_hash_map<Key, Value>>
+            ("jstd::flat16_hash_map<K, V>", obj_size, iters);
+    }
+#endif
+
+#if USE_JSTD_ROBIN16_HASH_MAP
+    if (FLAGS_test_jstd_robin16_hash_map) {
+        measure_string_hashmap<jstd::robin16_hash_map<Key, Value>>
+            ("jstd::robin16_hash_map<K, V>", obj_size, iters);
+    }
+#endif
+
+#if USE_JSTD_ROBIN_HASH_MAP
+    if (FLAGS_test_jstd_robin_hash_map) {
+        measure_string_hashmap<jstd::robin_hash_map<Key, Value>>
+            ("jstd::robin_hash_map<K, V>", obj_size, iters);
+    }
+#endif
+
+#if USE_JSTD_ROBIN_HASH_MAP_V3
+    if (FLAGS_test_jstd_v3_robin_hash_map) {
+        measure_string_hashmap<jstd::v3::robin_hash_map<Key, Value>>
+            ("jstd::v3::robin_hash_map<K, V>", obj_size, iters);
+    }
+#endif
+
+#if USE_JSTD_ROBIN_HASH_MAP_V2
+    if (FLAGS_test_jstd_v2_robin_hash_map) {
+        measure_string_hashmap<jstd::v2::robin_hash_map<Key, Value>>
+            ("jstd::v2::robin_hash_map<K, V>", obj_size, iters);
+    }
+#endif
+
+#if USE_JSTD_ROBIN_HASH_MAP_V1
+    if (FLAGS_test_jstd_v1_robin_hash_map) {
+        measure_string_hashmap<jstd::v1::robin_hash_map<Key, Value>>
+            ("jstd::v1::robin_hash_map<K, V>", obj_size, iters);
+    }
+#endif
 }
 
 void benchmark_all_hashmaps(std::size_t iters)
