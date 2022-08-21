@@ -5,8 +5,8 @@
 #pragma once
 
 template <class MapType, class Vector>
-static void map_sequential_find(char const * title, std::size_t iters,
-                                const Vector & indices) {
+static void map_serial_find(char const * title, std::size_t iters,
+                            const Vector & indices) {
     typedef typename MapType::mapped_type mapped_type;
 
     MapType hashmap;
@@ -36,7 +36,7 @@ static void map_sequential_find(char const * title, std::size_t iters,
 }
 
 template <class MapType>
-static void map_sequential_find_success(std::size_t iters) {
+static void map_serial_find_success(std::size_t iters) {
     typedef typename MapType::mapped_type mapped_type;
 
     mapped_type max_iters = static_cast<mapped_type>(iters);
@@ -45,11 +45,11 @@ static void map_sequential_find_success(std::size_t iters) {
         v[i] = i + 1;
     }
 
-    map_sequential_find<MapType>("sequential_find_success", iters, v);
+    map_serial_find<MapType>("serial_find_success", iters, v);
 }
 
 template <class MapType>
-static void map_sequential_find_random(std::size_t iters) {
+static void map_serial_find_random(std::size_t iters) {
     typedef typename MapType::mapped_type mapped_type;
 
     mapped_type max_iters = static_cast<mapped_type>(iters);
@@ -60,11 +60,11 @@ static void map_sequential_find_random(std::size_t iters) {
 
     shuffle_vector(v);
 
-    map_sequential_find<MapType>("sequential_find_random", iters, v);
+    map_serial_find<MapType>("serial_find_random", iters, v);
 }
 
 template <class MapType>
-static void map_sequential_find_failed(std::size_t iters) {
+static void map_serial_find_failed(std::size_t iters) {
     typedef typename MapType::mapped_type mapped_type;
 
     MapType hashmap;
@@ -90,11 +90,11 @@ static void map_sequential_find_failed(std::size_t iters) {
     ::srand(static_cast<unsigned int>(r));
 
     double lf = hashmap.load_factor();
-    report_result("sequential_find_failed", ut, lf, iters, 0, 0);
+    report_result("serial_find_failed", ut, lf, iters, 0, 0);
 }
 
 template <class MapType>
-static void map_sequential_find_empty(std::size_t iters) {
+static void map_serial_find_empty(std::size_t iters) {
     typedef typename MapType::mapped_type mapped_type;
 
     MapType hashmap;
@@ -122,11 +122,11 @@ static void map_sequential_find_empty(std::size_t iters) {
     ::srand(static_cast<unsigned int>(r));
 
     double lf = hashmap.load_factor();
-    report_result("sequential_find_empty", ut, lf, iters, 0, 0);
+    report_result("serial_find_empty", ut, lf, iters, 0, 0);
 }
 
 template <class MapType>
-static void map_sequential_insert(std::size_t iters) {
+static void map_serial_insert(std::size_t iters) {
     typedef typename MapType::mapped_type mapped_type;
 
     std::size_t start = CurrentMemoryUsage();
@@ -153,12 +153,12 @@ static void map_sequential_insert(std::size_t iters) {
         ::srand(static_cast<unsigned int>(hashmap.size()));
 
         double lf = hashmap.load_factor();
-        report_result("sequential_insert", ut, lf, iters, start, finish);
+        report_result("serial_insert", ut, lf, iters, start, finish);
     }    
 }
 
 template <class MapType>
-static void map_sequential_insert_predicted(std::size_t iters) {
+static void map_serial_insert_predicted(std::size_t iters) {
     typedef typename MapType::mapped_type mapped_type;
 
     std::size_t start = CurrentMemoryUsage();
@@ -187,12 +187,12 @@ static void map_sequential_insert_predicted(std::size_t iters) {
         ::srand(static_cast<unsigned int>(hashmap.size()));
 
         double lf = hashmap.load_factor();
-        report_result("sequential_insert_predicted", ut, lf, iters, start, finish);
+        report_result("serial_insert_predicted", ut, lf, iters, start, finish);
     }
 }
 
 template <class MapType>
-static void map_sequential_insert_replace(std::size_t iters) {
+static void map_serial_insert_replace(std::size_t iters) {
     typedef typename MapType::mapped_type mapped_type;
 
     MapType hashmap;
@@ -221,12 +221,12 @@ static void map_sequential_insert_replace(std::size_t iters) {
         ::srand(static_cast<unsigned int>(hashmap.size()));
 
         double lf = hashmap.load_factor();
-        report_result("sequential_insert_replace", ut, lf, iters, start, finish);
+        report_result("serial_insert_replace", ut, lf, iters, start, finish);
     }
 }
 
 template <class MapType>
-static void map_sequential_emplace(std::size_t iters) {
+static void map_serial_emplace(std::size_t iters) {
     typedef typename MapType::mapped_type mapped_type;
 
     std::size_t start = CurrentMemoryUsage();
@@ -253,12 +253,12 @@ static void map_sequential_emplace(std::size_t iters) {
         ::srand(static_cast<unsigned int>(hashmap.size()));
 
         double lf = hashmap.load_factor();
-        report_result("sequential_emplace", ut, lf, iters, start, finish);
+        report_result("serial_emplace", ut, lf, iters, start, finish);
     }
 }
 
 template <class MapType>
-static void map_sequential_emplace_predicted(std::size_t iters) {
+static void map_serial_emplace_predicted(std::size_t iters) {
     typedef typename MapType::mapped_type mapped_type;
 
     std::size_t start = CurrentMemoryUsage();
@@ -287,12 +287,12 @@ static void map_sequential_emplace_predicted(std::size_t iters) {
         ::srand(static_cast<unsigned int>(hashmap.size()));
 
         double lf = hashmap.load_factor();
-        report_result("sequential_emplace_predicted", ut, lf, iters, start, finish);
+        report_result("serial_emplace_predicted", ut, lf, iters, start, finish);
     }
 }
 
 template <class MapType>
-static void map_sequential_emplace_replace(std::size_t iters) {
+static void map_serial_emplace_replace(std::size_t iters) {
     typedef typename MapType::mapped_type mapped_type;
 
     MapType hashmap;
@@ -321,12 +321,12 @@ static void map_sequential_emplace_replace(std::size_t iters) {
         ::srand(static_cast<unsigned int>(hashmap.size()));
 
         double lf = hashmap.load_factor();
-        report_result("sequential_emplace_replace", ut, lf, iters, start, finish);
+        report_result("serial_emplace_replace", ut, lf, iters, start, finish);
     }
 }
 
 template <class MapType>
-static void map_sequential_operator(std::size_t iters) {
+static void map_serial_operator(std::size_t iters) {
     typedef typename MapType::mapped_type mapped_type;
 
     std::size_t start = CurrentMemoryUsage();
@@ -353,12 +353,12 @@ static void map_sequential_operator(std::size_t iters) {
         ::srand(static_cast<unsigned int>(hashmap.size()));
 
         double lf = hashmap.load_factor();
-        report_result("sequential_operator []", ut, lf, iters, start, finish);
+        report_result("serial operator []", ut, lf, iters, start, finish);
     }
 }
 
 template <class MapType>
-static void map_sequential_operator_predicted(std::size_t iters) {
+static void map_serial_operator_predicted(std::size_t iters) {
     typedef typename MapType::mapped_type mapped_type;
 
     std::size_t start = CurrentMemoryUsage();
@@ -387,12 +387,12 @@ static void map_sequential_operator_predicted(std::size_t iters) {
         ::srand(static_cast<unsigned int>(hashmap.size()));
 
         double lf = hashmap.load_factor();
-        report_result("sequential_operator [] predicted", ut, lf, iters, start, finish);
+        report_result("serial operator [] predicted", ut, lf, iters, start, finish);
     }
 }
 
 template <class MapType>
-static void map_sequential_operator_replace(std::size_t iters) {
+static void map_serial_operator_replace(std::size_t iters) {
     typedef typename MapType::mapped_type mapped_type;
 
     MapType hashmap;
@@ -421,12 +421,12 @@ static void map_sequential_operator_replace(std::size_t iters) {
         ::srand(static_cast<unsigned int>(hashmap.size()));
 
         double lf = hashmap.load_factor();
-        report_result("sequential_operator [] replace", ut, lf, iters, start, finish);
+        report_result("serial operator [] replace", ut, lf, iters, start, finish);
     }
 }
 
 template <class MapType>
-static void map_sequential_erase(std::size_t iters) {
+static void map_serial_erase(std::size_t iters) {
     typedef typename MapType::mapped_type mapped_type;
 
     MapType hashmap;
@@ -455,12 +455,12 @@ static void map_sequential_erase(std::size_t iters) {
         ::srand(static_cast<unsigned int>(hashmap.size()));
 
         double lf = hashmap.load_factor();
-        report_result("sequential_erase", ut, lf, iters, start, finish);
+        report_result("serial_erase", ut, lf, iters, start, finish);
     }
 }
 
 template <class MapType>
-static void map_sequential_erase_failed(std::size_t iters) {
+static void map_serial_erase_failed(std::size_t iters) {
     typedef typename MapType::mapped_type mapped_type;
 
     MapType hashmap;
@@ -489,12 +489,12 @@ static void map_sequential_erase_failed(std::size_t iters) {
         ::srand(static_cast<unsigned int>(hashmap.size()));
 
         double lf = hashmap.load_factor();
-        report_result("sequential_erase_failed", ut, lf, iters, start, finish);
+        report_result("serial_erase_failed", ut, lf, iters, start, finish);
     }
 }
 
 template <class MapType>
-static void map_sequential_toggle(std::size_t iters) {
+static void map_serial_toggle(std::size_t iters) {
     typedef typename MapType::mapped_type mapped_type;
 
     std::size_t start = CurrentMemoryUsage();
@@ -522,12 +522,12 @@ static void map_sequential_toggle(std::size_t iters) {
         ::srand(static_cast<unsigned int>(hashmap.size()));
 
         double lf = hashmap.load_factor();
-        report_result("sequential_toggle", ut, lf, iters, start, finish);
+        report_result("serial_toggle", ut, lf, iters, start, finish);
     }
 }
 
 template <class MapType>
-static void map_sequential_iterate(std::size_t iters) {
+static void map_serial_iterate(std::size_t iters) {
     typedef typename MapType::mapped_type       mapped_type;
     typedef typename MapType::const_iterator    const_iterator;
 
@@ -563,7 +563,7 @@ static void map_sequential_iterate(std::size_t iters) {
         ::srand(static_cast<unsigned int>(hashmap.size()));
 
         double lf = hashmap.load_factor();
-        report_result("sequential_emplace - iterate", ut, lf, iters, start, finish);
+        report_result("serial_emplace - iterate", ut, lf, iters, start, finish);
     }
 }
 
@@ -599,7 +599,7 @@ static void map_random_find(char const * title, std::size_t iters,
 }
 
 template <class MapType, class Vector>
-static void map_random_find_sequential(std::size_t iters, const Vector & indices) {
+static void map_random_find_serial(std::size_t iters, const Vector & indices) {
     typedef typename MapType::mapped_type mapped_type;
 
     mapped_type max_iters = static_cast<mapped_type>(iters);
@@ -608,7 +608,7 @@ static void map_random_find_sequential(std::size_t iters, const Vector & indices
         v[i] = i + 1;
     }
 
-    map_random_find<MapType>("random_find_sequential", iters, indices, v);
+    map_random_find<MapType>("random_find_serial", iters, indices, v);
 }
 
 template <class MapType, class Vector>
@@ -916,7 +916,7 @@ static void map_random_operator(std::size_t iters, const Vector & indices) {
         ::srand(static_cast<unsigned int>(hashmap.size()));
 
         double lf = hashmap.load_factor();
-        report_result("random_operator []", ut, lf, iters, start, finish);
+        report_result("random operator []", ut, lf, iters, start, finish);
     }
 }
 
@@ -950,7 +950,7 @@ static void map_random_operator_predicted(std::size_t iters, const Vector & indi
         ::srand(static_cast<unsigned int>(hashmap.size()));
 
         double lf = hashmap.load_factor();
-        report_result("random_operator [] predicted", ut, lf, iters, start, finish);
+        report_result("random operator [] predicted", ut, lf, iters, start, finish);
     }
 }
 
@@ -985,7 +985,7 @@ static void map_random_operator_replace(std::size_t iters, const Vector & indice
         ::srand(static_cast<unsigned int>(hashmap.size()));
 
         double lf = hashmap.load_factor();
-        report_result("random_operator [] replace", ut, lf, iters, start, finish);
+        report_result("random operator [] replace", ut, lf, iters, start, finish);
     }
 }
 

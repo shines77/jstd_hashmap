@@ -3852,7 +3852,7 @@ private:
         slot++;
 
         if (ctrl->value >= ctrl_type::make_dist(1)) {
-            if (ctrl->hash_equals(ctrl_hash)) {
+            if (!kNeedStoreHash || ctrl->hash_equals(ctrl_hash)) {
                 if (this->key_equal_(slot->value.first, key)) {
                     return slot;
                 }

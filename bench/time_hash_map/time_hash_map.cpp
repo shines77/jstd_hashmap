@@ -1052,13 +1052,13 @@ static void measure_hashmap(const char * name, std::size_t obj_size, std::size_t
 
     //------------------------------------------------------------
 
-    if (1) map_sequential_find_success<MapType>(iters);
-    if (1) map_sequential_find_random<MapType>(iters);
-    if (1) map_sequential_find_failed<MapType>(iters);
-    if (1) map_sequential_find_empty<MapType>(iters);
+    if (1) map_serial_find_success<MapType>(iters);
+    if (1) map_serial_find_random<MapType>(iters);
+    if (1) map_serial_find_failed<MapType>(iters);
+    if (1) map_serial_find_empty<MapType>(iters);
     if (1) printf("\n");
 
-    if (1) map_random_find_sequential<MapType>(iters, rndIndices);
+    if (1) map_random_find_serial<MapType>(iters, rndIndices);
     if (1) map_random_find_random<MapType>(iters, rndIndices);
     if (1) map_random_find_failed<MapType>(iters, rndIndices);
     if (1) map_random_find_empty<MapType>(iters, rndIndices);
@@ -1066,19 +1066,19 @@ static void measure_hashmap(const char * name, std::size_t obj_size, std::size_t
 
     //------------------------------------------------------------
 
-    if (1) map_sequential_insert<MapType>(iters);
-    if (1) map_sequential_insert_predicted<MapType>(iters);
-    if (1) map_sequential_insert_replace<MapType>(iters);
+    if (1) map_serial_insert<MapType>(iters);
+    if (1) map_serial_insert_predicted<MapType>(iters);
+    if (1) map_serial_insert_replace<MapType>(iters);
     if (1) printf("\n");
 
-    if (1) map_sequential_emplace<MapType>(iters);
-    if (1) map_sequential_emplace_predicted<MapType>(iters);
-    if (1) map_sequential_emplace_replace<MapType>(iters);
+    if (1) map_serial_emplace<MapType>(iters);
+    if (1) map_serial_emplace_predicted<MapType>(iters);
+    if (1) map_serial_emplace_replace<MapType>(iters);
     if (1) printf("\n");
 
-    if (1) map_sequential_operator<MapType>(iters);
-    if (1) map_sequential_operator_predicted<MapType>(iters);
-    if (1) map_sequential_operator_replace<MapType>(iters);
+    if (1) map_serial_operator<MapType>(iters);
+    if (1) map_serial_operator_predicted<MapType>(iters);
+    if (1) map_serial_operator_replace<MapType>(iters);
     if (1) printf("\n");
 
     //------------------------------------------------------------
@@ -1100,10 +1100,10 @@ static void measure_hashmap(const char * name, std::size_t obj_size, std::size_t
 
     //------------------------------------------------------------
 
-    if (1) map_sequential_erase<MapType>(iters);
-    if (1) map_sequential_erase_failed<MapType>(iters);
-    if (1) map_sequential_toggle<MapType>(iters);
-    if (1) map_sequential_iterate<MapType>(iters);
+    if (1) map_serial_erase<MapType>(iters);
+    if (1) map_serial_erase_failed<MapType>(iters);
+    if (1) map_serial_toggle<MapType>(iters);
+    if (1) map_serial_iterate<MapType>(iters);
     if (1) printf("\n");
 
     if (1) map_random_erase<MapType>(iters, rndIndices);
