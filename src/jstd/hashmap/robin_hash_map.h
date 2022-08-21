@@ -4539,7 +4539,7 @@ Insert_To_Slot:
 
     void unique_insert(value_type && value) {
         auto find_info = this->unique_find_or_insert(value.first);
-        slot_type * slot = find_info.first;
+        slot_type * new_slot = find_info.first;
         bool need_grow = find_info.second;
 
         if (need_grow) {
