@@ -169,7 +169,7 @@
 #include <jstd/test/ProcessMemInfo.h>
 #include <jstd/test/ReadRss.h>
 
-#define USE_STAT_COUNTER        1
+#define USE_STAT_COUNTER        0
 
 #if USE_STAT_COUNTER
 #define USE_CTOR_COUNTER        0

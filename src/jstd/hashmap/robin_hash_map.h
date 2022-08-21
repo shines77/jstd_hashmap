@@ -98,7 +98,7 @@
 #endif
 #endif // _MSC_VER
 
-#define ROBIN_USE_HASH_POLICY       1
+#define ROBIN_USE_HASH_POLICY       0
 #define ROBIN_USE_SWAP_TRAITS       1
 
 namespace jstd {
