@@ -1075,7 +1075,6 @@ void measure_hashmap(const char * name, std::size_t obj_size,
                      std::size_t iters, bool is_stress_hash_function)
 {
     typedef typename MapType::value_type    value_type;
-    typedef typename MapType::key_type      key_type;
     typedef typename MapType::mapped_type   mapped_type;
 
     printf("%s (%" PRIuPTR " byte objects, %" PRIuPTR " byte ValueType, %" PRIuPTR " iterations):\n",
@@ -1172,19 +1171,19 @@ template <typename StringType, std::size_t minLen, std::size_t maxLen>
 StringType generate_random_string(jstd::MtRandomGen & randomGen)
 {
     typedef StringType                      string_type;
-    typedef typename StringType::value_type value_type;
+    typedef typename StringType::value_type char_type;
 
     static constexpr std::size_t kMinAscii = 32;
     static constexpr std::size_t kMaxAscii = 126;
-    static const value_type IdentChars[] =
+    static const char_type IdentChars[] =
         "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_";
-    static const value_type BodyChars[] =
+    static const char_type BodyChars[] =
         "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_+-=*\\/ [](){}<>#$%&@!~|,;:?'`";
-    static const std::size_t kMaxIdentChars = sizeof(IdentChars);
-    static const std::size_t kMaxBodyChars = sizeof(BodyChars);
+    static const std::size_t kMaxIdentChars = sizeof(IdentChars) - 1;
+    static const std::size_t kMaxBodyChars = sizeof(BodyChars) - 1;
 
     string_type str;
-    value_type rndChar;
+    char_type rndChar;
     std::size_t length = minLen + (randomGen.nextInt() % std::size_t(maxLen - minLen));
     str.reserve(length);
 
@@ -1200,25 +1199,23 @@ StringType generate_random_string(jstd::MtRandomGen & randomGen)
         str.pop_back();
         str.push_back(rndChar);
     }
+    assert(std::strlen(str.c_str()) >= minLen);
     return str;
 }
 
 template <typename ValueType, typename Key, typename Value,
-          std::size_t minKeyLen = 5, std::size_t maxKeyLen = 31,
+          std::size_t minKeyLen = 4, std::size_t maxKeyLen = 31,
           std::size_t minValueLen = 1, std::size_t maxValueLen = 31>
 void generate_random_strings(std::size_t length, std::vector<ValueType> & kvs,
                             std::vector<Key> & keys,
                             std::vector<Key> & rnd_keys,
                             std::vector<Key> & miss_keys)
 {
-    typedef typename Key::value_type char_type;
-
     jstd::MtRandomGen mtRandomGen(20220714);
     std::unordered_set<Key> key_used;
 
     kvs.reserve(length);
     keys.reserve(length);
-    rnd_keys.reserve(length);
 
     for (std::size_t i = 0; i < length; i++) {
         std::string key;
@@ -1231,10 +1228,7 @@ void generate_random_strings(std::size_t length, std::vector<ValueType> & kvs,
 
         kvs.emplace_back(std::make_pair(key, value));
         keys.emplace_back(key);
-        rnd_keys.emplace_back(key);
     }
-
-    shuffle_vector(rnd_keys, 20220714);
 
     std::unordered_set<Key> miss_key_used;
     miss_keys.reserve(length);
@@ -1247,6 +1241,9 @@ void generate_random_strings(std::size_t length, std::vector<ValueType> & kvs,
         miss_key_used.insert(miss_key);
         miss_keys.emplace_back(miss_key);
     }
+
+    rnd_keys = keys;
+    shuffle_vector(rnd_keys, 20220714);
 }
 
 template <typename MapType>
@@ -1268,7 +1265,7 @@ void measure_string_hashmap(const char * name, std::size_t obj_size, std::size_t
     PairVector kvs;
     KeyVector keys, rnd_keys, miss_keys;
 
-    generate_random_strings<value_type, key_type, mapped_type, 5u, 31u, 1u, 31u>(
+    generate_random_strings<value_type, key_type, mapped_type, 4u, 31u, 1u, 31u>(
         iters, kvs, keys, rnd_keys, miss_keys);
 
     //------------------------------------------------------------
@@ -1464,6 +1461,7 @@ void benchmark_all_hashmaps(std::size_t iters)
     // a HashObject as it would be to use just a straight int/char
     // buffer.  To keep memory use similar, we normalize the number of
     // iterations based on size.
+#ifndef _DEBUG
     if (FLAGS_test_4_bytes) {
         test_all_hashmaps<std::uint32_t, std::uint32_t>(4, iters / 1);
     }
@@ -1471,6 +1469,7 @@ void benchmark_all_hashmaps(std::size_t iters)
     if (FLAGS_test_8_bytes) {
         test_all_hashmaps<std::uint64_t, std::uint64_t>(8, iters / 2);
     }
+#endif
 
     if (FLAGS_test_16_bytes) {
         test_all_hashmaps_for_string_view<jstd::string_view, jstd::string_view>
