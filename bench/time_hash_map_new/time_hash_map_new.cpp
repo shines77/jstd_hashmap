@@ -170,7 +170,7 @@
 #include <jstd/test/ProcessMemInfo.h>
 #include <jstd/test/ReadRss.h>
 
-#define USE_STAT_COUNTER        1
+#define USE_STAT_COUNTER        0
 
 #if USE_STAT_COUNTER
 #define USE_CTOR_COUNTER        0
@@ -1250,7 +1250,7 @@ void test_all_hashmaps_for_string_view(std::size_t obj_size, std::size_t iters)
 }
 
 template <typename Key, typename Value>
-void test_all_hashmaps_for_std_string(std::size_t obj_size, std::size_t iters)
+void test_all_hashmaps_for_string(std::size_t obj_size, std::size_t iters)
 {
 
 }
@@ -1271,13 +1271,13 @@ void benchmark_all_hashmaps(std::size_t iters)
     }
 
     if (FLAGS_test_16_bytes) {
-        test_all_hashmaps_for_string_view<
-            jstd::string_view, jstd::string_view>(sizeof(jstd::string_view), iters / 4);
+        test_all_hashmaps_for_string_view<jstd::string_view, jstd::string_view>
+            (sizeof(jstd::string_view), iters / 4);
     }
 
     if (FLAGS_test_32_bytes) {
-        test_all_hashmaps_for_std_string<
-            std::string, std::string>(sizeof(std::string), iters / 16);
+        test_all_hashmaps_for_string<std::string, std::string>
+            (sizeof(std::string), iters / 16);
     }
 }
 
