@@ -178,7 +178,7 @@ template < typename Key, typename Value,
 class robin_hash_map {
 public:
     template <typename K, typename V>
-    union map_slot_type {
+    union alignas(64) map_slot_type {
     public:
         using key_type = typename std::remove_const<K>::type;
         using mapped_type = typename std::remove_const<V>::type;
