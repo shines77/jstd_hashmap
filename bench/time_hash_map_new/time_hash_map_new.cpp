@@ -1318,72 +1318,64 @@ void test_all_hashmaps(std::size_t obj_size, std::size_t iters)
 #if USE_STD_HASH_MAP
     if (FLAGS_test_std_hash_map) {
         measure_hashmap<StdHashMap<Key,   Value, HASH_MAP_FUNCTION<Key>>,
-                        StdHashMap<Key *, Value, HASH_MAP_FUNCTION<Key *>>
-                        >(
-            "stdext::hash_map<K, V>", obj_size, iters, has_stress_hash_function);
+                        StdHashMap<Key *, Value, HASH_MAP_FUNCTION<Key *>>>
+            ("stdext::hash_map<K, V>", obj_size, iters, has_stress_hash_function);
     }
 #endif
 
 #if USE_STD_UNORDERED_MAP
     if (FLAGS_test_std_unordered_map) {
         measure_hashmap<std::unordered_map<Key,   Value, HASH_MAP_FUNCTION<Key>>,
-                        std::unordered_map<Key *, Value, HASH_MAP_FUNCTION<Key *>>
-                        >(
-            "std::unordered_map<K, V>", obj_size, iters, has_stress_hash_function);
+                        std::unordered_map<Key *, Value, HASH_MAP_FUNCTION<Key *>>>
+            ("std::unordered_map<K, V>", obj_size, iters, has_stress_hash_function);
     }
 #endif
 
 #if USE_JSTD_FLAT16_HASH_MAP
     if (FLAGS_test_jstd_flat16_hash_map) {
         measure_hashmap<jstd::flat16_hash_map<Key,   Value, HASH_MAP_FUNCTION<Key>>,
-                        jstd::flat16_hash_map<Key *, Value, HASH_MAP_FUNCTION<Key *>>
-                        >(
-            "jstd::flat16_hash_map<K, V>", obj_size, iters, has_stress_hash_function);
+                        jstd::flat16_hash_map<Key *, Value, HASH_MAP_FUNCTION<Key *>>>
+            ("jstd::flat16_hash_map<K, V>", obj_size, iters, has_stress_hash_function);
     }
 #endif
 
 #if USE_JSTD_ROBIN16_HASH_MAP
     if (FLAGS_test_jstd_robin16_hash_map) {
         measure_hashmap<jstd::robin16_hash_map<Key,   Value, HASH_MAP_FUNCTION<Key>>,
-                        jstd::robin16_hash_map<Key *, Value, HASH_MAP_FUNCTION<Key *>>
-                        >(
-            "jstd::robin16_hash_map<K, V>", obj_size, iters, has_stress_hash_function);
+                        jstd::robin16_hash_map<Key *, Value, HASH_MAP_FUNCTION<Key *>>>
+            ("jstd::robin16_hash_map<K, V>", obj_size, iters, has_stress_hash_function);
     }
 #endif
 
 #if USE_JSTD_ROBIN_HASH_MAP
     if (FLAGS_test_jstd_robin_hash_map) {
         measure_hashmap<jstd::robin_hash_map<Key,   Value, HASH_MAP_FUNCTION<Key>>,
-                        jstd::robin_hash_map<Key *, Value, HASH_MAP_FUNCTION<Key *>>
-                        >(
-            "jstd::robin_hash_map<K, V>", obj_size, iters, has_stress_hash_function);
+                        jstd::robin_hash_map<Key *, Value, HASH_MAP_FUNCTION<Key *>>>
+            ("jstd::robin_hash_map<K, V>", obj_size, iters, has_stress_hash_function);
     }
 #endif
 
 #if USE_JSTD_ROBIN_HASH_MAP_V3
     if (FLAGS_test_jstd_v3_robin_hash_map) {
         measure_hashmap<jstd::v3::robin_hash_map<Key,   Value, HASH_MAP_FUNCTION<Key>>,
-                        jstd::v3::robin_hash_map<Key *, Value, HASH_MAP_FUNCTION<Key *>>
-                        >(
-            "jstd::v3::robin_hash_map<K, V>", obj_size, iters, has_stress_hash_function);
+                        jstd::v3::robin_hash_map<Key *, Value, HASH_MAP_FUNCTION<Key *>>>
+            ("jstd::v3::robin_hash_map<K, V>", obj_size, iters, has_stress_hash_function);
     }
 #endif
 
 #if USE_JSTD_ROBIN_HASH_MAP_V2
     if (FLAGS_test_jstd_v2_robin_hash_map) {
         measure_hashmap<jstd::v2::robin_hash_map<Key,   Value, HASH_MAP_FUNCTION<Key>>,
-                        jstd::v2::robin_hash_map<Key *, Value, HASH_MAP_FUNCTION<Key *>>
-                        >(
-            "jstd::v2::robin_hash_map<K, V>", obj_size, iters, has_stress_hash_function);
+                        jstd::v2::robin_hash_map<Key *, Value, HASH_MAP_FUNCTION<Key *>>>
+            ("jstd::v2::robin_hash_map<K, V>", obj_size, iters, has_stress_hash_function);
     }
 #endif
 
 #if USE_JSTD_ROBIN_HASH_MAP_V1
     if (FLAGS_test_jstd_v1_robin_hash_map) {
         measure_hashmap<jstd::v1::robin_hash_map<Key,   Value, HASH_MAP_FUNCTION<Key>>,
-                        jstd::v1::robin_hash_map<Key *, Value, HASH_MAP_FUNCTION<Key *>>
-                        >(
-            "jstd::v1::robin_hash_map<K, V>", obj_size, iters, has_stress_hash_function);
+                        jstd::v1::robin_hash_map<Key *, Value, HASH_MAP_FUNCTION<Key *>>>
+            ("jstd::v1::robin_hash_map<K, V>", obj_size, iters, has_stress_hash_function);
     }
 #endif
 }
@@ -1473,7 +1465,7 @@ void benchmark_all_hashmaps(std::size_t iters)
 
     if (FLAGS_test_16_bytes) {
         test_all_hashmaps_for_string_view<jstd::string_view, jstd::string_view>
-            (sizeof(jstd::string_view), iters / 4);
+            (sizeof(jstd::string_view), iters / 8);
     }
 
     if (FLAGS_test_32_bytes) {
