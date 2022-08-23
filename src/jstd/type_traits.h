@@ -534,6 +534,7 @@ private:
         Value   second;
     };
 
+public:
     // Is class P layout-compatible with class Pair ?
     template <typename P>
     static constexpr bool isCompatiblePairLayout() {
@@ -544,7 +545,6 @@ private:
                (PairOffsetOf<P>::kSecond == PairOffsetOf<Pair>::kSecond));
     }
 
-public:
     // Whether std::pair<const Key, Value> and std::pair<Key, Value are layout-compatible.
     // If they are, then it is safe to store them in a union and read from either.
     static constexpr bool value = std::is_standard_layout<Key>() &&

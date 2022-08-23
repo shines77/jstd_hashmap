@@ -1316,13 +1316,16 @@ void is_noexcept_move_test()
 template <typename Key, typename Value>
 void print_need_store_hash(const std::string & key, const std::string & value)
 {
-    static constexpr bool bIsPlainType = jstd::detail::is_plain_type<Key>::value;
-    static constexpr bool bNeedStoreHash = jstd::robin_hash_map<Key, Value>::kDetectStoreHash;
+    static constexpr bool hasMemberSwap = jstd::has_member_swap<Key, Key &>::value;
+    static constexpr bool isPlainType = jstd::detail::is_plain_type<Key>::value;
+    static constexpr bool needStoreHash = jstd::robin_hash_map<Key, Value>::kDetectStoreHash;
 
+    printf("jstd::has_member_swap<%s>::value = %s\n",
+           key.c_str(), (hasMemberSwap ? "True" : "False"));
     printf("jstd::detail::is_plain_type<%s>::value = %s\n",
-           key.c_str(), (bIsPlainType ? "True" : "False"));
+           key.c_str(), (isPlainType ? "True" : "False"));
     printf("jstd::robin_hash_map<%s, %s>::kDetectStoreHash = %s\n",
-           key.c_str(), value.c_str(), (bNeedStoreHash ? "True" : "False"));
+           key.c_str(), value.c_str(), (needStoreHash ? "True" : "False"));
     printf("\n");
 }
 
@@ -1336,6 +1339,76 @@ void need_store_hash_test()
         "HashObject<std::size_t, 16, 16>",  "std::size_t");
     print_need_store_hash<HashObject<std::size_t, 256, 64>, std::size_t>(
         "HashObject<std::size_t, 256, 64>", "std::size_t");
+}
+
+template <typename Key, typename Value>
+bool is_compatible_layout_pair()
+{
+    static constexpr bool isCompatibleLayout =
+        jstd::is_compatible_pair_layout<std::pair<const Key, Value>, std::pair<Key, Value>>::value;
+    return isCompatibleLayout;
+}
+
+template <typename Key, typename Value>
+void is_compatible_layout_ex_test(const std::string & key, const std::string & value)
+{
+    static constexpr bool isStandardLayoutKey = std::is_standard_layout<Key>::value;
+    static constexpr bool isStandardLayoutPair = std::is_standard_layout<std::pair<Key, Value>>::value;
+    static constexpr bool isStandardLayoutConstPair = std::is_standard_layout<std::pair<const Key, Value>>::value;
+
+    static constexpr bool isCompatiblePairLayout =
+        jstd::is_compatible_kv_layout<Key, Value>::isCompatiblePairLayout<std::pair<Key, Value>>();
+    static constexpr bool isCompatibleConstPairLayout =
+        jstd::is_compatible_kv_layout<Key, Value>::isCompatiblePairLayout<std::pair<const Key, Value>>();
+
+    static constexpr bool isCompatibleKVLayoutKey = jstd::is_compatible_kv_layout<Key, Value>::value;
+
+    printf("\n");
+    printf("jstd::is_standard_layout<%s>::value = %s\n",
+           key.c_str(), (isStandardLayoutKey ? "True" : "False"));
+    printf("jstd::is_standard_layout<std::pair<%s, %s>>::value = %s\n",
+           key.c_str(), value.c_str(), (isStandardLayoutPair ? "True" : "False"));
+    printf("jstd::is_standard_layout<std::pair<const %s, %s>>::value = %s\n",
+           key.c_str(), value.c_str(), (isStandardLayoutConstPair ? "True" : "False"));
+
+    printf("jstd::is_compatible_kv_layout::isCompatiblePairLayout<std::pair<%s, %s>>() = %s\n",
+           key.c_str(), value.c_str(), (isCompatiblePairLayout ? "True" : "False"));
+    printf("jstd::is_compatible_kv_layout::isCompatiblePairLayout<std::pair<const %s, %s>>() = %s\n",
+           key.c_str(), value.c_str(), (isCompatibleConstPairLayout ? "True" : "False"));
+
+    printf("jstd::is_compatible_kv_layout<%s, %s>::value = %s\n",
+           key.c_str(), value.c_str(), (isCompatibleKVLayoutKey ? "True" : "False"));
+    printf("\n");
+}
+
+void is_compatible_layout_test()
+{
+    bool isCompatibleLayout;
+    isCompatibleLayout = is_compatible_layout_pair<HashObject<std::uint32_t, 4, 4>,  std::uint32_t>();
+    printf("jstd::is_compatible_layout<HashObject<std::uint32_t, 4, 4>, std::uint32_t> = %s\n",
+            (isCompatibleLayout ? "True" : "False"));
+
+    isCompatibleLayout = is_compatible_layout_pair<HashObject<std::uint64_t, 8, 8>,  std::uint64_t>();
+    printf("jstd::is_compatible_layout<HashObject<std::uint64_t, 8, 8>, std::uint64_t> = %s\n",
+            (isCompatibleLayout ? "True" : "False"));
+
+    isCompatibleLayout = is_compatible_layout_pair<HashObject<std::size_t, 16, 16>, std::size_t>();
+    printf("jstd::is_compatible_layout<HashObject<std::size_t, 16, 16>, std::size_t> = %s\n",
+            (isCompatibleLayout ? "True" : "False"));
+    if (!isCompatibleLayout) {
+        is_compatible_layout_ex_test<HashObject<std::size_t, 16, 16>, std::size_t>
+            ("HashObject<std::size_t, 16, 16>", "std::size_t");
+    }
+
+    isCompatibleLayout = is_compatible_layout_pair<HashObject<std::size_t, 256, 64>, std::size_t>();
+    printf("jstd::is_compatible_layout<HashObject<std::size_t, 256, 64>, std::size_t> = %s\n",
+            (isCompatibleLayout ? "True" : "False"));
+    if (!isCompatibleLayout) {
+        is_compatible_layout_ex_test<HashObject<std::size_t, 256, 64>, std::size_t>
+            ("HashObject<std::size_t, 256, 64>", "std::size_t");
+    }
+
+    printf("\n");
 }
 
 int main(int argc, char * argv[])
@@ -1354,6 +1427,7 @@ int main(int argc, char * argv[])
     if (1) { std_hash_test(); }
     if (0) { is_noexcept_move_test(); }
     if (1) { need_store_hash_test(); }
+    if (0) { is_compatible_layout_test(); }
 
     if (1)
     {
