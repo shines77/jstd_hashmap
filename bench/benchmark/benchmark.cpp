@@ -268,7 +268,6 @@ struct hash<jstd::wstring_view> {
                                      std::uint32_t, jstd::HashFunc_CRC32C> hasher;
 
     result_type operator () (const argument_type & key) const noexcept {
-
         return static_cast<result_type>(hasher::getHashCode(key));
     }
 };
@@ -282,7 +281,6 @@ struct hash<jstd::basic_string_view<CharT, Traits>> {
                                      std::uint32_t, jstd::HashFunc_CRC32C> hasher;
 
     result_type operator () (const argument_type & key) const noexcept {
-
         return static_cast<result_type>(hasher::getHashCode(key));
     }
 };
@@ -315,7 +313,6 @@ struct hash<jstd::wstring_view> {
                                      std::uint32_t, jstd::HashFunc_CRC32C> hasher;
 
     result_type operator () (const argument_type & key) const noexcept {
-
         return static_cast<result_type>(hasher::getHashCode(key));
     }
 };
@@ -329,7 +326,6 @@ struct hash<jstd::basic_string_view<CharT, Traits>> {
                                      std::uint32_t, jstd::HashFunc_CRC32C> hasher;
 
     result_type operator () (const argument_type & key) const noexcept {
-
         return static_cast<result_type>(hasher::getHashCode(key));
     }
 };

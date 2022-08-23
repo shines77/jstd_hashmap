@@ -86,7 +86,7 @@
 
 #ifndef _DEBUG
 #define USE_STD_UNORDERED_MAP       1
-#define USE_JSTD_FLAT16_HASH_MAP    0
+#define USE_JSTD_FLAT16_HASH_MAP    1
 #define USE_JSTD_ROBIN16_HASH_MAP   0
 #define USE_JSTD_ROBIN_HASH_MAP     1
 #define USE_JSTD_ROBIN_HASH_MAP_V1  0
@@ -94,12 +94,12 @@
 #define USE_JSTD_ROBIN_HASH_MAP_V3  1
 #else
 #define USE_STD_UNORDERED_MAP       0
-#define USE_JSTD_FLAT16_HASH_MAP    0
-#define USE_JSTD_ROBIN16_HASH_MAP   0
+#define USE_JSTD_FLAT16_HASH_MAP    1
+#define USE_JSTD_ROBIN16_HASH_MAP   1
 #define USE_JSTD_ROBIN_HASH_MAP     1
 #define USE_JSTD_ROBIN_HASH_MAP_V1  0
 #define USE_JSTD_ROBIN_HASH_MAP_V2  0
-#define USE_JSTD_ROBIN_HASH_MAP_V3  0
+#define USE_JSTD_ROBIN_HASH_MAP_V3  1
 #endif // _DEBUG
 
 #ifdef __SSE4_2__
@@ -305,7 +305,6 @@ struct hash<jstd::wstring_view> {
                                      std::uint32_t, jstd::HashFunc_CRC32C> hasher;
 
     result_type operator () (const argument_type & key) const noexcept {
-
         return static_cast<result_type>(hasher::getHashCode(key));
     }
 };
@@ -319,7 +318,6 @@ struct hash<jstd::basic_string_view<CharT, Traits>> {
                                      std::uint32_t, jstd::HashFunc_CRC32C> hasher;
 
     result_type operator () (const argument_type & key) const noexcept {
-
         return static_cast<result_type>(hasher::getHashCode(key));
     }
 };
@@ -1463,14 +1461,14 @@ void benchmark_all_hashmaps(std::size_t iters)
     }
 #endif
 
-    if (FLAGS_test_16_bytes) {
-        test_all_hashmaps_for_string_view<jstd::string_view, jstd::string_view>
-            (sizeof(jstd::string_view), iters / 8);
-    }
-
     if (FLAGS_test_32_bytes) {
         test_all_hashmaps_for_string<std::string, std::string>
             (sizeof(std::string), iters / 16);
+    }
+
+    if (FLAGS_test_16_bytes) {
+        test_all_hashmaps_for_string_view<jstd::string_view, jstd::string_view>
+            (sizeof(jstd::string_view), iters / 8);
     }
 }
 
