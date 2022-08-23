@@ -178,7 +178,7 @@ template < typename Key, typename Value,
 class robin_hash_map {
 public:
     template <typename K, typename V>
-    union alignas(64) map_slot_type {
+    union map_slot_type {
     public:
         using key_type = typename std::remove_const<K>::type;
         using mapped_type = typename std::remove_const<V>::type;
@@ -3555,14 +3555,14 @@ private:
             static constexpr bool isNoexceptMoveAssignKey    = is_noexcept_move_assignable<first_type>::value;
             static constexpr bool isNoexceptMoveAssignMapped = is_noexcept_move_assignable<second_type>::value;
 #if ROBIN_USE_SWAP_TRAITS
-            swap_traits<mutable_first_type, kHasSwapKey, isNoexceptMoveAssignKey>::
-                swap(alloc, mutable_key(&slot1->value), mutable_key(&slot2->value));
+            swap_traits<first_type, kHasSwapKey, isNoexceptMoveAssignKey>::
+                swap(alloc, &slot1->value.first, &slot2->value.first);
 
             swap_traits<second_type, kHasSwapMapped, isNoexceptMoveAssignMapped>::
                 swap(alloc, &slot1->value.second, &slot2->value.second);
 #else
             using std::swap;
-            swap(*mutable_key(&slot1->value), *mutable_key(&slot2->value));
+            swap(slot1->value.first,  slot2->value.first);
             swap(slot1->value.second, slot2->value.second);
 #endif
         }
@@ -3609,8 +3609,8 @@ private:
             static constexpr bool isNoexceptMoveAssignKey    = is_noexcept_move_assignable<first_type>::value;
             static constexpr bool isNoexceptMoveAssignMapped = is_noexcept_move_assignable<second_type>::value;
 #if ROBIN_USE_SWAP_TRAITS
-            swap_traits<mutable_first_type, kHasSwapKey, isNoexceptMoveAssignKey>::
-                swap(alloc, mutable_key(&slot1->value), mutable_key(&slot2->value));
+            swap_traits<first_type, kHasSwapKey, isNoexceptMoveAssignKey>::
+                swap(alloc, &slot1->value.first, &slot2->value.first);
 
             swap_traits<second_type, kHasSwapMapped, isNoexceptMoveAssignMapped>::
                 swap(alloc, &slot1->value.second, &slot2->value.second);
@@ -4594,7 +4594,7 @@ Insert_To_Slot:
         ctrl_type * next_ctrl = curr_ctrl + std::ptrdiff_t(1);
         slot_type * next_slot = curr_slot + std::ptrdiff_t(1);
 
-        while (!next_ctrl->isUnusedOrZero()) {
+        while (!next_ctrl->isEmptyOrZero()) {
             ctrl_type dist_and_hash(*next_ctrl);
             assert(dist_and_hash.dist > 0);
             dist_and_hash.decDist();
@@ -4606,6 +4606,7 @@ Insert_To_Slot:
 
             next_ctrl++;
             next_slot++;
+            assert(next_slot < this->last_slot());
         }
 
         this->setUnusedCtrl(curr_ctrl);

@@ -1526,9 +1526,12 @@ void std_hash_test()
 template <typename Key, typename Value>
 void print_need_store_hash(const std::string & key, const std::string & value)
 {
+    static constexpr bool hasMemberSwap = jstd::has_member_swap<Key>::value;
     static constexpr bool bIsPlainType = jstd::detail::is_plain_type<Key>::value;
     static constexpr bool bNeedStoreHash = jstd::robin_hash_map<Key, Value>::kDetectStoreHash;
 
+    printf("jstd::has_member_swap<%s>::value = %s\n",
+           key.c_str(), (hasMemberSwap ? "True" : "False"));
     printf("jstd::detail::is_plain_type<%s>::value = %s\n",
            key.c_str(), (bIsPlainType ? "True" : "False"));
     printf("jstd::robin_hash_map<%s, %s>::kDetectStoreHash = %s\n",
@@ -1540,8 +1543,8 @@ void need_store_hash_test()
 {
     print_need_store_hash<std::uint32_t, std::uint32_t>("std::uint32_t", "std::uint32_t");
     print_need_store_hash<std::uint64_t, std::uint64_t>("std::uint64_t", "std::uint64_t");
-    print_need_store_hash<jstd::string_view, jstd::string_view>("jstd::string_view", "jstd::string_view");
     print_need_store_hash<std::string, std::string>("std::string", "std::string");
+    print_need_store_hash<jstd::string_view, jstd::string_view>("jstd::string_view", "jstd::string_view");
 }
 
 int main(int argc, char * argv[])
