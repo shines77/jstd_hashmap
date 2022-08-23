@@ -230,7 +230,7 @@ public:
 
     static constexpr bool kUseIndexSalt = false;
 
-    static constexpr bool kEnableExchange = false;
+    static constexpr bool kEnableExchange = true;
     static constexpr bool kIsSmallValueType = (sizeof(value_type) <= sizeof(std::size_t) * 2);
 
     static constexpr size_type npos = size_type(-1);
