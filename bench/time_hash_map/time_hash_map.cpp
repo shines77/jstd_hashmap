@@ -1027,15 +1027,10 @@ void shuffle_vector(Vector & vector, int seed = 0) {
 #include "time_hash_map_func.hpp"
 
 template <class MapType, class StressMapType>
-static void measure_hashmap(const char * name, std::size_t obj_size, std::size_t entry_size,
+static void measure_hashmap(const char * name, std::size_t obj_size,
                             std::size_t iters, bool is_stress_hash_function) {
-    if (entry_size == 0) {
-        printf("%s (%" PRIuPTR " byte objects, %" PRIuPTR " byte ValueType, %" PRIuPTR " iterations):\n",
-               name, obj_size, sizeof(typename MapType::value_type), iters);
-    } else {
-        printf("%s (%" PRIuPTR " byte objects, %" PRIuPTR " byte ValueType, %" PRIuPTR " iterations):\n",
-               name, obj_size, entry_size, iters);
-    }
+    printf("%s (%" PRIuPTR " byte objects, %" PRIuPTR " byte ValueType, %" PRIuPTR " iterations):\n",
+           name, obj_size, sizeof(typename MapType::value_type), iters);
     if (1) printf("\n");
 
     //------------------------------------------------------------
@@ -1134,7 +1129,7 @@ static void test_all_hashmaps(std::size_t obj_size, std::size_t iters) {
         measure_hashmap<StdHashMap<HashObj,   Value, HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>,
                         StdHashMap<HashObj *, Value, HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>
                         >(
-            "stdext::hash_map<K, V>", obj_size, 0, iters, has_stress_hash_function);
+            "stdext::hash_map<K, V>", obj_size, iters, has_stress_hash_function);
     }
 #endif
 
@@ -1143,7 +1138,7 @@ static void test_all_hashmaps(std::size_t obj_size, std::size_t iters) {
         measure_hashmap<std::unordered_map<HashObj,   Value, HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>,
                         std::unordered_map<HashObj *, Value, HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>
                         >(
-            "std::unordered_map<K, V>", obj_size, 0, iters, has_stress_hash_function);
+            "std::unordered_map<K, V>", obj_size, iters, has_stress_hash_function);
     }
 #endif
 
@@ -1152,7 +1147,7 @@ static void test_all_hashmaps(std::size_t obj_size, std::size_t iters) {
         measure_hashmap<jstd::flat16_hash_map<HashObj,   Value, HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>,
                         jstd::flat16_hash_map<HashObj *, Value, HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>
                         >(
-            "jstd::flat16_hash_map<K, V>", obj_size, 0, iters, has_stress_hash_function);
+            "jstd::flat16_hash_map<K, V>", obj_size, iters, has_stress_hash_function);
     }
 #endif
 
@@ -1161,7 +1156,7 @@ static void test_all_hashmaps(std::size_t obj_size, std::size_t iters) {
         measure_hashmap<jstd::robin16_hash_map<HashObj,   Value, HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>,
                         jstd::robin16_hash_map<HashObj *, Value, HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>
                         >(
-            "jstd::robin16_hash_map<K, V>", obj_size, 0, iters, has_stress_hash_function);
+            "jstd::robin16_hash_map<K, V>", obj_size, iters, has_stress_hash_function);
     }
 #endif
 
@@ -1170,7 +1165,7 @@ static void test_all_hashmaps(std::size_t obj_size, std::size_t iters) {
         measure_hashmap<jstd::robin_hash_map<HashObj,   Value, HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>,
                         jstd::robin_hash_map<HashObj *, Value, HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>
                         >(
-            "jstd::robin_hash_map<K, V>", obj_size, 0, iters, has_stress_hash_function);
+            "jstd::robin_hash_map<K, V>", obj_size, iters, has_stress_hash_function);
     }
 #endif
 
@@ -1179,7 +1174,7 @@ static void test_all_hashmaps(std::size_t obj_size, std::size_t iters) {
         measure_hashmap<jstd::v3::robin_hash_map<HashObj,   Value, HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>,
                         jstd::v3::robin_hash_map<HashObj *, Value, HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>
                         >(
-            "jstd::v3::robin_hash_map<K, V>", obj_size, 0, iters, has_stress_hash_function);
+            "jstd::v3::robin_hash_map<K, V>", obj_size, iters, has_stress_hash_function);
     }
 #endif
 
@@ -1188,7 +1183,7 @@ static void test_all_hashmaps(std::size_t obj_size, std::size_t iters) {
         measure_hashmap<jstd::v2::robin_hash_map<HashObj,   Value, HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>,
                         jstd::v2::robin_hash_map<HashObj *, Value, HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>
                         >(
-            "jstd::v2::robin_hash_map<K, V>", obj_size, 0, iters, has_stress_hash_function);
+            "jstd::v2::robin_hash_map<K, V>", obj_size, iters, has_stress_hash_function);
     }
 #endif
 
@@ -1197,7 +1192,7 @@ static void test_all_hashmaps(std::size_t obj_size, std::size_t iters) {
         measure_hashmap<jstd::v1::robin_hash_map<HashObj,   Value, HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>,
                         jstd::v1::robin_hash_map<HashObj *, Value, HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>
                         >(
-            "jstd::v1::robin_hash_map<K, V>", obj_size, 0, iters, has_stress_hash_function);
+            "jstd::v1::robin_hash_map<K, V>", obj_size, iters, has_stress_hash_function);
     }
 #endif
 }
