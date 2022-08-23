@@ -1589,25 +1589,38 @@ void is_compatible_layout_ex_test(const std::string & key, const std::string & v
 
 void is_compatible_layout_test()
 {
-    bool isCompatibleLayout;
-    isCompatibleLayout = is_compatible_layout_pair<int, int>();
-    printf("jstd::is_compatible_layout<int, int> = %s\n",
-            (isCompatibleLayout ? "True" : "False"));
+    bool isCompatibleKVLayout, isCompatiblePairLayout;
 
-    isCompatibleLayout = is_compatible_layout_pair<size_t, size_t>();
-    printf("jstd::is_compatible_layout<size_t, size_t> = %s\n",
-            (isCompatibleLayout ? "True" : "False"));
+    isCompatibleKVLayout = jstd::is_compatible_kv_layout<int, int>::value;
+    isCompatiblePairLayout = is_compatible_layout_pair<int, int>();
+    printf("jstd::is_compatible_kv_layout<int, int> = %s\n",
+            (isCompatibleKVLayout ? "True" : "False"));
+    printf("jstd::is_compatible_pair_layout<int, int> = %s\n",
+            (isCompatiblePairLayout ? "True" : "False"));
 
-    isCompatibleLayout = is_compatible_layout_pair<std::string, std::string>();
-    printf("jstd::is_compatible_layout<std::string, std::string> = %s\n",
-            (isCompatibleLayout ? "True" : "False"));
-    if (!isCompatibleLayout) {
+    isCompatibleKVLayout = jstd::is_compatible_kv_layout<size_t, size_t>::value;
+    isCompatiblePairLayout = is_compatible_layout_pair<size_t, size_t>();
+    printf("jstd::is_compatible_kv_layout<size_t, size_t> = %s\n",
+            (isCompatibleKVLayout ? "True" : "False"));
+    printf("jstd::is_compatible_pair_layout<size_t, size_t> = %s\n",
+            (isCompatiblePairLayout ? "True" : "False"));
+
+    isCompatibleKVLayout = jstd::is_compatible_kv_layout<std::string, std::string>::value;
+    isCompatiblePairLayout = is_compatible_layout_pair<std::string, std::string>();
+    printf("jstd::is_compatible_kv_layout<std::string, std::string> = %s\n",
+            (isCompatibleKVLayout ? "True" : "False"));
+    printf("jstd::is_compatible_pair_layout<std::string, std::string> = %s\n",
+            (isCompatiblePairLayout ? "True" : "False"));
+    if (!isCompatibleKVLayout || !isCompatiblePairLayout) {
         is_compatible_layout_ex_test<std::string, std::string>("std::string", "std::string");
     }
 
-    isCompatibleLayout = is_compatible_layout_pair<jstd::string_view, jstd::string_view>();
-    printf("jstd::is_compatible_layout<jstd::string_view, jstd::string_view> = %s\n",
-            (isCompatibleLayout ? "True" : "False"));
+    isCompatibleKVLayout = jstd::is_compatible_kv_layout<jstd::string_view, jstd::string_view>::value;
+    isCompatiblePairLayout = is_compatible_layout_pair<jstd::string_view, jstd::string_view>();
+    printf("jstd::is_compatible_kv_layout<jstd::string_view, jstd::string_view> = %s\n",
+            (isCompatibleKVLayout ? "True" : "False"));
+    printf("jstd::is_compatible_pair_layout<jstd::string_view, jstd::string_view> = %s\n",
+            (isCompatiblePairLayout ? "True" : "False"));
 
     printf("\n");
 }
