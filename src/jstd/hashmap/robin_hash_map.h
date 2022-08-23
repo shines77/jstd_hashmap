@@ -3210,9 +3210,12 @@ private:
                 if (old_slot_capacity >= kGroupWidth) {
                     static constexpr size_type kSlotSetp = sizeof(value_type) * kGroupWidth;
                     static constexpr size_type kCacheLine = 64;
+                    static constexpr size_type kPrefetchMinSteps = 3;
+                    static constexpr size_type kPrefetchMinOffset = cmax(kPrefetchMinSteps * kSlotSetp, kCacheLine);
                     static constexpr size_type kPrefetchMaxOffset = 1024;
-                    static constexpr size_type kPrefetchSteps = 3;
-                    static constexpr size_type kPrefetchOffset = cmin(kPrefetchSteps * cmax(kSlotSetp, kCacheLine), kPrefetchMaxOffset);
+                    static constexpr size_type kMaxPrefetchOffset = cmax(kPrefetchMinOffset, kPrefetchMaxOffset);
+                    static constexpr size_type kPrefetchSteps = 4 + kSlotSetp / 512;
+                    static constexpr size_type kPrefetchOffset = cmin(kPrefetchSteps * cmax(kSlotSetp, kCacheLine), kMaxPrefetchOffset);
                     static constexpr size_type kTailGroupCount = (kPrefetchOffset + (kSlotSetp - 1)) / kSlotSetp;
 
                     ctrl_type * ctrl = old_ctrls;
