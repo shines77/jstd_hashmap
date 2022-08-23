@@ -1357,9 +1357,9 @@ void is_compatible_layout_ex_test(const std::string & key, const std::string & v
     static constexpr bool isStandardLayoutConstPair = std::is_standard_layout<std::pair<const Key, Value>>::value;
 
     static constexpr bool isCompatiblePairLayout =
-        jstd::is_compatible_kv_layout<Key, Value>::isCompatiblePairLayout<std::pair<Key, Value>>();
+        jstd::is_compatible_kv_layout<Key, Value>::template isCompatiblePairLayout<std::pair<Key, Value>>();
     static constexpr bool isCompatibleConstPairLayout =
-        jstd::is_compatible_kv_layout<Key, Value>::isCompatiblePairLayout<std::pair<const Key, Value>>();
+        jstd::is_compatible_kv_layout<Key, Value>::template isCompatiblePairLayout<std::pair<const Key, Value>>();
 
     static constexpr bool isCompatibleKVLayoutKey = jstd::is_compatible_kv_layout<Key, Value>::value;
 
