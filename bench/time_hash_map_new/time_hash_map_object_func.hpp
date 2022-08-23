@@ -482,6 +482,7 @@ static void map_serial_erase(std::size_t iters, const PairVector & kvs) {
         for (std::size_t i = 0; i < iters; i++) {
             hashmap.erase(kvs[i].first);
         }
+        assert(hashmap.size() == 0);
         sw.stop();
 
         double ut = sw.getElapsedSecond();
@@ -513,6 +514,7 @@ static void map_random_erase(std::size_t iters, const PairVector & kvs, const Ke
         for (std::size_t i = 0; i < iters; i++) {
             hashmap.erase(rnd_keys[i]);
         }
+        assert(hashmap.size() == 0);
         sw.stop();
 
         double ut = sw.getElapsedSecond();
@@ -572,6 +574,7 @@ static void map_toggle(std::size_t iters, const PairVector & kvs) {
         for (std::size_t i = 0; i < iters; i++) {
             hashmap.emplace(kvs[i]);
             hashmap.erase(kvs[i].first);
+            assert(hashmap.size() == 0);
         }
         sw.stop();
 

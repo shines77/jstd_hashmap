@@ -496,11 +496,11 @@ struct has_mapped_type {
     static constexpr bool value = std::is_same<decltype(check<T>(nullptr)), std::true_type>::value;
 };
 
-template <typename T>
+template <typename T, typename ... Args>
 struct has_member_swap {
     template <typename U>
     static constexpr auto check(void *)
-        -> decltype(std::declval<U>().swap(std::declval<U &>), std::true_type()) {
+        -> decltype(std::declval<U>().swap(std::declval<Args>()...), std::true_type()) {
         return std::true_type();
     }
 

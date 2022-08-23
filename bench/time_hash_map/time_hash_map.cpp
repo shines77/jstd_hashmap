@@ -974,15 +974,15 @@ static void report_result(char const * title, double ut, double lf, std::size_t 
 #endif
 
 #if (USE_STAT_COUNTER == 0)
-    printf("%-35s %8.2f ns  lf=%0.3f  %s\n", title, (ut * 1000000000.0 / iters), lf, heap);
+    printf("%-32s %8.2f ns  lf=%0.3f  %s\n", title, (ut * 1000000000.0 / iters), lf, heap);
 #else
   #if USE_CTOR_COUNTER
-    printf("%-35s %8.2f ns  (%8" PRIuPTR " hashes, %8" PRIuPTR " copies, %8" PRIuPTR " assigns, %8" PRIuPTR " ctor)  lf=%0.3f  %s\n",
+    printf("%-32s %8.2f ns  (%8" PRIuPTR " hashes, %8" PRIuPTR " copies, %8" PRIuPTR " assigns, %8" PRIuPTR " ctor)  lf=%0.3f  %s\n",
            title, (ut * 1000000000.0 / iters),
            g_num_hashes, g_num_copies, g_num_assigns, g_num_constructor,
            lf, heap);
   #else
-    printf("%-35s %8.2f ns  (%8" PRIuPTR " hashes, %8" PRIuPTR " copies, %8" PRIuPTR " assigns)  lf=%0.3f  %s\n",
+    printf("%-32s %8.2f ns  (%8" PRIuPTR " hashes, %8" PRIuPTR " copies, %8" PRIuPTR " assigns)  lf=%0.3f  %s\n",
            title, (ut * 1000000000.0 / iters),
            g_num_hashes, g_num_copies, g_num_assigns,
            lf, heap);

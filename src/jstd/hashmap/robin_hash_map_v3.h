@@ -278,8 +278,8 @@ public:
 
     static constexpr bool kIsPlainKV = kIsPlainKey && kIsPlainMapped;
 
-    static constexpr bool kHasSwapKey    = has_member_swap<key_type>::value;
-    static constexpr bool kHasSwapMapped = has_member_swap<mapped_type>::value;
+    static constexpr bool kHasSwapKey    = has_member_swap<key_type, key_type &>::value;
+    static constexpr bool kHasSwapMapped = has_member_swap<mapped_type, mapped_type &>::value;
 
     static constexpr bool kIsSwappableKey    = detail::is_swappable<key_type>::value;
     static constexpr bool kIsSwappableMapped = detail::is_swappable<mapped_type>::value;
@@ -3028,7 +3028,7 @@ private:
         {
             // hasSwapMethod = false, isNoexceptMoveAssign = true
             using std::swap;
-            swap(obj1, obj2);
+            swap(*obj1, *obj2);
         }
     };
 

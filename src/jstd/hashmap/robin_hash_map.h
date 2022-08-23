@@ -272,8 +272,8 @@ public:
 
     static constexpr bool kIsPlainKV = kIsPlainKey && kIsPlainMapped;
 
-    static constexpr bool kHasSwapKey    = has_member_swap<key_type>::value;
-    static constexpr bool kHasSwapMapped = has_member_swap<mapped_type>::value;
+    static constexpr bool kHasSwapKey    = has_member_swap<key_type, key_type &>::value;
+    static constexpr bool kHasSwapMapped = has_member_swap<mapped_type, mapped_type &>::value;
 
     static constexpr bool kIsSwappableKey    = detail::is_swappable<key_type>::value;
     static constexpr bool kIsSwappableMapped = detail::is_swappable<mapped_type>::value;
@@ -3382,10 +3382,12 @@ private:
     struct swap_traits<T, true, true> {
         template <typename Alloc>
         static void swap(Alloc * alloc, T * obj1, T * obj2)
-            noexcept(noexcept(std::declval<T>().swap(*obj2)))
+            noexcept(noexcept(std::declval<typename std::remove_const<T>::type>()
+                              .swap(*const_cast<typename std::remove_const<T>::type *>(obj2))))
         {
             // hasSwapMethod = true
-            obj1->swap(*obj2);
+            typedef typename std::remove_const<T>::type non_const_type;
+            const_cast<non_const_type *>(obj1)->swap(*const_cast<non_const_type *>(obj2));
         }
     };
 
@@ -3393,10 +3395,12 @@ private:
     struct swap_traits<T, true, false> {
         template <typename Alloc>
         static void swap(Alloc * alloc, T * obj1, T * obj2)
-            noexcept(noexcept(std::declval<T>().swap(*obj2)))
+            noexcept(noexcept(std::declval<typename std::remove_const<T>::type>()
+                              .swap(*const_cast<typename std::remove_const<T>::type *>(obj2))))
         {
             // hasSwapMethod = true
-            obj1->swap(*obj2);
+            typedef typename std::remove_const<T>::type non_const_type;
+            const_cast<non_const_type *>(obj1)->swap(*const_cast<non_const_type *>(obj2));
         }
     };
 
@@ -3404,12 +3408,14 @@ private:
     struct swap_traits<T, false, true> {
         template <typename Alloc>
         static void swap(Alloc * alloc, T * obj1, T * obj2)
-            noexcept(std::is_nothrow_move_constructible<T>::value &&
-                     std::is_nothrow_move_assignable<T>::value)
+            noexcept(std::is_nothrow_move_constructible<typename std::remove_const<T>::type>::value &&
+                     std::is_nothrow_move_assignable<typename std::remove_const<T>::type>::value)
         {
             // hasSwapMethod = false, isNoexceptMoveAssign = true
+            typedef typename std::remove_const<T>::type non_const_type;
+
             using std::swap;
-            swap(obj1, obj2);
+            swap(*const_cast<non_const_type *>(obj1), *const_cast<non_const_type *>(obj2));
         }
     };
 

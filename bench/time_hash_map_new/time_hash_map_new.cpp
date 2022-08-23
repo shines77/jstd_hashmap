@@ -1015,15 +1015,15 @@ static void report_result(char const * title, double ut, double lf, std::size_t 
 #endif
 
 #if (USE_STAT_COUNTER == 0)
-    printf("%-35s %8.2f ns  lf=%0.3f  %s\n", title, (ut * 1000000000.0 / iters), lf, heap);
+    printf("%-32s %8.2f ns  lf=%0.3f  %s\n", title, (ut * 1000000000.0 / iters), lf, heap);
 #else
   #if USE_CTOR_COUNTER
-    printf("%-35s %8.2f ns  (%8" PRIuPTR " hashes, %8" PRIuPTR " copies, %8" PRIuPTR " assigns, %8" PRIuPTR " ctor)  lf=%0.3f  %s\n",
+    printf("%-32s %8.2f ns  (%8" PRIuPTR " hashes, %8" PRIuPTR " copies, %8" PRIuPTR " assigns, %8" PRIuPTR " ctor)  lf=%0.3f  %s\n",
            title, (ut * 1000000000.0 / iters),
            g_num_hashes, g_num_copies, g_num_assigns, g_num_constructor,
            lf, heap);
   #else
-    printf("%-35s %8.2f ns  (%8" PRIuPTR " hashes, %8" PRIuPTR " copies, %8" PRIuPTR " assigns)  lf=%0.3f  %s\n",
+    printf("%-32s %8.2f ns  (%8" PRIuPTR " hashes, %8" PRIuPTR " copies, %8" PRIuPTR " assigns)  lf=%0.3f  %s\n",
            title, (ut * 1000000000.0 / iters),
            g_num_hashes, g_num_copies, g_num_assigns,
            lf, heap);
@@ -1526,7 +1526,7 @@ void std_hash_test()
 template <typename Key, typename Value>
 void print_need_store_hash(const std::string & key, const std::string & value)
 {
-    static constexpr bool hasMemberSwap = jstd::has_member_swap<Key>::value;
+    static constexpr bool hasMemberSwap = jstd::has_member_swap<Key, Key &>::value;
     static constexpr bool bIsPlainType = jstd::detail::is_plain_type<Key>::value;
     static constexpr bool bNeedStoreHash = jstd::robin_hash_map<Key, Value>::kDetectStoreHash;
 

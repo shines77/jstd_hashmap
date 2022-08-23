@@ -32,7 +32,7 @@ struct is_plain_type {
 
 template <typename T>
 struct is_swappable {
-    static constexpr bool value = is_plain_type<T>::value || has_member_swap<T>::value;
+    static constexpr bool value = is_plain_type<T>::value || has_member_swap<T, T &>::value;
 };
 
 } // namespace detail
