@@ -2460,7 +2460,10 @@ private:
             control->setUsed(ctrl_hash);
             this->setUsedMirrorCtrl(target, ctrl_hash);
             slot_type * slot = this->slot_at(target);
-            this->slot_allocator_.construct(slot, value);
+            if (kIsCompatibleLayout)
+                this->mutable_allocator_.construct(&slot->mutable_value, value);
+            else
+                this->allocator_.construct(&slot->value, value);
             this->slot_size_++;
             return { this->iterator_at(target), true };
         } else {
