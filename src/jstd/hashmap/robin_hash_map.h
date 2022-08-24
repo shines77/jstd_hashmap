@@ -316,7 +316,7 @@ public:
         (!layout_policy_t::autoDetectIsIndirectValue && layout_policy_t::isIndirectValue) ||
          (layout_policy_t::autoDetectIsIndirectValue && (kDetectIsIndirectValue));
 
-    static constexpr bool kIsIndirectKeyValue = kIsIndirectKey || kIsIndirectValue;
+    static constexpr bool kIsIndirectKV = kIsIndirectKey || kIsIndirectValue;
 
     static constexpr bool kDetectStoreHash = !(detail::is_plain_type<key_type>::value ||
                                                (sizeof(key_type) <= sizeof(std::size_t)) ||
@@ -326,7 +326,7 @@ public:
 
     static constexpr bool kNeedStoreHash =
         (!layout_policy_t::autoDetectStoreHash && layout_policy_t::needStoreHash) ||
-         (layout_policy_t::autoDetectStoreHash && (kDetectStoreHash)) || kIsIndirectKeyValue;
+         (layout_policy_t::autoDetectStoreHash && (kDetectStoreHash)) || kIsIndirectKV;
 
     static constexpr size_type kGroupBits   = (kNeedStoreHash ? 4 : 5);
     static constexpr size_type kGroupWidth  = size_type(1) << kGroupBits;
@@ -334,20 +334,26 @@ public:
     static constexpr std::int8_t kEmptySlot     = (std::int8_t)0b11111111;
     static constexpr std::int8_t kEndOfMark     = (std::int8_t)0b11111110;
     static constexpr std::int8_t kUnusedMask    = (std::int8_t)0b10000000;
-    static constexpr std::int8_t kHash2Mask     = (std::int8_t)0b11111111;
     static constexpr std::int8_t kMaxDist       = (std::int8_t)0b01111111;
 
     static constexpr std::int16_t kEmptySlot16  = std::int16_t(std::uint16_t((std::uint8_t)kEmptySlot)  << 8);
     static constexpr std::int16_t kEndOfMark16  = std::int16_t(std::uint16_t((std::uint8_t)kEndOfMark)  << 8);
     static constexpr std::int16_t kUnusedMask16 = std::int16_t(std::uint16_t((std::uint8_t)kUnusedMask) << 8);
-    static constexpr std::int16_t kHash2Mask16  = std::int16_t(std::uint16_t((std::uint8_t)kHash2Mask)  << 8);
     static constexpr std::int16_t kMaxDist16    = std::int16_t(std::uint16_t((std::uint8_t)kMaxDist)    << 8);
+
+    static constexpr std::int16_t kEmptySlot16b  = (std::int16_t)0b1111111111111111;
+    static constexpr std::int16_t kEndOfMark16b  = (std::int16_t)0b1111111111111110;
+    static constexpr std::int16_t kUnusedMask16b = (std::int16_t)0b1000000000000000;
+    static constexpr std::int16_t kMaxDist16b    = (std::int16_t)0b0111111111111111;
 
     static constexpr std::int16_t  kDistInc16   = std::int16_t(0x0100);
     static constexpr std::uint16_t kDistInc16u  = std::uint16_t(0x0100);
 
-    static constexpr std::uint32_t kFullMask16   = 0x0000FFFFul;
-    static constexpr std::uint32_t kFullMask32   = 0xFFFFFFFFul;
+    static constexpr std::int32_t  kDistInc32   = std::int32_t(0x00010000);
+    static constexpr std::uint32_t kDistInc32u  = std::uint32_t(0x00010000);
+
+    static constexpr std::uint32_t kFullMask16  = 0x0000FFFFul;
+    static constexpr std::uint32_t kFullMask32  = 0xFFFFFFFFul;
     static constexpr std::uint32_t kFullMask32_Half  = 0x55555555ul;
     static constexpr std::uint32_t kFullMask32_Half2 = 0xAAAAAAAAul;
 
@@ -364,17 +370,20 @@ public:
         opLE    // <=
     };
 
-    template <typename T, bool bStoreHash>
+    template <typename T, bool bStoreHash, bool kIsIndirectKV>
     struct ctrl_data;
 
     template <typename T>
-    struct ctrl_data<T, false> {
-        typedef std::int8_t  value_type;
-        typedef std::uint8_t uvalue_type;
+    struct ctrl_data<T, false, false> {
+        typedef std::int8_t   value_type;
+        typedef std::uint8_t  uvalue_type;
+        typedef std::uint32_t index_type;
+        typedef std::int8_t   dist_type;
+        typedef std::uint8_t  udist_type;
 
         union {
             struct {
-                std::int8_t dist;
+                dist_type dist;
             };
             value_type  value;
             uvalue_type uvalue;
@@ -395,7 +404,7 @@ public:
             /* Do nothing!! */
         }
 
-        ctrl_data(std::int8_t dist, std::uint8_t hash) noexcept
+        ctrl_data(dist_type dist, std::uint8_t hash) noexcept
             : dist(dist) {
             /* (void)hash; */
         }
@@ -415,12 +424,12 @@ public:
             return *this;
         }
 
-        static value_type make(std::int8_t dist, std::uint8_t hash) {
+        static value_type make(dist_type dist, std::uint8_t hash) {
             /* (void)hash; */
             return static_cast<value_type>(dist);
         }
 
-        static uvalue_type makeu(std::int8_t dist, std::uint8_t hash) {
+        static uvalue_type makeu(dist_type dist, std::uint8_t hash) {
             /* (void)hash; */
             return static_cast<uvalue_type>(dist);
         }
@@ -437,7 +446,7 @@ public:
             return (this->dist == kEmptySlot);
         }
 
-        static bool isEmpty(std::int8_t tag) {
+        static bool isEmpty(dist_type tag) {
             return (tag == kEmptySlot);
         }
 
@@ -445,7 +454,7 @@ public:
             return !(this->isEmpty());
         }
 
-        static bool isNonEmpty(std::int8_t tag) {
+        static bool isNonEmpty(dist_type tag) {
             return !ctrl_data::isEmpty(tag);
         }
 
@@ -457,7 +466,7 @@ public:
             return (this->value >= 0);
         }
 
-        static bool isUsed(std::int8_t tag) {
+        static bool isUsed(dist_type tag) {
             return (tag >= 0);
         }
 
@@ -465,13 +474,13 @@ public:
             return (this->value < 0);
         }
 
-        static bool isUnused(std::int8_t tag) {
+        static bool isUnused(dist_type tag) {
             return (tag < 0);
         }
 
         bool isEmptyOrZero() const {
             //return (this->dist == 0 || this->dist == kEmptySlot);
-            return (std::uint8_t(this->dist + 1) <= 1);
+            return (udist_type(this->dist + 1) <= 1);
         }
 
         bool isUnusedOrZero() const {
@@ -490,7 +499,7 @@ public:
             this->value = kEmptySlot;
         }
 
-        void setDist(std::int8_t dist) {
+        void setDist(dist_type dist) {
             this->dist = dist;
         }
 
@@ -498,7 +507,7 @@ public:
             /* (void)ctrl_hash; */
         }
 
-        void setValue(std::int8_t dist, std::uint8_t hash) {
+        void setValue(dist_type dist, std::uint8_t hash) {
             assert(dist >= 0 && dist <= kMaxDist);
             /* (void)hash; */
             this->setDist(dist);
@@ -547,7 +556,7 @@ public:
             return true;
         }
 
-        bool dist_equals(std::int8_t dist) const {
+        bool dist_equals(dist_type dist) const {
             return (this->dist == dist);
         }
 
@@ -602,7 +611,7 @@ public:
         }
 
         template <CompareOp CmpOp>
-        bool cmp_dist(std::int8_t dist) const {
+        bool cmp_dist(dist_type dist) const {
             if (CmpOp == opEQ)
                 return (this->dist == dist);
             else if (CmpOp == opNE)
@@ -675,14 +684,17 @@ public:
     };
 
     template <typename T>
-    struct ctrl_data<T, true> {
+    struct ctrl_data<T, true, false> {
         typedef std::int16_t  value_type;
         typedef std::uint16_t uvalue_type;
+        typedef std::uint32_t index_type;
+        typedef std::int8_t   dist_type;
+        typedef std::uint8_t  udist_type;
 
         union {
             struct {
                 std::uint8_t hash;
-                std::int8_t  dist;
+                dist_type    dist;
             };
             value_type  value;
             uvalue_type uvalue;
@@ -703,7 +715,7 @@ public:
             /* Do nothing!! */
         }
 
-        ctrl_data(std::int8_t dist, std::uint8_t hash) noexcept
+        ctrl_data(dist_type dist, std::uint8_t hash) noexcept
             : hash(hash), dist(dist) {
         }
 
@@ -721,12 +733,12 @@ public:
             return *this;
         }
 
-        static value_type make(std::int8_t dist, std::uint8_t hash) {
-            return value_type((std::uint16_t((std::uint8_t)dist) << 8) | hash);
+        static value_type make(dist_type dist, std::uint8_t hash) {
+            return value_type((uvalue_type((udist_type)dist) << 8) | hash);
         }
 
-        static uvalue_type makeu(std::int8_t dist, std::uint8_t hash) {
-            return uvalue_type((std::uint16_t((std::uint8_t)dist) << 8) | hash);
+        static uvalue_type makeu(dist_type dist, std::uint8_t hash) {
+            return uvalue_type((uvalue_type((udist_type)dist) << 8) | hash);
         }
 
         static constexpr value_type make_dist(size_type n) {
@@ -734,14 +746,14 @@ public:
         }
 
         size_type distance() const {
-            return static_cast<size_type>(this->uvalue ^ this->hash);
+            return static_cast<size_type>(this->uvalue & uvalue_type(0xFF00));
         }
 
         bool isEmpty() const {
             return (this->dist == kEmptySlot);
         }
 
-        static bool isEmpty(std::int8_t tag) {
+        static bool isEmpty(dist_type tag) {
             return (tag == kEmptySlot);
         }
 
@@ -749,7 +761,7 @@ public:
             return !(this->isEmpty());
         }
 
-        static bool isNonEmpty(std::int8_t tag) {
+        static bool isNonEmpty(dist_type tag) {
             return !ctrl_data::isEmpty(tag);
         }
 
@@ -761,7 +773,7 @@ public:
             return (this->value >= 0);
         }
 
-        static bool isUsed(std::int8_t tag) {
+        static bool isUsed(dist_type tag) {
             return (tag >= 0);
         }
 
@@ -769,13 +781,13 @@ public:
             return (this->value < 0);
         }
 
-        static bool isUnused(std::int8_t tag) {
+        static bool isUnused(dist_type tag) {
             return (tag < 0);
         }
 
         bool isEmptyOrZero() const {
             //return (this->dist == 0 || this->dist == kEmptySlot);
-            return (std::uint8_t(this->dist + 1) <= 1);
+            return (udist_type(this->dist + 1) <= 1);
         }
 
         bool isUnusedOrZero() const {
@@ -795,7 +807,7 @@ public:
             this->value = kEmptySlot16;
         }
 
-        void setDist(std::int8_t dist) {
+        void setDist(dist_type dist) {
             this->dist = dist;
         }
 
@@ -803,7 +815,7 @@ public:
             this->hash = ctrl_hash;
         }
 
-        void setValue(std::int8_t dist, std::uint8_t hash) {
+        void setValue(dist_type dist, std::uint8_t hash) {
             assert(dist >= 0 && dist <= kMaxDist);
 #if 1
             this->value = ctrl_data::make(dist, hash);
@@ -853,7 +865,7 @@ public:
             return (this->hash == ctrl.hash);
         }
 
-        bool dist_equals(std::int8_t dist) const {
+        bool dist_equals(dist_type dist) const {
             return (this->dist == dist);
         }
 
@@ -906,7 +918,7 @@ public:
         }
 
         template <CompareOp CmpOp>
-        bool cmp_dist(std::int8_t dist) const {
+        bool cmp_dist(dist_type dist) const {
             if (CmpOp == opEQ)
                 return (this->dist == dist);
             else if (CmpOp == opNE)
@@ -978,8 +990,323 @@ public:
         }
     };
 
-    typedef ctrl_data<void, kNeedStoreHash> ctrl_type;
+    template <typename T>
+    struct ctrl_data<T, true, true> {
+        typedef std::int64_t  value_type;
+        typedef std::uint64_t uvalue_type;
+        typedef std::uint32_t index_type;
+        typedef std::int16_t  dist_type;
+        typedef std::uint16_t udist_type;
+
+        union {
+            struct {
+                std::uint8_t  hash;
+                std::uint8_t  first;
+                dist_type     dist;
+                index_type    index;
+            };
+            struct {
+                std::uint32_t low;
+                std::uint32_t high;
+            };
+            value_type  value;
+            uvalue_type uvalue;
+        };
+
+        ctrl_data() noexcept : uvalue(static_cast<uvalue_type>(0)) {
+        }
+
+        explicit ctrl_data(value_type value) noexcept
+            : value(value) {
+        }
+
+        explicit ctrl_data(uvalue_type value) noexcept
+            : uvalue(value) {
+        }
+
+        explicit ctrl_data(no_init_t) noexcept {
+            /* Do nothing!! */
+        }
+
+        ctrl_data(dist_type dist, std::uint8_t hash) noexcept
+            : hash(hash), first(0), dist(dist), index(0) {
+        }
+
+        ctrl_data(const ctrl_data & other, std::uint8_t hash) noexcept
+            : uvalue(other.uvalue | static_cast<uvalue_type>(hash)) {
+        }
+
+        ctrl_data(const ctrl_data & src) noexcept : value(src.value) {
+        }
+
+        ~ctrl_data() = default;
+
+        ctrl_data & operator = (const ctrl_data & rhs) {
+            this->value = rhs.value;
+            return *this;
+        }
+
+        static value_type make(dist_type dist, std::uint8_t hash) {
+            return value_type((uvalue_type((udist_type)dist) << 16) | hash);
+        }
+
+        static uvalue_type makeu(dist_type dist, std::uint8_t hash) {
+            return uvalue_type((uvalue_type((udist_type)dist) << 16) | hash);
+        }
+
+        static constexpr value_type make_dist(size_type n) {
+            return static_cast<value_type>(n * kDistInc32);
+        }
+
+        size_type distance() const {
+            return static_cast<size_type>(this->low & 0xFFFF0000u);
+        }
+
+        bool isEmpty() const {
+            return (this->dist == kEmptySlot16b);
+        }
+
+        static bool isEmpty(dist_type tag) {
+            return (tag == kEmptySlot16b);
+        }
+
+        bool isNonEmpty() const {
+            return !(this->isEmpty());
+        }
+
+        static bool isNonEmpty(dist_type tag) {
+            return !ctrl_data::isEmpty(tag);
+        }
+
+        bool isEndOf() const {
+            return (this->dist == kEndOfMark);
+        }
+
+        bool isUsed() const {
+            return (this->value >= 0);
+        }
+
+        static bool isUsed(dist_type tag) {
+            return (tag >= 0);
+        }
+
+        bool isUnused() const {
+            return (this->value < 0);
+        }
+
+        static bool isUnused(dist_type tag) {
+            return (tag < 0);
+        }
+
+        bool isEmptyOrZero() const {
+            //return (this->dist == 0 || this->dist == kEmptySlot16b);
+            return (udist_type(this->dist + 1) <= 1);
+        }
+
+        bool isUnusedOrZero() const {
+            // return (this->dist <= 0);
+            return (this->value < kDistInc32);
+        }
+
+        void setEmpty() {
+            this->value = kEmptySlot16b;
+        }
+
+        void setEndOf() {
+            this->value = kEndOfMark16b;
+        }
+
+        void setUnused() {
+            this->value = kEmptySlot16b;
+        }
+
+        void setDist(dist_type dist) {
+            this->dist = dist;
+        }
+
+        void setHash(std::uint8_t ctrl_hash) {
+            this->hash = ctrl_hash;
+        }
+
+        void setValue(dist_type dist, std::uint8_t hash) {
+            assert(dist >= 0 && dist <= kMaxDist16b);
+#if 1
+            this->value = ctrl_data::make(dist, hash);
+#else
+            this->setHash(hash);
+            this->setDist(dist);
+#endif
+        }
+
+        void setValue(value_type dist_and_hash) {
+            this->value = dist_and_hash;
+        }
+
+        void setValue(uvalue_type dist_and_hash) {
+            this->uvalue = dist_and_hash;
+        }
+
+        void setValue(const ctrl_data & ctrl) {
+            this->value = ctrl.value;
+        }
+
+        void mergeHash(const ctrl_data & ctrl, std::uint8_t hash) {
+            this->uvalue = ctrl.uvalue | static_cast<uvalue_type>(hash);
+        }
+
+        void incDist() {
+            this->uvalue += kDistInc32;
+        }
+
+        void decDist() {
+            this->uvalue -= kDistInc32;
+        }
+
+        void incDist(size_type width) {
+            this->uvalue += static_cast<uvalue_type>(kDistInc32 * width);
+        }
+
+        void decDist(size_type width) {
+            this->uvalue -= static_cast<uvalue_type>(kDistInc32 * width);
+        }
+
+        bool hash_equals(std::uint8_t ctrl_hash) const {
+            return (this->hash == ctrl_hash);
+        }
+
+        bool hash_equals(const ctrl_data & ctrl) const {
+            return (this->hash == ctrl.hash);
+        }
+
+        bool dist_equals(dist_type dist) const {
+            return (this->dist == dist);
+        }
+
+        bool dist_equals(const ctrl_data & ctrl) const {
+            return (this->dist == ctrl.dist);
+        }
+
+        bool equals(value_type value) const {
+            return (this->value == value);
+        }
+
+        bool equals(const ctrl_data & ctrl) const {
+            return (this->value == ctrl.value);
+        }
+
+        template <CompareOp CmpOp>
+        bool cmp_hash(std::uint8_t ctrl_hash) const {
+            if (CmpOp == opEQ)
+                return (this->hash == ctrl_hash);
+            else if (CmpOp == opNE)
+                return (this->hash != ctrl_hash);
+            else if (CmpOp == opGT)
+                return (this->hash >  ctrl_hash);
+            else if (CmpOp == opGE)
+                return (this->hash >= ctrl_hash);
+            else if (CmpOp == opLT)
+                return (this->hash <  ctrl_hash);
+            else if (CmpOp == opLE)
+                return (this->hash <= ctrl_hash);
+            else
+                return true;
+        }
+
+        template <CompareOp CmpOp>
+        bool cmp_hash(const ctrl_data & ctrl) const {
+            if (CmpOp == opEQ)
+                return (this->hash == ctrl.hash);
+            else if (CmpOp == opNE)
+                return (this->hash != ctrl.hash);
+            else if (CmpOp == opGT)
+                return (this->hash >  ctrl.hash);
+            else if (CmpOp == opGE)
+                return (this->hash >= ctrl.hash);
+            else if (CmpOp == opLT)
+                return (this->hash <  ctrl.hash);
+            else if (CmpOp == opLE)
+                return (this->hash <= ctrl.hash);
+            else
+                return true;
+        }
+
+        template <CompareOp CmpOp>
+        bool cmp_dist(dist_type dist) const {
+            if (CmpOp == opEQ)
+                return (this->dist == dist);
+            else if (CmpOp == opNE)
+                return (this->dist != dist);
+            else if (CmpOp == opGT)
+                return (this->dist >  dist);
+            else if (CmpOp == opGE)
+                return (this->dist >= dist);
+            else if (CmpOp == opLT)
+                return (this->dist <  dist);
+            else if (CmpOp == opLE)
+                return (this->dist <= dist);
+            else
+                return true;
+        }
+
+        template <CompareOp CmpOp>
+        bool cmp_dist(const ctrl_data & ctrl) const {
+            if (CmpOp == opEQ)
+                return (this->dist == ctrl.dist);
+            else if (CmpOp == opNE)
+                return (this->dist != ctrl.dist);
+            else if (CmpOp == opGT)
+                return (this->dist >  ctrl.dist);
+            else if (CmpOp == opGE)
+                return (this->dist >= ctrl.dist);
+            else if (CmpOp == opLT)
+                return (this->dist <  ctrl.dist);
+            else if (CmpOp == opLE)
+                return (this->dist <= ctrl.dist);
+            else
+                return true;
+        }
+
+        template <CompareOp CmpOp>
+        bool compare(value_type value) const {
+            if (CmpOp == opEQ)
+                return (this->value == value);
+            else if (CmpOp == opNE)
+                return (this->value != value);
+            else if (CmpOp == opGT)
+                return (this->value >  value);
+            else if (CmpOp == opGE)
+                return (this->value >= value);
+            else if (CmpOp == opLT)
+                return (this->value <  value);
+            else if (CmpOp == opLE)
+                return (this->value <= value);
+            else
+                return true;
+        }
+
+        template <CompareOp CmpOp>
+        bool compare(const ctrl_data & ctrl) const {
+            if (CmpOp == opEQ)
+                return (this->value == ctrl.value);
+            else if (CmpOp == opNE)
+                return (this->value != ctrl.value);
+            else if (CmpOp == opGT)
+                return (this->value >  ctrl.value);
+            else if (CmpOp == opGE)
+                return (this->value >= ctrl.value);
+            else if (CmpOp == opLT)
+                return (this->value <  ctrl.value);
+            else if (CmpOp == opLE)
+                return (this->value <= ctrl.value);
+            else
+                return true;
+        }
+    };
+
+    typedef ctrl_data<void, kNeedStoreHash, kIsIndirectKV> ctrl_type;
     typedef typename ctrl_type::value_type  ctrl_value_t;
+    typedef typename ctrl_type::dist_type   dist_type;
+    typedef typename ctrl_type::udist_type  udist_type;
 
     template <typename T>
     struct MatchMask2 {
@@ -4626,7 +4953,7 @@ Insert_To_Slot:
         ctrl_type * next_ctrl = curr_ctrl + std::ptrdiff_t(1);
         slot_type * next_slot = curr_slot + std::ptrdiff_t(1);
 
-        while (!next_ctrl->isEmptyOrZero()) {
+        while (!next_ctrl->isUnusedOrZero()) {
             ctrl_type dist_and_hash(*next_ctrl);
             assert(dist_and_hash.dist > 0);
             dist_and_hash.decDist();

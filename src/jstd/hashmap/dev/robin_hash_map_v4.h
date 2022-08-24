@@ -1662,7 +1662,7 @@ public:
 
 #else
 
-    static_assert(false, "jstd::robin_hash_map<K,V> required Intel AVX2 or heigher intrinsics.")
+    static_assert(false, "jstd::v4::robin_hash_map<K,V> required Intel AVX2 or heigher intrinsics.")
 
 #endif // __AVX2__
 
@@ -2442,7 +2442,7 @@ public:
     }
 
     static const char * name() {
-        return "jstd::robin_hash_map<K, V>";
+        return "jstd::v4::robin_hash_map<K, V>";
     }
 
     void clear(bool need_destroy = false) noexcept {
@@ -2502,7 +2502,7 @@ public:
         if (slot != this->last_slot()) {
             return slot->value.second;
         } else {
-            throw std::out_of_range("std::out_of_range exception: jstd::robin_hash_map<K,V>::at(key), "
+            throw std::out_of_range("std::out_of_range exception: jstd::v4::robin_hash_map<K,V>::at(key), "
                                     "the specified key is not exists.");
         }
     }
@@ -2512,7 +2512,7 @@ public:
         if (slot != this->last_slot()) {
             return slot->value.second;
         } else {
-            throw std::out_of_range("std::out_of_range exception: jstd::robin_hash_map<K,V>::at(key) const, "
+            throw std::out_of_range("std::out_of_range exception: jstd::v4::robin_hash_map<K,V>::at(key) const, "
                                     "the specified key is not exists.");
         }
     }
@@ -4627,7 +4627,7 @@ Insert_To_Slot:
         ctrl_type * next_ctrl = curr_ctrl + std::ptrdiff_t(1);
         slot_type * next_slot = curr_slot + std::ptrdiff_t(1);
 
-        while (!next_ctrl->isEmptyOrZero()) {
+        while (!next_ctrl->isUnusedOrZero()) {
             ctrl_type dist_and_hash(*next_ctrl);
             assert(dist_and_hash.dist > 0);
             dist_and_hash.decDist();
