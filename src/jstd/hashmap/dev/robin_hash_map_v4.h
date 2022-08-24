@@ -1984,16 +1984,17 @@ public:
     using iterator       = basic_iterator<value_type>;
     using const_iterator = basic_iterator<const value_type>;
 
-    typedef typename std::allocator_traits<allocator_type>::template rebind_alloc<mutable_value_type>
-                                        mutable_allocator_type;
+    typedef typename std::allocator_traits<allocator_type> AllocatorTraits;
+
     typedef typename std::allocator_traits<allocator_type>::template rebind_alloc<ctrl_type>
                                         ctrl_allocator_type;
     typedef typename std::allocator_traits<allocator_type>::template rebind_alloc<slot_type>
-                                        slot_allocator_type;
+                                        slot_allocator_type;    
 
-    typedef typename std::allocator_traits<allocator_type>      AllocatorTraits;
-    typedef typename std::allocator_traits<ctrl_allocator_type> CtrlAllocTraits;
-    typedef typename std::allocator_traits<slot_allocator_type> SlotAllocTraits;
+    typedef typename std::allocator_traits<allocator_type>::template rebind_traits<ctrl_type>
+                                        CtrlAllocTraits;
+    typedef typename std::allocator_traits<allocator_type>::template rebind_traits<slot_type>
+                                        SlotAllocTraits;
 
 private:
     ctrl_type *     ctrls_;
@@ -2013,10 +2014,9 @@ private:
     hasher          hasher_;
     key_equal       key_equal_;
 
-    allocator_type              allocator_;
-    mutable_allocator_type      mutable_allocator_;
-    ctrl_allocator_type         ctrl_allocator_;
-    slot_allocator_type         slot_allocator_;
+    allocator_type          allocator_;
+    ctrl_allocator_type     ctrl_allocator_;
+    slot_allocator_type     slot_allocator_;
 
 public:
     robin_hash_map() : robin_hash_map(kDefaultCapacity) {
@@ -2032,7 +2032,7 @@ public:
         slot_threshold_(0), n_mlf_(kDefaultLoadFactorInt),
         n_mlf_rev_(kDefaultLoadFactorRevInt),
         hasher_(hash), key_equal_(equal),
-        allocator_(alloc), mutable_allocator_(alloc),
+        allocator_(alloc),
         ctrl_allocator_(alloc), slot_allocator_(alloc) {
         if (init_capacity != 0) {
             this->create_slots<true>(init_capacity);
@@ -2055,7 +2055,7 @@ public:
         slot_threshold_(0), n_mlf_(kDefaultLoadFactorInt),
         n_mlf_rev_(kDefaultLoadFactorRevInt),
         hasher_(hash), key_equal_(equal),
-        allocator_(alloc), mutable_allocator_(alloc),
+        allocator_(alloc),
         ctrl_allocator_(alloc), slot_allocator_(alloc) {
         // Prepare enough space to ensure that no expansion is required during the insertion process.
         size_type input_size = distance(first, last);
@@ -2091,10 +2091,10 @@ public:
         slot_threshold_(0), n_mlf_(kDefaultLoadFactorInt),
         n_mlf_rev_(kDefaultLoadFactorRevInt),
 #if ROBIN_V4_USE_HASH_POLICY
-        hash_policy_(other.hash_policy_ref()),
+        hash_policy_(),
 #endif
-        hasher_(hasher()), key_equal_(key_equal()),
-        allocator_(alloc), mutable_allocator_(alloc),
+        hasher_(other.hash_function_ref()), key_equal_(other.key_eq_ref()),
+        allocator_(alloc),
         ctrl_allocator_(alloc), slot_allocator_(alloc) {
         // Prepare enough space to ensure that no expansion is required during the insertion process.
         size_type other_size = other.slot_size();
@@ -2126,12 +2126,11 @@ public:
 #if ROBIN_V4_USE_HASH_POLICY
         hash_policy_(jstd_exchange(other.hash_policy_ref(), hash_policy_t())),
 #endif
-        hasher_(std::move(other.hash_function_ref())),
-        key_equal_(std::move(other.key_eq_ref())),
-        allocator_(std::move(other.get_allocator_ref())),
-        mutable_allocator_(std::move(other.get_mutable_allocator_ref())),
-        ctrl_allocator_(std::move(other.get_ctrl_allocator_ref())),
-        slot_allocator_(std::move(other.get_slot_allocator_ref())) {
+        hasher_(other.hash_function_ref()),
+        key_equal_(other.key_eq_ref()),
+        allocator_(other.get_allocator_ref()),
+        ctrl_allocator_(other.get_ctrl_allocator_ref()),
+        slot_allocator_(other.get_slot_allocator_ref()) {
         // Swap content only
         // this->swap_content(other);
     }
@@ -2143,14 +2142,13 @@ public:
         slot_threshold_(0), n_mlf_(kDefaultLoadFactorInt),
         n_mlf_rev_(kDefaultLoadFactorRevInt),
 #if ROBIN_V4_USE_HASH_POLICY
-        hash_policy_(std::move(other.hash_policy_ref())),
+        hash_policy_(),
 #endif
-        hasher_(std::move(other.hash_function_ref())),
-        key_equal_(std::move(other.key_eq_ref())),
+        hasher_(other.hash_function_ref()),
+        key_equal_(other.key_eq_ref()),
         allocator_(alloc),
-        mutable_allocator_(std::move(other.get_mutable_allocator_ref())),
-        ctrl_allocator_(std::move(other.get_ctrl_allocator_ref())),
-        slot_allocator_(std::move(other.get_slot_allocator_ref())) {
+        ctrl_allocator_(other.get_ctrl_allocator_ref()),
+        slot_allocator_(other.get_slot_allocator_ref()) {
         if (alloc == other.get_allocator_ref()) {
             // Swap content only
             this->swap_content(other);
@@ -2187,7 +2185,7 @@ public:
         hash_policy_(),
 #endif
         hasher_(hash), key_equal_(equal),
-        allocator_(alloc), mutable_allocator_(alloc),
+        allocator_(alloc),
         ctrl_allocator_(alloc), slot_allocator_(alloc) {
         // Prepare enough space to ensure that no expansion is required during the insertion process.
         size_type reserve_capacity = (init_capacity >= init_list.size()) ? init_capacity : init_list.size();
@@ -2214,7 +2212,7 @@ public:
 
     robin_hash_map & operator = (const robin_hash_map & other) {
         robin_hash_map tmp(other,
-                           std::allocator_traits<allocator_type>::propagate_on_container_copy_assignment::value
+                           AllocTraits::propagate_on_container_copy_assignment::value
                            ? other.get_allocator_ref()
                            : this->get_allocator_ref());
         this->swap_impl(tmp);
@@ -2222,13 +2220,13 @@ public:
     }
 
     robin_hash_map & operator = (robin_hash_map && other) noexcept(
-        std::allocator_traits<allocator_type>::is_always_equal::value &&
+        AllocTraits::is_always_equal::value &&
         std::is_nothrow_move_assignable<hasher>::value &&
         std::is_nothrow_move_assignable<key_equal>::value) {
         // TODO: We should only use the operations from the noexcept clause
         // to make sure we actually adhere to other contract.
         return this->move_assign(std::move(other),
-                     typename std::allocator_traits<allocator_type>::propagate_on_container_move_assignment());
+                     typename AllocTraits::propagate_on_container_move_assignment());
     }
 
     bool is_valid() const { return (this->ctrls() != nullptr); }
@@ -2399,10 +2397,6 @@ public:
         return this->allocator_;
     }
 
-    mutable_allocator_type get_mutable_allocator() const noexcept {
-        return this->mutable_allocator_;
-    }
-
     ctrl_allocator_type get_ctrl_allocator() const noexcept {
         return this->ctrl_allocator_;
     }
@@ -2427,10 +2421,6 @@ public:
 
     allocator_type & get_allocator_ref() noexcept {
         return this->allocator_;
-    }
-
-    mutable_allocator_type & get_mutable_allocator_ref() noexcept {
-        return this->mutable_allocator_;
     }
 
     ctrl_allocator_type & get_ctrl_allocator_ref() noexcept {
@@ -4683,9 +4673,6 @@ Insert_To_Slot:
         swap(this->key_equal_, other.key_eq_ref());
         if (std::allocator_traits<allocator_type>::propagate_on_container_swap::value) {
             swap(this->allocator_, other.get_allocator_ref());
-        }
-        if (std::allocator_traits<mutable_allocator_type>::propagate_on_container_swap::value) {
-            swap(this->mutable_allocator_, other.get_mutable_allocator_ref());
         }
         if (std::allocator_traits<ctrl_allocator_type>::propagate_on_container_swap::value) {
             swap(this->ctrl_allocator_, other.get_ctrl_allocator_ref());
