@@ -92,14 +92,16 @@
 #define USE_JSTD_ROBIN_HASH_MAP_V1  0
 #define USE_JSTD_ROBIN_HASH_MAP_V2  1
 #define USE_JSTD_ROBIN_HASH_MAP_V3  1
+#define USE_JSTD_ROBIN_HASH_MAP_V4  1
 #else
 #define USE_STD_UNORDERED_MAP       0
-#define USE_JSTD_FLAT16_HASH_MAP    1
-#define USE_JSTD_ROBIN16_HASH_MAP   1
+#define USE_JSTD_FLAT16_HASH_MAP    0
+#define USE_JSTD_ROBIN16_HASH_MAP   0
 #define USE_JSTD_ROBIN_HASH_MAP     1
 #define USE_JSTD_ROBIN_HASH_MAP_V1  0
 #define USE_JSTD_ROBIN_HASH_MAP_V2  0
 #define USE_JSTD_ROBIN_HASH_MAP_V3  1
+#define USE_JSTD_ROBIN_HASH_MAP_V4  1
 #endif // _DEBUG
 
 #ifdef __SSE4_2__
@@ -150,13 +152,16 @@
 #include <jstd/hashmap/robin_hash_map.h>
 #endif
 #if USE_JSTD_ROBIN_HASH_MAP_V1
-#include <jstd/hashmap/robin_hash_map_v1.h>
+#include <jstd/hashmap/dev/robin_hash_map_v1.h>
 #endif
 #if USE_JSTD_ROBIN_HASH_MAP_V2
-#include <jstd/hashmap/robin_hash_map_v2.h>
+#include <jstd/hashmap/dev/robin_hash_map_v2.h>
 #endif
 #if USE_JSTD_ROBIN_HASH_MAP_V3
-#include <jstd/hashmap/robin_hash_map_v3.h>
+#include <jstd/hashmap/dev/robin_hash_map_v3.h>
+#endif
+#if USE_JSTD_ROBIN_HASH_MAP_V4
+#include <jstd/hashmap/dev/robin_hash_map_v4.h>
 #endif
 #include <jstd/hashmap/hashmap_analyzer.h>
 #include <jstd/hasher/hashes.h>
@@ -229,6 +234,7 @@ static const bool FLAGS_test_jstd_robin_hash_map = true;
 static const bool FLAGS_test_jstd_v1_robin_hash_map = true;
 static const bool FLAGS_test_jstd_v2_robin_hash_map = true;
 static const bool FLAGS_test_jstd_v3_robin_hash_map = true;
+static const bool FLAGS_test_jstd_v4_robin_hash_map = true;
 static const bool FLAGS_test_map = true;
 
 static constexpr bool FLAGS_test_4_bytes = true;
@@ -1419,6 +1425,13 @@ void test_all_hashmaps_for_string(std::size_t obj_size, std::size_t iters)
     if (FLAGS_test_jstd_robin_hash_map) {
         measure_string_hashmap<jstd::robin_hash_map<Key, Value>>
             ("jstd::robin_hash_map<K, V>", obj_size, iters);
+    }
+#endif
+
+#if USE_JSTD_ROBIN_HASH_MAP_V4
+    if (FLAGS_test_jstd_v4_robin_hash_map) {
+        measure_string_hashmap<jstd::v4::robin_hash_map<Key, Value>>
+            ("jstd::v4::robin_hash_map<K, V>", obj_size, iters);
     }
 #endif
 

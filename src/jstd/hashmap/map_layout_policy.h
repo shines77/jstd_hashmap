@@ -40,13 +40,13 @@ struct is_swappable {
 template <typename Key, typename Value>
 struct default_layout_policy {
     static constexpr bool autoDetectPairLayout = true;
-    static constexpr bool keyValueIsIsolated = false;
+    static constexpr bool isIsolatedKeyValue = false;
 
-    static constexpr bool autoDetectKeyInlined = true;
-    static constexpr bool keyIsInlined = true;
+    static constexpr bool autoDetectIsIndirectKey = true;
+    static constexpr bool isIndirectKey = false;
 
-    static constexpr bool autoDetectValueInlined = true;
-    static constexpr bool valueIsInlined = true;
+    static constexpr bool autoDetectIsIndirectValue = true;
+    static constexpr bool isIndirectValue = true;
 
     static constexpr bool autoDetectStoreHash = true;
     static constexpr bool needStoreHash = true;

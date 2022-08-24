@@ -44,6 +44,9 @@
     <Filter Include="src\lang">
       <UniqueIdentifier>{835340cb-6b9d-4313-8fff-d2c95c7138a1}</UniqueIdentifier>
     </Filter>
+    <Filter Include="src\hashmap\dev">
+      <UniqueIdentifier>{c506441c-e4b2-4111-9bba-86aa618cd511}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\src\jstd\basic\msvc\inttypes.h">
@@ -226,9 +229,6 @@
     <ClInclude Include="..\..\..\src\jstd\hashmap\hash_chunk_list.h">
       <Filter>src\hashmap</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\src\jstd\hashmap\flat16_hash_map_v1.h">
-      <Filter>src\hashmap</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\..\src\jstd\config\config.h">
       <Filter>src\config</Filter>
     </ClInclude>
@@ -237,9 +237,6 @@
     </ClInclude>
     <ClInclude Include="..\..\..\src\jstd\support\x86_intrin.h">
       <Filter>src\support</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\src\jstd\hashmap\flat16_hash_map_v2.h">
-      <Filter>src\hashmap</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\src\jstd\hashmap\robin16_hash_map.h">
       <Filter>src\hashmap</Filter>
@@ -265,20 +262,32 @@
     <ClInclude Include="..\..\..\src\jstd\hashmap\slot_policy_traits.h">
       <Filter>src\hashmap</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\src\jstd\hashmap\robin_hash_map_v1.h">
-      <Filter>src\hashmap</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\src\jstd\hashmap\robin_hash_map_v2.h">
-      <Filter>src\hashmap</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\..\src\jstd\hasher\hash_crc32.h">
       <Filter>src\hasher</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\src\jstd\support\CPUPrefetch.h">
       <Filter>src\support</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\src\jstd\hashmap\robin_hash_map_v3.h">
-      <Filter>src\hashmap</Filter>
+    <ClInclude Include="..\..\..\src\jstd\hashmap\dev\flat16_hash_map_v1.h">
+      <Filter>src\hashmap\dev</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\hashmap\dev\flat16_hash_map_v2.h">
+      <Filter>src\hashmap\dev</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\hashmap\dev\robin_hash_map_v0.h">
+      <Filter>src\hashmap\dev</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\hashmap\dev\robin_hash_map_v1.h">
+      <Filter>src\hashmap\dev</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\hashmap\dev\robin_hash_map_v2.h">
+      <Filter>src\hashmap\dev</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\hashmap\dev\robin_hash_map_v3.h">
+      <Filter>src\hashmap\dev</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\hashmap\dev\robin_hash_map_v4.h">
+      <Filter>src\hashmap\dev</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -98,10 +98,11 @@
 #endif
 #endif // _MSC_VER
 
-#define ROBIN_USE_HASH_POLICY       0
-#define ROBIN_USE_SWAP_TRAITS       1
+#define ROBIN_V4_USE_HASH_POLICY    0
+#define ROBIN_V4_USE_SWAP_TRAITS    1
 
 namespace jstd {
+namespace v4 {
 
 template <typename Key, typename Value, typename SlotType>
 struct robin_hash_map_slot_policy {
@@ -197,7 +198,7 @@ public:
     typedef map_slot_type<Key, Value>               slot_type;
     typedef map_slot_type<Key, Value>               node_type;
 
-    typedef robin_hash_map_slot_policy<Key, Value, slot_type>
+    typedef v4::robin_hash_map_slot_policy<Key, Value, slot_type>
                                                     slot_policy_t;
     typedef slot_policy_traits<slot_policy_t>       SlotPolicyTraits;
 
@@ -2005,7 +2006,7 @@ private:
     size_type       slot_threshold_;
     std::uint32_t   n_mlf_;
     std::uint32_t   n_mlf_rev_;
-#if ROBIN_USE_HASH_POLICY
+#if ROBIN_V4_USE_HASH_POLICY
     hash_policy_t   hash_policy_;
 #endif
 
@@ -2089,7 +2090,7 @@ public:
         slot_size_(0), slot_mask_(0), max_lookups_(kMinLookups),
         slot_threshold_(0), n_mlf_(kDefaultLoadFactorInt),
         n_mlf_rev_(kDefaultLoadFactorRevInt),
-#if ROBIN_USE_HASH_POLICY
+#if ROBIN_V4_USE_HASH_POLICY
         hash_policy_(other.hash_policy_ref()),
 #endif
         hasher_(hasher()), key_equal_(key_equal()),
@@ -2122,7 +2123,7 @@ public:
         slot_threshold_(jstd_exchange(other.slot_size_, 0)),
         n_mlf_(jstd_exchange(other.n_mlf_, kDefaultLoadFactorInt)),
         n_mlf_rev_(jstd_exchange(other.n_mlf_rev_, kDefaultLoadFactorRevInt)),
-#if ROBIN_USE_HASH_POLICY
+#if ROBIN_V4_USE_HASH_POLICY
         hash_policy_(jstd_exchange(other.hash_policy_ref(), hash_policy_t())),
 #endif
         hasher_(std::move(other.hash_function_ref())),
@@ -2141,7 +2142,7 @@ public:
         slot_size_(0), slot_mask_(0), max_lookups_(kMinLookups),
         slot_threshold_(0), n_mlf_(kDefaultLoadFactorInt),
         n_mlf_rev_(kDefaultLoadFactorRevInt),
-#if ROBIN_USE_HASH_POLICY
+#if ROBIN_V4_USE_HASH_POLICY
         hash_policy_(std::move(other.hash_policy_ref())),
 #endif
         hasher_(std::move(other.hash_function_ref())),
@@ -2182,7 +2183,7 @@ public:
         slot_size_(0), slot_mask_(0), max_lookups_(kMinLookups),
         slot_threshold_(0), n_mlf_(kDefaultLoadFactorInt),
         n_mlf_rev_(kDefaultLoadFactorRevInt),
-#if ROBIN_USE_HASH_POLICY
+#if ROBIN_V4_USE_HASH_POLICY
         hash_policy_(),
 #endif
         hasher_(hash), key_equal_(equal),
@@ -2388,7 +2389,7 @@ public:
         return this->key_equal_;
     }
 
-#if ROBIN_USE_HASH_POLICY
+#if ROBIN_V4_USE_HASH_POLICY
     hash_policy_t hash_policy() const {
         return this->hash_policy_;
     }
@@ -2418,7 +2419,7 @@ public:
         return this->key_equal_;
     }
 
-#if ROBIN_USE_HASH_POLICY
+#if ROBIN_V4_USE_HASH_POLICY
     hash_policy_t & hash_policy_ref() noexcept {
         return this->hash_policy_;
     }
@@ -2841,7 +2842,7 @@ private:
     // Maybe call the second hash
     inline size_type index_for_hash(hash_code_t hash_code) const noexcept {
         size_type hash_value = static_cast<size_type>(hash_code);
-#if ROBIN_USE_HASH_POLICY
+#if ROBIN_V4_USE_HASH_POLICY
         if (kUseIndexSalt) {
             hash_value ^= this->index_salt();
         }
@@ -2860,7 +2861,7 @@ private:
     // Do the third hash on the basis of hash code for the ctrl hash.
     //
     inline hash_code_t get_third_hash(hash_code_t hash_code) const noexcept {
-#if ROBIN_USE_HASH_POLICY
+#if ROBIN_V4_USE_HASH_POLICY
         return hash_code;
 #elif 0
         return (size_type)hashes::mum_hash64((std::uint64_t)hash_code, 11400714819323198485ull);
@@ -3125,7 +3126,7 @@ private:
         this->slot_mask_ = 0;
         this->max_lookups_ = kMinLookups;
         this->slot_threshold_ = 0;
-#if ROBIN_USE_HASH_POLICY
+#if ROBIN_V4_USE_HASH_POLICY
         this->hash_policy_.reset();
 #endif
     }
@@ -3149,7 +3150,7 @@ private:
             new_capacity = init_capacity;
         }
 
-#if ROBIN_USE_HASH_POLICY
+#if ROBIN_V4_USE_HASH_POLICY
         auto hash_policy_setting = this->hash_policy_.calc_next_capacity(new_capacity);
         this->hash_policy_.commit(hash_policy_setting);
 #endif
@@ -3482,7 +3483,7 @@ private:
         {
             static constexpr bool isNoexceptMoveAssignKey    = is_noexcept_move_assignable<mutable_first_type>::value;
             static constexpr bool isNoexceptMoveAssignMapped = is_noexcept_move_assignable<second_type>::value;
-#if ROBIN_USE_SWAP_TRAITS
+#if ROBIN_V4_USE_SWAP_TRAITS
             swap_traits<mutable_first_type, kHasSwapKey, isNoexceptMoveAssignKey>::
                 swap(alloc, &slot1->mutable_value.first, &slot2->mutable_value.first);
 
@@ -3533,7 +3534,7 @@ private:
         {
             static constexpr bool isNoexceptMoveAssignKey    = is_noexcept_move_assignable<mutable_first_type>::value;
             static constexpr bool isNoexceptMoveAssignMapped = is_noexcept_move_assignable<second_type>::value;
-#if ROBIN_USE_SWAP_TRAITS
+#if ROBIN_V4_USE_SWAP_TRAITS
             swap_traits<mutable_first_type, kHasSwapKey, isNoexceptMoveAssignKey>::
                 swap(alloc, &slot1->mutable_value.first, &slot2->mutable_value.first);
 
@@ -3586,7 +3587,7 @@ private:
         {
             static constexpr bool isNoexceptMoveAssignKey    = is_noexcept_move_assignable<first_type>::value;
             static constexpr bool isNoexceptMoveAssignMapped = is_noexcept_move_assignable<second_type>::value;
-#if ROBIN_USE_SWAP_TRAITS
+#if ROBIN_V4_USE_SWAP_TRAITS
             swap_traits<first_type, kHasSwapKey, isNoexceptMoveAssignKey>::
                 swap(alloc, &slot1->value.first, &slot2->value.first);
 
@@ -3640,7 +3641,7 @@ private:
         {
             static constexpr bool isNoexceptMoveAssignKey    = is_noexcept_move_assignable<first_type>::value;
             static constexpr bool isNoexceptMoveAssignMapped = is_noexcept_move_assignable<second_type>::value;
-#if ROBIN_USE_SWAP_TRAITS
+#if ROBIN_V4_USE_SWAP_TRAITS
             swap_traits<first_type, kHasSwapKey, isNoexceptMoveAssignKey>::
                 swap(alloc, &slot1->value.first, &slot2->value.first);
 
@@ -4671,7 +4672,7 @@ Insert_To_Slot:
         swap(this->slot_threshold_, other.slot_threshold_);
         swap(this->n_mlf_, other.n_mlf_);
         swap(this->n_mlf_rev_, other.n_mlf_rev_);
-#if ROBIN_USE_HASH_POLICY
+#if ROBIN_V4_USE_HASH_POLICY
         swap(this->hash_policy_, other.hash_policy_ref());
 #endif
     }
@@ -4715,6 +4716,7 @@ void swap(robin_hash_map<Key, Value, Hash, KeyEqual, LayoutPolicy, Alloc> & lhs,
     lhs.swap(rhs);
 }
 
+} // namespace v4
 } // namespace jstd
 
 ///////////////////////////////////////////////////////////
@@ -4724,9 +4726,9 @@ void swap(robin_hash_map<Key, Value, Hash, KeyEqual, LayoutPolicy, Alloc> & lhs,
 namespace std {
 
 template <class Key, class Value, class Hash, class KeyEqual, class LayoutPolicy, class Alloc, class Pred>
-typename jstd::robin_hash_map<Key, Value, Hash, KeyEqual, LayoutPolicy, Alloc>::size_type
+typename jstd::v4::robin_hash_map<Key, Value, Hash, KeyEqual, LayoutPolicy, Alloc>::size_type
 inline
-erase_if(jstd::robin_hash_map<Key, Value, Hash, KeyEqual, LayoutPolicy, Alloc> & hash_map, Pred pred)
+erase_if(jstd::v4::robin_hash_map<Key, Value, Hash, KeyEqual, LayoutPolicy, Alloc> & hash_map, Pred pred)
 {
     auto old_size = hash_map.size();
 
