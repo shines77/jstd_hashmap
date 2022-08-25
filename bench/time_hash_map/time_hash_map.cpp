@@ -655,7 +655,9 @@ struct HashFn {
     static const std::size_t bucket_size = 4;
     static const std::size_t min_buckets = 8;
 
-    result_type operator () (const argument_type & obj) const noexcept {
+    template <typename ArgumentT = argument_type, typename = typename std::enable_if<
+                                                  (Size > sizeof(ArgumentT))>::type>
+    result_type operator () (const ArgumentT & obj) const noexcept {
         if (is_special)
             return static_cast<result_type>(test::MumHash<key_type>()(obj.Hash()));
         else
@@ -668,7 +670,7 @@ struct HashFn {
     }
 
     template <typename KeyT = key_type, typename = typename std::enable_if<
-                                        (Size <= sizeof(key_type))>::type>
+                                        (Size <= sizeof(KeyT))>::type>
     result_type operator () (KeyT key) const noexcept {
         return reinterpret_cast<result_type>(HASH_MAP_FUNCTION<KeyT>()(key));
     }
@@ -759,17 +761,19 @@ struct hash<HashObject<Key, Size, HashSize>> {
     static const std::size_t bucket_size = 4;
     static const std::size_t min_buckets = 8;
 
-    result_type operator () (const argument_type & obj) const {
+    template <typename ArgumentT = argument_type, typename = typename std::enable_if<
+                                                  (Size > sizeof(ArgumentT))>::type>
+    result_type operator () (const argument_type & obj) const noexcept {
         return static_cast<result_type>(obj.Hash());
     }
 
     // Do the identity hash for pointers.
-    result_type operator () (const argument_type * obj) const {
+    result_type operator () (const argument_type * obj) const noexcept {
         return reinterpret_cast<result_type>(obj);
     }
 
     template <typename KeyT = key_type, typename = typename std::enable_if<
-                                        (Size <= sizeof(key_type))>::type>
+                                        (Size <= sizeof(KeyT))>::type>
     result_type operator () (KeyT key) const noexcept {
         return reinterpret_cast<result_type>(HASH_MAP_FUNCTION<KeyT>()(key));
     }
