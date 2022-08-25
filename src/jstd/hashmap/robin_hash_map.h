@@ -196,6 +196,8 @@ public:
 
     static constexpr bool kIsTransparent = (is_transparent<Hash>::value && is_transparent<KeyEqual>::value);
 
+    using KeyArgImpl = KeyArgSelector<kIsTransparent>;
+
     typedef map_slot_type<Key, Value>               slot_type;
     typedef map_slot_type<Key, Value>               node_type;
 
@@ -210,8 +212,13 @@ public:
     // Tip of the Week #144: Heterogeneous Lookup in Associative Containers
     // See: https://abseil.io/tips/144 (Transparent Functors)
     //
+#if 1
     template <typename K>
     using key_arg = typename key_arg_selector<K, key_type, kIsTransparent>::type;
+#else
+    template <typename K>
+    using key_arg = typename KeyArgImpl::template type<K, key_type>;
+#endif
 
     typedef typename slot_type::value_type          value_type;
     typedef typename slot_type::mutable_value_type  mutable_value_type;

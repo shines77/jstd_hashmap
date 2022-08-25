@@ -604,13 +604,27 @@ struct is_transparent<T, void_t<typename T::is_transparent>>
 template <typename K, typename key_type, bool is_transparent>
 struct key_arg_selector {
     // Transparent. Forward `K`.
-    typedef key_type K;
+    typedef K type;
 };
 
 template <typename K, typename key_type>
 struct key_arg_selector<K, key_type, false> {
     // Not transparent. Always use `key_type`.
     typedef key_type type;
+};
+
+template <bool is_transparent>
+struct KeyArgSelector {
+    // Transparent. Forward `K`.
+    template <typename K, typename key_type>
+    using type = K;
+};
+
+template <>
+struct KeyArgSelector<false> {
+    // Not transparent. Always use `key_type`.
+    template <typename K, typename key_type>
+    using type = key_type;
 };
 
 //////////////////////////////////////////////////////////////////////////////////
