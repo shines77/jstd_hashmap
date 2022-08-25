@@ -2333,7 +2333,7 @@ public:
     using iterator       = basic_iterator<value_type>;
     using const_iterator = basic_iterator<const value_type>;
 
-    typedef typename std::allocator_traits<allocator_type> AllocaTraits;
+    typedef typename std::allocator_traits<allocator_type> AllocTraits;
 
     typedef typename std::allocator_traits<allocator_type>::template rebind_alloc<ctrl_type>
                                         ctrl_allocator_type;
@@ -3806,12 +3806,12 @@ private:
 
             alignas(kAlignment) char raw[sizeof(T)];
             T * tmp = reinterpret_cast<T *>(&raw);
-            AllocaTraits::construct(*alloc, tmp, std::move(*obj2));
-            AllocaTraits::destroy(*alloc, obj2);
-            AllocaTraits::construct(*alloc, obj2, std::move(*obj1));
-            AllocaTraits::destroy(*alloc, obj1);
-            AllocaTraits::construct(*alloc, obj1, std::move(*tmp));
-            AllocaTraits::destroy(*alloc, tmp);
+            AllocTraits::construct(*alloc, tmp, std::move(*obj2));
+            AllocTraits::destroy(*alloc, obj2);
+            AllocTraits::construct(*alloc, obj2, std::move(*obj1));
+            AllocTraits::destroy(*alloc, obj1);
+            AllocTraits::construct(*alloc, obj1, std::move(*tmp));
+            AllocTraits::destroy(*alloc, tmp);
         }
     };
 
