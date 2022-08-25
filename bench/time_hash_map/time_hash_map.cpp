@@ -649,7 +649,6 @@ struct HashFn {
     typedef HashObject<Key, Size, HashSize> argument_type;
     typedef std::size_t                     result_type;
 
-    template <typename = typename std::enable_if<(Size <= sizeof(key_type))>::type>
     using is_transparent = void;
 
     // These two public members are required by msvc.  4 and 8 are defaults.
@@ -754,7 +753,6 @@ struct hash<HashObject<Key, Size, HashSize>> {
     typedef HashObject<Key, Size, HashSize> argument_type;
     typedef std::size_t                     result_type;
 
-    template <typename = typename std::enable_if<(Size <= sizeof(key_type))>::type>
     using is_transparent = void;
 
     // These two public members are required by msvc.  4 and 8 are defaults.
