@@ -594,6 +594,27 @@ public:
 
 //////////////////////////////////////////////////////////////////////////////////
 
+template <typename T, typename = void>
+struct is_transparent : std::false_type {};
+
+template <typename T>
+struct is_transparent<T, void_t<typename T::is_transparent>>
+    : std::true_type {};
+
+template <typename K, typename key_type, bool is_transparent>
+struct key_arg_selector {
+    // Transparent. Forward `K`.
+    typedef key_type K;
+};
+
+template <typename K, typename key_type>
+struct key_arg_selector<K, key_type, false> {
+    // Not transparent. Always use `key_type`.
+    typedef key_type type;
+};
+
+//////////////////////////////////////////////////////////////////////////////////
+
 } // namespace jstd
 
 #endif // JSTD_TYPE_TRAITS_H

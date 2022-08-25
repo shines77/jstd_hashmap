@@ -1689,17 +1689,17 @@ public:
             std::is_nothrow_copy_constructible<hasher>::value &&
             std::is_nothrow_copy_constructible<key_equal>::value &&
             std::is_nothrow_copy_constructible<allocator_type>::value) :
-        ctrls_(jstd_exchange(other.ctrls_, this_type::default_empty_ctrls())),
-        slots_(jstd_exchange(other.slots_, nullptr)),
-        last_slot_(jstd_exchange(other.last_slot_, nullptr)),
-        slot_size_(jstd_exchange(other.slot_size_, 0)),
-        slot_mask_(jstd_exchange(other.slot_mask_, 0)),
-        max_lookups_(jstd_exchange(other.max_lookups_, kMinLookups)),
-        slot_threshold_(jstd_exchange(other.slot_size_, 0)),
-        n_mlf_(jstd_exchange(other.n_mlf_, kDefaultLoadFactorInt)),
-        n_mlf_rev_(jstd_exchange(other.n_mlf_rev_, kDefaultLoadFactorRevInt)),
+        ctrls_(jstd::exchange(other.ctrls_, this_type::default_empty_ctrls())),
+        slots_(jstd::exchange(other.slots_, nullptr)),
+        last_slot_(jstd::exchange(other.last_slot_, nullptr)),
+        slot_size_(jstd::exchange(other.slot_size_, 0)),
+        slot_mask_(jstd::exchange(other.slot_mask_, 0)),
+        max_lookups_(jstd::exchange(other.max_lookups_, kMinLookups)),
+        slot_threshold_(jstd::exchange(other.slot_size_, 0)),
+        n_mlf_(jstd::exchange(other.n_mlf_, kDefaultLoadFactorInt)),
+        n_mlf_rev_(jstd::exchange(other.n_mlf_rev_, kDefaultLoadFactorRevInt)),
 #if ROBIN_V3_USE_HASH_POLICY
-        hash_policy_(jstd_exchange(other.hash_policy_ref(), hash_policy_t())),
+        hash_policy_(jstd::exchange(other.hash_policy_ref(), hash_policy_t())),
 #endif
         hasher_(std::move(other.hash_function_ref())),
         key_equal_(std::move(other.key_eq_ref())),

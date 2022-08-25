@@ -4,6 +4,7 @@
 #include <new>
 
 #include "jstd/basic/stddef.h"
+#include "jstd/config/config.h"
 
 #if defined(_WIN32)
 #ifndef WIN32_LEAN_AND_MEAN
@@ -11,6 +12,8 @@
 #endif
 #include <windows.h>
 #endif // _WIN32
+
+namespace jstd {
 
 //
 // Reference from: https://github.com/facebook/folly/blob/main/folly/lang/Launder.h
@@ -24,16 +27,10 @@
     (defined(_MSC_VER) && (_HAS_LAUNDER != 0 || _MSC_VER >= 1914)) || \
     ((_LIBCPP_VERSION >= (__ANDROID__ ? 7000 : 6000)) && (__cplusplus >= 201703L))
 
-namespace jstd {
-
 /* using override */
 using std::launder;
 
-} // namespace jstd
-
 #else // !JSTD_STD_LAUNDER
-
-namespace jstd {
 
 /**
  * Approximate backport from C++17 of std::launder. It should be `constexpr`
@@ -79,6 +76,6 @@ template <typename T, typename... Args>
 inline
 void launder(T (*)(Args...)) = delete;
 
-} // namespace jstd
-
 #endif // JSTD_STD_LAUNDER
+
+} // namespace jstd

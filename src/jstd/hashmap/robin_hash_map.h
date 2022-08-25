@@ -194,6 +194,8 @@ public:
         ~map_slot_type() = delete;
     };
 
+    static constexpr bool kIsTransparent = (is_transparent<Hash>::value && is_transparent<KeyEqual>::value);
+
     typedef map_slot_type<Key, Value>               slot_type;
     typedef map_slot_type<Key, Value>               node_type;
 
@@ -203,6 +205,13 @@ public:
 
     typedef typename slot_type::key_type            key_type;
     typedef typename slot_type::mapped_type         mapped_type;
+
+    //
+    // Tip of the Week #144: Heterogeneous Lookup in Associative Containers
+    // See: https://abseil.io/tips/144 (Transparent Functors)
+    //
+    template <typename K>
+    using key_arg = typename key_arg_selector<K, key_type, kIsTransparent>::type;
 
     typedef typename slot_type::value_type          value_type;
     typedef typename slot_type::mutable_value_type  mutable_value_type;
@@ -327,9 +336,6 @@ public:
     static constexpr bool kNeedStoreHash =
         (!layout_policy_t::autoDetectStoreHash && layout_policy_t::needStoreHash) ||
          (layout_policy_t::autoDetectStoreHash && (kDetectStoreHash)) || kIsIndirectKV;
-
-    static constexpr size_type kGroupBits   = (kNeedStoreHash ? 4 : 5);
-    static constexpr size_type kGroupWidth  = size_type(1) << kGroupBits;
 
     static constexpr std::int8_t kEmptySlot     = (std::int8_t)0b11111111;
     static constexpr std::int8_t kEndOfMark     = (std::int8_t)0b11111110;
@@ -1303,7 +1309,7 @@ public:
         }
     };
 
-    typedef ctrl_data<void, kNeedStoreHash, kIsIndirectKV> ctrl_type;
+    typedef ctrl_data<void, kNeedStoreHash, false> ctrl_type;
     typedef typename ctrl_type::value_type  ctrl_value_t;
     typedef typename ctrl_type::dist_type   dist_type;
     typedef typename ctrl_type::udist_type  udist_type;
@@ -1327,7 +1333,7 @@ public:
 
 #if defined(__AVX2__)
 
-    template <typename T, bool bStoreHash>
+    template <typename T, bool NeedStoreHash>
     struct BitMask256_AVX;
 
     template <typename T>
@@ -1339,6 +1345,8 @@ public:
         typedef const T &   const_reference;
 
         typedef std::uint32_t bitmask_type;
+
+        static constexpr size_type kGroupWidth = 32;
 
         pointer ctrl;
 
@@ -1521,6 +1529,8 @@ public:
         typedef const T &   const_reference;
 
         typedef std::uint32_t bitmask_type;
+
+        static constexpr size_type kGroupWidth = 16;
 
         pointer ctrl;
 
@@ -1753,6 +1763,8 @@ public:
 
         typedef std::uint32_t bitmask_type;
 
+        static constexpr size_type kGroupWidth = 16;
+
         pointer ctrl;
 
         BitMask256_AVX() noexcept : ctrl(nullptr) {
@@ -1983,8 +1995,8 @@ public:
 
 #endif // __AVX512BW__ && __AVX512VL__
 
-    template <typename T, bool bStoreHash>
-    using BitMask256 = BitMask256_AVX<T, bStoreHash>;
+    template <typename T, bool NeedStoreHash>
+    using BitMask256 = BitMask256_AVX<T, NeedStoreHash>;
 
 #else
 
@@ -1999,6 +2011,8 @@ public:
         typedef typename bitmask256_type::pointer           pointer;
         typedef typename bitmask256_type::const_pointer     const_pointer;
         typedef typename ctrl_t::value_type                 ctrl_value_t;
+
+        static constexpr size_type kGroupWidth = typename bitmask256_type::kGroupWidth;
 
         bitmask256_type bitmask;
 
@@ -2154,6 +2168,8 @@ public:
     };
 
     typedef group_mask  group_type;
+
+    static constexpr size_type kGroupWidth = typename group_mask::kGroupWidth;
 
     template <typename ValueType>
     class basic_iterator {
@@ -2440,17 +2456,17 @@ public:
             std::is_nothrow_copy_constructible<hasher>::value &&
             std::is_nothrow_copy_constructible<key_equal>::value &&
             std::is_nothrow_copy_constructible<allocator_type>::value) :
-        ctrls_(jstd_exchange(other.ctrls_, this_type::default_empty_ctrls())),
-        slots_(jstd_exchange(other.slots_, nullptr)),
-        last_slot_(jstd_exchange(other.last_slot_, nullptr)),
-        slot_size_(jstd_exchange(other.slot_size_, 0)),
-        slot_mask_(jstd_exchange(other.slot_mask_, 0)),
-        max_lookups_(jstd_exchange(other.max_lookups_, kMinLookups)),
-        slot_threshold_(jstd_exchange(other.slot_size_, 0)),
-        n_mlf_(jstd_exchange(other.n_mlf_, kDefaultLoadFactorInt)),
-        n_mlf_rev_(jstd_exchange(other.n_mlf_rev_, kDefaultLoadFactorRevInt)),
+        ctrls_(jstd::exchange(other.ctrls_, this_type::default_empty_ctrls())),
+        slots_(jstd::exchange(other.slots_, nullptr)),
+        last_slot_(jstd::exchange(other.last_slot_, nullptr)),
+        slot_size_(jstd::exchange(other.slot_size_, 0)),
+        slot_mask_(jstd::exchange(other.slot_mask_, 0)),
+        max_lookups_(jstd::exchange(other.max_lookups_, kMinLookups)),
+        slot_threshold_(jstd::exchange(other.slot_size_, 0)),
+        n_mlf_(jstd::exchange(other.n_mlf_, kDefaultLoadFactorInt)),
+        n_mlf_rev_(jstd::exchange(other.n_mlf_rev_, kDefaultLoadFactorRevInt)),
 #if ROBIN_USE_HASH_POLICY
-        hash_policy_(jstd_exchange(other.hash_policy_ref(), hash_policy_t())),
+        hash_policy_(jstd::exchange(other.hash_policy_ref(), hash_policy_t())),
 #endif
         hasher_(other.hash_function_ref()),
         key_equal_(other.key_eq_ref()),
@@ -2468,7 +2484,7 @@ public:
         slot_threshold_(0), n_mlf_(kDefaultLoadFactorInt),
         n_mlf_rev_(kDefaultLoadFactorRevInt),
 #if ROBIN_USE_HASH_POLICY
-        hash_policy_(jstd_exchange(other.hash_policy_ref(), hash_policy_t())),
+        hash_policy_(jstd::exchange(other.hash_policy_ref(), hash_policy_t())),
 #endif
         hasher_(other.hash_function_ref()),
         key_equal_(other.key_eq_ref()),
@@ -2805,34 +2821,6 @@ public:
         }
     }
 
-    mapped_type & operator [] (const key_type & key) {
-        return this->try_emplace(key).first->second;
-    }
-
-    mapped_type & operator [] (key_type && key) {
-        return this->try_emplace(std::move(key)).first->second;
-    }
-
-    mapped_type & at(const key_type & key) {
-        slot_type * slot = const_cast<slot_type *>(this->find_impl(key));
-        if (slot != this->last_slot()) {
-            return slot->value.second;
-        } else {
-            throw std::out_of_range("std::out_of_range exception: jstd::robin_hash_map<K,V>::at(key), "
-                                    "the specified key is not exists.");
-        }
-    }
-
-    const mapped_type & at(const key_type & key) const {
-        const slot_type * slot = this->find_impl(key);
-        if (slot != this->last_slot()) {
-            return slot->value.second;
-        } else {
-            throw std::out_of_range("std::out_of_range exception: jstd::robin_hash_map<K,V>::at(key) const, "
-                                    "the specified key is not exists.");
-        }
-    }
-
     size_type count(const key_type & key) const {
         const slot_type * slot = this->find_impl(key);
         return size_type(slot != this->last_slot());
@@ -2879,7 +2867,7 @@ public:
     template <typename P, typename std::enable_if<
               (!jstd::is_same_ex<P, value_type>::value) &&
               (!jstd::is_same_ex<P, mutable_value_type>::value) &&
-              std::is_constructible<value_type, P &&>::value>::type * = nullptr>
+              std::is_convertible<P &&, value_type>::value>::type * = nullptr>
     std::pair<iterator, bool> insert(P && value) {
         return this->emplace_impl<false>(std::forward<P>(value));
     }
@@ -2957,27 +2945,63 @@ public:
         return this->emplace_impl<false>(std::forward<Args>(args)...).first;
     }
 
-    template <typename ... Args>
-    std::pair<iterator, bool> try_emplace(const key_type & key, Args && ... args) {
-        return this->emplace_impl<false>(key, std::forward<Args>(args)...);
+    template <typename KeyT = key_type, typename ... Args,
+              typename std::enable_if<!std::is_convertible<KeyT, const_iterator>::value, int>::type = 0>
+    std::pair<iterator, bool> try_emplace(const key_arg<KeyT> & key, Args && ... args) {
+        return this->try_emplace_impl(key, std::forward<Args>(args)...);
     }
 
-    template <typename ... Args>
-    std::pair<iterator, bool> try_emplace(key_type && key, Args && ... args) {
-        return this->emplace_impl<false>(std::forward<key_type>(key), std::forward<Args>(args)...);
+    template <typename KeyT = key_type, typename ... Args,
+              typename std::enable_if<!std::is_convertible<KeyT, const_iterator>::value, int>::type = 0,
+              KeyT * = nullptr>
+    std::pair<iterator, bool> try_emplace(key_arg<KeyT> && key, Args && ... args) {
+        return this->try_emplace_impl(std::forward<KeyT>(key), std::forward<Args>(args)...);
     }
 
-    template <typename ... Args>
-    std::pair<iterator, bool> try_emplace(const_iterator hint, const key_type & key, Args && ... args) {
-        return this->emplace_impl<false>(key, std::forward<Args>(args)...);
+    template <typename KeyT = key_type, typename ... Args>
+    iterator try_emplace(const_iterator hint, const key_arg<KeyT> & key, Args && ... args) {
+        return this->try_emplace(key, std::forward<Args>(args)...).first;
     }
 
-    template <typename ... Args>
-    std::pair<iterator, bool> try_emplace(const_iterator hint, key_type && key, Args && ... args) {
-        return this->emplace_impl<false>(std::forward<key_type>(key), std::forward<Args>(args)...);
+    template <typename KeyT = key_type, typename ... Args, KeyT * = nullptr>
+    iterator try_emplace(const_iterator hint, key_arg<KeyT> && key, Args && ... args) {
+        return this->try_emplace(std::forward<KeyT>(key), std::forward<Args>(args)...).first;
     }
 
-    size_type erase(const key_type & key) {
+    template <typename KeyT = key_type>
+    mapped_type & operator [] (const key_arg<KeyT> & key) {
+        return this->try_emplace(key).first->second;
+    }
+
+    template <typename KeyT = key_type, KeyT * = nullptr>
+    mapped_type & operator [] (key_arg<KeyT> && key) {
+        return this->try_emplace(std::forward<KeyT>(key)).first->second;
+    }
+
+    template <typename KeyT = key_type>
+    mapped_type & at(const key_arg<KeyT> & key) {
+        slot_type * slot = const_cast<slot_type *>(this->find_impl(key));
+        if (slot != this->last_slot()) {
+            return slot->value.second;
+        } else {
+            throw std::out_of_range("std::out_of_range exception: jstd::robin_hash_map<K,V>::at(key), "
+                                    "the specified key is not exists.");
+        }
+    }
+
+    template <typename KeyT = key_type, KeyT * = nullptr>
+    const mapped_type & at(const key_arg<KeyT> & key) const {
+        const slot_type * slot = this->find_impl(key);
+        if (slot != this->last_slot()) {
+            return slot->value.second;
+        } else {
+            throw std::out_of_range("std::out_of_range exception: jstd::robin_hash_map<K,V>::at(key) const, "
+                                    "the specified key is not exists.");
+        }
+    }
+
+    template <typename KeyT = key_type>
+    size_type erase(const key_arg<KeyT> & key) {
         size_type num_deleted = this->find_and_erase(key);
         return num_deleted;
     }
@@ -3127,15 +3151,16 @@ private:
         return (size_type)((std::uintptr_t)this->ctrls() >> 12);
     }
 
-    inline hash_code_t get_hash(const key_type & key) const
+    template <typename KeyT>
+    inline hash_code_t get_hash(const KeyT & key) const
         noexcept(noexcept(this->hasher_(key)))
         /* noexcept(noexcept(std::declval<hasher &>()(key))) */ {
-#if 0
+#if 1
+        hash_code_t hash_code = static_cast<hash_code_t>(this->hasher_(key));
+#else
         hash_code_t hash_code = static_cast<hash_code_t>(
             this->hash_policy_.get_hash_code(key)
         );
-#else
-        hash_code_t hash_code = static_cast<hash_code_t>(this->hasher_(key));
 #endif
         return hash_code;
     }
@@ -4090,22 +4115,24 @@ private:
     JSTD_FORCED_INLINE
     void setUnusedCtrl(size_type index) {
         ctrl_type * ctrl = this->ctrl_at(index);
-        this->setUnused(ctrl);
+        this->setUnusedCtrl(ctrl);
     }
 
     JSTD_FORCED_INLINE
     void setUnusedCtrl(ctrl_type * ctrl) {
         assert(ctrl->isUsed());
-        ctrl->setUnused();
+        ctrl->setEmpty();
     }
 
-    slot_type * find_impl(const key_type & key) {
+    template <typename KeyT>
+    slot_type * find_impl(const KeyT & key) {
         return const_cast<slot_type *>(
             const_cast<const this_type *>(this)->find_impl(key)
         );
     }
 
-    const slot_type * find_impl(const key_type & key) const {
+    template <typename KeyT>
+    const slot_type * find_impl(const KeyT & key) const {
         // Prefetch for resolve potential ctrls TLB misses.
         //Prefetch_Read_T2(this->ctrls());
 
@@ -4249,9 +4276,10 @@ private:
         kIsExists = 2
     };
 
+    template <typename KeyT>
     JSTD_NO_INLINE
     std::pair<slot_type *, FindResult>
-    find_or_insert(const key_type & key) {
+    find_or_insert(const KeyT & key) {
         hash_code_t hash_code = this->get_hash(key);
         size_type slot_index = this->index_for_hash(hash_code);
         std::uint8_t ctrl_hash = this->get_ctrl_hash(hash_code);
@@ -4760,15 +4788,62 @@ InsertOrGrow_Start:
         }
     }
 
+    template <typename KeyT = key_type, typename ... Args>
+    std::pair<iterator, bool> try_emplace_impl(const KeyT & key, Args && ... args) {
+        auto find_info = this->find_or_insert(key);
+        slot_type * slot = find_info.first;
+        size_type is_exists = find_info.second;
+        if (is_exists != kIsExists) {
+            // The key to be inserted is not exists.
+            assert(slot != nullptr);
+            if (is_exists == kNeedGrow) {
+                this->grow_if_necessary();
+                return this->try_emplace_impl(key, std::forward<Args>(args)...);
+            }
+
+            SlotPolicyTraits::construct(&this->allocator_, slot,
+                                        std::piecewise_construct,
+                                        std::forward_as_tuple(key),
+                                        std::forward_as_tuple(std::forward<Args>(args)...));
+            this->slot_size_++;            
+        }
+        return { this->iterator_at(slot), (is_exists != kIsExists) };
+    }
+
+    template <typename KeyT = key_type, typename ... Args>
+    std::pair<iterator, bool> try_emplace_impl(KeyT && key, Args && ... args) {
+        auto find_info = this->find_or_insert(key);
+        slot_type * slot = find_info.first;
+        size_type is_exists = find_info.second;
+        if (is_exists != kIsExists) {
+            // The key to be inserted is not exists.
+            assert(slot != nullptr);
+            if (is_exists == kNeedGrow) {
+                this->grow_if_necessary();
+                return this->try_emplace_impl(std::forward<key_type>(key),
+                                              std::forward<Args>(args)...);
+            }
+
+            SlotPolicyTraits::construct(&this->allocator_, slot,
+                                        std::piecewise_construct,
+                                        std::forward_as_tuple(std::forward<key_type>(key)),
+                                        std::forward_as_tuple(std::forward<Args>(args)...));
+            this->slot_size_++;
+        }
+        return { this->iterator_at(slot), (is_exists != kIsExists) };
+    }
+
+    template <typename KeyT>
     std::pair<slot_type *, bool>
-    unique_find_or_insert(const key_type & key) {
+    unique_find_or_insert(const KeyT & key) {
         hash_code_t hash_code = this->get_hash(key);
         return this->unique_find_or_insert(key, hash_code);
     }
 
+    template <typename KeyT>
     JSTD_NO_INLINE
     std::pair<slot_type *, bool>
-    unique_find_or_insert(const key_type & key, hash_code_t hash_code) {
+    unique_find_or_insert(const KeyT & key, hash_code_t hash_code) {
         size_type slot_index = this->index_for_hash(hash_code);
         std::uint8_t ctrl_hash = this->get_ctrl_hash(hash_code);
 
@@ -4829,9 +4904,10 @@ Insert_To_Slot:
         }
     }
 
+    template <typename KeyT>
     JSTD_FORCED_INLINE
     std::pair<slot_type *, bool>
-    unique_find_or_insert_no_grow(const key_type & key) {
+    unique_find_or_insert_no_grow(const KeyT & key) {
         hash_code_t hash_code = this->get_hash(key);
         size_type slot_index = this->index_for_hash(hash_code);
         std::uint8_t ctrl_hash = this->get_ctrl_hash(hash_code);
@@ -4915,8 +4991,9 @@ Insert_To_Slot:
         }
     }
 
+    template <typename KeyT>
     JSTD_FORCED_INLINE
-    size_type find_and_erase(const key_type & key) {
+    size_type find_and_erase(const KeyT & key) {
         slot_type * slot = this->find_impl(key);
         if (likely(slot != this->last_slot())) {
             size_type to_erase = this->index_of(slot);

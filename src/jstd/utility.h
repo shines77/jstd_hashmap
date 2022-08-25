@@ -115,23 +115,27 @@ T * pointer_align_to(T * address)
     return reinterpret_cast<T *>(ptr);
 }
 
+#ifdef JSTD_EXCHANGE_FUNCTION
+
+/* using override */
+using std::exchange;
+
+#else
+
 template <typename T, typename U = T>
 inline
 #if jstd_cplusplus >= 2020L
 constexpr // since C++20
 #endif
-T jstd_exchange(T & target, U && new_value) noexcept(
-            std::is_nothrow_move_constructible<T>::value &&
-            std::is_nothrow_assignable<T &, U>::value)
+T exchange(T & target, U && new_value) noexcept(
+           std::is_nothrow_move_constructible<T>::value &&
+           std::is_nothrow_assignable<T &, U>::value)
 {
-#ifdef JSTD_EXCHANGE_FUNCTION
-    return std::exchange(target, std::forward<U>(new_value));
-#else
     T old_value = std::move(target);
     target = std::forward<U>(new_value);
     return old_value;
-#endif
 }
+#endif // JSTD_EXCHANGE_FUNCTION
 
 //
 // tuple_wrapper<T, DecayT, bool IsIntegral>
