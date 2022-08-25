@@ -667,7 +667,7 @@ struct HashFn {
         return reinterpret_cast<result_type>(obj);
     }
 
-    template <typename KeyT = key_type, typename = std::enable_if<
+    template <typename KeyT = key_type, typename = typename std::enable_if<
                                         (Size <= sizeof(key_type))>::type * = nullptr>
     result_type operator () (KeyT key) const noexcept {
         return reinterpret_cast<result_type>(HASH_MAP_FUNCTION<KeyT>()(key));
@@ -768,7 +768,7 @@ struct hash<HashObject<Key, Size, HashSize>> {
         return reinterpret_cast<result_type>(obj);
     }
 
-    template <typename KeyT = key_type, typename = std::enable_if<
+    template <typename KeyT = key_type, typename = typename std::enable_if<
                                         (Size <= sizeof(key_type))>::type * = nullptr>
     result_type operator () (KeyT key) const noexcept {
         return reinterpret_cast<result_type>(HASH_MAP_FUNCTION<KeyT>()(key));
