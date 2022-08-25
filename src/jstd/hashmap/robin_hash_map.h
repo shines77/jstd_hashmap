@@ -2019,7 +2019,7 @@ public:
         typedef typename bitmask256_type::const_pointer     const_pointer;
         typedef typename ctrl_t::value_type                 ctrl_value_t;
 
-        static constexpr size_type kGroupWidth = typename bitmask256_type::kGroupWidth;
+        static constexpr size_type kGroupWidth = bitmask256_type::kGroupWidth;
 
         bitmask256_type bitmask;
 
@@ -2176,7 +2176,7 @@ public:
 
     typedef group_mask  group_type;
 
-    static constexpr size_type kGroupWidth = typename group_mask::kGroupWidth;
+    static constexpr size_type kGroupWidth = group_mask::kGroupWidth;
 
     template <typename ValueType>
     class basic_iterator {
@@ -2333,7 +2333,7 @@ public:
     using iterator       = basic_iterator<value_type>;
     using const_iterator = basic_iterator<const value_type>;
 
-    typedef typename std::allocator_traits<allocator_type> AllocatorTraits;
+    typedef typename std::allocator_traits<allocator_type> AllocaTraits;
 
     typedef typename std::allocator_traits<allocator_type>::template rebind_alloc<ctrl_type>
                                         ctrl_allocator_type;
@@ -3806,12 +3806,12 @@ private:
 
             alignas(kAlignment) char raw[sizeof(T)];
             T * tmp = reinterpret_cast<T *>(&raw);
-            AllocatorTraits::construct(*alloc, tmp, std::move(*obj2));
-            AllocatorTraits::destroy(*alloc, obj2);
-            AllocatorTraits::construct(*alloc, obj2, std::move(*obj1));
-            AllocatorTraits::destroy(*alloc, obj1);
-            AllocatorTraits::construct(*alloc, obj1, std::move(*tmp));
-            AllocatorTraits::destroy(*alloc, tmp);
+            AllocaTraits::construct(*alloc, tmp, std::move(*obj2));
+            AllocaTraits::destroy(*alloc, obj2);
+            AllocaTraits::construct(*alloc, obj2, std::move(*obj1));
+            AllocaTraits::destroy(*alloc, obj1);
+            AllocaTraits::construct(*alloc, obj1, std::move(*tmp));
+            AllocaTraits::destroy(*alloc, tmp);
         }
     };
 
