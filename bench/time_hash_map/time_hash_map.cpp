@@ -649,15 +649,14 @@ struct HashFn {
     typedef HashObject<Key, Size, HashSize> argument_type;
     typedef std::size_t                     result_type;
 
+    template <typename = typename std::enable_if<(Size <= sizeof(key_type))>::type>
     typedef void is_transparent;
 
     // These two public members are required by msvc.  4 and 8 are defaults.
     static const std::size_t bucket_size = 4;
     static const std::size_t min_buckets = 8;
 
-    template <typename ArgumentT = argument_type, typename = typename std::enable_if<
-                                                  (Size > sizeof(ArgumentT))>::type>
-    result_type operator () (const ArgumentT & obj) const noexcept {
+    result_type operator () (const argument_type & obj) const noexcept {
         if (is_special)
             return static_cast<result_type>(test::MumHash<key_type>()(obj.Hash()));
         else
@@ -669,7 +668,7 @@ struct HashFn {
         return reinterpret_cast<result_type>(obj);
     }
 
-    template <typename KeyT = key_type, typename = typename std::enable_if<
+    template <typename KeyT, typename = typename std::enable_if<
                                         (Size <= sizeof(KeyT))>::type>
     result_type operator () (KeyT key) const noexcept {
         return reinterpret_cast<result_type>(HASH_MAP_FUNCTION<KeyT>()(key));
@@ -755,14 +754,13 @@ struct hash<HashObject<Key, Size, HashSize>> {
     typedef HashObject<Key, Size, HashSize> argument_type;
     typedef std::size_t                     result_type;
 
+    template <typename = typename std::enable_if<(Size <= sizeof(key_type))>::type>
     typedef void is_transparent;
 
     // These two public members are required by msvc.  4 and 8 are defaults.
     static const std::size_t bucket_size = 4;
     static const std::size_t min_buckets = 8;
 
-    template <typename ArgumentT = argument_type, typename = typename std::enable_if<
-                                                  (Size > sizeof(ArgumentT))>::type>
     result_type operator () (const argument_type & obj) const noexcept {
         return static_cast<result_type>(obj.Hash());
     }
@@ -772,7 +770,7 @@ struct hash<HashObject<Key, Size, HashSize>> {
         return reinterpret_cast<result_type>(obj);
     }
 
-    template <typename KeyT = key_type, typename = typename std::enable_if<
+    template <typename KeyT, typename = typename std::enable_if<
                                         (Size <= sizeof(KeyT))>::type>
     result_type operator () (KeyT key) const noexcept {
         return reinterpret_cast<result_type>(HASH_MAP_FUNCTION<KeyT>()(key));
