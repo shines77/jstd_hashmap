@@ -3161,7 +3161,8 @@ private:
     template <typename KeyT>
     inline hash_code_t get_hash(const KeyT & key) const
         noexcept(noexcept(this->hasher_(key)))
-        /* noexcept(noexcept(std::declval<hasher &>()(key))) */ {
+        //noexcept(noexcept(std::declval<hasher &>()(key)))
+    {
 #if 1
         hash_code_t hash_code = static_cast<hash_code_t>(this->hasher_(key));
 #else
@@ -4766,8 +4767,14 @@ InsertOrGrow_Start:
                !std::is_constructible<key_type, First &&>::value)>::type * = nullptr,
               typename ... Args>
     std::pair<iterator, bool> emplace_impl(First && first, Args && ... args) {
-        value_type value(std::forward<First>(first), std::forward<Args>(args)...);
-        auto find_info = this->find_or_insert(value.first);
+        alignas(slot_type) unsigned char raw[sizeof(slot_type)];
+        slot_type * tmp_slot = reinterpret_cast<slot_type *>(&raw);
+
+        SlotPolicyTraits::construct(&this->allocator_, tmp_slot,
+                                    std::forward<First>(first),
+                                    std::forward<Args>(args)...);
+
+        auto find_info = this->find_or_insert(tmp_slot->value.first);
         slot_type * slot = find_info.first;
         size_type is_exists = find_info.second;
         if (is_exists != kIsExists) {
@@ -4775,22 +4782,21 @@ InsertOrGrow_Start:
             assert(slot != nullptr);
             if (is_exists == kNeedGrow) {
                 this->grow_if_necessary();
-                return this->emplace(std::move(value));
+                if (kIsCompatibleLayout)
+                    return this->emplace(std::move(tmp_slot->mutable_value));
+                else
+                    return this->emplace(std::move(tmp_slot->value));
             }
 
-            if (kIsCompatibleLayout) {
-                SlotPolicyTraits::construct(&this->allocator_, slot,
-                                            std::move(*static_cast<mutable_value_type *>(&value)));
-            } else {
-                SlotPolicyTraits::construct(&this->allocator_, slot, std::move(value));
-            }
+            SlotPolicyTraits::transfer(&this->allocator_, slot, tmp_slot);
             this->slot_size_++;
             return { this->iterator_at(slot), true };
         } else {
             // The key to be inserted already exists.
             if (AlwaysUpdate) {
-                slot->value.second = std::move(value.second);
+                slot->value.second = std::move(tmp_slot->value.second);
             }
+            SlotPolicyTraits::destroy(&this->allocator_, tmp_slot);
             return { this->iterator_at(slot), false };
         }
     }

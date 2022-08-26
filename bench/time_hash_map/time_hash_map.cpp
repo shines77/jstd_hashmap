@@ -641,15 +641,88 @@ public:
     }
 };
 
-template <typename Key, std::size_t Size = sizeof(Key),
-                        std::size_t HashSize = sizeof(Key),
-                        bool is_special = false>
+template <typename Key, bool isSpecial,
+                        std::size_t Size = sizeof(Key),
+                        std::size_t HashSize = sizeof(Key)>
 struct HashFn {
     typedef Key                             key_type;
     typedef HashObject<Key, Size, HashSize> argument_type;
-    typedef std::size_t                     result_type;
+    typedef size_t                          result_type;
 
     using is_transparent = void;
+
+    // These two public members are required by msvc.  4 and 8 are defaults.
+    static const std::size_t bucket_size = 4;
+    static const std::size_t min_buckets = 8;
+
+    template <typename ArgumentT, typename std::enable_if<
+                                  jstd::is_same_ex<ArgumentT, argument_type>::value, int>::type * = nullptr>
+    result_type operator () (const ArgumentT & obj) const noexcept {
+        if (isSpecial)
+            return static_cast<result_type>(test::MumHash<key_type>()(obj.Hash()));
+        else
+            return static_cast<result_type>(obj.Hash());
+    }
+
+    // Do the identity hash for pointers.
+    result_type operator () (const argument_type * obj) const noexcept {
+        return reinterpret_cast<result_type>(obj);
+    }
+
+    template <typename KeyT, typename std::enable_if<
+                             !jstd::is_same_ex<KeyT, argument_type>::value &&
+                             (Size <= sizeof(KeyT))>::type * = nullptr>
+    result_type operator () (const KeyT & key) const noexcept {
+        return static_cast<result_type>(HASH_MAP_FUNCTION<KeyT>()(key));
+    }
+
+    // Less operator for MSVC's hash containers.
+    bool operator () (const argument_type & a, argument_type & b) const noexcept {
+        return (a < b);
+    }
+
+    bool operator () (const argument_type * a, const argument_type * b) const noexcept {
+        return (a < b);
+    }
+};
+
+template <typename Key, bool isSpecial>
+struct HashFn<Key, isSpecial, 16, 16> {
+    typedef Key                             key_type;
+    typedef HashObject<Key, 16, 16>         argument_type;
+    typedef size_t                          result_type;
+
+    // These two public members are required by msvc.  4 and 8 are defaults.
+    static const std::size_t bucket_size = 4;
+    static const std::size_t min_buckets = 8;
+
+    result_type operator () (const argument_type & obj) const noexcept {
+        if (isSpecial)
+            return static_cast<result_type>(test::MumHash<key_type>()(obj.Hash()));
+        else
+            return static_cast<result_type>(obj.Hash());
+    }
+
+    // Do the identity hash for pointers.
+    result_type operator () (const argument_type * obj) const noexcept {
+        return reinterpret_cast<result_type>(obj);
+    }
+
+    // Less operator for MSVC's hash containers.
+    bool operator () (const argument_type & a, argument_type & b) const noexcept {
+        return (a < b);
+    }
+
+    bool operator () (const argument_type * a, const argument_type * b) const noexcept {
+        return (a < b);
+    }
+};
+
+template <typename Key, bool is_special>
+struct HashFn<Key, is_special, 256, 64> {
+    typedef Key                             key_type;
+    typedef HashObject<Key, 256, 64>        argument_type;
+    typedef size_t                          result_type;
 
     // These two public members are required by msvc.  4 and 8 are defaults.
     static const std::size_t bucket_size = 4;
@@ -667,42 +740,12 @@ struct HashFn {
         return reinterpret_cast<result_type>(obj);
     }
 
-    template <typename KeyT, typename = typename std::enable_if<
-                                        (Size <= sizeof(KeyT))>::type>
-    result_type operator () (KeyT key) const noexcept {
-        return reinterpret_cast<result_type>(HASH_MAP_FUNCTION<KeyT>()(key));
-    }
-
     // Less operator for MSVC's hash containers.
     bool operator () (const argument_type & a, argument_type & b) const noexcept {
         return (a < b);
     }
 
     bool operator () (const argument_type * a, const argument_type * b) const noexcept {
-        return (a < b);
-    }
-
-    template <std::size_t nSize, std::size_t nHashSize>
-    result_type operator () (const HashObject<key_type, nSize, nHashSize> & obj) const noexcept {
-        return static_cast<result_type>(obj.Hash());
-    }
-
-    // Do the identity hash for pointers.
-    template <std::size_t nSize, std::size_t nHashSize>
-    result_type operator () (const HashObject<key_type, nSize, nHashSize> * obj) const noexcept {
-        return reinterpret_cast<result_type>(obj);
-    }
-
-    // Less operator for MSVC's hash containers.
-    template <std::size_t nSize, std::size_t nHashSize>
-    bool operator () (const HashObject<key_type, nSize, nHashSize> & a,
-                      const HashObject<key_type, nSize, nHashSize> & b) const noexcept {
-        return (a < b);
-    }
-
-    template <std::size_t nSize, std::size_t nHashSize>
-    bool operator () (const HashObject<key_type, nSize, nHashSize> * a,
-                      const HashObject<key_type, nSize, nHashSize> * b) const noexcept {
         return (a < b);
     }
 };
@@ -759,7 +802,9 @@ struct hash<HashObject<Key, Size, HashSize>> {
     static const std::size_t bucket_size = 4;
     static const std::size_t min_buckets = 8;
 
-    result_type operator () (const argument_type & obj) const noexcept {
+    template <typename ArgumentT, typename std::enable_if<
+                                  jstd::is_same_ex<ArgumentT, argument_type>::value, int>::type * = nullptr>
+    result_type operator () (const ArgumentT & obj) const noexcept {
         return static_cast<result_type>(obj.Hash());
     }
 
@@ -768,10 +813,11 @@ struct hash<HashObject<Key, Size, HashSize>> {
         return reinterpret_cast<result_type>(obj);
     }
 
-    template <typename KeyT, typename = typename std::enable_if<
-                                        (Size <= sizeof(KeyT))>::type>
-    result_type operator () (KeyT key) const noexcept {
-        return reinterpret_cast<result_type>(HASH_MAP_FUNCTION<KeyT>()(key));
+    template <typename KeyT, typename std::enable_if<
+                             !jstd::is_same_ex<KeyT, argument_type>::value &&
+                             (Size <= sizeof(KeyT))>::type * = nullptr>
+    result_type operator () (const KeyT & key) const noexcept {
+        return static_cast<result_type>(HASH_MAP_FUNCTION<KeyT>()(key));
     }
 
     // Less operator for MSVC's hash containers.
@@ -782,28 +828,62 @@ struct hash<HashObject<Key, Size, HashSize>> {
     bool operator () (const argument_type * a, const argument_type * b) const {
         return (a < b);
     }
+};
 
-    template <std::size_t nSize, std::size_t nHashSize>
-    result_type operator () (const HashObject<key_type, nSize, nHashSize> & obj) const {
+template <typename Key>
+struct hash<HashObject<Key, 16, 16>> {
+    typedef Key                             key_type;
+    typedef HashObject<Key, 16, 16>         argument_type;
+    typedef std::size_t                     result_type;
+
+    // These two public members are required by msvc.  4 and 8 are defaults.
+    static const std::size_t bucket_size = 4;
+    static const std::size_t min_buckets = 8;
+
+    result_type operator () (const argument_type & obj) const noexcept {
         return static_cast<result_type>(obj.Hash());
     }
 
     // Do the identity hash for pointers.
-    template <std::size_t nSize, std::size_t nHashSize>
-    result_type operator () (const HashObject<key_type, nSize, nHashSize> * obj) const {
+    result_type operator () (const argument_type * obj) const noexcept {
         return reinterpret_cast<result_type>(obj);
     }
 
     // Less operator for MSVC's hash containers.
-    template <std::size_t nSize, std::size_t nHashSize>
-    bool operator () (const HashObject<key_type, nSize, nHashSize> & a,
-                      const HashObject<key_type, nSize, nHashSize> & b) const {
+    bool operator () (const argument_type & a, argument_type & b) const {
         return (a < b);
     }
 
-    template <std::size_t nSize, std::size_t nHashSize>
-    bool operator () (const HashObject<key_type, nSize, nHashSize> * a,
-                      const HashObject<key_type, nSize, nHashSize> * b) const {
+    bool operator () (const argument_type * a, const argument_type * b) const {
+        return (a < b);
+    }
+};
+
+template <typename Key>
+struct hash<HashObject<Key, 256, 64>> {
+    typedef Key                             key_type;
+    typedef HashObject<Key, 256, 64>        argument_type;
+    typedef std::size_t                     result_type;
+
+    // These two public members are required by msvc.  4 and 8 are defaults.
+    static const std::size_t bucket_size = 4;
+    static const std::size_t min_buckets = 8;
+
+    result_type operator () (const argument_type & obj) const noexcept {
+        return static_cast<result_type>(obj.Hash());
+    }
+
+    // Do the identity hash for pointers.
+    result_type operator () (const argument_type * obj) const noexcept {
+        return reinterpret_cast<result_type>(obj);
+    }
+
+    // Less operator for MSVC's hash containers.
+    bool operator () (const argument_type & a, argument_type & b) const {
+        return (a < b);
+    }
+
+    bool operator () (const argument_type * a, const argument_type * b) const {
         return (a < b);
     }
 };
@@ -1219,10 +1299,10 @@ static void test_all_hashmaps(std::size_t obj_size, std::size_t iters) {
 #if USE_STD_HASH_MAP
     if (FLAGS_test_std_hash_map) {
         measure_hashmap<StdHashMap<HashObj, Value,
-                        HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>,
+                        HashFn<typename HashObj::key_type, false, HashObj::cSize, HashObj::cHashSize>,
                         HashEqualTo<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>,
                         StdHashMap<HashObj *, Value,
-                        HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>
+                        HashFn<typename HashObj::key_type, false, HashObj::cSize, HashObj::cHashSize>>
                         >(
             "stdext::hash_map<K, V>", obj_size, iters, has_stress_hash_function);
     }
@@ -1231,10 +1311,10 @@ static void test_all_hashmaps(std::size_t obj_size, std::size_t iters) {
 #if USE_STD_UNORDERED_MAP
     if (FLAGS_test_std_unordered_map) {
         measure_hashmap<std::unordered_map<HashObj, Value,
-                        HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>,
+                        HashFn<typename HashObj::key_type, false, HashObj::cSize, HashObj::cHashSize>,
                         HashEqualTo<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>,
                         std::unordered_map<HashObj *, Value,
-                        HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>
+                        HashFn<typename HashObj::key_type, false, HashObj::cSize, HashObj::cHashSize>>
                         >(
             "std::unordered_map<K, V>", obj_size, iters, has_stress_hash_function);
     }
@@ -1243,10 +1323,10 @@ static void test_all_hashmaps(std::size_t obj_size, std::size_t iters) {
 #if USE_JSTD_FLAT16_HASH_MAP
     if (FLAGS_test_jstd_flat16_hash_map) {
         measure_hashmap<jstd::flat16_hash_map<HashObj, Value,
-                        HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>,
+                        HashFn<typename HashObj::key_type, false, HashObj::cSize, HashObj::cHashSize>,
                         HashEqualTo<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>,
                         jstd::flat16_hash_map<HashObj *, Value,
-                        HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>
+                        HashFn<typename HashObj::key_type, false, HashObj::cSize, HashObj::cHashSize>>
                         >(
             "jstd::flat16_hash_map<K, V>", obj_size, iters, has_stress_hash_function);
     }
@@ -1255,10 +1335,10 @@ static void test_all_hashmaps(std::size_t obj_size, std::size_t iters) {
 #if USE_JSTD_ROBIN16_HASH_MAP
     if (FLAGS_test_jstd_robin16_hash_map) {
         measure_hashmap<jstd::robin16_hash_map<HashObj, Value,
-                        HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>,
+                        HashFn<typename HashObj::key_type, false, HashObj::cSize, HashObj::cHashSize>,
                         HashEqualTo<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>,
                         jstd::robin16_hash_map<HashObj *, Value,
-                        HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>
+                        HashFn<typename HashObj::key_type, false, HashObj::cSize, HashObj::cHashSize>>
                         >(
             "jstd::robin16_hash_map<K, V>", obj_size, iters, has_stress_hash_function);
     }
@@ -1267,10 +1347,10 @@ static void test_all_hashmaps(std::size_t obj_size, std::size_t iters) {
 #if USE_JSTD_ROBIN_HASH_MAP
     if (FLAGS_test_jstd_robin_hash_map) {
         measure_hashmap<jstd::robin_hash_map<HashObj, Value,
-                        HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>,
+                        HashFn<typename HashObj::key_type, false, HashObj::cSize, HashObj::cHashSize>,
                         HashEqualTo<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>,
                         jstd::robin_hash_map<HashObj *, Value,
-                        HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>
+                        HashFn<typename HashObj::key_type, false, HashObj::cSize, HashObj::cHashSize>>
                         >(
             "jstd::robin_hash_map<K, V>", obj_size, iters, has_stress_hash_function);
     }
@@ -1279,10 +1359,10 @@ static void test_all_hashmaps(std::size_t obj_size, std::size_t iters) {
 #if USE_JSTD_ROBIN_HASH_MAP_V4
     if (FLAGS_test_jstd_v4_robin_hash_map) {
         measure_hashmap<jstd::v4::robin_hash_map<HashObj, Value,
-                        HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>,
+                        HashFn<typename HashObj::key_type, false, HashObj::cSize, HashObj::cHashSize>,
                         HashEqualTo<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>,
                         jstd::v4::robin_hash_map<HashObj *, Value,
-                        HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>
+                        HashFn<typename HashObj::key_type, false, HashObj::cSize, HashObj::cHashSize>>
                         >(
             "jstd::v4::robin_hash_map<K, V>", obj_size, iters, has_stress_hash_function);
     }
@@ -1291,10 +1371,10 @@ static void test_all_hashmaps(std::size_t obj_size, std::size_t iters) {
 #if USE_JSTD_ROBIN_HASH_MAP_V3
     if (FLAGS_test_jstd_v3_robin_hash_map) {
         measure_hashmap<jstd::v3::robin_hash_map<HashObj, Value,
-                        HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>,
+                        HashFn<typename HashObj::key_type, false, HashObj::cSize, HashObj::cHashSize>,
                         HashEqualTo<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>,
                         jstd::v3::robin_hash_map<HashObj *, Value,
-                        HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>
+                        HashFn<typename HashObj::key_type, false, HashObj::cSize, HashObj::cHashSize>>
                         >(
             "jstd::v3::robin_hash_map<K, V>", obj_size, iters, has_stress_hash_function);
     }
@@ -1303,10 +1383,10 @@ static void test_all_hashmaps(std::size_t obj_size, std::size_t iters) {
 #if USE_JSTD_ROBIN_HASH_MAP_V2
     if (FLAGS_test_jstd_v2_robin_hash_map) {
         measure_hashmap<jstd::v2::robin_hash_map<HashObj, Value,
-                        HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>,
+                        HashFn<typename HashObj::key_type, false, HashObj::cSize, HashObj::cHashSize>,
                         HashEqualTo<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>,
                         jstd::v2::robin_hash_map<HashObj *, Value,
-                        HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>
+                        HashFn<typename HashObj::key_type, false, HashObj::cSize, HashObj::cHashSize>>
                         >(
             "jstd::v2::robin_hash_map<K, V>", obj_size, iters, has_stress_hash_function);
     }
@@ -1315,10 +1395,10 @@ static void test_all_hashmaps(std::size_t obj_size, std::size_t iters) {
 #if USE_JSTD_ROBIN_HASH_MAP_V1
     if (FLAGS_test_jstd_v1_robin_hash_map) {
         measure_hashmap<jstd::v1::robin_hash_map<HashObj, Value,
-                        HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>,
+                        HashFn<typename HashObj::key_type, false, HashObj::cSize, HashObj::cHashSize>,
                         HashEqualTo<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>,
                         jstd::v1::robin_hash_map<HashObj *, Value,
-                        HashFn<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>
+                        HashFn<typename HashObj::key_type, false, HashObj::cSize, HashObj::cHashSize>>
                         >(
             "jstd::v1::robin_hash_map<K, V>", obj_size, iters, has_stress_hash_function);
     }
