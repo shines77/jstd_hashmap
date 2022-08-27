@@ -80,28 +80,28 @@
 #include <vector>
 #include <algorithm>
 
-#define USE_JSTD_HASH_TABLE         0
-#define USE_JSTD_DICTIONARY         0
-#define USE_STD_HASH_MAP            0
+#define USE_JSTD_HASH_TABLE             0
+#define USE_JSTD_DICTIONARY             0
+#define USE_STD_HASH_MAP                0
 
 #ifndef _DEBUG
-#define USE_STD_UNORDERED_MAP       1
-#define USE_JSTD_FLAT16_HASH_MAP    0
-#define USE_JSTD_ROBIN16_HASH_MAP   0
-#define USE_JSTD_ROBIN_HASH_MAP     1
-#define USE_JSTD_ROBIN_HASH_MAP_V1  0
-#define USE_JSTD_ROBIN_HASH_MAP_V2  1
-#define USE_JSTD_ROBIN_HASH_MAP_V3  1
-#define USE_JSTD_ROBIN_HASH_MAP_V4  1
+#define USE_STD_UNORDERED_MAP           1
+#define USE_JSTD_FLAT16_HASH_MAP        0
+#define USE_JSTD_ROBIN16_HASH_MAP       0
+#define USE_JSTD_ROBIN_HASH_MAP         1
+#define USE_JSTD_ROBIN_HASH_MAP_V1      0
+#define USE_JSTD_ROBIN_HASH_MAP_V2      1
+#define USE_JSTD_ROBIN_HASH_MAP_V3      1
+#define USE_JSTD_ROBIN_HASH_MAP_V4      1
 #else
-#define USE_STD_UNORDERED_MAP       0
-#define USE_JSTD_FLAT16_HASH_MAP    0
-#define USE_JSTD_ROBIN16_HASH_MAP   0
-#define USE_JSTD_ROBIN_HASH_MAP     1
-#define USE_JSTD_ROBIN_HASH_MAP_V1  0
-#define USE_JSTD_ROBIN_HASH_MAP_V2  0
-#define USE_JSTD_ROBIN_HASH_MAP_V3  0
-#define USE_JSTD_ROBIN_HASH_MAP_V4  1
+#define USE_STD_UNORDERED_MAP           0
+#define USE_JSTD_FLAT16_HASH_MAP        0
+#define USE_JSTD_ROBIN16_HASH_MAP       0
+#define USE_JSTD_ROBIN_HASH_MAP         1
+#define USE_JSTD_ROBIN_HASH_MAP_V1      0
+#define USE_JSTD_ROBIN_HASH_MAP_V2      0
+#define USE_JSTD_ROBIN_HASH_MAP_V3      0
+#define USE_JSTD_ROBIN_HASH_MAP_V4      1
 #endif // _DEBUG
 
 #ifdef __SSE4_2__
@@ -136,6 +136,7 @@
 #endif
 #endif // USE_STD_HASH_MAP
 
+#include <string>
 #if USE_STD_UNORDERED_MAP
 #include <unordered_map>
 #endif
@@ -219,21 +220,6 @@
 #ifndef UINT64_Low
 #define UINT64_Low(u64)         ((uint32_t)((uint64_t)u64 & 0x00000000FFFFFFFFull))
 #endif
-
-#if defined(_MSC_VER)
-static const bool FLAGS_test_std_hash_map = false;
-#else
-static const bool FLAGS_test_std_hash_map = false;
-#endif
-static const bool FLAGS_test_std_unordered_map = true;
-static const bool FLAGS_test_jstd_flat16_hash_map = true;
-static const bool FLAGS_test_jstd_robin16_hash_map = true;
-static const bool FLAGS_test_jstd_robin_hash_map = true;
-static const bool FLAGS_test_jstd_v1_robin_hash_map = true;
-static const bool FLAGS_test_jstd_v2_robin_hash_map = true;
-static const bool FLAGS_test_jstd_v3_robin_hash_map = true;
-static const bool FLAGS_test_jstd_v4_robin_hash_map = true;
-static const bool FLAGS_test_map = true;
 
 static constexpr bool FLAGS_test_4_bytes = true;
 static constexpr bool FLAGS_test_8_bytes = true;
@@ -647,7 +633,7 @@ template <typename Key, bool isSpecial,
 struct HashFn {
     typedef Key                             key_type;
     typedef HashObject<Key, Size, HashSize> argument_type;
-    typedef size_t                          result_type;
+    typedef std::size_t                     result_type;
 
     using is_transparent = void;
 
@@ -656,7 +642,7 @@ struct HashFn {
     static const std::size_t min_buckets = 8;
 
     template <typename ArgumentT, typename std::enable_if<
-                                  jstd::is_same_ex<ArgumentT, argument_type>::value, int>::type * = nullptr>
+                                  jstd::is_same_ex<ArgumentT, argument_type>::value, int>::type = 0>
     result_type operator () (const ArgumentT & obj) const noexcept {
         if (isSpecial)
             return static_cast<result_type>(test::MumHash<key_type>()(obj.Hash()));
@@ -690,7 +676,7 @@ template <typename Key, bool isSpecial>
 struct HashFn<Key, isSpecial, 16, 16> {
     typedef Key                             key_type;
     typedef HashObject<Key, 16, 16>         argument_type;
-    typedef size_t                          result_type;
+    typedef std::size_t                     result_type;
 
     // These two public members are required by msvc.  4 and 8 are defaults.
     static const std::size_t bucket_size = 4;
@@ -722,7 +708,7 @@ template <typename Key, bool is_special>
 struct HashFn<Key, is_special, 256, 64> {
     typedef Key                             key_type;
     typedef HashObject<Key, 256, 64>        argument_type;
-    typedef size_t                          result_type;
+    typedef std::size_t                     result_type;
 
     // These two public members are required by msvc.  4 and 8 are defaults.
     static const std::size_t bucket_size = 4;
@@ -803,7 +789,7 @@ struct hash<HashObject<Key, Size, HashSize>> {
     static const std::size_t min_buckets = 8;
 
     template <typename ArgumentT, typename std::enable_if<
-                                  jstd::is_same_ex<ArgumentT, argument_type>::value, int>::type * = nullptr>
+                                  jstd::is_same_ex<ArgumentT, argument_type>::value, int>::type = 0>
     result_type operator () (const ArgumentT & obj) const noexcept {
         return static_cast<result_type>(obj.Hash());
     }
@@ -1297,7 +1283,7 @@ static void test_all_hashmaps(std::size_t obj_size, std::size_t iters) {
     const bool has_stress_hash_function = (obj_size <= 8);
 
 #if USE_STD_HASH_MAP
-    if (FLAGS_test_std_hash_map) {
+    if (1) {
         measure_hashmap<StdHashMap<HashObj, Value,
                         HashFn<typename HashObj::key_type, false, HashObj::cSize, HashObj::cHashSize>,
                         HashEqualTo<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>,
@@ -1309,7 +1295,7 @@ static void test_all_hashmaps(std::size_t obj_size, std::size_t iters) {
 #endif
 
 #if USE_STD_UNORDERED_MAP
-    if (FLAGS_test_std_unordered_map) {
+    if (1) {
         measure_hashmap<std::unordered_map<HashObj, Value,
                         HashFn<typename HashObj::key_type, false, HashObj::cSize, HashObj::cHashSize>,
                         HashEqualTo<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>,
@@ -1321,7 +1307,7 @@ static void test_all_hashmaps(std::size_t obj_size, std::size_t iters) {
 #endif
 
 #if USE_JSTD_FLAT16_HASH_MAP
-    if (FLAGS_test_jstd_flat16_hash_map) {
+    if (1) {
         measure_hashmap<jstd::flat16_hash_map<HashObj, Value,
                         HashFn<typename HashObj::key_type, false, HashObj::cSize, HashObj::cHashSize>,
                         HashEqualTo<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>,
@@ -1333,7 +1319,7 @@ static void test_all_hashmaps(std::size_t obj_size, std::size_t iters) {
 #endif
 
 #if USE_JSTD_ROBIN16_HASH_MAP
-    if (FLAGS_test_jstd_robin16_hash_map) {
+    if (1) {
         measure_hashmap<jstd::robin16_hash_map<HashObj, Value,
                         HashFn<typename HashObj::key_type, false, HashObj::cSize, HashObj::cHashSize>,
                         HashEqualTo<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>,
@@ -1345,7 +1331,7 @@ static void test_all_hashmaps(std::size_t obj_size, std::size_t iters) {
 #endif
 
 #if USE_JSTD_ROBIN_HASH_MAP
-    if (FLAGS_test_jstd_robin_hash_map) {
+    if (1) {
         measure_hashmap<jstd::robin_hash_map<HashObj, Value,
                         HashFn<typename HashObj::key_type, false, HashObj::cSize, HashObj::cHashSize>,
                         HashEqualTo<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>,
@@ -1357,7 +1343,7 @@ static void test_all_hashmaps(std::size_t obj_size, std::size_t iters) {
 #endif
 
 #if USE_JSTD_ROBIN_HASH_MAP_V4
-    if (FLAGS_test_jstd_v4_robin_hash_map) {
+    if (1) {
         measure_hashmap<jstd::v4::robin_hash_map<HashObj, Value,
                         HashFn<typename HashObj::key_type, false, HashObj::cSize, HashObj::cHashSize>,
                         HashEqualTo<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>,
@@ -1369,7 +1355,7 @@ static void test_all_hashmaps(std::size_t obj_size, std::size_t iters) {
 #endif
 
 #if USE_JSTD_ROBIN_HASH_MAP_V3
-    if (FLAGS_test_jstd_v3_robin_hash_map) {
+    if (1) {
         measure_hashmap<jstd::v3::robin_hash_map<HashObj, Value,
                         HashFn<typename HashObj::key_type, false, HashObj::cSize, HashObj::cHashSize>,
                         HashEqualTo<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>,
@@ -1381,7 +1367,7 @@ static void test_all_hashmaps(std::size_t obj_size, std::size_t iters) {
 #endif
 
 #if USE_JSTD_ROBIN_HASH_MAP_V2
-    if (FLAGS_test_jstd_v2_robin_hash_map) {
+    if (1) {
         measure_hashmap<jstd::v2::robin_hash_map<HashObj, Value,
                         HashFn<typename HashObj::key_type, false, HashObj::cSize, HashObj::cHashSize>,
                         HashEqualTo<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>,
@@ -1393,7 +1379,7 @@ static void test_all_hashmaps(std::size_t obj_size, std::size_t iters) {
 #endif
 
 #if USE_JSTD_ROBIN_HASH_MAP_V1
-    if (FLAGS_test_jstd_v1_robin_hash_map) {
+    if (1) {
         measure_hashmap<jstd::v1::robin_hash_map<HashObj, Value,
                         HashFn<typename HashObj::key_type, false, HashObj::cSize, HashObj::cHashSize>,
                         HashEqualTo<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>,

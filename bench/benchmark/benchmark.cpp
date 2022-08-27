@@ -75,20 +75,20 @@
 #include <utility>
 #include <vector>
 
-#define USE_JSTD_HASH_TABLE         0
-#define USE_JSTD_DICTIONARY         0
+#define USE_JSTD_HASH_TABLE             0
+#define USE_JSTD_DICTIONARY             0
 
-#define USE_JSTD_FLAT16_HASH_MAP    1
-#define USE_JSTD_ROBIN16_HASH_MAP   0
-#define USE_JSTD_ROBIN_HASH_MAP     1
-#define USE_JSTD_ROBIN_HASH_MAP_V1  0
-#define USE_JSTD_ROBIN_HASH_MAP_V2  1
-#define USE_JSTD_ROBIN_HASH_MAP_V3  1
-#define USE_JSTD_ROBIN_HASH_MAP_V4  1
-#define USE_SKA_FLAT_HASH_MAP       0
-#define USE_SKA_BYTELL_HASH_MAP     0
-#define USE_ABSL_FLAT_HASH_MAP      0
-#define USE_ABSL_NODE_HASH_MAP      0
+#define USE_JSTD_FLAT16_HASH_MAP        1
+#define USE_JSTD_ROBIN16_HASH_MAP       0
+#define USE_JSTD_ROBIN_HASH_MAP         1
+#define USE_JSTD_ROBIN_HASH_MAP_V1      0
+#define USE_JSTD_ROBIN_HASH_MAP_V2      1
+#define USE_JSTD_ROBIN_HASH_MAP_V3      1
+#define USE_JSTD_ROBIN_HASH_MAP_V4      1
+#define USE_SKA_FLAT_HASH_MAP           0
+#define USE_SKA_BYTELL_HASH_MAP         0
+#define USE_ABSL_FLAT_HASH_MAP          0
+#define USE_ABSL_NODE_HASH_MAP          0
 
 #ifdef __SSE4_2__
 
