@@ -235,9 +235,7 @@ public:
     using key_arg = typename KeyArgImpl::template type<K, key_type>;
 #endif
 
-    static constexpr bool kIsCompatibleLayout =
-            std::is_same<value_type, mutable_value_type>::value ||
-            is_compatible_pair_layout<value_type, mutable_value_type>::value;
+    static constexpr bool kIsCompatibleLayout = slot_type::kIsCompatibleLayout;
 
     typedef typename std::conditional<kIsCompatibleLayout, mutable_value_type, value_type>::type
                                                     actual_value_type;
