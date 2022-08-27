@@ -110,7 +110,7 @@ struct robin_hash_map_slot_policy {
     using slot_type   = typename slot_policy::slot_type;
     using key_type    = typename slot_policy::key_type;
     using mapped_type = typename slot_policy::mapped_type;
-    using init_type   = std::pair</* non const */ key_type, mapped_type>;
+    using init_type   = typename slot_policy::init_type;
 
     template <typename Allocator, typename ... Args>
     static void construct(Allocator * alloc, slot_type * slot, Args &&... args) {
@@ -184,6 +184,16 @@ public:
         using mapped_type = typename std::remove_const<V>::type;
         using value_type = std::pair<const key_type, mapped_type>;
         using mutable_value_type = std::pair<key_type, mapped_type>;
+        using init_type = std::pair<key_type, mapped_type>;
+
+        //
+        // If std::pair<const K, V> and std::pair<K, V> are layout-compatible,
+        // we can accept one or the other via slot_type. We are also free to
+        // access the key via slot_type::key in this case.
+        //
+        static constexpr bool kIsCompatibleLayout =
+                std::is_same<value_type, mutable_value_type>::value ||
+                jstd::is_compatible_pair_layout<value_type, mutable_value_type>::value;
 
         value_type          value;
         mutable_value_type  mutable_value;
@@ -208,6 +218,11 @@ public:
     typedef typename slot_type::key_type            key_type;
     typedef typename slot_type::mapped_type         mapped_type;
 
+    typedef typename slot_type::value_type          value_type;
+    typedef typename slot_type::mutable_value_type  mutable_value_type;
+    typedef typename slot_type::init_type           init_type;
+    
+
     //
     // Tip of the Week #144: Heterogeneous Lookup in Associative Containers
     // See: https://abseil.io/tips/144 (Transparent Functors)
@@ -219,9 +234,6 @@ public:
     template <typename K>
     using key_arg = typename KeyArgImpl::template type<K, key_type>;
 #endif
-
-    typedef typename slot_type::value_type          value_type;
-    typedef typename slot_type::mutable_value_type  mutable_value_type;
 
     static constexpr bool kIsCompatibleLayout =
             std::is_same<value_type, mutable_value_type>::value ||
@@ -2871,10 +2883,19 @@ public:
         return this->emplace_impl<false>(std::move(value));
     }
 
+    std::pair<iterator, bool> insert(const init_type & value) {
+        return this->emplace_impl<false>(value);
+    }
+
+    std::pair<iterator, bool> insert(init_type && value) {
+        return this->emplace_impl<false>(std::move(value));
+    }
+
     template <typename P, typename std::enable_if<
               (!jstd::is_same_ex<P, value_type>::value) &&
-              (!jstd::is_same_ex<P, mutable_value_type>::value) &&
-              std::is_convertible<P &&, value_type>::value>::type * = nullptr>
+              (!jstd::is_same_ex<P, init_type>::value) &&
+              (std::is_constructible<value_type, P &&>::value ||
+               std::is_convertible<init_type, P &&>::value)>::type * = nullptr>
     std::pair<iterator, bool> insert(P && value) {
         return this->emplace_impl<false>(std::forward<P>(value));
     }
@@ -2887,10 +2908,19 @@ public:
         return this->emplace_impl<false>(std::move(value)).first;
     }
 
+    iterator insert(const_iterator hint, const init_type & value) {
+        return this->emplace_impl<false>(value).first;
+    }
+
+    iterator insert(const_iterator hint, init_type && value) {
+        return this->emplace_impl<false>(std::move(value)).first;
+    }
+
     template <typename P, typename std::enable_if<
               (!jstd::is_same_ex<P, value_type>::value) &&
-              (!jstd::is_same_ex<P, mutable_value_type>::value) &&
-              std::is_constructible<value_type, P &&>::value>::type * = nullptr>
+              (!jstd::is_same_ex<P, init_type>::value) &&
+              (std::is_constructible<value_type, P &&>::value ||
+               std::is_convertible<init_type, P &&>::value)>::type * = nullptr>
     std::pair<iterator, bool> insert(const_iterator hint, P && value) {
         return this->emplace_impl<false>(std::forward<P>(value));
     }
@@ -2903,6 +2933,10 @@ public:
     }
 
     void insert(std::initializer_list<value_type> ilist) {
+        this->insert(ilist.begin(), ilist.end());
+    }
+
+    void insert(std::initializer_list<init_type> ilist) {
         this->insert(ilist.begin(), ilist.end());
     }
 
@@ -2934,10 +2968,19 @@ public:
         return this->emplace_impl<true>(std::move(value));
     }
 
+    std::pair<iterator, bool> insert_always(const init_type & value) {
+        return this->emplace_impl<true>(value);
+    }
+
+    std::pair<iterator, bool> insert_always(init_type && value) {
+        return this->emplace_impl<true>(std::move(value));
+    }
+
     template <typename P, typename std::enable_if<
               (!jstd::is_same_ex<P, value_type>::value) &&
-              (!jstd::is_same_ex<P, mutable_value_type>::value) &&
-              std::is_constructible<value_type, P &&>::value>::type * = nullptr>
+              (!jstd::is_same_ex<P, init_type>::value) &&
+              (std::is_constructible<value_type, P &&>::value ||
+               std::is_constructible<init_type, P &&>::value)>::type * = nullptr>
     std::pair<iterator, bool> insert_always(P && value) {
         return this->emplace_impl<true>(std::forward<P>(value));
     }

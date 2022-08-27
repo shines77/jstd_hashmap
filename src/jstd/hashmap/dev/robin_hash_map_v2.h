@@ -109,7 +109,7 @@ struct robin_hash_map_slot_policy {
     using slot_type   = typename slot_policy::slot_type;
     using key_type    = typename slot_policy::key_type;
     using mapped_type = typename slot_policy::mapped_type;
-    using init_type   = std::pair</* non const */ key_type, mapped_type>;
+    using init_type   = typename slot_policy::init_type;
 
     template <typename Allocator, typename ... Args>
     static void construct(Allocator * alloc, slot_type * slot, Args &&... args) {
@@ -184,6 +184,17 @@ public:
         using value_type = std::pair<const key_type, mapped_type>;
         using mutable_value_type = std::pair<key_type, mapped_type>;
 
+        using init_type = std::pair<key_type, mapped_type>;
+
+        //
+        // If std::pair<const K, V> and std::pair<K, V> are layout-compatible,
+        // we can accept one or the other via slot_type. We are also free to
+        // access the key via slot_type::key in this case.
+        //
+        static constexpr bool kIsCompatibleLayout =
+                std::is_same<value_type, mutable_value_type>::value ||
+                jstd::is_compatible_pair_layout<value_type, mutable_value_type>::value;
+
         value_type          value;
         mutable_value_type  mutable_value;
         const key_type      key;
@@ -205,6 +216,7 @@ public:
 
     typedef typename slot_type::value_type          value_type;
     typedef typename slot_type::mutable_value_type  mutable_value_type;
+    typedef typename slot_type::init_type           init_type;
 
     static constexpr bool kIsCompatibleLayout =
             std::is_same<value_type, mutable_value_type>::value ||

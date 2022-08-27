@@ -46,11 +46,12 @@ public:
 template <typename Key, typename Value, typename SlotType>
 class map_slot_policy {
 public:
-    using key_type = typename std::remove_const<Key>::type;
-    using mapped_type = typename std::remove_const<Value>::type;
     using slot_type = SlotType;
+    using key_type = typename slot_type::key_type;
+    using mapped_type = typename slot_type::mapped_type;    
     using value_type = typename slot_type::value_type;
     using mutable_value_type = typename slot_type::mutable_value_type;
+    using init_type = typename slot_type::init_type;
 
     using this_type = map_slot_policy<Key, Value, SlotType>;
 
@@ -59,9 +60,7 @@ public:
     // we can accept one or the other via slot_type. We are also free to
     // access the key via slot_type::key in this case.
     //
-    static constexpr bool kIsCompatibleLayout =
-            std::is_same<value_type, mutable_value_type>::value ||
-            is_compatible_pair_layout<value_type, mutable_value_type>::value;
+    static constexpr bool kIsCompatibleLayout = slot_type::kIsCompatibleLayout;
 
 public:
     template <typename Allocator, typename ... Args>
