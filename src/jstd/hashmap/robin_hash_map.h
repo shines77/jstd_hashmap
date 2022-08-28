@@ -257,6 +257,7 @@ public:
     static constexpr size_type npos = size_type(-1);
 
     static constexpr size_type kCacheLineSize = 64;
+    static constexpr size_type kActualSlotAlignment = alignof(slot_type);
     static constexpr size_type kSlotAlignment = compile_time::is_pow2<alignof(slot_type)>::value ?
                                                 cmax(alignof(slot_type), kCacheLineSize) :
                                                 alignof(slot_type);
@@ -2184,6 +2185,7 @@ public:
     typedef group_mask  group_type;
 
     static constexpr size_type kGroupWidth = group_mask::kGroupWidth;
+    static constexpr size_type kGroupSize = kGroupWidth * sizeof(ctrl_type);
 
     template <typename ValueType>
     class basic_iterator {
@@ -3539,7 +3541,7 @@ private:
         static_assert(((SlotAlignment & (SlotAlignment - 1)) == 0),
                       "jstd::robin_hash_map::SlotsOffset<N>(): SlotAlignment must be power of 2.");
         const size_type num_ctrl_bytes = ctrl_capacity * sizeof(ctrl_type);
-        const ctrl_type * last_ctrls = ctrls + num_ctrl_bytes;
+        const ctrl_type * last_ctrls = ctrls + ctrl_capacity;
         size_type last_ctrl = reinterpret_cast<size_type>(last_ctrls);
         size_type slots_first = (last_ctrl + SlotAlignment - 1) & (~(SlotAlignment - 1));
         size_type slots_padding = static_cast<size_type>(slots_first - last_ctrl);
@@ -3553,7 +3555,7 @@ private:
     inline size_type TotalAllocSize(size_type ctrl_capacity, size_type slot_capacity) {
         const size_type num_ctrl_bytes = ctrl_capacity * sizeof(ctrl_type);
         const size_type num_slot_bytes = slot_capacity * sizeof(slot_type);
-        const size_type total_bytes = num_ctrl_bytes + SlotAlignment * 2 + num_slot_bytes;
+        const size_type total_bytes = num_ctrl_bytes + SlotAlignment + num_slot_bytes;
         return (total_bytes + sizeof(ctrl_type) - 1) / sizeof(ctrl_type);
     }
 
