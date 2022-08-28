@@ -124,9 +124,9 @@ public:
     static constexpr size_type kGroupMask   = kGroupWidth - 1;
     static constexpr size_type kGroupShift  = kControlShift + kGroupBits;
 
-    // kMinimumCapacity must be >= 2
-    static constexpr size_type kMinimumCapacity = 4;
-    // kDefaultCapacity must be >= kMinimumCapacity
+    // kMinCapacity must be >= 2
+    static constexpr size_type kMinCapacity = 4;
+    // kDefaultCapacity must be >= kMinCapacity
     static constexpr size_type kDefaultCapacity = 4;
 
     static constexpr float kMinLoadFactor = 0.2f;
@@ -1452,9 +1452,9 @@ public:
 private:
     JSTD_FORCED_INLINE
     size_type calc_capacity(size_type init_capacity) const noexcept {
-        size_type new_capacity = (std::max)(init_capacity, kMinimumCapacity);
+        size_type new_capacity = (std::max)(init_capacity, kMinCapacity);
         if (!pow2::is_pow2(new_capacity)) {
-            new_capacity = pow2::round_up<size_type, kMinimumCapacity>(new_capacity);
+            new_capacity = pow2::round_up<size_type, kMinCapacity>(new_capacity);
         }
         return new_capacity;
     }
@@ -1720,7 +1720,7 @@ private:
         else
             new_capacity = init_capacity;
         assert(new_capacity > 0);
-        assert(new_capacity >= kMinimumCapacity);
+        assert(new_capacity >= kMinCapacity);
 
         size_type group_count = (new_capacity + (kGroupWidth - 1)) / kGroupWidth;
         assert(group_count > 0);
@@ -1757,7 +1757,7 @@ private:
     void rehash_impl(size_type new_capacity) {
         new_capacity = this->calc_capacity(new_capacity);
         assert(new_capacity > 0);
-        assert(new_capacity >= kMinimumCapacity);
+        assert(new_capacity >= kMinCapacity);
         if (AlwaysResize ||
             (!AllowShrink && (new_capacity > this->slot_capacity())) ||
             (AllowShrink && (new_capacity != this->slot_capacity()))) {

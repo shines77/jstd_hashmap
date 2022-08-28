@@ -41,7 +41,6 @@
     <ClInclude Include="..\..\..\src\jstd\hasher\sha1.h" />
     <ClInclude Include="..\..\..\src\jstd\hashmap\dev\flat16_hash_map_v1.h" />
     <ClInclude Include="..\..\..\src\jstd\hashmap\dev\flat16_hash_map_v2.h" />
-    <ClInclude Include="..\..\..\src\jstd\hashmap\dev\robin_hash_map_v0.h" />
     <ClInclude Include="..\..\..\src\jstd\hashmap\dev\robin_hash_map_v1.h" />
     <ClInclude Include="..\..\..\src\jstd\hashmap\dev\robin_hash_map_v2.h" />
     <ClInclude Include="..\..\..\src\jstd\hashmap\dev\robin_hash_map_v3.h" />

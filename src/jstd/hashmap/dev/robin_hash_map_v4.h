@@ -178,6 +178,23 @@ template < typename Key, typename Value,
                                                          typename std::remove_const<Value>::type>> >
 class robin_hash_map {
 public:
+    static constexpr bool kUseIndexSalt = false;
+    static constexpr bool kEnableExchange = true;
+
+    typedef Hash                                    hasher;
+    typedef KeyEqual                                key_equal;
+    typedef Allocator                               allocator_type;
+    typedef typename Hash::result_type              hash_result_t;
+    typedef typename hash_policy_selector<Hash>::type
+                                                    hash_policy_t;
+    typedef LayoutPolicy                            layout_policy_t;
+
+    typedef std::size_t                             size_type;
+    typedef std::intptr_t                           ssize_type;
+    typedef std::size_t                             hash_code_t;
+    typedef robin_hash_map<Key, Value, Hash, KeyEqual, LayoutPolicy, Allocator>
+                                                    this_type;
+
     template <typename K, typename V>
     union map_slot_type {
     public:
@@ -195,6 +212,9 @@ public:
         static constexpr bool kIsCompatibleLayout =
                 std::is_same<value_type, mutable_value_type>::value ||
                 jstd::is_compatible_pair_layout<value_type, mutable_value_type>::value;
+
+        using actual_value_type = typename std::conditional<kIsCompatibleLayout,
+                                           mutable_value_type, value_type>::type;
 
         value_type          value;
         mutable_value_type  mutable_value;
@@ -217,30 +237,11 @@ public:
 
     typedef typename slot_type::value_type          value_type;
     typedef typename slot_type::mutable_value_type  mutable_value_type;
+    typedef typename slot_type::actual_value_type   actual_value_type;
     typedef typename slot_type::init_type           init_type;
 
     static constexpr bool kIsCompatibleLayout = slot_type::kIsCompatibleLayout;
 
-    typedef typename std::conditional<kIsCompatibleLayout, mutable_value_type, value_type>::type
-                                                    actual_value_type;
-
-    typedef Hash                                    hasher;
-    typedef KeyEqual                                key_equal;
-    typedef Allocator                               allocator_type;
-    typedef typename Hash::result_type              hash_result_t;
-    typedef typename hash_policy_selector<Hash>::type
-                                                    hash_policy_t;
-    typedef LayoutPolicy                            layout_policy_t;
-
-    typedef std::size_t                             size_type;
-    typedef std::intptr_t                           ssize_type;
-    typedef std::size_t                             hash_code_t;
-    typedef robin_hash_map<Key, Value, Hash, KeyEqual, LayoutPolicy, Allocator>
-                                                    this_type;
-
-    static constexpr bool kUseIndexSalt = false;
-
-    static constexpr bool kEnableExchange = true;
     static constexpr bool kIsSmallValueType = (sizeof(value_type) <= sizeof(std::size_t) * 2);
 
     static constexpr size_type npos = size_type(-1);
@@ -249,8 +250,8 @@ public:
     static constexpr size_type kCtrlShift    = 8;
 
     static constexpr size_type kDefaultCapacity = 0;
-    // kMinimumCapacity must be >= 2
-    static constexpr size_type kMinimumCapacity = 4;
+    // kMinCapacity must be >= 2
+    static constexpr size_type kMinCapacity = 4;
 
     static constexpr size_type kMinLookups = 4;
 
@@ -2717,9 +2718,9 @@ private:
 
     JSTD_FORCED_INLINE
     size_type calc_capacity(size_type init_capacity) const noexcept {
-        size_type new_capacity = (std::max)(init_capacity, kMinimumCapacity);
+        size_type new_capacity = (std::max)(init_capacity, kMinCapacity);
         if (!pow2::is_pow2(new_capacity)) {
-            new_capacity = pow2::round_up<size_type, kMinimumCapacity>(new_capacity);
+            new_capacity = pow2::round_up<size_type, kMinCapacity>(new_capacity);
         }
         return new_capacity;
     }
@@ -3144,7 +3145,7 @@ private:
         if (initialize) {
             new_capacity = this->calc_capacity(init_capacity);
             assert(new_capacity > 0);
-            assert(new_capacity >= kMinimumCapacity);
+            assert(new_capacity >= kMinCapacity);
         } else {
             new_capacity = init_capacity;
         }
@@ -3195,7 +3196,7 @@ private:
     void rehash_impl(size_type new_capacity) {
         new_capacity = this->calc_capacity(new_capacity);
         assert(new_capacity > 0);
-        assert(new_capacity >= kMinimumCapacity);
+        assert(new_capacity >= kMinCapacity);
         if (AlwaysResize ||
             (!AllowShrink && (new_capacity > this->slot_capacity())) ||
             (AllowShrink && (new_capacity != this->slot_capacity()))) {

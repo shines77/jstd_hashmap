@@ -111,12 +111,12 @@ public:
 
     static constexpr size_type npos = size_type(-1);
 
-    // kMinimumCapacity must be >= 2
-    static constexpr size_type kMinimumCapacity = 4;
+    // kMinCapacity must be >= 2
+    static constexpr size_type kMinCapacity = 4;
     // Maximum capacity is 1 << (sizeof(std::size_t) - 1).
     static constexpr size_type kMaximumCapacity = (std::numeric_limits<size_type>::max)() / 2 + 1;
 
-    // kDefaultCapacity must be >= kMinimumCapacity
+    // kDefaultCapacity must be >= kMinCapacity
     static constexpr size_type kDefaultCapacity = 4;
 
     static constexpr float kMinLoadFactor = 0.2f;
@@ -1465,9 +1465,9 @@ public:
 private:
     JSTD_FORCED_INLINE
     size_type calc_capacity(size_type init_capacity) const noexcept {
-        size_type new_capacity = (std::max)(init_capacity, kMinimumCapacity);
+        size_type new_capacity = (std::max)(init_capacity, kMinCapacity);
         if (!pow2::is_pow2(new_capacity)) {
-            new_capacity = pow2::round_up<size_type, kMinimumCapacity>(new_capacity);
+            new_capacity = pow2::round_up<size_type, kMinCapacity>(new_capacity);
         }
         return new_capacity;
     }
@@ -1656,14 +1656,14 @@ private:
 
     void assert_bucket_capacity(size_type bucket_capacity) {
         assert(pow2::is_pow2(bucket_capacity));
-        assert(bucket_capacity >= this->min_bucket_count(kMinimumCapacity));
+        assert(bucket_capacity >= this->min_bucket_count(kMinCapacity));
         assert(bucket_capacity >= this->min_bucket_count());
         (void)bucket_capacity;
     }
 
     void assert_entry_capacity(size_type entry_capacity) {
         assert(pow2::is_pow2(entry_capacity));
-        assert(entry_capacity >= kMinimumCapacity);
+        assert(entry_capacity >= kMinCapacity);
         assert(entry_capacity >= this->entry_size());
         (void)entry_capacity;
     }
@@ -1748,7 +1748,7 @@ private:
         else
             new_capacity = init_capacity;
         assert(new_capacity > 0);
-        assert(new_capacity >= kMinimumCapacity);
+        assert(new_capacity >= kMinCapacity);
 
         size_type cluster_count = (new_capacity + (kClusterEntries - 1)) / kClusterEntries;
         assert(cluster_count > 0);
@@ -1773,7 +1773,7 @@ private:
     void rehash_impl(size_type new_capacity) {
         new_capacity = this->calc_capacity(new_capacity);
         assert(new_capacity > 0);
-        assert(new_capacity >= kMinimumCapacity);
+        assert(new_capacity >= kMinCapacity);
         if (AlwaysResize ||
             (!AllowShrink && (new_capacity > this->entry_capacity())) ||
             (AllowShrink && (new_capacity != this->entry_capacity()))) {

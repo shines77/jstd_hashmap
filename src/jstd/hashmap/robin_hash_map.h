@@ -101,6 +101,8 @@
 #define ROBIN_USE_HASH_POLICY       0
 #define ROBIN_USE_SWAP_TRAITS       1
 
+#define ROBIN_REHASH_READ_PREFETCH  0
+
 namespace jstd {
 
 template <typename Key, typename Value, typename SlotType>
@@ -177,6 +179,23 @@ template < typename Key, typename Value,
                                                          typename std::remove_const<Value>::type>> >
 class robin_hash_map {
 public:
+    static constexpr bool kUseIndexSalt = false;
+    static constexpr bool kEnableExchange = true;
+
+    typedef Hash                                    hasher;
+    typedef KeyEqual                                key_equal;
+    typedef Allocator                               allocator_type;
+    typedef typename Hash::result_type              hash_result_t;
+    typedef typename hash_policy_selector<Hash>::type
+                                                    hash_policy_t;
+    typedef LayoutPolicy                            layout_policy_t;
+
+    typedef std::size_t                             size_type;
+    typedef std::ptrdiff_t                          ssize_type;
+    typedef std::size_t                             hash_code_t;
+    typedef robin_hash_map<Key, Value, Hash, KeyEqual, LayoutPolicy, Allocator>
+                                                    this_type;
+
     template <typename K, typename V>
     union map_slot_type {
     public:
@@ -195,6 +214,9 @@ public:
                 std::is_same<value_type, mutable_value_type>::value ||
                 jstd::is_compatible_pair_layout<value_type, mutable_value_type>::value;
 
+        using actual_value_type = typename std::conditional<kIsCompatibleLayout,
+                                           mutable_value_type, value_type>::type;
+
         value_type          value;
         mutable_value_type  mutable_value;
         const key_type      key;
@@ -204,74 +226,52 @@ public:
         ~map_slot_type() = delete;
     };
 
-    static constexpr bool kIsTransparent = (is_transparent<Hash>::value && is_transparent<KeyEqual>::value);
-
-    using KeyArgImpl = KeyArgSelector<kIsTransparent>;
-
     typedef map_slot_type<Key, Value>               slot_type;
     typedef map_slot_type<Key, Value>               node_type;
-
-    typedef robin_hash_map_slot_policy<Key, Value, slot_type>
-                                                    slot_policy_t;
-    typedef slot_policy_traits<slot_policy_t>       SlotPolicyTraits;
 
     typedef typename slot_type::key_type            key_type;
     typedef typename slot_type::mapped_type         mapped_type;
 
     typedef typename slot_type::value_type          value_type;
     typedef typename slot_type::mutable_value_type  mutable_value_type;
+    typedef typename slot_type::actual_value_type   actual_value_type;
     typedef typename slot_type::init_type           init_type;
-    
+
+    static constexpr bool kIsCompatibleLayout = slot_type::kIsCompatibleLayout;
+
+    typedef robin_hash_map_slot_policy<Key, Value, slot_type>
+                                                    slot_policy_t;
+    typedef slot_policy_traits<slot_policy_t>       SlotPolicyTraits;
 
     //
     // Tip of the Week #144: Heterogeneous Lookup in Associative Containers
     // See: https://abseil.io/tips/144 (Transparent Functors)
     //
-#if 1
+    static constexpr bool kIsTransparent = (is_transparent<Hash>::value && is_transparent<KeyEqual>::value);
+
     template <typename K>
     using key_arg = typename key_arg_selector<K, key_type, kIsTransparent>::type;
-#else
-    template <typename K>
-    using key_arg = typename KeyArgImpl::template type<K, key_type>;
-#endif
 
-    static constexpr bool kIsCompatibleLayout = slot_type::kIsCompatibleLayout;
-
-    typedef typename std::conditional<kIsCompatibleLayout, mutable_value_type, value_type>::type
-                                                    actual_value_type;
-
-    typedef Hash                                    hasher;
-    typedef KeyEqual                                key_equal;
-    typedef Allocator                               allocator_type;
-    typedef typename Hash::result_type              hash_result_t;
-    typedef typename hash_policy_selector<Hash>::type
-                                                    hash_policy_t;
-    typedef LayoutPolicy                            layout_policy_t;
-
-    typedef std::size_t                             size_type;
-    typedef std::intptr_t                           ssize_type;
-    typedef std::size_t                             hash_code_t;
-    typedef robin_hash_map<Key, Value, Hash, KeyEqual, LayoutPolicy, Allocator>
-                                                    this_type;
-
-    static constexpr bool kUseIndexSalt = false;
-
-    static constexpr bool kEnableExchange = true;
     static constexpr bool kIsSmallValueType = (sizeof(value_type) <= sizeof(std::size_t) * 2);
 
     static constexpr size_type npos = size_type(-1);
+
+    static constexpr size_type kCacheLineSize = 64;
+    static constexpr size_type kSlotAlignment = compile_time::is_pow2<alignof(slot_type)>::value ?
+                                                cmax(alignof(slot_type), kCacheLineSize) :
+                                                alignof(slot_type);
 
     static constexpr size_type kCtrlHashMask = 0x000000FFul;
     static constexpr size_type kCtrlShift    = 8;
 
     static constexpr size_type kDefaultCapacity = 0;
-    // kMinimumCapacity must be >= 2
-    static constexpr size_type kMinimumCapacity = 4;
+    // kMinCapacity must be >= 2
+    static constexpr size_type kMinCapacity = 4;
 
     static constexpr size_type kMinLookups = 4;
 
     static constexpr float kMinLoadFactor = 0.2f;
-    static constexpr float kMaxLoadFactor = 0.8f;
+    static constexpr float kMaxLoadFactor = 0.6f;
 
     // Must be kMinLoadFactor <= loadFactor <= kMaxLoadFactor
     static constexpr float kDefaultLoadFactor = 0.5f;
@@ -289,9 +289,6 @@ public:
 #else
     static constexpr bool isGccOrClang = false;
 #endif
-    static constexpr bool isPlainKeyHash = isGccOrClang &&
-                                           std::is_same<Hash, std::hash<key_type>>::value &&
-                                          (detail::is_plain_type<key_type>::value);
 
     static constexpr bool kIsPlainKey    = detail::is_plain_type<key_type>::value;
     static constexpr bool kIsPlainMapped = detail::is_plain_type<mapped_type>::value;
@@ -2832,12 +2829,6 @@ public:
         this->rehash_impl<true, false>(new_capacity);
     }
 
-    void swap(robin_hash_map & other) {
-        if (std::addressof(other) != this) {
-            this->swap_impl(other);
-        }
-    }
-
     size_type count(const key_type & key) const {
         const slot_type * slot = this->find_impl(key);
         return size_type(slot != this->last_slot());
@@ -3086,6 +3077,17 @@ public:
         return { first };
     }
 
+    void swap(robin_hash_map & other) {
+        if (std::addressof(other) != this) {
+            this->swap_impl(other);
+        }
+    }
+
+    friend void swap(robin_hash_map & lhs, robin_hash_map & rhs)
+        noexcept(noexcept(lhs.swap(rhs))) {
+        lhs.swap(rhs);
+    }
+
 private:
     static ctrl_type * default_empty_ctrls() {
         static constexpr size_type kMinGroupCount = (kMinLookups + (kGroupWidth - 1)) / kGroupWidth;
@@ -3106,9 +3108,9 @@ private:
 
     JSTD_FORCED_INLINE
     size_type calc_capacity(size_type init_capacity) const noexcept {
-        size_type new_capacity = (std::max)(init_capacity, kMinimumCapacity);
+        size_type new_capacity = (std::max)(init_capacity, kMinCapacity);
         if (!pow2::is_pow2(new_capacity)) {
-            new_capacity = pow2::round_up<size_type, kMinimumCapacity>(new_capacity);
+            new_capacity = pow2::round_up<size_type, kMinCapacity>(new_capacity);
         }
         return new_capacity;
     }
@@ -3429,7 +3431,7 @@ private:
         this->clear_slots();
 
         if (this->slots_ != nullptr) {
-            SlotAllocTraits::deallocate(this->slot_allocator_, this->slots_, this->max_slot_capacity());
+            //SlotAllocTraits::deallocate(this->slot_allocator_, this->slots_, this->max_slot_capacity());
         }
         this->slots_ = nullptr;
         this->last_slot_ = nullptr;
@@ -3440,7 +3442,9 @@ private:
     void destroy_ctrls() noexcept {
         if (this->ctrls_ != this_type::default_empty_ctrls()) {
             size_type max_ctrl_capacity = (this->group_count() + 1) * kGroupWidth;
-            CtrlAllocTraits::deallocate(this->ctrl_allocator_, this->ctrls_, max_ctrl_capacity);
+            size_type total_alloc_size = this->TotalAllocSize<kSlotAlignment>(
+                                               max_ctrl_capacity, this->max_slot_capacity());
+            CtrlAllocTraits::deallocate(this->ctrl_allocator_, this->ctrls_, total_alloc_size);
         }
         this->ctrls_ = this_type::default_empty_ctrls();
     }
@@ -3521,6 +3525,38 @@ private:
 #endif
     }
 
+    bool isValidCapacity(size_type capacity) const {
+        return ((capacity >= kMinCapacity) && pow2::is_pow2(capacity));
+    }
+
+    // Given the pointer of ctrls and the capacity of ctrl, computes the padding of
+    // between ctrls and slots (from the start of the backing allocation)
+    // and return the beginning of slots.
+    template <size_type SlotAlignment>
+    inline slot_type * AlignedSlots(const ctrl_type * ctrls, size_type ctrl_capacity) {
+        static_assert((SlotAlignment > 0),
+                      "jstd::robin_hash_map::SlotsOffset<N>(): SlotAlignment must bigger than 0.");
+        static_assert(((SlotAlignment & (SlotAlignment - 1)) == 0),
+                      "jstd::robin_hash_map::SlotsOffset<N>(): SlotAlignment must be power of 2.");
+        const size_type num_ctrl_bytes = ctrl_capacity * sizeof(ctrl_type);
+        const ctrl_type * last_ctrls = ctrls + num_ctrl_bytes;
+        size_type last_ctrl = reinterpret_cast<size_type>(last_ctrls);
+        size_type slots_first = (last_ctrl + SlotAlignment - 1) & (~(SlotAlignment - 1));
+        size_type slots_padding = static_cast<size_type>(slots_first - last_ctrl);
+        slot_type * slots = reinterpret_cast<slot_type *>((char *)last_ctrls + slots_padding);
+        return slots;
+    }
+
+    // Given the pointer of ctrls, the capacity of a ctrl and slot,
+    // computes the total allocate size of the backing array.
+    template <size_type SlotAlignment>
+    inline size_type TotalAllocSize(size_type ctrl_capacity, size_type slot_capacity) {
+        const size_type num_ctrl_bytes = ctrl_capacity * sizeof(ctrl_type);
+        const size_type num_slot_bytes = slot_capacity * sizeof(slot_type);
+        const size_type total_bytes = num_ctrl_bytes + SlotAlignment * 2 + num_slot_bytes;
+        return (total_bytes + sizeof(ctrl_type) - 1) / sizeof(ctrl_type);
+    }
+
     template <bool initialize = false>
     void create_slots(size_type init_capacity) {
         if (init_capacity == 0) {
@@ -3535,7 +3571,7 @@ private:
         if (initialize) {
             new_capacity = this->calc_capacity(init_capacity);
             assert(new_capacity > 0);
-            assert(new_capacity >= kMinimumCapacity);
+            assert(new_capacity >= kMinCapacity);
         } else {
             new_capacity = init_capacity;
         }
@@ -3556,19 +3592,18 @@ private:
         assert(new_group_count > 0);
         size_type ctrl_alloc_size = (new_group_count + 1) * kGroupWidth;
 
-        ctrl_type * new_ctrls = CtrlAllocTraits::allocate(this->ctrl_allocator_, ctrl_alloc_size);
+        size_type total_alloc_size = this->TotalAllocSize<kSlotAlignment>(ctrl_alloc_size, new_ctrl_capacity);
+
+        ctrl_type * new_ctrls = CtrlAllocTraits::allocate(this->ctrl_allocator_, total_alloc_size);
         // Prefetch for resolve potential ctrls TLB misses.
         //Prefetch_Write_T2(new_ctrls);
 
-        this->ctrls_ = new_ctrls;
-        this->max_lookups_ = new_max_lookups;
-
-        // Reset ctrls to default state
-        this->clear_ctrls(new_ctrls, new_capacity, new_max_lookups, new_group_count);
-
-        slot_type * new_slots = SlotAllocTraits::allocate(this->slot_allocator_, new_ctrl_capacity);
+        slot_type * new_slots = this->AlignedSlots<kSlotAlignment>(new_ctrls, ctrl_alloc_size);
         // Prefetch for resolve potential ctrls TLB misses.
         Prefetch_Write_T2(new_slots);
+
+        this->ctrls_ = new_ctrls;
+        this->max_lookups_ = new_max_lookups;
 
         this->slots_ = new_slots;
         this->last_slot_ = new_slots + new_ctrl_capacity;
@@ -3579,6 +3614,9 @@ private:
         }
         this->slot_mask_ = new_capacity - 1;
         this->slot_threshold_ = this->slot_threshold(new_capacity);
+
+        // Reset ctrls to default state
+        this->clear_ctrls(new_ctrls, new_capacity, new_max_lookups, new_group_count);
     }
 
     template <bool AllowShrink, bool AlwaysResize>
@@ -3586,7 +3624,7 @@ private:
     void rehash_impl(size_type new_capacity) {
         new_capacity = this->calc_capacity(new_capacity);
         assert(new_capacity > 0);
-        assert(new_capacity >= kMinimumCapacity);
+        assert(new_capacity >= kMinCapacity);
         if (AlwaysResize ||
             (!AllowShrink && (new_capacity > this->slot_capacity())) ||
             (AllowShrink && (new_capacity != this->slot_capacity()))) {
@@ -3610,7 +3648,125 @@ private:
 
             this->create_slots<false>(new_capacity);
 
-            if ((this->max_load_factor() < 0.5f) && false) {
+            if (old_slot_capacity >= kGroupWidth) {
+                static constexpr size_type kSlotSetp = sizeof(value_type) * kGroupWidth;
+                static constexpr size_type kCacheLine = 64;
+                static constexpr size_type kPrefetchMinSteps = 3;
+                static constexpr size_type kPrefetchMinOffset = cmax(kPrefetchMinSteps * kSlotSetp, kCacheLine);
+                static constexpr size_type kPrefetchMaxOffset = 1024;
+                static constexpr size_type kMaxPrefetchOffset = cmax(kPrefetchMinOffset, kPrefetchMaxOffset);
+                static constexpr size_type kPrefetchSteps = 4 + kSlotSetp / 512;
+                static constexpr size_type kPrefetchOffset = cmin(kPrefetchSteps * cmax(kSlotSetp, kCacheLine), kMaxPrefetchOffset);
+                static constexpr size_type kTailGroupCount = (kPrefetchOffset + (kSlotSetp - 1)) / kSlotSetp;
+
+                ctrl_type * ctrl = old_ctrls;
+                ctrl_type * last_ctrl = old_ctrls + old_group_count * kGroupWidth;
+                ctrl_type * end_ctrl = last_ctrl - kTailGroupCount * kGroupWidth;
+                group_type group(ctrl), end_group(end_ctrl);
+                slot_type * slot_base = old_slots;
+                for (; group < end_group; ++group) {
+#if ROBIN_REHASH_READ_PREFETCH
+                    // Prefetch for read old ctrl
+                    Prefetch_Read_T0(PtrOffset(group.ctrl(), kCacheLine * 2));
+
+                    // Prefetch for read old slot
+                    if (kSlotSetp < 64) {
+                        // sizeof(value_type) = [1, 4)
+                        Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 0));
+                    } else {
+                        if (kSlotSetp >= 64 * 1) {   // >= 64
+                            // sizeof(value_type) = [4, 8)
+                            Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 0));
+                        }
+                        if (kSlotSetp >= 64 * 2) {   // >= 128
+                            // sizeof(value_type) = [8, 12)
+                            Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 1));
+                        }
+                        if (kSlotSetp >= 64 * 3) {   // >= 192
+                            // sizeof(value_type) = [12, 16)
+                            Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 2));
+                        }
+                        if (kSlotSetp >= 64 * 4) {   // >= 256
+                            // sizeof(value_type) = [16, 20)
+                            Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 3));
+                        }
+                        if (kSlotSetp >= 64 * 5) {   // >= 320
+                            // sizeof(value_type) = [20, 24)
+                            Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 4));
+                        }
+                        if (kSlotSetp >= 64 * 6) {   // >= 384
+                            // sizeof(value_type) = [24, 28)
+                            Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 5));
+                        }
+                        if (kSlotSetp >= 64 * 7) {   // >= 448
+                            // sizeof(value_type) = [28, 32)
+                            Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 6));
+                        }
+                        if (kSlotSetp >= 64 * 8) {   // >= 512
+                            // sizeof(value_type) = [32, 36)
+                            Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 7));
+                        }
+                        if (kSlotSetp >= 64 * 9) {   // >= 576
+                            // sizeof(value_type) = [36, 40)
+                            Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 8));
+                        }
+                        if (kSlotSetp >= 64 * 10) {   // >= 640
+                            // sizeof(value_type) = [40, 44)
+                            Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 9));
+                        }
+                        if (kSlotSetp >= 64 * 11) {   // >= 704
+                            // sizeof(value_type) = [44, 48)
+                            Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 10));
+                        }
+                        if (kSlotSetp >= 64 * 12) {   // >= 768
+                            // sizeof(value_type) = [48, 52)
+                            Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 11));
+                        }
+                        if (kSlotSetp >= 64 * 13) {   // >= 832
+                            // sizeof(value_type) = [52, 56)
+                            Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 12));
+                        }
+                        if (kSlotSetp >= 64 * 14) {   // >= 896
+                            // sizeof(value_type) = [56, 60)
+                            Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 13));
+                        }
+                        if (kSlotSetp >= 64 * 15) {   // >= 960
+                            // sizeof(value_type) = [60, 64)
+                            Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 14));
+                        }
+                        if (kSlotSetp >= 64 * 16) {   // >= 1024
+                            // sizeof(value_type) = [64, Max)
+                            Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 15));
+                        }
+                    }
+#endif // ROBIN_REHASH_READ_PREFETCH
+
+                    std::uint32_t maskUsed = group.matchUsed();
+                    while (maskUsed != 0) {
+                        size_type pos = BitUtils::bsf32(maskUsed);
+                        maskUsed = BitUtils::clearLowBit32(maskUsed);
+                        size_type index = group.index(0, pos);
+                        slot_type * old_slot = slot_base + index;
+                        this->unique_insert_no_grow(old_slot);
+                        this->destroy_slot(old_slot);
+                    }
+                    slot_base += kGroupWidth;
+                }
+
+                group_type last_group(last_ctrl);
+                for (; group < last_group; ++group) {
+                    std::uint32_t maskUsed = group.matchUsed();
+                    while (maskUsed != 0) {
+                        size_type pos = BitUtils::bsf32(maskUsed);
+                        maskUsed = BitUtils::clearLowBit32(maskUsed);
+                        size_type index = group.index(0, pos);
+                        slot_type * old_slot = slot_base + index;
+                        this->unique_insert_no_grow(old_slot);
+                        this->destroy_slot(old_slot);
+                    }
+                    slot_base += kGroupWidth;
+                }
+            } else if (old_ctrls != default_empty_ctrls()) {
                 ctrl_type * last_ctrl = old_ctrls + old_max_slot_capacity;
                 slot_type * old_slot = old_slots;
                 for (ctrl_type * ctrl = old_ctrls; ctrl != last_ctrl; ctrl++) {
@@ -3620,144 +3776,15 @@ private:
                     }
                     old_slot++;
                 }
-            } else {
-                if (old_slot_capacity >= kGroupWidth) {
-                    static constexpr size_type kSlotSetp = sizeof(value_type) * kGroupWidth;
-                    static constexpr size_type kCacheLine = 64;
-                    static constexpr size_type kPrefetchMinSteps = 3;
-                    static constexpr size_type kPrefetchMinOffset = cmax(kPrefetchMinSteps * kSlotSetp, kCacheLine);
-                    static constexpr size_type kPrefetchMaxOffset = 1024;
-                    static constexpr size_type kMaxPrefetchOffset = cmax(kPrefetchMinOffset, kPrefetchMaxOffset);
-                    static constexpr size_type kPrefetchSteps = 4 + kSlotSetp / 512;
-                    static constexpr size_type kPrefetchOffset = cmin(kPrefetchSteps * cmax(kSlotSetp, kCacheLine), kMaxPrefetchOffset);
-                    static constexpr size_type kTailGroupCount = (kPrefetchOffset + (kSlotSetp - 1)) / kSlotSetp;
-
-                    ctrl_type * ctrl = old_ctrls;
-                    ctrl_type * last_ctrl = old_ctrls + old_group_count * kGroupWidth;
-                    ctrl_type * end_ctrl = last_ctrl - kTailGroupCount * kGroupWidth;
-                    group_type group(ctrl), end_group(end_ctrl);
-                    slot_type * slot_base = old_slots;
-                    for (; group < end_group; ++group) {
-                        // Prefetch for read old ctrl
-                        Prefetch_Read_T0(PtrOffset(group.ctrl(), kCacheLine * 2));
-
-                        // Prefetch for read old slot
-                        if (kSlotSetp < 64) {
-                            // sizeof(value_type) = [1, 4)
-                            Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 0));
-                        } else {
-                            if (kSlotSetp >= 64 * 1) {   // >= 64
-                                // sizeof(value_type) = [4, 8)
-                                Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 0));
-                            }
-                            if (kSlotSetp >= 64 * 2) {   // >= 128
-                                // sizeof(value_type) = [8, 12)
-                                Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 1));
-                            }
-                            if (kSlotSetp >= 64 * 3) {   // >= 192
-                                // sizeof(value_type) = [12, 16)
-                                Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 2));
-                            }
-                            if (kSlotSetp >= 64 * 4) {   // >= 256
-                                // sizeof(value_type) = [16, 20)
-                                Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 3));
-                            }
-                            if (kSlotSetp >= 64 * 5) {   // >= 320
-                                // sizeof(value_type) = [20, 24)
-                                Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 4));
-                            }
-                            if (kSlotSetp >= 64 * 6) {   // >= 384
-                                // sizeof(value_type) = [24, 28)
-                                Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 5));
-                            }
-                            if (kSlotSetp >= 64 * 7) {   // >= 448
-                                // sizeof(value_type) = [28, 32)
-                                Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 6));
-                            }
-                            if (kSlotSetp >= 64 * 8) {   // >= 512
-                                // sizeof(value_type) = [32, 36)
-                                Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 7));
-                            }
-                            if (kSlotSetp >= 64 * 9) {   // >= 576
-                                // sizeof(value_type) = [36, 40)
-                                Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 8));
-                            }
-                            if (kSlotSetp >= 64 * 10) {   // >= 640
-                                // sizeof(value_type) = [40, 44)
-                                Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 9));
-                            }
-                            if (kSlotSetp >= 64 * 11) {   // >= 704
-                                // sizeof(value_type) = [44, 48)
-                                Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 10));
-                            }
-                            if (kSlotSetp >= 64 * 12) {   // >= 768
-                                // sizeof(value_type) = [48, 52)
-                                Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 11));
-                            }
-                            if (kSlotSetp >= 64 * 13) {   // >= 832
-                                // sizeof(value_type) = [52, 56)
-                                Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 12));
-                            }
-                            if (kSlotSetp >= 64 * 14) {   // >= 896
-                                // sizeof(value_type) = [56, 60)
-                                Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 13));
-                            }
-                            if (kSlotSetp >= 64 * 15) {   // >= 960
-                                // sizeof(value_type) = [60, 64)
-                                Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 14));
-                            }
-                            if (kSlotSetp >= 64 * 16) {   // >= 1024
-                                // sizeof(value_type) = [64, Max)
-                                Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 15));
-                            }
-                        }
-
-                        std::uint32_t maskUsed = group.matchUsed();
-                        while (maskUsed != 0) {
-                            size_type pos = BitUtils::bsf32(maskUsed);
-                            maskUsed = BitUtils::clearLowBit32(maskUsed);
-                            size_type index = group.index(0, pos);
-                            slot_type * old_slot = slot_base + index;
-                            this->unique_insert_no_grow(old_slot);
-                            this->destroy_slot(old_slot);
-                        }
-                        slot_base += kGroupWidth;
-                    }
-
-                    group_type last_group(last_ctrl);
-                    for (; group < last_group; ++group) {
-                        std::uint32_t maskUsed = group.matchUsed();
-                        while (maskUsed != 0) {
-                            size_type pos = BitUtils::bsf32(maskUsed);
-                            maskUsed = BitUtils::clearLowBit32(maskUsed);
-                            size_type index = group.index(0, pos);
-                            slot_type * old_slot = slot_base + index;
-                            this->unique_insert_no_grow(old_slot);
-                            this->destroy_slot(old_slot);
-                        }
-                        slot_base += kGroupWidth;
-                    }
-                } else if (old_ctrls != default_empty_ctrls()) {
-                    ctrl_type * last_ctrl = old_ctrls + old_max_slot_capacity;
-                    slot_type * old_slot = old_slots;
-                    for (ctrl_type * ctrl = old_ctrls; ctrl != last_ctrl; ctrl++) {
-                        if (likely(ctrl->isUsed())) {
-                            this->unique_insert_no_grow(old_slot);
-                            this->destroy_slot(old_slot);
-                        }
-                        old_slot++;
-                    }
-                }
             }
 
             assert(this->slot_size() == old_slot_size);
 
             if (old_ctrls != this->default_empty_ctrls()) {
                 size_type old_max_ctrl_capacity = (old_group_count + 1) * kGroupWidth;
-                CtrlAllocTraits::deallocate(this->ctrl_allocator_, old_ctrls, old_max_ctrl_capacity);
-            }
-            if (old_slots != nullptr) {
-                SlotAllocTraits::deallocate(this->slot_allocator_, old_slots, old_max_slot_capacity);
+                size_type total_alloc_size = this->TotalAllocSize<kSlotAlignment>(
+                                                   old_max_ctrl_capacity, old_max_slot_capacity);
+                CtrlAllocTraits::deallocate(this->ctrl_allocator_, old_ctrls, total_alloc_size);
             }
         }
     }
@@ -5155,7 +5182,8 @@ Insert_To_Slot:
 template <class Key, class Value, class Hash, class KeyEqual, class LayoutPolicy, class Alloc>
 inline
 void swap(robin_hash_map<Key, Value, Hash, KeyEqual, LayoutPolicy, Alloc> & lhs,
-          robin_hash_map<Key, Value, Hash, KeyEqual, LayoutPolicy, Alloc> & rhs) noexcept
+          robin_hash_map<Key, Value, Hash, KeyEqual, LayoutPolicy, Alloc> & rhs)
+          noexcept(noexcept(lhs.swap(rhs)))
 {
     lhs.swap(rhs);
 }
@@ -5167,6 +5195,22 @@ void swap(robin_hash_map<Key, Value, Hash, KeyEqual, LayoutPolicy, Alloc> & lhs,
 ///////////////////////////////////////////////////////////
 
 namespace std {
+
+/**
+ * Specializes the @c std::swap algorithm for @c robin_hash_map. Calls @c lhs.swap(rhs).
+ *
+ * @param lhs the map on the left side to swap
+ * @param lhs the map on the right side to swap
+ */
+
+template <class Key, class Value, class Hash, class KeyEqual, class LayoutPolicy, class Alloc>
+inline
+void swap(jstd::robin_hash_map<Key, Value, Hash, KeyEqual, LayoutPolicy, Alloc> & lhs,
+          jstd::robin_hash_map<Key, Value, Hash, KeyEqual, LayoutPolicy, Alloc> & rhs)
+          noexcept(noexcept(lhs.swap(rhs)))
+{
+    lhs.swap(rhs);
+}
 
 template <class Key, class Value, class Hash, class KeyEqual, class LayoutPolicy, class Alloc, class Pred>
 typename jstd::robin_hash_map<Key, Value, Hash, KeyEqual, LayoutPolicy, Alloc>::size_type

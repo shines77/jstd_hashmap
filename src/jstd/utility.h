@@ -97,8 +97,8 @@ template <typename T>
 static inline
 T * pointer_align_to(T * address, size_t alignment)
 {
-    JSTD_ASSERT(alignment > 0 );
-    JSTD_ASSERT((alignment & (alignment - 1)) == 0);
+    assert(alignment > 0 );
+    assert((alignment & (alignment - 1)) == 0);
     uintptr_t ptr = ((uintptr_t)address + alignment - 1) & (~(alignment - 1));
     return reinterpret_cast<T *>(ptr);
 }
@@ -107,10 +107,10 @@ template <size_t alignment, typename T>
 static inline
 T * pointer_align_to(T * address)
 {
-    JSTD_STATIC_ASSERT((alignment > 0),
-                       "pointer_align_to<N>(): alignment must bigger than 0.");
-    JSTD_STATIC_ASSERT(((alignment & (alignment - 1)) == 0),
-                       "pointer_align_to<N>(): alignment must be power of 2.");
+    static_assert((alignment > 0),
+                  "pointer_align_to<N>(): alignment must bigger than 0.");
+    static_assert(((alignment & (alignment - 1)) == 0),
+                  "pointer_align_to<N>(): alignment must be power of 2.");
     uintptr_t ptr = ((uintptr_t)address + alignment - 1) & (~(alignment - 1));
     return reinterpret_cast<T *>(ptr);
 }
