@@ -557,6 +557,8 @@ int main(int argc, char * argv[])
 #include <cstddef>
 #include <chrono>
 
+#include <jstd/test/CPUWarmUp.h>
+
 // Type your code here, or load an example.
 struct ListNode
 {
@@ -571,6 +573,8 @@ int main(int argc, char * argv[])
     using namespace std::chrono;
 
     static constexpr int kMaxCount = 10000000;
+
+    jtest::CPU::warm_up(1000);
 
     auto root = new ListNode;
     auto it = root;
