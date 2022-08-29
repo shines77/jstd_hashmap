@@ -87,7 +87,7 @@
 #ifndef _DEBUG
 #define USE_STD_UNORDERED_MAP           1
 #define USE_JSTD_FLAT16_HASH_MAP        0
-#define USE_JSTD_ROBIN16_HASH_MAP       1
+#define USE_JSTD_ROBIN16_HASH_MAP       0
 #define USE_JSTD_ROBIN_HASH_MAP         1
 #define USE_JSTD_ROBIN_HASH_MAP_V1      0
 #define USE_JSTD_ROBIN_HASH_MAP_V2      1
@@ -1301,6 +1301,14 @@ void test_all_hashmaps(std::size_t obj_size, std::size_t iters)
         measure_hashmap<jstd::robin_hash_map<Key,   Value, HASH_MAP_FUNCTION<Key>>,
                         jstd::robin_hash_map<Key *, Value, HASH_MAP_FUNCTION<Key *>>>
             ("jstd::robin_hash_map<K, V>", obj_size, iters, has_stress_hash_function);
+    }
+#endif
+
+#if USE_JSTD_ROBIN_HASH_MAP_V4
+    if (1) {
+        measure_hashmap<jstd::v4::robin_hash_map<Key,   Value, HASH_MAP_FUNCTION<Key>>,
+                        jstd::v4::robin_hash_map<Key *, Value, HASH_MAP_FUNCTION<Key *>>>
+            ("jstd::v4::robin_hash_map<K, V>", obj_size, iters, has_stress_hash_function);
     }
 #endif
 
