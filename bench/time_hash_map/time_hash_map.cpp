@@ -226,6 +226,8 @@ static constexpr bool FLAGS_test_8_bytes = true;
 static constexpr bool FLAGS_test_16_bytes = true;
 static constexpr bool FLAGS_test_256_bytes = true;
 
+static bool FLAGS_test_bigobject_only = false;
+
 #ifndef _DEBUG
 static constexpr std::size_t kDefaultIters = 10000000;
 #else
@@ -1399,11 +1401,11 @@ void benchmark_all_hashmaps(std::size_t iters)
     // buffer.  To keep memory use similar, we normalize the number of
     // iterations based on size.
 #ifndef _DEBUG_
-    if (FLAGS_test_4_bytes) {
+    if (FLAGS_test_4_bytes && !FLAGS_test_bigobject_only) {
         test_all_hashmaps<HashObject<std::uint32_t, 4, 4>, std::uint32_t>(4, iters / 1);
     }
 
-    if (FLAGS_test_8_bytes) {
+    if (FLAGS_test_8_bytes && !FLAGS_test_bigobject_only) {
         test_all_hashmaps<HashObject<std::uint64_t, 8, 8>, std::uint64_t>(8, iters / 2);
     }
 #endif
@@ -1600,15 +1602,30 @@ void is_compatible_layout_test()
     printf("\n");
 }
 
+void strtolower(char * s) {
+    for (int i = 0; s[i]; i++)
+        s[i] = ::tolower(s[i]);
+}
+
 int main(int argc, char * argv[])
 {
     jstd::RandomGen   RandomGen(20200831);
     jstd::MtRandomGen mtRandomGen(20200831);
 
     std::size_t iters = kDefaultIters;
-    if (argc > 1) {
-        // first arg is # of iterations
-        iters = ::atoi(argv[1]);
+    for (int n = 1; n < argc; n++) {
+        char arg[256] = { 0 };
+        ::strcpy(arg, argv[n]);
+        strtolower(arg);
+
+        if (0) {
+            // Dummy header
+        } else if (::strcmp(arg, "bigobject") == 0) {
+            FLAGS_test_bigobject_only = true;
+        } else if (n == (argc - 1)) {
+            // first arg is # of iterations
+            iters = ::atoi(arg);
+        }
     }
 
     jtest::CPU::warm_up(1000);

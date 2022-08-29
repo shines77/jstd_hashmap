@@ -1592,7 +1592,7 @@ void is_compatible_layout_test()
 
 void strtolower(char * s) {
     for (int i = 0; s[i]; i++)
-        s[i] = tolower(s[i]);
+        s[i] = ::tolower(s[i]);
 }
 
 int main(int argc, char * argv[])
@@ -1601,16 +1601,16 @@ int main(int argc, char * argv[])
     jstd::MtRandomGen mtRandomGen(20200831);
 
     std::size_t iters = kDefaultIters;
-    if (argc > 1) {
+    for (int n = 1; n < argc; n++) {
         char arg[256] = { 0 };
-        strcpy(arg, argv[1]);
+        ::strcpy(arg, argv[n]);
         strtolower(arg);
 
         if (0) {
             // Dummy header
-        } else if (strcmp(arg, "string") == 0) {
+        } else if (::strcmp(arg, "string") == 0) {
             FLAGS_test_string_only = true;
-        } else {
+        } else if (n == (argc - 1)) {
             // first arg is # of iterations
             iters = ::atoi(arg);
         }
