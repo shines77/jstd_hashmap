@@ -556,6 +556,8 @@ int main(int argc, char * argv[])
 #include <cstdint>
 #include <cstddef>
 #include <chrono>
+#include <cstring>
+#include <memory>
 
 #include <jstd/test/CPUWarmUp.h>
 
@@ -573,8 +575,12 @@ int main(int argc, char * argv[])
     using namespace std::chrono;
 
     static constexpr int kMaxCount = 10000000;
+    static constexpr int kBufSize = 128 * 1024 * 1024;
 
     jtest::CPU::warm_up(1000);
+
+    std::unique_ptr<char> src(new char[kBufSize]);
+    std::unique_ptr<char> dest(new char[kBufSize]);
 
     auto root = new ListNode;
     auto it = root;
@@ -584,6 +590,9 @@ int main(int argc, char * argv[])
         it->next = new ListNode;
         it = it->next;
     }
+
+    // Forced invalid the caches
+    std::memcpy((void *)dest.get(), (const void *)src.get(), kBufSize * sizeof(char));
 
     if (1) {
         auto begin = high_resolution_clock::now();
@@ -599,6 +608,9 @@ int main(int argc, char * argv[])
         printf("cur = %p, time1: %0.3f ms\n", cur, elapsed.count() * 1000);
     }
 
+    // Forced invalid the caches
+    std::memcpy((void *)dest.get(), (const void *)src.get(), kBufSize * sizeof(char));
+
     if (1) {
         auto begin = high_resolution_clock::now();
         ListNode * cur;
@@ -613,6 +625,9 @@ int main(int argc, char * argv[])
         printf("cur = %p, time2: %0.3f ms\n", cur, elapsed.count() * 1000);
     }
 
+    // Forced invalid the caches
+    std::memcpy((void *)dest.get(), (const void *)src.get(), kBufSize * sizeof(char));
+
     if (1) {
         auto begin = high_resolution_clock::now();
         ListNode * cur;
@@ -626,6 +641,9 @@ int main(int argc, char * argv[])
         duration<double> elapsed = duration_cast<duration<double>>(end - begin);
         printf("cur = %p, time3: %0.3f ms\n", cur, elapsed.count() * 1000);
     }
+
+    // Forced invalid the caches
+    std::memcpy((void *)dest.get(), (const void *)src.get(), kBufSize * sizeof(char));
 
     if (1) {
         auto begin = high_resolution_clock::now();
