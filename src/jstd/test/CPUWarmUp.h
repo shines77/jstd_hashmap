@@ -7,6 +7,7 @@
 #endif
 
 #include <stdio.h>
+#include <stdint.h>
 
 #if defined(_WIN32) || defined(WIN32) || defined(OS_WINDOWS) || defined(_WINDOWS_)
 #ifndef WIN32_LEAN_AND_MEAN
@@ -31,28 +32,29 @@ namespace CPU {
 static
 void warm_up(int delayMillsecs)
 {
+    using namespace std::chrono;
 #if !defined(_DEBUG)
     double delayTimeLimit = (double)delayMillsecs / 1.0;
-    volatile int sum = 0;
+    volatile intptr_t sum = 0;
 
     printf("------------------------------------------\n\n");
     printf("CPU warm-up begin ...\n");
     //::fflush(stdout);
-    std::chrono::high_resolution_clock::time_point startTime, endTime;
-    std::chrono::duration<double, std::ratio<1, 1000>> elapsedTime;
-    startTime = std::chrono::high_resolution_clock::now();
+    high_resolution_clock::time_point startTime, endTime;
+    duration<double, std::ratio<1, 1000>> elapsedTime;
+    startTime = high_resolution_clock::now();
     do {
-        for (int i = 0; i < 500; ++i) {
+        for (intptr_t i = 0; i < 500; ++i) {
             sum += i;
-            for (int j = 5000; j >= 0; --j) {
+            for (intptr_t j = 5000; j >= 0; --j) {
                 sum -= j;
             }
         }
-        endTime = std::chrono::high_resolution_clock::now();
+        endTime = high_resolution_clock::now();
         elapsedTime = endTime - startTime;
     } while (elapsedTime.count() < delayTimeLimit);
 
-    printf("sum = %d, time: %0.3f ms\n", sum, elapsedTime.count());
+    printf("sum = %d, time: %0.3f ms\n", (int)sum, elapsedTime.count());
     printf("CPU warm-up end   ... \n\n");
     printf("------------------------------------------\n\n");
     //::fflush(stdout);
@@ -65,7 +67,7 @@ static
 void warm_up(DWORD delayMillsecs)
 {
 #if !defined(_DEBUG)
-    volatile int sum = 0;
+    volatile intptr_t sum = 0;
 
     printf("CPU warm-up begin ...\n");
     //::fflush(stdout);
@@ -73,9 +75,9 @@ void warm_up(DWORD delayMillsecs)
     DWORD elapsedTime;
     startTime = ::timeGetTime();
     do {
-        for (int i = 0; i < 500; ++i) {
+        for (intptr_t i = 0; i < 500; ++i) {
             sum += i;
-            for (int j = 5000; j >= 0; --j) {
+            for (intptr_t j = 5000; j >= 0; --j) {
                 sum -= j;
             }
         }
@@ -83,7 +85,7 @@ void warm_up(DWORD delayMillsecs)
         elapsedTime = endTime - startTime;
     } while (elapsedTime < delayMillsecs);
 
-    printf("sum = %d, time: %u ms\n", sum, elapsedTime);
+    printf("sum = %d, time: %u ms\n", (int)sum, elapsedTime);
     printf("CPU warm-up end   ... \n\n");
     //::fflush(stdout);
 #endif // !_DEBUG
