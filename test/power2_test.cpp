@@ -549,7 +549,7 @@ int main(int argc, char * argv[])
     return 0;
 }
 
-#else
+#elif 0
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -558,6 +558,8 @@ int main(int argc, char * argv[])
 #include <chrono>
 #include <cstring>
 #include <memory>
+
+#define USE_CACHE_OVERWRITE     1
 
 void cpu_warm_up(int delayMillsecs)
 {
@@ -617,8 +619,10 @@ int main(int argc, char * argv[])
         it = it->next;
     }
 
+#if USE_CACHE_OVERWRITE
     // Force invalid the caches
     std::memcpy((void *)dest.get(), (const void *)src.get(), kBufSize * sizeof(char));
+#endif
 
     if (1) {
         auto begin = high_resolution_clock::now();
@@ -634,8 +638,10 @@ int main(int argc, char * argv[])
         printf("cur = %p, dest[0] = %c, time1: %0.3f ms\n", cur, *dest.get(), elapsed.count() * 1000);
     }
 
+#if USE_CACHE_OVERWRITE
     // Force invalid the caches
     std::memcpy((void *)dest.get(), (const void *)src.get(), kBufSize * sizeof(char));
+#endif
 
     if (1) {
         auto begin = high_resolution_clock::now();
@@ -651,8 +657,10 @@ int main(int argc, char * argv[])
         printf("cur = %p, dest[0] = %c, time2: %0.3f ms\n", cur, *dest.get(), elapsed.count() * 1000);
     }
 
+#if USE_CACHE_OVERWRITE
     // Force invalid the caches
     std::memcpy((void *)dest.get(), (const void *)src.get(), kBufSize * sizeof(char));
+#endif
 
     if (1) {
         auto begin = high_resolution_clock::now();
@@ -668,8 +676,10 @@ int main(int argc, char * argv[])
         printf("cur = %p, dest[0] = %c, time3: %0.3f ms\n", cur, *dest.get(), elapsed.count() * 1000);
     }
 
+#if USE_CACHE_OVERWRITE
     // Force invalid the caches
     std::memcpy((void *)dest.get(), (const void *)src.get(), kBufSize * sizeof(char));
+#endif
 
     if (1) {
         auto begin = high_resolution_clock::now();
@@ -686,6 +696,151 @@ int main(int argc, char * argv[])
     }
 
     printf("\n");
+    return 0;
+}
+
+#else
+
+#include <stdlib.h>
+#include <stdio.h>
+#include <cstdint>
+#include <cstddef>
+#include <chrono>
+#include <cstring>
+#include <memory>
+
+#define USE_CACHE_OVERWRITE     1
+
+void cpu_warm_up(int delayMillsecs)
+{
+    using namespace std::chrono;
+    double delayTimeLimit = (double)delayMillsecs / 1.0;
+    volatile int sum = 0;
+
+    printf("------------------------------------------\n\n");
+    printf("CPU warm-up begin ...\n");
+
+    high_resolution_clock::time_point startTime, endTime;
+    duration<double, std::ratio<1, 1000>> elapsedTime;
+    startTime = high_resolution_clock::now();
+    do {
+        for (int i = 0; i < 500; ++i) {
+            sum += i;
+            for (int j = 5000; j >= 0; --j) {
+                sum -= j;
+            }
+        }
+        endTime = high_resolution_clock::now();
+        elapsedTime = endTime - startTime;
+    } while (elapsedTime.count() < delayTimeLimit);
+
+    printf("sum = %d, time: %0.3f ms\n", sum, elapsedTime.count());
+    printf("CPU warm-up end   ... \n\n");
+    printf("------------------------------------------\n\n");
+}
+
+struct ListNode
+{
+    size_t val;
+    ListNode * next;
+
+    ListNode() : val(0), next(nullptr) {}
+    explicit ListNode(size_t val) : val(val), next(nullptr) {}
+};
+
+int main(int argc, char * argv[])
+{
+    using namespace std::chrono;
+
+    static constexpr intptr_t kMaxCount = 10000000;
+    static constexpr size_t kBufSize = 128 * 1024 * 1024;   // 128 MB
+
+    cpu_warm_up(1000);
+
+    std::unique_ptr<char> src(new char[kBufSize]);
+    std::unique_ptr<char> dest(new char[kBufSize]);
+
+    *src.get() = 'A';
+
+    ListNode * head = nullptr;
+    for (intptr_t i = kMaxCount - 1; i >= 0; --i) {
+        ListNode * cur = new ListNode(i);
+        cur->next = head;
+        head = cur;
+    }
+
+#if USE_CACHE_OVERWRITE
+    // Force invalid the caches
+    std::memcpy((void *)dest.get(), (const void *)src.get(), kBufSize * sizeof(char));
+#endif
+
+    if (1) {
+        auto begin = high_resolution_clock::now();
+        ListNode * cur = head;
+        while (cur->next != nullptr) {
+            cur = cur->next;
+        }
+        auto end = high_resolution_clock::now();
+
+        duration<double> elapsed = duration_cast<duration<double>>(end - begin);
+        printf("cur = %p, dest[0] = %c, time1: %0.3f ms\n", cur, *dest.get(), elapsed.count() * 1000);
+    }
+
+#if USE_CACHE_OVERWRITE
+    // Force invalid the caches
+    std::memcpy((void *)dest.get(), (const void *)src.get(), kBufSize * sizeof(char));
+#endif
+
+    if (1) {
+        auto begin = high_resolution_clock::now();
+        ListNode * cur = head;
+        while (cur->next != nullptr && cur->next->val != kMaxCount) {
+            cur = cur->next;
+        }
+        auto end = high_resolution_clock::now();
+
+        duration<double> elapsed = duration_cast<duration<double>>(end - begin);
+        printf("cur = %p, dest[0] = %c, time2: %0.3f ms\n", cur, *dest.get(), elapsed.count() * 1000);
+    }
+
+#if USE_CACHE_OVERWRITE
+    // Force invalid the caches
+    std::memcpy((void *)dest.get(), (const void *)src.get(), kBufSize * sizeof(char));
+#endif
+
+    if (1) {
+        auto begin = high_resolution_clock::now();
+        ListNode * cur = head;
+        while (cur->next != nullptr) {
+            cur = cur->next;
+        }
+        auto end = high_resolution_clock::now();
+
+        duration<double> elapsed = duration_cast<duration<double>>(end - begin);
+        printf("cur = %p, dest[0] = %c, time3: %0.3f ms\n", cur, *dest.get(), elapsed.count() * 1000);
+    }
+
+#if USE_CACHE_OVERWRITE
+    // Force invalid the caches
+    std::memcpy((void *)dest.get(), (const void *)src.get(), kBufSize * sizeof(char));
+#endif
+
+    if (1) {
+        auto begin = high_resolution_clock::now();
+        ListNode * cur = head;
+        while (cur->next != nullptr && cur->next->val != kMaxCount) {
+            cur = cur->next;
+        }
+        auto end = high_resolution_clock::now();
+
+        duration<double> elapsed = duration_cast<duration<double>>(end - begin);
+        printf("cur = %p, dest[0] = %c, time4: %0.3f ms\n", cur, *dest.get(), elapsed.count() * 1000);
+    }
+
+    printf("\n");
+#if defined(_MSC_VER) && !defined(_DEBUG)
+    ::system("pause");
+#endif
     return 0;
 }
 
