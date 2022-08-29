@@ -565,7 +565,7 @@ void cpu_warm_up(int delayMillsecs)
 {
     using namespace std::chrono;
     double delayTimeLimit = (double)delayMillsecs / 1.0;
-    volatile int sum = 0;
+    volatile intptr_t sum = 0;
 
     printf("------------------------------------------\n\n");
     printf("CPU warm-up begin ...\n");
@@ -574,9 +574,9 @@ void cpu_warm_up(int delayMillsecs)
     duration<double, std::ratio<1, 1000>> elapsedTime;
     startTime = high_resolution_clock::now();
     do {
-        for (int i = 0; i < 500; ++i) {
+        for (intptr_t i = 0; i < 500; ++i) {
             sum += i;
-            for (int j = 5000; j >= 0; --j) {
+            for (intptr_t j = 5000; j >= 0; --j) {
                 sum -= j;
             }
         }
@@ -584,7 +584,7 @@ void cpu_warm_up(int delayMillsecs)
         elapsedTime = endTime - startTime;
     } while (elapsedTime.count() < delayTimeLimit);
 
-    printf("sum = %d, time: %0.3f ms\n", sum, elapsedTime.count());
+    printf("sum = %d, time: %0.3f ms\n", (int)sum, elapsedTime.count());
     printf("CPU warm-up end   ... \n\n");
     printf("------------------------------------------\n\n");
 }
@@ -715,7 +715,7 @@ void cpu_warm_up(int delayMillsecs)
 {
     using namespace std::chrono;
     double delayTimeLimit = (double)delayMillsecs / 1.0;
-    volatile int sum = 0;
+    volatile intptr_t  sum = 0;
 
     printf("------------------------------------------\n\n");
     printf("CPU warm-up begin ...\n");
@@ -724,9 +724,9 @@ void cpu_warm_up(int delayMillsecs)
     duration<double, std::ratio<1, 1000>> elapsedTime;
     startTime = high_resolution_clock::now();
     do {
-        for (int i = 0; i < 500; ++i) {
+        for (intptr_t i = 0; i < 500; ++i) {
             sum += i;
-            for (int j = 5000; j >= 0; --j) {
+            for (intptr_t j = 5000; j >= 0; --j) {
                 sum -= j;
             }
         }
@@ -734,7 +734,7 @@ void cpu_warm_up(int delayMillsecs)
         elapsedTime = endTime - startTime;
     } while (elapsedTime.count() < delayTimeLimit);
 
-    printf("sum = %d, time: %0.3f ms\n", sum, elapsedTime.count());
+    printf("sum = %d, time: %0.3f ms\n", (int)sum, elapsedTime.count());
     printf("CPU warm-up end   ... \n\n");
     printf("------------------------------------------\n\n");
 }
@@ -838,9 +838,6 @@ int main(int argc, char * argv[])
     }
 
     printf("\n");
-#if defined(_MSC_VER) && !defined(_DEBUG)
-    ::system("pause");
-#endif
     return 0;
 }
 
