@@ -258,8 +258,7 @@ public:
 
     static constexpr size_type kCacheLineSize = 64;
     static constexpr size_type kActualSlotAlignment = alignof(slot_type);
-    static constexpr size_type kSlotAlignment = alignof(slot_type);
-    static constexpr size_type kSlotAlignment2 = compile_time::is_pow2<alignof(slot_type)>::value ?
+    static constexpr size_type kSlotAlignment = compile_time::is_pow2<alignof(slot_type)>::value ?
                                                 cmax(alignof(slot_type), kCacheLineSize) :
                                                 alignof(slot_type);
 
@@ -3541,7 +3540,6 @@ private:
                       "jstd::robin_hash_map::SlotsOffset<N>(): SlotAlignment must bigger than 0.");
         static_assert(((SlotAlignment & (SlotAlignment - 1)) == 0),
                       "jstd::robin_hash_map::SlotsOffset<N>(): SlotAlignment must be power of 2.");
-        const size_type num_ctrl_bytes = ctrl_capacity * sizeof(ctrl_type);
         const ctrl_type * last_ctrls = ctrls + ctrl_capacity;
         size_type last_ctrl = reinterpret_cast<size_type>(last_ctrls);
         size_type slots_first = (last_ctrl + SlotAlignment - 1) & (~(SlotAlignment - 1));
@@ -3601,9 +3599,12 @@ private:
         // Prefetch for resolve potential ctrls TLB misses.
         //Prefetch_Write_T2(new_ctrls);
 
+        // Reset ctrls to default state
+        this->clear_ctrls(new_ctrls, new_capacity, new_max_lookups, new_group_count);
+
         slot_type * new_slots = this->AlignedSlots<kSlotAlignment>(new_ctrls, ctrl_alloc_size);
         // Prefetch for resolve potential ctrls TLB misses.
-        Prefetch_Write_T2(new_slots);
+        //Prefetch_Write_T2(new_slots);
 
         this->ctrls_ = new_ctrls;
         this->max_lookups_ = new_max_lookups;
@@ -3617,9 +3618,6 @@ private:
         }
         this->slot_mask_ = new_capacity - 1;
         this->slot_threshold_ = this->slot_threshold(new_capacity);
-
-        // Reset ctrls to default state
-        this->clear_ctrls(new_ctrls, new_capacity, new_max_lookups, new_group_count);
     }
 
     template <bool AllowShrink, bool AlwaysResize>
