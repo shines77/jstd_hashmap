@@ -559,9 +559,34 @@ int main(int argc, char * argv[])
 #include <cstring>
 #include <memory>
 
-#include <jstd/test/CPUWarmUp.h>
+void cpu_warm_up(int delayMillsecs)
+{
+    using namespace std::chrono;
+    double delayTimeLimit = (double)delayMillsecs / 1.0;
+    volatile int sum = 0;
 
-// Type your code here, or load an example.
+    printf("------------------------------------------\n\n");
+    printf("CPU warm-up begin ...\n");
+
+    high_resolution_clock::time_point startTime, endTime;
+    duration<double, std::ratio<1, 1000>> elapsedTime;
+    startTime = high_resolution_clock::now();
+    do {
+        for (int i = 0; i < 500; ++i) {
+            sum += i;
+            for (int j = 5000; j >= 0; --j) {
+                sum -= j;
+            }
+        }
+        endTime = high_resolution_clock::now();
+        elapsedTime = endTime - startTime;
+    } while (elapsedTime.count() < delayTimeLimit);
+
+    printf("sum = %d, time: %0.3f ms\n", sum, elapsedTime.count());
+    printf("CPU warm-up end   ... \n\n");
+    printf("------------------------------------------\n\n");
+}
+
 struct ListNode
 {
     size_t val{0};
@@ -577,23 +602,22 @@ int main(int argc, char * argv[])
     static constexpr size_t kMaxCount = 10000000;
     static constexpr size_t kBufSize = 128 * 1024 * 1024;
 
-    jtest::CPU::warm_up(1000);
+    cpu_warm_up(1000);
 
     std::unique_ptr<char> src(new char[kBufSize]);
     std::unique_ptr<char> dest(new char[kBufSize]);
 
     *src.get() = 'A';
 
-    auto root = new ListNode;
+    auto root = new ListNode(-1);
     auto it = root;
     for (size_t i = 0; i < kMaxCount; ++i)
     {
-        it->val = i;
-        it->next = new ListNode;
+        it->next = new ListNode(i);
         it = it->next;
     }
 
-    // Forced invalid the caches
+    // Force invalid the caches
     std::memcpy((void *)dest.get(), (const void *)src.get(), kBufSize * sizeof(char));
 
     if (1) {
@@ -610,7 +634,7 @@ int main(int argc, char * argv[])
         printf("cur = %p, dest[0] = %c, time1: %0.3f ms\n", cur, *dest.get(), elapsed.count() * 1000);
     }
 
-    // Forced invalid the caches
+    // Force invalid the caches
     std::memcpy((void *)dest.get(), (const void *)src.get(), kBufSize * sizeof(char));
 
     if (1) {
@@ -627,7 +651,7 @@ int main(int argc, char * argv[])
         printf("cur = %p, dest[0] = %c, time2: %0.3f ms\n", cur, *dest.get(), elapsed.count() * 1000);
     }
 
-    // Forced invalid the caches
+    // Force invalid the caches
     std::memcpy((void *)dest.get(), (const void *)src.get(), kBufSize * sizeof(char));
 
     if (1) {
@@ -644,7 +668,7 @@ int main(int argc, char * argv[])
         printf("cur = %p, dest[0] = %c, time3: %0.3f ms\n", cur, *dest.get(), elapsed.count() * 1000);
     }
 
-    // Forced invalid the caches
+    // Force invalid the caches
     std::memcpy((void *)dest.get(), (const void *)src.get(), kBufSize * sizeof(char));
 
     if (1) {
