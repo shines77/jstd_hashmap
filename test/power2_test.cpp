@@ -607,7 +607,7 @@ int main(int argc, char * argv[])
 {
     using namespace std::chrono;
 
-    static constexpr size_t Iters = 5;
+    static constexpr size_t Iters = 6;
     static constexpr intptr_t kMaxCount = 10000000;
     static constexpr size_t kBufSize = 128 * 1024 * 1024;   // 128 MB
 
@@ -705,11 +705,11 @@ int main(int argc, char * argv[])
 
         char text[512];
         snprintf(text, sizeof(text) - 1,
-                 "t1: %0.3f ms, t2: %0.3f ms, t3: %0.3f ms, t4: %0.3f ms, (%s) - (%s) %s\n\n",
+                 "t1: %0.3f ms, t2: %0.3f ms, t3: %0.3f ms, t4: %0.3f ms, (%s) - (%s) %s",
                  time1, time2, time3, time4,
                  (time1 > time2) ? "t1 > t2" : "t1 < t2",
                  (time3 > time4) ? "t3 > t4" : "t3 < t4",
-                 (time3 > time4) ? "" : "*");
+                 (time3 > time4) ? "*" : "");
 
         results.push_back(text);
     }
