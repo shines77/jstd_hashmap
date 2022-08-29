@@ -556,8 +556,10 @@ int main(int argc, char * argv[])
 #include <cstdint>
 #include <cstddef>
 #include <chrono>
+#include <string>
 #include <cstring>
 #include <memory>
+#include <vector>
 
 #define USE_CACHE_OVERWRITE     1
 
@@ -605,6 +607,7 @@ int main(int argc, char * argv[])
 {
     using namespace std::chrono;
 
+    static constexpr size_t Iters = 5;
     static constexpr intptr_t kMaxCount = 10000000;
     static constexpr size_t kBufSize = 128 * 1024 * 1024;   // 128 MB
 
@@ -614,92 +617,109 @@ int main(int argc, char * argv[])
     std::unique_ptr<char> dest(new char[kBufSize]);
 
     double time1 = 0.0, time2 = 0.0, time3 = 0.0, time4 = 0.0;
+    std::vector<std::string> results;
 
     *src.get() = 'A';
 
     ListNode * head = nullptr;
-    for (intptr_t i = kMaxCount - 1; i >= 0; --i) {
+    for (intptr_t i = kMaxCount - 1; i >= 0; i--) {
         ListNode * cur = new ListNode(i);
         cur->next = head;
         head = cur;
     }
 
+    for (size_t i = 0; i < Iters; i++) {
 #if USE_CACHE_OVERWRITE
-    // Force invalid the caches
-    std::memcpy((void *)dest.get(), (const void *)src.get(), kBufSize * sizeof(char));
+        // Force invalid the caches
+        std::memcpy((void *)dest.get(), (const void *)src.get(), kBufSize * sizeof(char));
 #endif
 
-    if (1) {
-        auto begin = high_resolution_clock::now();
-        ListNode * cur = head;
-        while (cur->next != nullptr) {
-            cur = cur->next;
-        }
-        auto end = high_resolution_clock::now();
+        if (1) {
+            auto begin = high_resolution_clock::now();
+            ListNode * cur = head;
+            while (cur->next != nullptr) {
+                cur = cur->next;
+            }
+            auto end = high_resolution_clock::now();
 
-        duration<double> elapsed = duration_cast<duration<double>>(end - begin);
-        printf("cur = %p, dest[0] = %c, time1: %0.3f ms\n", cur, *dest.get(), elapsed.count() * 1000);
-        time1 = elapsed.count() * 1000;
-    }
+            duration<double> elapsed = duration_cast<duration<double>>(end - begin);
+            printf("cur = %p, dest[0] = %c, time1: %0.3f ms\n", cur, *dest.get(), elapsed.count() * 1000);
+            time1 = elapsed.count() * 1000;
+        }
 
 #if USE_CACHE_OVERWRITE
-    // Force invalid the caches
-    std::memcpy((void *)dest.get(), (const void *)src.get(), kBufSize * sizeof(char));
+        // Force invalid the caches
+        std::memcpy((void *)dest.get(), (const void *)src.get(), kBufSize * sizeof(char));
 #endif
 
-    if (1) {
-        auto begin = high_resolution_clock::now();
-        ListNode * cur = head;
-        while (cur->next != nullptr && cur->next->val != kMaxCount) {
-            cur = cur->next;
-        }
-        auto end = high_resolution_clock::now();
+        if (1) {
+            auto begin = high_resolution_clock::now();
+            ListNode * cur = head;
+            while (cur->next != nullptr && cur->next->val != kMaxCount) {
+                cur = cur->next;
+            }
+            auto end = high_resolution_clock::now();
 
-        duration<double> elapsed = duration_cast<duration<double>>(end - begin);
-        printf("cur = %p, dest[0] = %c, time2: %0.3f ms\n", cur, *dest.get(), elapsed.count() * 1000);
-        time2 = elapsed.count() * 1000;
-    }
+            duration<double> elapsed = duration_cast<duration<double>>(end - begin);
+            printf("cur = %p, dest[0] = %c, time2: %0.3f ms\n", cur, *dest.get(), elapsed.count() * 1000);
+            time2 = elapsed.count() * 1000;
+        }
 
 #if USE_CACHE_OVERWRITE
-    // Force invalid the caches
-    std::memcpy((void *)dest.get(), (const void *)src.get(), kBufSize * sizeof(char));
+        // Force invalid the caches
+        std::memcpy((void *)dest.get(), (const void *)src.get(), kBufSize * sizeof(char));
 #endif
 
-    if (1) {
-        auto begin = high_resolution_clock::now();
-        ListNode * cur = head;
-        while (cur->next != nullptr) {
-            cur = cur->next;
-        }
-        auto end = high_resolution_clock::now();
+        if (1) {
+            auto begin = high_resolution_clock::now();
+            ListNode * cur = head;
+            while (cur->next != nullptr) {
+                cur = cur->next;
+            }
+            auto end = high_resolution_clock::now();
 
-        duration<double> elapsed = duration_cast<duration<double>>(end - begin);
-        printf("cur = %p, dest[0] = %c, time3: %0.3f ms\n", cur, *dest.get(), elapsed.count() * 1000);
-        time3 = elapsed.count() * 1000;
-    }
+            duration<double> elapsed = duration_cast<duration<double>>(end - begin);
+            printf("cur = %p, dest[0] = %c, time3: %0.3f ms\n", cur, *dest.get(), elapsed.count() * 1000);
+            time3 = elapsed.count() * 1000;
+        }
 
 #if USE_CACHE_OVERWRITE
-    // Force invalid the caches
-    std::memcpy((void *)dest.get(), (const void *)src.get(), kBufSize * sizeof(char));
+        // Force invalid the caches
+        std::memcpy((void *)dest.get(), (const void *)src.get(), kBufSize * sizeof(char));
 #endif
 
-    if (1) {
-        auto begin = high_resolution_clock::now();
-        ListNode * cur = head;
-        while (cur->next != nullptr && cur->next->val != kMaxCount) {
-            cur = cur->next;
-        }
-        auto end = high_resolution_clock::now();
+        if (1) {
+            auto begin = high_resolution_clock::now();
+            ListNode * cur = head;
+            while (cur->next != nullptr && cur->next->val != kMaxCount) {
+                cur = cur->next;
+            }
+            auto end = high_resolution_clock::now();
 
-        duration<double> elapsed = duration_cast<duration<double>>(end - begin);
-        printf("cur = %p, dest[0] = %c, time4: %0.3f ms\n", cur, *dest.get(), elapsed.count() * 1000);
-        time4 = elapsed.count() * 1000;
+            duration<double> elapsed = duration_cast<duration<double>>(end - begin);
+            printf("cur = %p, dest[0] = %c, time4: %0.3f ms\n", cur, *dest.get(), elapsed.count() * 1000);
+            time4 = elapsed.count() * 1000;
+        }
+
+        printf("\n");
+
+        char text[512];
+        snprintf(text, sizeof(text) - 1,
+                 "t1: %0.3f ms, t2: %0.3f ms, t3: %0.3f ms, t4: %0.3f ms, (%s) - (%s) %s\n\n",
+                 time1, time2, time3, time4,
+                 (time1 > time2) ? "t1 > t2" : "t1 < t2",
+                 (time3 > time4) ? "t3 > t4" : "t3 < t4",
+                 (time3 > time4) ? "" : "*");
+
+        results.push_back(text);
     }
 
+    // Print all test results
+    for (auto const & result : results) {
+        printf("%s\n", result.c_str());
+    }
     printf("\n");
 
-    printf("t1: %0.3f ms, t2: %0.3f ms, t3: %0.3f ms, t4: %0.3f ms\n\n",
-           time1, time2, time3, time4);
     return 0;
 }
 
