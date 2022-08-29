@@ -1,3 +1,4 @@
+#if 0
 
 #ifndef __SSE4_2__
 #define __SSE4_2__
@@ -547,3 +548,69 @@ int main(int argc, char * argv[])
     jstd::Console::ReadKey();
     return 0;
 }
+
+#else
+
+#include <stdlib.h>
+#include <stdio.h>
+#include <cstdint>
+#include <cstddef>
+#include <chrono>
+
+// Type your code here, or load an example.
+struct ListNode
+{
+    int val{0};
+    ListNode *next{nullptr};
+    ListNode(int x) : val(x) {}
+    ListNode() = default;
+};
+
+int main(int argc, char * argv[])
+{
+    using namespace std::chrono;
+
+    static constexpr int kMaxCount = 10000000;
+
+    auto root = new ListNode;
+    auto it = root;
+    for (int i = 0; i < kMaxCount; ++i)
+    {
+        it->val = i;
+        it->next = new ListNode;
+        it = it->next;
+    }
+
+    if (1) {
+        auto begin = high_resolution_clock::now();
+        ListNode * cur;
+        {
+            cur = root;
+            while (cur->next != nullptr)
+                cur = cur->next;
+        }
+        auto end = high_resolution_clock::now();
+
+        duration<double> elapsed2 = duration_cast<duration<double>>(end - begin);
+        printf("cur = %p, time1: %0.3f ms\n", cur, elapsed2.count() * 1000);
+    }
+
+    if (1) {
+        auto begin = high_resolution_clock::now();
+        ListNode * cur;
+        {
+            cur = root;
+            while (cur->next != nullptr && cur->next->val != kMaxCount)
+                cur = cur->next;
+        }
+        auto end = high_resolution_clock::now();
+
+        duration<double> elapsed1 = duration_cast<duration<double>>(end - begin);
+        printf("cur = %p, time2: %0.3f ms\n", cur, elapsed1.count() * 1000);
+    }
+
+    printf("\n");
+    return 0;
+}
+
+#endif
