@@ -101,7 +101,7 @@
 #define ROBIN_USE_HASH_POLICY       0
 #define ROBIN_USE_SWAP_TRAITS       1
 
-#define ROBIN_REHASH_READ_PREFETCH  0
+#define ROBIN_REHASH_READ_PREFETCH  1
 
 namespace jstd {
 
@@ -3661,6 +3661,8 @@ private:
                 static constexpr size_type kPrefetchOffset = cmin(kPrefetchSteps * cmax(kSlotSetp, kCacheLine), kMaxPrefetchOffset);
                 static constexpr size_type kTailGroupCount = (kPrefetchOffset + (kSlotSetp - 1)) / kSlotSetp;
 
+                static constexpr size_type kPrefetchCtrlOffset = cmax(4 * kGroupSize, kCacheLine * 2);
+
                 ctrl_type * ctrl = old_ctrls;
                 ctrl_type * last_ctrl = old_ctrls + old_group_count * kGroupWidth;
                 ctrl_type * end_ctrl = last_ctrl - kTailGroupCount * kGroupWidth;
@@ -3669,7 +3671,7 @@ private:
                 for (; group < end_group; ++group) {
 #if ROBIN_REHASH_READ_PREFETCH
                     // Prefetch for read old ctrl
-                    Prefetch_Read_T0(PtrOffset(group.ctrl(), kCacheLine * 2));
+                    Prefetch_Read_T0(PtrOffset(group.ctrl(), kPrefetchCtrlOffset));
 
                     // Prefetch for read old slot
                     if (kSlotSetp < 64) {
