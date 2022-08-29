@@ -589,6 +589,9 @@ void cpu_warm_up(int delayMillsecs)
     printf("------------------------------------------\n\n");
 }
 
+//
+// See: https://www.zhihu.com/question/550456179
+//
 struct ListNode
 {
     size_t val;
@@ -609,6 +612,8 @@ int main(int argc, char * argv[])
 
     std::unique_ptr<char> src(new char[kBufSize]);
     std::unique_ptr<char> dest(new char[kBufSize]);
+
+    double time1 = 0.0, time2 = 0.0, time3 = 0.0, time4 = 0.0;
 
     *src.get() = 'A';
 
@@ -634,6 +639,7 @@ int main(int argc, char * argv[])
 
         duration<double> elapsed = duration_cast<duration<double>>(end - begin);
         printf("cur = %p, dest[0] = %c, time1: %0.3f ms\n", cur, *dest.get(), elapsed.count() * 1000);
+        time1 = elapsed.count() * 1000;
     }
 
 #if USE_CACHE_OVERWRITE
@@ -651,6 +657,7 @@ int main(int argc, char * argv[])
 
         duration<double> elapsed = duration_cast<duration<double>>(end - begin);
         printf("cur = %p, dest[0] = %c, time2: %0.3f ms\n", cur, *dest.get(), elapsed.count() * 1000);
+        time2 = elapsed.count() * 1000;
     }
 
 #if USE_CACHE_OVERWRITE
@@ -668,6 +675,7 @@ int main(int argc, char * argv[])
 
         duration<double> elapsed = duration_cast<duration<double>>(end - begin);
         printf("cur = %p, dest[0] = %c, time3: %0.3f ms\n", cur, *dest.get(), elapsed.count() * 1000);
+        time3 = elapsed.count() * 1000;
     }
 
 #if USE_CACHE_OVERWRITE
@@ -685,9 +693,13 @@ int main(int argc, char * argv[])
 
         duration<double> elapsed = duration_cast<duration<double>>(end - begin);
         printf("cur = %p, dest[0] = %c, time4: %0.3f ms\n", cur, *dest.get(), elapsed.count() * 1000);
+        time4 = elapsed.count() * 1000;
     }
 
     printf("\n");
+
+    printf("t1: %0.3f ms, t2: %0.3f ms, t3: %0.3f ms, t4: %0.3f ms\n\n",
+           time1, time2, time3, time4);
     return 0;
 }
 
