@@ -564,9 +564,9 @@ int main(int argc, char * argv[])
 // Type your code here, or load an example.
 struct ListNode
 {
-    int val{0};
-    ListNode *next{nullptr};
-    ListNode(int x) : val(x) {}
+    size_t val{0};
+    ListNode * next{nullptr};
+    ListNode(size_t x) : val(x) {}
     ListNode() = default;
 };
 
@@ -574,17 +574,19 @@ int main(int argc, char * argv[])
 {
     using namespace std::chrono;
 
-    static constexpr int kMaxCount = 10000000;
-    static constexpr int kBufSize = 128 * 1024 * 1024;
+    static constexpr size_t kMaxCount = 10000000;
+    static constexpr size_t kBufSize = 128 * 1024 * 1024;
 
     jtest::CPU::warm_up(1000);
 
     std::unique_ptr<char> src(new char[kBufSize]);
     std::unique_ptr<char> dest(new char[kBufSize]);
 
+    *src.get() = 'A';
+
     auto root = new ListNode;
     auto it = root;
-    for (int i = 0; i < kMaxCount; ++i)
+    for (size_t i = 0; i < kMaxCount; ++i)
     {
         it->val = i;
         it->next = new ListNode;
@@ -605,7 +607,7 @@ int main(int argc, char * argv[])
         auto end = high_resolution_clock::now();
 
         duration<double> elapsed = duration_cast<duration<double>>(end - begin);
-        printf("cur = %p, time1: %0.3f ms\n", cur, elapsed.count() * 1000);
+        printf("cur = %p, dest[0] = %c, time1: %0.3f ms\n", cur, *dest.get(), elapsed.count() * 1000);
     }
 
     // Forced invalid the caches
@@ -622,7 +624,7 @@ int main(int argc, char * argv[])
         auto end = high_resolution_clock::now();
 
         duration<double> elapsed = duration_cast<duration<double>>(end - begin);
-        printf("cur = %p, time2: %0.3f ms\n", cur, elapsed.count() * 1000);
+        printf("cur = %p, dest[0] = %c, time2: %0.3f ms\n", cur, *dest.get(), elapsed.count() * 1000);
     }
 
     // Forced invalid the caches
@@ -639,7 +641,7 @@ int main(int argc, char * argv[])
         auto end = high_resolution_clock::now();
 
         duration<double> elapsed = duration_cast<duration<double>>(end - begin);
-        printf("cur = %p, time3: %0.3f ms\n", cur, elapsed.count() * 1000);
+        printf("cur = %p, dest[0] = %c, time3: %0.3f ms\n", cur, *dest.get(), elapsed.count() * 1000);
     }
 
     // Forced invalid the caches
@@ -656,7 +658,7 @@ int main(int argc, char * argv[])
         auto end = high_resolution_clock::now();
 
         duration<double> elapsed = duration_cast<duration<double>>(end - begin);
-        printf("cur = %p, time4: %0.3f ms\n", cur, elapsed.count() * 1000);
+        printf("cur = %p, dest[0] = %c, time4: %0.3f ms\n", cur, *dest.get(), elapsed.count() * 1000);
     }
 
     printf("\n");
