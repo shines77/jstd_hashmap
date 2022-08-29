@@ -591,8 +591,8 @@ int main(int argc, char * argv[])
         }
         auto end = high_resolution_clock::now();
 
-        duration<double> elapsed2 = duration_cast<duration<double>>(end - begin);
-        printf("cur = %p, time1: %0.3f ms\n", cur, elapsed2.count() * 1000);
+        duration<double> elapsed = duration_cast<duration<double>>(end - begin);
+        printf("cur = %p, time1: %0.3f ms\n", cur, elapsed.count() * 1000);
     }
 
     if (1) {
@@ -605,8 +605,36 @@ int main(int argc, char * argv[])
         }
         auto end = high_resolution_clock::now();
 
-        duration<double> elapsed1 = duration_cast<duration<double>>(end - begin);
-        printf("cur = %p, time2: %0.3f ms\n", cur, elapsed1.count() * 1000);
+        duration<double> elapsed = duration_cast<duration<double>>(end - begin);
+        printf("cur = %p, time2: %0.3f ms\n", cur, elapsed.count() * 1000);
+    }
+
+    if (1) {
+        auto begin = high_resolution_clock::now();
+        ListNode * cur;
+        {
+            cur = root;
+            while (cur->next != nullptr)
+                cur = cur->next;
+        }
+        auto end = high_resolution_clock::now();
+
+        duration<double> elapsed = duration_cast<duration<double>>(end - begin);
+        printf("cur = %p, time3: %0.3f ms\n", cur, elapsed.count() * 1000);
+    }
+
+    if (1) {
+        auto begin = high_resolution_clock::now();
+        ListNode * cur;
+        {
+            cur = root;
+            while (cur->next != nullptr && cur->next->val != kMaxCount)
+                cur = cur->next;
+        }
+        auto end = high_resolution_clock::now();
+
+        duration<double> elapsed = duration_cast<duration<double>>(end - begin);
+        printf("cur = %p, time4: %0.3f ms\n", cur, elapsed.count() * 1000);
     }
 
     printf("\n");
