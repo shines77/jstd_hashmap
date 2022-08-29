@@ -2866,19 +2866,11 @@ public:
             return { iter, iter };
     }
 
-    std::pair<iterator, bool> insert(const value_type & value) {
+    std::pair<iterator, bool> insert(const actual_value_type & value) {
         return this->emplace_impl<false>(value);
     }
 
-    std::pair<iterator, bool> insert(value_type && value) {
-        return this->emplace_impl<false>(std::move(value));
-    }
-
-    std::pair<iterator, bool> insert(const init_type & value) {
-        return this->emplace_impl<false>(value);
-    }
-
-    std::pair<iterator, bool> insert(init_type && value) {
+    std::pair<iterator, bool> insert(actual_value_type && value) {
         return this->emplace_impl<false>(std::move(value));
     }
 
@@ -2886,24 +2878,16 @@ public:
               (!jstd::is_same_ex<P, value_type>::value) &&
               (!jstd::is_same_ex<P, init_type>::value) &&
               (std::is_constructible<value_type, P &&>::value ||
-               std::is_convertible<init_type, P &&>::value)>::type * = nullptr>
+               std::is_constructible<init_type, P &&>::value)>::type * = nullptr>
     std::pair<iterator, bool> insert(P && value) {
         return this->emplace_impl<false>(std::forward<P>(value));
     }
 
-    iterator insert(const_iterator hint, const value_type & value) {
+    iterator insert(const_iterator hint, const actual_value_type & value) {
         return this->emplace_impl<false>(value).first;
     }
 
-    iterator insert(const_iterator hint, value_type && value) {
-        return this->emplace_impl<false>(std::move(value)).first;
-    }
-
-    iterator insert(const_iterator hint, const init_type & value) {
-        return this->emplace_impl<false>(value).first;
-    }
-
-    iterator insert(const_iterator hint, init_type && value) {
+    iterator insert(const_iterator hint, actual_value_type && value) {
         return this->emplace_impl<false>(std::move(value)).first;
     }
 
@@ -2911,7 +2895,7 @@ public:
               (!jstd::is_same_ex<P, value_type>::value) &&
               (!jstd::is_same_ex<P, init_type>::value) &&
               (std::is_constructible<value_type, P &&>::value ||
-               std::is_convertible<init_type, P &&>::value)>::type * = nullptr>
+               std::is_constructible<init_type, P &&>::value)>::type * = nullptr>
     std::pair<iterator, bool> insert(const_iterator hint, P && value) {
         return this->emplace_impl<false>(std::forward<P>(value));
     }
@@ -2923,11 +2907,7 @@ public:
         }
     }
 
-    void insert(std::initializer_list<value_type> ilist) {
-        this->insert(ilist.begin(), ilist.end());
-    }
-
-    void insert(std::initializer_list<init_type> ilist) {
+    void insert(std::initializer_list<actual_value_type> ilist) {
         this->insert(ilist.begin(), ilist.end());
     }
 
@@ -4650,7 +4630,7 @@ InsertOrGrow_Start:
     }
 
     template <bool AlwaysUpdate>
-    std::pair<iterator, bool> emplace_impl(const value_type & value) {
+    std::pair<iterator, bool> emplace_impl(const actual_value_type & value) {
         auto find_info = this->find_or_insert(value.first);
         slot_type * slot = find_info.first;
         size_type is_exists = find_info.second;
@@ -4675,7 +4655,7 @@ InsertOrGrow_Start:
     }
 
     template <bool AlwaysUpdate>
-    std::pair<iterator, bool> emplace_impl(value_type && value) {
+    std::pair<iterator, bool> emplace_impl(actual_value_type && value) {
         auto find_info = this->find_or_insert(value.first);
         slot_type * slot = find_info.first;
         size_type is_exists = find_info.second;
@@ -4684,10 +4664,10 @@ InsertOrGrow_Start:
             assert(slot != nullptr);
             if (is_exists == kNeedGrow) {
                 this->grow_if_necessary();
-                return this->emplace_impl<AlwaysUpdate>(std::forward<value_type>(value));
+                return this->emplace_impl<AlwaysUpdate>(std::forward<actual_value_type>(value));
             }
 
-            SlotPolicyTraits::construct(&this->allocator_, slot, std::forward<value_type>(value));
+            SlotPolicyTraits::construct(&this->allocator_, slot, std::forward<actual_value_type>(value));
             this->slot_size_++;
             return { this->iterator_at(slot), true };
         } else {
