@@ -258,7 +258,8 @@ public:
 
     static constexpr size_type kCacheLineSize = 64;
     static constexpr size_type kActualSlotAlignment = alignof(slot_type);
-    static constexpr size_type kSlotAlignment = compile_time::is_pow2<alignof(slot_type)>::value ?
+    static constexpr size_type kSlotAlignment = alignof(slot_type);
+    static constexpr size_type kSlotAlignment2 = compile_time::is_pow2<alignof(slot_type)>::value ?
                                                 cmax(alignof(slot_type), kCacheLineSize) :
                                                 alignof(slot_type);
 
