@@ -705,9 +705,10 @@ int main(int argc, char * argv[])
 
         char text[512];
         snprintf(text, sizeof(text) - 1,
-                 "t1: %0.3f ms, t2: %0.3f ms, t3: %0.3f ms, t4: %0.3f ms, (%s) - (%s) %s",
+                 "t1: %0.3f ms, t2: %0.3f ms, t3: %0.3f ms, t4: %0.3f ms, (%s) %s - (%s) %s",
                  time1, time2, time3, time4,
                  (time1 > time2) ? "t1 > t2" : "t1 < t2",
+                 (time1 > time2) ? "*" : " ",
                  (time3 > time4) ? "t3 > t4" : "t3 < t4",
                  (time3 > time4) ? "*" : "");
 
