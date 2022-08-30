@@ -1397,13 +1397,17 @@ public:
 
     template <>
     struct ctrl_data<false, true> : ctrl_data<true, true> {
-        //
+        using Base = typename ctrl_data::ctrl_data;
+        using Base::Base;
     };
 
     typedef ctrl_data<kNeedStoreHash, false> ctrl_type;
+
     typedef typename ctrl_type::value_type  ctrl_value_t;
+    typedef typename ctrl_type::uvalue_type ctrl_uvalue_t;
     typedef typename ctrl_type::dist_type   dist_type;
     typedef typename ctrl_type::udist_type  udist_type;
+    typedef typename ctrl_type::index_type  slot_index_t;
 
     template <typename T>
     struct MatchMask2 {
