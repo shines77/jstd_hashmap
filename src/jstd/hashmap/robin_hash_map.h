@@ -1397,7 +1397,9 @@ public:
 
     template <>
     struct ctrl_data<false, true> : ctrl_data<true, true> {
-        using Base = typename ctrl_data::ctrl_data;
+        using Base = ctrl_data<true, true>;
+
+        ctrl_data() {}
         using Base::Base;
     };
 
