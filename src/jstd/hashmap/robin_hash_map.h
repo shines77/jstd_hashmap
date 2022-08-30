@@ -271,7 +271,7 @@ public:
 
     static constexpr size_type kMinLookups = 4;
 
-    static constexpr float kMinLoadFactor = 0.2f;
+    static constexpr float kMinLoadFactor = 0.3f;
     static constexpr float kMaxLoadFactor = 0.6f;
 
     // Must be kMinLoadFactor <= loadFactor <= kMaxLoadFactor
@@ -391,11 +391,48 @@ public:
         opLE    // <=
     };
 
-    template <typename T, bool bStoreHash, bool kIsIndirectKV>
-    struct ctrl_data;
+    template <typename T, bool bStoreHash>
+    class meta_hash {
+    public:
+        typedef T value_type;
+
+    private:        
+        value_type hash_;
+
+    public:
+        meta_hash(value_type hash = 0) noexcept : hash_(hash) {
+        }
+        ~meta_hash() = default;
+
+        value_type value() const {
+            return this->hash_;
+        }
+
+        void setValue(value_type hash) {
+            this->hash_ = hash;
+        }
+    };
 
     template <typename T>
-    struct ctrl_data<T, false, false> {
+    class meta_hash<T, false> {
+    public:
+        typedef T value_type;
+
+        meta_hash(value_type hash = 0) noexcept {
+        }
+        ~meta_hash() = default;
+
+        value_type value() const {
+            return 0;
+        }
+
+        void setValue(value_type /* hash */) {
+            /* Do nothing! */
+        }
+    };
+
+    template <bool bStoreHash /* = false */, bool kIsIndirectKV /* = false */>
+    struct ctrl_data {
         typedef std::int8_t   value_type;
         typedef std::uint8_t  uvalue_type;
         typedef std::uint32_t index_type;
@@ -508,6 +545,14 @@ public:
             return (this->dist <= 0);
         }
 
+        std::uint8_t getHash() const {
+            return static_cast<std::uint8_t>(0);
+        }
+
+        index_type getIndex() const {
+            return static_cast<index_type>(-1);
+        }
+
         void setEmpty() {
             this->value = kEmptySlot;
         }
@@ -544,6 +589,9 @@ public:
 
         void setValue(const ctrl_data & ctrl) {
             this->value = ctrl.value;
+        }
+
+        void setIndex(index_type /* index */) {
         }
 
         void mergeHash(const ctrl_data & ctrl, std::uint8_t hash) {
@@ -704,8 +752,8 @@ public:
         }
     };
 
-    template <typename T>
-    struct ctrl_data<T, true, false> {
+    template <>
+    struct ctrl_data<true, false> {
         typedef std::int16_t  value_type;
         typedef std::uint16_t uvalue_type;
         typedef std::uint32_t index_type;
@@ -816,6 +864,14 @@ public:
             return (this->value < kDistInc16);
         }
 
+        std::uint8_t getHash() const {
+            return this->hash;
+        }
+
+        index_type getIndex() const {
+            return static_cast<index_type>(-1);
+        }
+
         void setEmpty() {
             this->value = kEmptySlot16;
         }
@@ -856,6 +912,9 @@ public:
 
         void setValue(const ctrl_data & ctrl) {
             this->value = ctrl.value;
+        }
+
+        void setIndex(index_type /* index */) {
         }
 
         void mergeHash(const ctrl_data & ctrl, std::uint8_t hash) {
@@ -1011,8 +1070,8 @@ public:
         }
     };
 
-    template <typename T>
-    struct ctrl_data<T, true, true> {
+    template <>
+    struct ctrl_data<true, true> {
         typedef std::int64_t  value_type;
         typedef std::uint64_t uvalue_type;
         typedef std::uint32_t index_type;
@@ -1129,6 +1188,14 @@ public:
             return (this->value < kDistInc32);
         }
 
+        std::uint8_t getHash() const {
+            return this->hash;
+        }
+
+        index_type getIndex() const {
+            return this->index;
+        }
+
         void setEmpty() {
             this->value = kEmptySlot16b;
         }
@@ -1169,6 +1236,10 @@ public:
 
         void setValue(const ctrl_data & ctrl) {
             this->value = ctrl.value;
+        }
+
+        void setIndex(index_type index ) {
+            this->index = index;
         }
 
         void mergeHash(const ctrl_data & ctrl, std::uint8_t hash) {
@@ -1324,7 +1395,12 @@ public:
         }
     };
 
-    typedef ctrl_data<void, kNeedStoreHash, false> ctrl_type;
+    template <>
+    struct ctrl_data<false, true> : ctrl_data<true, true> {
+        //
+    };
+
+    typedef ctrl_data<kNeedStoreHash, false> ctrl_type;
     typedef typename ctrl_type::value_type  ctrl_value_t;
     typedef typename ctrl_type::dist_type   dist_type;
     typedef typename ctrl_type::udist_type  udist_type;
@@ -3298,6 +3374,16 @@ private:
         return (this->ctrls() + ssize_type(slot_index));
     }
 
+    size_type ctrl_index(size_type slot_index) noexcept {
+        ctrl_type * ctrl = this->ctrl_at(slot_index);
+        return ctrl->getIndex();
+    }
+
+    size_type ctrl_index(size_type slot_index) const noexcept {
+        const ctrl_type * ctrl = this->ctrl_at(slot_index);
+        return ctrl->getIndex();
+    }
+
     inline ctrl_type * next_ctrl(size_type & slot_index) noexcept {
         slot_index = this->next_index(slot_index);
         return this->ctrl_at(slot_index);
@@ -3310,10 +3396,36 @@ private:
 
     slot_type * slot_at(size_type slot_index) noexcept {
         assert(slot_index <= this->max_slot_capacity());
+        if (kIsIndirectKV) {
+            slot_index = this->ctrl_index(slot_index);
+        }
         return (this->slots() + ssize_type(slot_index));
     }
 
     const slot_type * slot_at(size_type slot_index) const noexcept {
+        assert(slot_index <= this->max_slot_capacity());
+        if (kIsIndirectKV) {
+            slot_index = this->ctrl_index(slot_index);
+        }
+        return (this->slots() + ssize_type(slot_index));
+    }
+
+    slot_type * slot_at(ctrl_type * ctrl) noexcept {
+        size_type slot_index;
+        if (kIsIndirectKV)
+            slot_index = ctrl->getIndex();
+        else
+            slot_index = this->index_of(ctrl);
+        assert(slot_index <= this->max_slot_capacity());
+        return (this->slots() + ssize_type(slot_index));
+    }
+
+    const slot_type * slot_at(const ctrl_type * ctrl) const noexcept {
+        size_type slot_index;
+        if (kIsIndirectKV)
+            slot_index = ctrl->getIndex();
+        else
+            slot_index = this->index_of(ctrl);
         assert(slot_index <= this->max_slot_capacity());
         return (this->slots() + ssize_type(slot_index));
     }
@@ -4497,8 +4609,7 @@ InsertOrGrow_Start:
             ctrl++;
         }
 
-        slot_index = this->index_of(ctrl);
-        slot_type * slot = this->slot_at(slot_index);
+        slot_type * slot = this->slot_at(ctrl);
         o_dist_and_0 = dist_and_0;
         return { ctrl, slot };
     }
