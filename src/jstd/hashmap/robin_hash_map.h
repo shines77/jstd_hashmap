@@ -431,7 +431,18 @@ public:
         }
     };
 
-    template <bool bStoreHash /* = false */, bool kIsIndirectKV /* = false */>
+    //
+    // GCC unsupported class-scope explicit specialization until gcc 12.x,
+    // so we add an useless T type to solve.
+    //
+    // See: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=85282
+    //      https://stackoverflow.com/questions/3052579/explicit-specialization-in-non-namespace-scope
+    //
+    // Like:
+    //       template <>
+    //       struct ctrl_data<true, false> {};
+    //
+    template <typename T, bool bStoreHash /* = false */, bool kIsIndirectKV /* = false */>
     struct ctrl_data {
         typedef std::int8_t   value_type;
         typedef std::uint8_t  uvalue_type;
@@ -752,8 +763,8 @@ public:
         }
     };
 
-    template <>
-    struct ctrl_data<true, false> {
+    template <typename T>
+    struct ctrl_data<T, true, false> {
         typedef std::int16_t  value_type;
         typedef std::uint16_t uvalue_type;
         typedef std::uint32_t index_type;
@@ -1070,8 +1081,8 @@ public:
         }
     };
 
-    template <>
-    struct ctrl_data<true, true> {
+    template <typename T>
+    struct ctrl_data<T, true, true> {
         typedef std::int64_t  value_type;
         typedef std::uint64_t uvalue_type;
         typedef std::uint32_t index_type;
@@ -1395,15 +1406,15 @@ public:
         }
     };
 
-    template <>
-    struct ctrl_data<false, true> : ctrl_data<true, true> {
-        using Base = ctrl_data<true, true>;
+    template <typename T>
+    struct ctrl_data<T, false, true> : ctrl_data<T, true, true> {
+        using Base = ctrl_data<T, true, true>;
 
         ctrl_data() {}
         using Base::Base;
     };
 
-    typedef ctrl_data<kNeedStoreHash, false> ctrl_type;
+    typedef ctrl_data<void, kNeedStoreHash, false> ctrl_type;
 
     typedef typename ctrl_type::value_type  ctrl_value_t;
     typedef typename ctrl_type::uvalue_type ctrl_uvalue_t;
