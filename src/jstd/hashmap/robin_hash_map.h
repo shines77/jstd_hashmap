@@ -435,6 +435,8 @@ public:
     // GCC unsupported class-scope explicit specialization until gcc 12.x,
     // so we add an useless T type to solve.
     //
+    // Compile error info: "error: explicit specialization in non-namespace scope ......"
+    //
     // See: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=85282
     //      https://stackoverflow.com/questions/3052579/explicit-specialization-in-non-namespace-scope
     //
