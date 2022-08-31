@@ -101,7 +101,7 @@
 #define ROBIN_USE_HASH_POLICY       0
 #define ROBIN_USE_SWAP_TRAITS       1
 
-#define ROBIN_REHASH_READ_PREFETCH  1
+#define ROBIN_REHASH_READ_PREFETCH  0
 
 namespace jstd {
 
@@ -3761,6 +3761,7 @@ private:
             this->create_slots<false>(new_capacity);
 
             if (old_slot_capacity >= kGroupWidth) {
+#if ROBIN_REHASH_READ_PREFETCH
                 static constexpr size_type kSlotSetp = sizeof(value_type) * kGroupWidth;
                 static constexpr size_type kCacheLine = 64;
                 static constexpr size_type kPrefetchMinSteps = 3;
@@ -3779,7 +3780,6 @@ private:
                 group_type group(ctrl), end_group(end_ctrl);
                 slot_type * slot_base = old_slots;
                 for (; group < end_group; ++group) {
-#if ROBIN_REHASH_READ_PREFETCH
                     // Prefetch for read old ctrl
                     Prefetch_Read_T0(PtrOffset(group.ctrl(), kPrefetchCtrlOffset));
 
@@ -3853,7 +3853,6 @@ private:
                             Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 15));
                         }
                     }
-#endif // ROBIN_REHASH_READ_PREFETCH
 
                     std::uint32_t maskUsed = group.matchUsed();
                     while (maskUsed != 0) {
@@ -3880,6 +3879,29 @@ private:
                     }
                     slot_base += kGroupWidth;
                 }
+
+#else // !ROBIN_REHASH_READ_PREFETCH
+
+                ctrl_type * ctrl = old_ctrls;
+                ctrl_type * last_ctrl = old_ctrls + old_group_count * kGroupWidth;
+                group_type group(ctrl), last_group(last_ctrl);
+                slot_type * slot_base = old_slots;
+
+                for (; group < last_group; ++group) {
+                    std::uint32_t maskUsed = group.matchUsed();
+                    while (maskUsed != 0) {
+                        size_type pos = BitUtils::bsf32(maskUsed);
+                        maskUsed = BitUtils::clearLowBit32(maskUsed);
+                        size_type index = group.index(0, pos);
+                        slot_type * old_slot = slot_base + index;
+                        this->unique_insert_no_grow(old_slot);
+                        this->destroy_slot(old_slot);
+                    }
+                    slot_base += kGroupWidth;
+                }
+
+#endif // ROBIN_REHASH_READ_PREFETCH
+
             } else if (old_ctrls != default_empty_ctrls()) {
                 ctrl_type * last_ctrl = old_ctrls + old_max_slot_capacity;
                 slot_type * old_slot = old_slots;
