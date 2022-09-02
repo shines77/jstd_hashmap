@@ -382,6 +382,12 @@ public:
     static constexpr std::uint64_t kEndOfMark64  = 0xFEFEFEFEFEFEFEFEull;
     static constexpr std::uint64_t kUnusedMask64 = 0x8080808080808080ull;
 
+    enum FindResult {
+        kNeedGrow = 0,
+        kIsNotExists = 1,
+        kIsExists = 2
+    };
+
     enum CompareOp {
         opEQ,   // ==
         opNE,   // !=
@@ -433,7 +439,7 @@ public:
 
     //
     // GCC unsupported class-scope explicit specialization until gcc 12.x,
-    // so we add an useless T type to solve.
+    // so we add an useless T type (dummy template argument) to solve.
     //
     // Compile error info: "error: explicit specialization in non-namespace scope ......"
     //
@@ -562,6 +568,14 @@ public:
             return static_cast<std::uint8_t>(0);
         }
 
+        udist_type getDist() const {
+            return static_cast<udist_type>(this->dist);
+        }
+
+        std::int32_t getLow() const {
+            return 0;
+        }
+
         index_type getIndex() const {
             return static_cast<index_type>(-1);
         }
@@ -602,6 +616,9 @@ public:
 
         void setValue(const ctrl_data & ctrl) {
             this->value = ctrl.value;
+        }
+
+        void setLow(std::int32_t /* low */) {
         }
 
         void setIndex(index_type /* index */) {
@@ -881,6 +898,14 @@ public:
             return this->hash;
         }
 
+        udist_type getDist() const {
+            return static_cast<udist_type>(this->dist);
+        }
+
+        std::int32_t getLow() const {
+            return 0;
+        }
+
         index_type getIndex() const {
             return static_cast<index_type>(-1);
         }
@@ -925,6 +950,9 @@ public:
 
         void setValue(const ctrl_data & ctrl) {
             this->value = ctrl.value;
+        }
+
+        void setLow(std::int32_t /* low */) {
         }
 
         void setIndex(index_type /* index */) {
@@ -1099,6 +1127,10 @@ public:
                 index_type    index;
             };
             struct {
+                std::int32_t ilow;
+                std::int32_t ihigh;
+            };
+            struct {
                 std::uint32_t low;
                 std::uint32_t high;
             };
@@ -1205,6 +1237,14 @@ public:
             return this->hash;
         }
 
+        udist_type getDist() const {
+            return static_cast<udist_type>(this->dist);
+        }
+
+        std::int32_t getLow() const {
+            return this->ilow;
+        }
+
         index_type getIndex() const {
             return this->index;
         }
@@ -1251,7 +1291,11 @@ public:
             this->value = ctrl.value;
         }
 
-        void setIndex(index_type index ) {
+        void setLow(std::int32_t low) {
+            this->ilow = low;
+        }
+
+        void setIndex(index_type index) {
             this->index = index;
         }
 
@@ -3214,7 +3258,6 @@ private:
         return (std::intptr_t(value) >= 0);
     }
 
-#if 1
     iterator iterator_at(size_type index) noexcept {
         return { this, index };
     }
@@ -3222,15 +3265,6 @@ private:
     const_iterator iterator_at(size_type index) const noexcept {
         return { this, index };
     }
-#else
-    iterator iterator_at(size_type index) noexcept {
-        return { this->ctrl_at(index), this->slot_at(index) };
-    }
-
-    const_iterator iterator_at(size_type index) const noexcept {
-        return { this->ctrl_at(index), this->slot_at(index) };
-    }
-#endif
 
     iterator iterator_at(ctrl_type * ctrl) noexcept {
         return { this, this->index_of(ctrl) };
@@ -3363,57 +3397,27 @@ private:
         return (index + 1);
     }
 
-    size_type round_index(size_type index) const {
-        return (index & this->slot_mask());
-    }
-
-    size_type round_index(size_type index, size_type slot_mask) const {
-        assert(pow2::is_pow2(slot_mask + 1));
-        return (index & slot_mask);
-    }
-
-    std::int8_t round_dist(size_type last, size_type first) const {
-        assert(last >= first);
-        size_type distance = last - first;
-        assert(distance < (size_type)kMaxDist);
-#if 1
-        return (std::int8_t)distance;
-#else
-        return ((distance <= (size_type)kMaxDist) ? std::int8_t(distance) : kMaxDist);
-#endif
-    }
-
-    ctrl_type * ctrl_at(size_type slot_index) noexcept {
+    inline ctrl_type * ctrl_at(size_type slot_index) noexcept {
         assert(slot_index <= this->max_slot_capacity());
         return (this->ctrls() + ssize_type(slot_index));
     }
 
-    const ctrl_type * ctrl_at(size_type slot_index) const noexcept {
+    inline const ctrl_type * ctrl_at(size_type slot_index) const noexcept {
         assert(slot_index <= this->max_slot_capacity());
         return (this->ctrls() + ssize_type(slot_index));
     }
 
-    size_type ctrl_index(size_type slot_index) noexcept {
+    inline size_type ctrl_index(size_type slot_index) noexcept {
         ctrl_type * ctrl = this->ctrl_at(slot_index);
         return ctrl->getIndex();
     }
 
-    size_type ctrl_index(size_type slot_index) const noexcept {
+    inline size_type ctrl_index(size_type slot_index) const noexcept {
         const ctrl_type * ctrl = this->ctrl_at(slot_index);
         return ctrl->getIndex();
     }
 
-    inline ctrl_type * next_ctrl(size_type & slot_index) noexcept {
-        slot_index = this->next_index(slot_index);
-        return this->ctrl_at(slot_index);
-    }
-
-    inline const ctrl_type * next_ctrl(size_type & slot_index) const noexcept {
-        slot_index = this->next_index(slot_index);
-        return this->ctrl_at(slot_index);
-    }
-
-    slot_type * slot_at(size_type slot_index) noexcept {
+    inline slot_type * slot_at(size_type slot_index) noexcept {
         assert(slot_index <= this->max_slot_capacity());
         if (kIsIndirectKV) {
             slot_index = this->ctrl_index(slot_index);
@@ -3421,7 +3425,7 @@ private:
         return (this->slots() + ssize_type(slot_index));
     }
 
-    const slot_type * slot_at(size_type slot_index) const noexcept {
+    inline const slot_type * slot_at(size_type slot_index) const noexcept {
         assert(slot_index <= this->max_slot_capacity());
         if (kIsIndirectKV) {
             slot_index = this->ctrl_index(slot_index);
@@ -3429,7 +3433,7 @@ private:
         return (this->slots() + ssize_type(slot_index));
     }
 
-    slot_type * slot_at(ctrl_type * ctrl) noexcept {
+    inline slot_type * slot_at(ctrl_type * ctrl) noexcept {
         size_type slot_index;
         if (kIsIndirectKV)
             slot_index = ctrl->getIndex();
@@ -3439,7 +3443,7 @@ private:
         return (this->slots() + ssize_type(slot_index));
     }
 
-    const slot_type * slot_at(const ctrl_type * ctrl) const noexcept {
+    inline const slot_type * slot_at(const ctrl_type * ctrl) const noexcept {
         size_type slot_index;
         if (kIsIndirectKV)
             slot_index = ctrl->getIndex();
@@ -3449,36 +3453,14 @@ private:
         return (this->slots() + ssize_type(slot_index));
     }
 
-    group_type group_at(size_type slot_index) noexcept {
+    inline group_type group_at(size_type slot_index) noexcept {
         assert(slot_index < this->max_slot_capacity());
         return { this->ctrl_at(slot_index) };
     }
 
-    const group_type group_at(size_type slot_index) const noexcept {
+    inline const group_type group_at(size_type slot_index) const noexcept {
         assert(slot_index < this->max_slot_capacity());
         return { this->ctrl_at(slot_index) };
-    }
-
-    ctrl_type & get_ctrl(size_type slot_index) {
-        assert(slot_index < this->max_slot_capacity());
-        ctrl_type * ctrls = this->ctrls();
-        return ctrls[slot_index];
-    }
-
-    const ctrl_type & get_ctrl(size_type slot_index) const {
-        assert(slot_index < this->max_slot_capacity());
-        ctrl_type * ctrls = this->ctrls();
-        return ctrls[slot_index];
-    }
-
-    slot_type & get_slot(size_type slot_index) {
-        assert(slot_index < this->max_slot_capacity());
-        return this->slots_[slot_index];
-    }
-
-    const slot_type & get_slot(size_type slot_index) const {
-        assert(slot_index < this->max_slot_capacity());
-        return this->slots_[slot_index];
     }
 
     size_type index_of(iterator pos) const {
@@ -3487,18 +3469,6 @@ private:
 
     size_type index_of(const_iterator pos) const {
         return pos.index();
-    }
-
-    size_type index_of(slot_type * slot) const {
-        assert(slot != nullptr);
-        assert(slot >= this->slots());
-        size_type index = (size_type)(slot - this->slots());
-        assert(is_positive(index));
-        return index;
-    }
-
-    size_type index_of(const slot_type * slot) const {
-        return this->index_of((slot_type *)slot);
     }
 
     size_type index_of(ctrl_type * ctrl) const {
@@ -3511,6 +3481,18 @@ private:
 
     size_type index_of(const ctrl_type * ctrl) const {
         return this->index_of((ctrl_type *)ctrl);
+    }
+
+    size_type index_of(slot_type * slot) const {
+        assert(slot != nullptr);
+        assert(slot >= this->slots());
+        size_type index = (size_type)(slot - this->slots());
+        assert(is_positive(index));
+        return index;
+    }
+
+    size_type index_of(const slot_type * slot) const {
+        return this->index_of((slot_type *)slot);
     }
 
     template <typename U>
@@ -4347,6 +4329,9 @@ private:
     const slot_type * find_impl(const KeyT & key) const {
         // Prefetch for resolve potential ctrls TLB misses.
         //Prefetch_Read_T2(this->ctrls());
+        if (kIsIndirectKV) {
+            return this->indirect_find_impl(key);
+        }
 
         hash_code_t hash_code = this->get_hash(key);
         size_type slot_index = this->index_for_hash(hash_code);
@@ -4482,16 +4467,57 @@ private:
 #endif
     }
 
-    enum FindResult {
-        kNeedGrow = 0,
-        kIsNotExists = 1,
-        kIsExists = 2
-    };
+    template <typename KeyT>
+    slot_type * indirect_find_impl(const KeyT & key) {
+        return const_cast<slot_type *>(
+            const_cast<const this_type *>(this)->indirect_find_impl(key)
+        );
+    }
+
+    template <typename KeyT>
+    const slot_type * indirect_find_impl(const KeyT & key) const {
+        // Prefetch for resolve potential ctrls TLB misses.
+        //Prefetch_Read_T2(this->ctrls());
+
+        hash_code_t hash_code = this->get_hash(key);
+        size_type ctrl_index = this->index_for_hash(hash_code);
+        std::uint8_t ctrl_hash = this->get_ctrl_hash(hash_code);
+
+        const ctrl_type * ctrl = this->ctrl_at(ctrl_index);
+        ctrl_type dist_and_0;
+
+        while (dist_and_0.value <= ctrl->value) {
+            if (!kNeedStoreHash || ctrl->hash_equals(ctrl_hash)) {
+                const slot_type * slot = this->slot_at(ctrl);
+                if (this->key_equal_(slot->value.first, key)) {
+                    return slot;
+                }
+            }
+            dist_and_0.incDist();
+            ctrl++;
+        }
+
+        return this->last_slot();
+    }
 
     template <typename KeyT>
     JSTD_NO_INLINE
     std::pair<slot_type *, FindResult>
     find_or_insert(const KeyT & key) {
+        if (kIsIndirectKV) {
+            return this->indirect_find_or_insert(key);
+        } else {
+            return this->direct_find_or_insert(key);
+        }
+    }
+
+    template <typename KeyT>
+    JSTD_FORCED_INLINE
+    std::pair<slot_type *, FindResult>
+    direct_find_or_insert(const KeyT & key) {
+        if (kIsIndirectKV) {
+            return this->indirect_find_or_insert(key);
+        }
         hash_code_t hash_code = this->get_hash(key);
         size_type slot_index = this->index_for_hash(hash_code);
         std::uint8_t ctrl_hash = this->get_ctrl_hash(hash_code);
@@ -4638,6 +4664,52 @@ InsertOrGrow_Start:
         }
     }
 
+    template <typename KeyT>
+    JSTD_FORCED_INLINE
+    std::pair<slot_type *, FindResult>
+    indirect_find_or_insert(const KeyT & key) {
+        hash_code_t hash_code = this->get_hash(key);
+        size_type ctrl_index = this->index_for_hash(hash_code);
+        std::uint8_t ctrl_hash = this->get_ctrl_hash(hash_code);
+
+        ctrl_type * ctrl = this->ctrl_at(ctrl_index);
+        ctrl_type dist_and_0;
+        ctrl_type dist_and_hash(no_init_t{});
+
+        while (dist_and_0.getLow() <= ctrl->getLow()) {
+            if (!kNeedStoreHash || ctrl->hash_equals(ctrl_hash)) {
+                slot_type * target = this->slot_at(ctrl);
+                if (this->key_equal_(target->value.first, key)) {
+                    return { target, kIsExists };
+                }
+            }
+
+            dist_and_0.incDist();
+            ctrl++;
+        }
+
+        if (this->need_grow() || (dist_and_0.getDist() >= this->max_distance())) {
+            // The size of slot reach the slot threshold or hashmap is full.
+            this->grow_if_necessary();
+
+            ctrl = this->indirect_find_failed(hash_code, dist_and_0);
+        }
+
+        size_type slot_index = this->slot_size_;
+        dist_and_hash.mergeHash(dist_and_0, ctrl_hash);
+        dist_and_hash.setIndex(static_cast<slot_index_t>(slot_index));
+
+        slot_type * slot = this->slot_at(slot_index);
+
+        if (ctrl->isEmpty()) {
+            this->setUsedCtrl(ctrl, dist_and_hash);
+            return { slot, kIsNotExists };
+        } else {
+            bool neednt_grow = this->indirect_insert_to_place<false>(ctrl, dist_and_hash);
+            return { slot, static_cast<FindResult>(neednt_grow) };
+        }
+    }
+
     JSTD_FORCED_INLINE
     std::pair<ctrl_type *, slot_type *>
     find_failed(hash_code_t hash_code, ctrl_type & o_dist_and_0) {
@@ -4653,6 +4725,22 @@ InsertOrGrow_Start:
         slot_type * slot = this->slot_at(ctrl);
         o_dist_and_0 = dist_and_0;
         return { ctrl, slot };
+    }
+
+    JSTD_FORCED_INLINE
+    ctrl_type *
+    indirect_find_failed(hash_code_t hash_code, ctrl_type & o_dist_and_0) {
+        size_type ctrl_index = this->index_for_hash(hash_code);
+        ctrl_type * ctrl = this->ctrl_at(ctrl_index);
+
+        ctrl_type dist_and_0;
+        while (dist_and_0.getLow() <= ctrl->getLow()) {
+            dist_and_0.incDist();
+            ctrl++;
+        }
+
+        o_dist_and_0 = dist_and_0;
+        return ctrl;
     }
 
     template <bool isRehashing>
@@ -4728,6 +4816,44 @@ InsertOrGrow_Start:
 
         this->emplace_rich_slot(insert_ctrl, insert_slot, insert, rich_ctrl);
         this->destroy_empty_slot(empty);
+        return false;
+    }
+
+    template <bool isRehashing>
+    JSTD_FORCED_INLINE
+    bool indirect_insert_to_place(ctrl_type * insert_ctrl, const ctrl_type & dist_and_hash) {
+        ctrl_type * ctrl = insert_ctrl;
+        ctrl_type rich_ctrl(dist_and_hash);
+        assert(!ctrl->isEmpty());
+        assert(rich_ctrl.dist > ctrl->dist);
+        std::swap(rich_ctrl.value, ctrl->value);
+        ctrl++;
+        rich_ctrl.incDist();
+
+        ctrl_type * last_ctrl = this->ctrls() + this->max_slot_capacity();
+        while (ctrl < last_ctrl) {
+            if (ctrl->isEmpty()) {
+                ctrl->setValue(rich_ctrl);
+                return true;
+            } else if (rich_ctrl.dist > ctrl->dist) {
+                std::swap(rich_ctrl.value, ctrl->value);
+            }
+
+            ctrl++;
+            rich_ctrl.incDist();
+            assert(rich_ctrl.getDist() <= static_cast<udist_type>(kMaxDist));
+
+            if (isRehashing) {
+                assert(rich_ctrl.getDist() < this->max_distance());
+            } else {
+                if (rich_ctrl.getDist() >= this->max_distance()) {
+                    insert_ctrl->setValue(rich_ctrl);
+                    return false;
+                }
+            }
+        }
+
+        insert_ctrl->setValue(rich_ctrl);
         return false;
     }
 
