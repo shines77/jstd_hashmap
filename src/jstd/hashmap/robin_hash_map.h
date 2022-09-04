@@ -4104,6 +4104,7 @@ private:
         assert(new_group_count > 0);
         size_type ctrl_alloc_size = (new_group_count + 1) * kGroupWidth;
 
+        //size_type new_slot_capacity = this->mul_mlf(new_capacity) + new_max_lookups + 1;
         size_type total_alloc_size = this->TotalAllocSize<kSlotAlignment>(ctrl_alloc_size, new_ctrl_capacity);
 
         ctrl_type * new_ctrls = CtrlAllocTraits::allocate(this->ctrl_allocator_, total_alloc_size);
@@ -4319,6 +4320,16 @@ private:
                     }
                 }
             } else {
+#if 1
+                // kIsIndirectKV = true
+                if (old_ctrls != default_empty_ctrls()) {
+                    slot_type * last_slot = old_slots + old_slot_size;
+                    for (slot_type * old_slot = old_slots; old_slot != last_slot; old_slot++) {
+                        this->indirect_insert_index_no_grow(old_slot);
+                        this->destroy_slot(old_slot);
+                    }
+                }
+#else
                 // kIsIndirectKV = true
                 if (old_slot_capacity >= kGroupWidth) {
                     ctrl_type * ctrl = old_ctrls;
@@ -4350,6 +4361,7 @@ private:
                         }
                     }
                 }
+#endif
             }
 
             assert(this->slot_size() == old_slot_size);
@@ -5703,6 +5715,38 @@ InsertOrGrow_Start:
     template <typename KeyT>
     JSTD_FORCED_INLINE
     std::pair<slot_type *, bool>
+    indirect_find_or_insert_no_grow(const KeyT & key) {
+        hash_code_t hash_code = this->get_hash(key);
+        size_type ctrl_index = this->index_for_hash(hash_code);
+        std::uint8_t ctrl_hash = this->get_ctrl_hash(hash_code);
+
+        ctrl_type * ctrl = this->ctrl_at(ctrl_index);
+        ctrl_type dist_and_0;
+
+        while (dist_and_0.getLow() <= ctrl->getLow()) {
+            dist_and_0.incDist();
+            ctrl++;
+        }
+
+        size_type slot_index = this->slot_size_;
+
+        ctrl_type dist_and_hash(dist_and_0, ctrl_hash);
+        dist_and_hash.setIndex(static_cast<slot_index_t>(slot_index));
+
+        slot_type * slot = this->slot_at(slot_index);
+
+        if (ctrl->isEmpty()) {
+            this->setUsedCtrl(ctrl, dist_and_hash);
+            return { slot, false };
+        } else {
+            bool neednt_grow = this->indirect_insert_to_place<true>(ctrl, dist_and_hash);
+            return { slot, !neednt_grow };
+        }
+    }
+
+    template <typename KeyT>
+    JSTD_FORCED_INLINE
+    std::pair<slot_type *, bool>
     indirect_find_or_insert_no_grow(const KeyT & key, std::uint8_t ctrl_hash) {
         hash_code_t hash_code = this->get_hash(key);
         size_type ctrl_index = this->index_for_hash(hash_code);
@@ -5748,6 +5792,18 @@ InsertOrGrow_Start:
     // Use in rehash_impl()
     bool insert_no_grow(slot_type * old_slot, std::uint8_t ctrl_hash) {
         auto find_info = this->find_or_insert_no_grow(old_slot->value.first, ctrl_hash);
+        slot_type * new_slot = find_info.first;
+        bool need_grow = find_info.second;
+
+        SlotPolicyTraits::construct(&this->allocator_, new_slot, old_slot);
+        this->slot_size_++;
+        assert(this->slot_size() <= this->slot_capacity());
+        return need_grow;
+    }
+
+    // Use in rehash_impl()
+    bool indirect_insert_index_no_grow(slot_type * old_slot) {
+        auto find_info = this->indirect_find_or_insert_no_grow(old_slot->value.first);
         slot_type * new_slot = find_info.first;
         bool need_grow = find_info.second;
 
