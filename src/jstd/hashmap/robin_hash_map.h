@@ -4104,8 +4104,8 @@ private:
         assert(new_group_count > 0);
         size_type ctrl_alloc_size = (new_group_count + 1) * kGroupWidth;
 
-        //size_type new_slot_capacity = this->mul_mlf(new_capacity) + new_max_lookups + 1;
-        size_type total_alloc_size = this->TotalAllocSize<kSlotAlignment>(ctrl_alloc_size, new_ctrl_capacity);
+        size_type new_slot_capacity = this->mul_mlf(new_capacity) + new_max_lookups + 1;
+        size_type total_alloc_size = this->TotalAllocSize<kSlotAlignment>(ctrl_alloc_size, new_slot_capacity);
 
         ctrl_type * new_ctrls = CtrlAllocTraits::allocate(this->ctrl_allocator_, total_alloc_size);
         // Prefetch for resolve potential ctrls TLB misses.
