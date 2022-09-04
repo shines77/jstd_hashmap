@@ -3836,16 +3836,6 @@ private:
         return (this->ctrls() + ssize_type(slot_index));
     }
 
-    inline size_type get_ctrl_index(size_type ctrl_idx) noexcept {
-        ctrl_type * ctrl = this->ctrl_at(ctrl_idx);
-        return ctrl->getIndex();
-    }
-
-    inline size_type get_ctrl_index(size_type ctrl_idx) const noexcept {
-        const ctrl_type * ctrl = this->ctrl_at(ctrl_idx);
-        return ctrl->getIndex();
-    }
-
     inline slot_type * slot_at(size_type slot_index) noexcept {
         assert(slot_index <= this->max_slot_capacity());
         return (this->slots() + ssize_type(slot_index));
@@ -3853,26 +3843,6 @@ private:
 
     inline const slot_type * slot_at(size_type slot_index) const noexcept {
         assert(slot_index <= this->max_slot_capacity());
-        return (this->slots() + ssize_type(slot_index));
-    }
-
-    inline slot_type * slot_at_by_ctrl(size_type ctrl_index) noexcept {
-        assert(ctrl_index <= this->max_slot_capacity());
-        size_type slot_index;
-        if (kIsIndirectKV)
-            slot_index = this->get_ctrl_index(ctrl_index);
-        else
-            slot_index = ctrl_index;
-        return (this->slots() + ssize_type(slot_index));
-    }
-
-    inline const slot_type * slot_at_by_ctrl(size_type ctrl_index) const noexcept {
-        assert(slot_index <= this->max_slot_capacity());
-        size_type slot_index;
-        if (kIsIndirectKV)
-            slot_index = this->get_ctrl_index(ctrl_index);
-        else
-            slot_index = ctrl_index;
         return (this->slots() + ssize_type(slot_index));
     }
 
@@ -4185,8 +4155,8 @@ private:
             size_type old_max_slot_capacity = this->max_slot_capacity();
 
             // Prefetch for resolve potential ctrls TLB misses.
-            Prefetch_Read_T0(old_ctrls);
-            Prefetch_Read_T0(old_slots);
+            Prefetch_Read_T2(old_ctrls);
+            Prefetch_Read_T2(old_slots);
 
             this->create_slots<false>(new_capacity);
 
@@ -5934,10 +5904,11 @@ Insert_To_Slot:
         size_type ctrl_index = this->index_for_hash(hash_code);
         std::uint8_t ctrl_hash = this->get_ctrl_hash(hash_code);
 
+        const ctrl_type * last_ctrl = this->ctrls() + this->max_slot_capacity();
         const ctrl_type * ctrl = this->ctrl_at(ctrl_index);
         ctrl_type dist_and_0;
 
-        while (dist_and_0.value <= ctrl->value) {
+        while (dist_and_0.getLow() <= ctrl->getLow()) {
             if (!kNeedStoreHash || ctrl->hash_equals(ctrl_hash)) {
                 size_type slot_index = ctrl->getIndex();
                 const slot_type * slot = this->slot_at(slot_index);
@@ -5947,6 +5918,7 @@ Insert_To_Slot:
             }
             dist_and_0.incDist();
             ctrl++;
+            assert(ctrl <= last_ctrl);
         }
 
         return npos;
