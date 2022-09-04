@@ -2831,7 +2831,7 @@ public:
             const slot_type * _slot = this->slot();
             return std::addressof(const_cast<slot_type *>(_slot)->value);
         }
-#if 1
+#if 0
         operator basic_iterator<const mutable_value_type, IsIndirectKV>() const noexcept {
             return { this->owner_, this->index_ };
         }
@@ -4136,7 +4136,7 @@ private:
 
         slot_type * new_slots = this->AlignedSlots<kSlotAlignment>(new_ctrls, ctrl_alloc_size);
         // Prefetch for resolve potential ctrls TLB misses.
-        //Prefetch_Write_T2(new_slots);
+        Prefetch_Write_T2(new_slots);
 
         this->ctrls_ = new_ctrls;
         this->max_lookups_ = new_max_lookups;
