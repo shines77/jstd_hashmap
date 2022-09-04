@@ -1204,11 +1204,11 @@ public:
         }
 
         bool isEndOf() const {
-            return (this->dist == kEndOfMark);
+            return (this->dist == kEndOfMark16b);
         }
 
         bool isUsed() const {
-            return (this->value >= 0);
+            return (this->dist >= 0);
         }
 
         static bool isUsed(dist_type tag) {
@@ -1216,7 +1216,7 @@ public:
         }
 
         bool isUnused() const {
-            return (this->value < 0);
+            return (this->dist < 0);
         }
 
         static bool isUnused(dist_type tag) {
@@ -1229,8 +1229,7 @@ public:
         }
 
         bool isUnusedOrZero() const {
-            // return (this->dist <= 0);
-            return (this->value < kDistInc32);
+            return (this->dist <= 0);
         }
 
         std::uint8_t getHash() const {
@@ -1250,15 +1249,15 @@ public:
         }
 
         void setEmpty() {
-            this->value = kEmptySlot16b;
+            this->uvalue = kEmptySlot64;
         }
 
         void setEndOf() {
-            this->value = kEndOfMark16b;
+            this->uvalue = kEndOfMark64;
         }
 
         void setUnused() {
-            this->value = kEmptySlot16b;
+            this->uvalue = kEmptySlot64;
         }
 
         void setDist(dist_type dist) {
@@ -2227,56 +2226,39 @@ public:
         }
 
         std::uint32_t matchHash(std::uint8_t ctrl_hash) const {
-            __m256i hash_bits  = _mm256_set1_epi16(ctrl_hash);
             __m256i ctrl_bits  = _mm256_loadu_si256((const __m256i *)this->ctrl);
-            __m256i match_mask = _mm256_cmpeq_epi8(ctrl_bits, hash_bits);
-                    match_mask = _mm256_slli_epi16(match_mask, 8);
-            std::uint32_t mask = (std::uint32_t)_mm256_movemask_epi8(match_mask);
+            __m256i hash_bits  = _mm256_set1_epi64x((std::int64_t)ctrl_hash);
+                    ctrl_bits  = _mm256_slli_epi16(ctrl_bits, 56);
+                    hash_bits  = _mm256_slli_epi16(hash_bits, 56);
+            __m256i match_mask = _mm256_cmpeq_epi64(ctrl_bits, hash_bits);
+            std::uint32_t mask = (std::uint32_t)_mm256_movepi64_mask(match_mask);
             return mask;
         }
 
         std::uint32_t matchEmpty() const {
-            if (((kEmptySlot64 >> 16) & 0xFFFFu) == 0b1111111111111111) {
-                __m256i ctrl_bits  = _mm256_loadu_si256((const __m256i *)this->ctrl);
-                __m256i empty_bits = _mm256_set1_epi64x((std::int64_t)kEmptySlot64);
-                        ctrl_bits  = _mm256_and_si256(ctrl_bits, empty_bits);
-                __m256i match_mask = _mm256_cmpeq_epi64(ctrl_bits, empty_bits);
-                std::uint32_t maskUsed = (std::uint32_t)_mm256_movepi64_mask(match_mask);
-                return mask;
-            } else {
-                return this->matchHighTag(kEmptySlot16b);
-            }
+            __m256i ctrl_bits  = _mm256_loadu_si256((const __m256i *)this->ctrl);
+            __m256i empty_bits = _mm256_set1_epi64x((std::int64_t)kEmptySlot64);
+                    ctrl_bits  = _mm256_and_si256(ctrl_bits, empty_bits);
+            __m256i match_mask = _mm256_cmpeq_epi64(empty_bits, ctrl_bits);
+            std::uint32_t maskUsed = (std::uint32_t)_mm256_movepi64_mask(match_mask);
+            return mask;
         }
 
         std::uint32_t matchNonEmpty() const {
             __m256i ctrl_bits  = _mm256_loadu_si256((const __m256i *)this->ctrl);
             __m256i empty_bits = _mm256_set1_epi64x((std::int64_t)kEmptySlot64);
-            __m256i ones_bits  = _mm256_setones_si256();
                     ctrl_bits  = _mm256_and_si256(ctrl_bits, empty_bits);
-            __m256i match_mask = _mm256_cmpeq_epi64(ctrl_bits, empty_bits);
-                    match_mask = _mm256_andnot_si256(match_mask, ones_bits);
+            __m256i match_mask = _mm256_cmpgt_epi64(empty_bits, ctrl_bits);
             std::uint32_t maskUsed = (std::uint32_t)_mm256_movepi64_mask(match_mask);
             return maskUsed;
         }
 
         std::uint32_t matchUsed() const {
-            __m256i ctrl_bits  = _mm256_loadu_si256((const __m256i *)this->ctrl);
-            __m256i empty_bits = _mm256_set1_epi64x((std::int64_t)kEmptySlot64);
-            __m256i ones_bits  = _mm256_setones_si256();
-                    ctrl_bits  = _mm256_and_si256(ctrl_bits, empty_bits);
-            __m256i match_mask = _mm256_cmpgt_epi64(empty_bits, ctrl_bits);
-                    match_mask = _mm256_andnot_si256(match_mask, ones_bits);
-            std::uint32_t maskUsed = (std::uint32_t)_mm256_movepi64_mask(match_mask);
-            return maskUsed;
+            return this->matchNonEmpty();
         }
 
         std::uint32_t matchUnused() const {
-            __m256i ctrl_bits  = _mm256_loadu_si256((const __m256i *)this->ctrl);
-            __m256i empty_bits = _mm256_set1_epi64x((std::int64_t)kEmptySlot64);
-                    ctrl_bits  = _mm256_and_si256(ctrl_bits, empty_bits);
-            __m256i match_mask = _mm256_cmpeq_epi64(ctrl_bits, empty_bits);
-            std::uint32_t maskUsed = (std::uint32_t)_mm256_movepi64_mask(match_mask);
-            return maskUsed;
+            return this->matchEmpty();
         }
 
         MatchMask2<std::uint32_t>
@@ -2439,56 +2421,42 @@ public:
         }
 
         std::uint32_t matchHash(std::uint8_t ctrl_hash) const {
-            __m256i hash_bits  = _mm256_set1_epi16(ctrl_hash);
             __m256i ctrl_bits  = _mm256_loadu_si256((const __m256i *)this->ctrl);
-            __m256i match_mask = _mm256_cmpeq_epi8(ctrl_bits, hash_bits);
-                    match_mask = _mm256_slli_epi16(match_mask, 8);
+            __m256i hash_bits  = _mm256_set1_epi64x((std::int64_t)ctrl_hash);
+                    ctrl_bits  = _mm256_slli_epi16(ctrl_bits, 56);
+                    hash_bits  = _mm256_slli_epi16(hash_bits, 56);
+            __m256i match_mask = _mm256_cmpeq_epi64(ctrl_bits, hash_bits);
+                    match_mask = _mm256_srli_epi64(match_mask, 56);
             std::uint32_t mask = (std::uint32_t)_mm256_movemask_epi8(match_mask);
             return mask;
         }
 
         std::uint32_t matchEmpty() const {
-            if (((kEmptySlot64 >> 16) & 0xFFFFu) == 0b1111111111111111) {
-                __m256i ctrl_bits  = _mm256_loadu_si256((const __m256i *)this->ctrl);
-                __m256i empty_bits = _mm256_set1_epi64x((std::int64_t)kEmptySlot64);
-                        ctrl_bits  = _mm256_and_si256(ctrl_bits, empty_bits);
-                __m256i match_mask = _mm256_cmpeq_epi64(ctrl_bits, empty_bits);
-                std::uint32_t maskUsed = (std::uint32_t)_mm256_movemask_epi8(match_mask);
-                return mask;
-            } else {
-                return this->matchHighTag(kEmptySlot16b);
-            }
+            __m256i ctrl_bits  = _mm256_loadu_si256((const __m256i *)this->ctrl);
+            __m256i empty_bits = _mm256_set1_epi64x((std::int64_t)kEmptySlot64);
+                    ctrl_bits  = _mm256_and_si256(ctrl_bits, empty_bits);
+            __m256i match_mask = _mm256_cmpeq_epi64(empty_bits, ctrl_bits);
+                    match_mask = _mm256_srli_epi64(match_mask, 56);
+            std::uint32_t maskUsed = (std::uint32_t)_mm256_movemask_epi8(match_mask);
+            return mask;
         }
 
         std::uint32_t matchNonEmpty() const {
             __m256i ctrl_bits  = _mm256_loadu_si256((const __m256i *)this->ctrl);
             __m256i empty_bits = _mm256_set1_epi64x((std::int64_t)kEmptySlot64);
-            __m256i ones_bits  = _mm256_setones_si256();
                     ctrl_bits  = _mm256_and_si256(ctrl_bits, empty_bits);
-            __m256i match_mask = _mm256_cmpeq_epi64(ctrl_bits, empty_bits);
-                    match_mask = _mm256_andnot_si256(match_mask, ones_bits);
+            __m256i match_mask = _mm256_cmpgt_epi64(empty_bits, ctrl_bits);
+                    match_mask = _mm256_srli_epi64(match_mask, 56);
             std::uint32_t maskUsed = (std::uint32_t)_mm256_movemask_epi8(match_mask);
             return maskUsed;
         }
 
         std::uint32_t matchUsed() const {
-            __m256i ctrl_bits  = _mm256_loadu_si256((const __m256i *)this->ctrl);
-            __m256i empty_bits = _mm256_set1_epi64x((std::int64_t)kEmptySlot64);
-            __m256i ones_bits  = _mm256_setones_si256();
-                    ctrl_bits  = _mm256_and_si256(ctrl_bits, empty_bits);
-            __m256i match_mask = _mm256_cmpgt_epi64(empty_bits, ctrl_bits);
-                    match_mask = _mm256_andnot_si256(match_mask, ones_bits);
-            std::uint32_t maskUsed = (std::uint32_t)_mm256_movemask_epi8(match_mask);
-            return maskUsed;
+            return this->matchNonEmpty();
         }
 
         std::uint32_t matchUnused() const {
-            __m256i ctrl_bits  = _mm256_loadu_si256((const __m256i *)this->ctrl);
-            __m256i empty_bits = _mm256_set1_epi64x((std::int64_t)kEmptySlot64);
-                    ctrl_bits  = _mm256_and_si256(ctrl_bits, empty_bits);
-            __m256i match_mask = _mm256_cmpeq_epi64(ctrl_bits, empty_bits);
-            std::uint32_t maskUsed = (std::uint32_t)_mm256_movemask_epi8(match_mask);
-            return maskUsed;
+            return this->matchEmpty();
         }
 
         MatchMask2<std::uint32_t>
@@ -3868,29 +3836,43 @@ private:
         return (this->ctrls() + ssize_type(slot_index));
     }
 
-    inline size_type ctrl_index(size_type slot_index) noexcept {
-        ctrl_type * ctrl = this->ctrl_at(slot_index);
+    inline size_type get_ctrl_index(size_type ctrl_idx) noexcept {
+        ctrl_type * ctrl = this->ctrl_at(ctrl_idx);
         return ctrl->getIndex();
     }
 
-    inline size_type ctrl_index(size_type slot_index) const noexcept {
-        const ctrl_type * ctrl = this->ctrl_at(slot_index);
+    inline size_type get_ctrl_index(size_type ctrl_idx) const noexcept {
+        const ctrl_type * ctrl = this->ctrl_at(ctrl_idx);
         return ctrl->getIndex();
     }
 
     inline slot_type * slot_at(size_type slot_index) noexcept {
         assert(slot_index <= this->max_slot_capacity());
-        if (kIsIndirectKV) {
-            slot_index = this->ctrl_index(slot_index);
-        }
         return (this->slots() + ssize_type(slot_index));
     }
 
     inline const slot_type * slot_at(size_type slot_index) const noexcept {
         assert(slot_index <= this->max_slot_capacity());
-        if (kIsIndirectKV) {
-            slot_index = this->ctrl_index(slot_index);
-        }
+        return (this->slots() + ssize_type(slot_index));
+    }
+
+    inline slot_type * slot_at_by_ctrl(size_type ctrl_index) noexcept {
+        assert(ctrl_index <= this->max_slot_capacity());
+        size_type;
+        if (kIsIndirectKV)
+            slot_index = this->get_ctrl_index(ctrl_index);
+        else
+            slot_index = ctrl_index;
+        return (this->slots() + ssize_type(slot_index));
+    }
+
+    inline const slot_type * slot_at_by_ctrl(size_type ctrl_index) const noexcept {
+        assert(slot_index <= this->max_slot_capacity());
+        size_type;
+        if (kIsIndirectKV)
+            slot_index = this->get_ctrl_index(ctrl_index);
+        else
+            slot_index = ctrl_index;
         return (this->slots() + ssize_type(slot_index));
     }
 
@@ -4208,157 +4190,195 @@ private:
 
             this->create_slots<false>(new_capacity);
 
-            if (old_slot_capacity >= kGroupWidth) {
+            if (!kIsIndirectKV) {
+                // kIsIndirectKV = false
+                if (old_slot_capacity >= kGroupWidth) {
 #if ROBIN_REHASH_READ_PREFETCH
-                static constexpr size_type kSlotSetp = sizeof(value_type) * kGroupWidth;
-                static constexpr size_type kCacheLine = 64;
-                static constexpr size_type kPrefetchMinSteps = 3;
-                static constexpr size_type kPrefetchMinOffset = cmax(kPrefetchMinSteps * kSlotSetp, kCacheLine);
-                static constexpr size_type kPrefetchMaxOffset = 1024;
-                static constexpr size_type kMaxPrefetchOffset = cmax(kPrefetchMinOffset, kPrefetchMaxOffset);
-                static constexpr size_type kPrefetchSteps = 4 + kSlotSetp / 512;
-                static constexpr size_type kPrefetchOffset = cmin(kPrefetchSteps * cmax(kSlotSetp, kCacheLine), kMaxPrefetchOffset);
-                static constexpr size_type kTailGroupCount = (kPrefetchOffset + (kSlotSetp - 1)) / kSlotSetp;
+                    static constexpr size_type kSlotSetp = sizeof(value_type) * kGroupWidth;
+                    static constexpr size_type kCacheLine = 64;
+                    static constexpr size_type kPrefetchMinSteps = 3;
+                    static constexpr size_type kPrefetchMinOffset = cmax(kPrefetchMinSteps * kSlotSetp, kCacheLine);
+                    static constexpr size_type kPrefetchMaxOffset = 1024;
+                    static constexpr size_type kMaxPrefetchOffset = cmax(kPrefetchMinOffset, kPrefetchMaxOffset);
+                    static constexpr size_type kPrefetchSteps = 4 + kSlotSetp / 512;
+                    static constexpr size_type kPrefetchOffset = cmin(kPrefetchSteps * cmax(kSlotSetp, kCacheLine), kMaxPrefetchOffset);
+                    static constexpr size_type kTailGroupCount = (kPrefetchOffset + (kSlotSetp - 1)) / kSlotSetp;
 
-                static constexpr size_type kPrefetchCtrlOffset = cmax(4 * kGroupSize, kCacheLine * 2);
+                    static constexpr size_type kPrefetchCtrlOffset = cmax(4 * kGroupSize, kCacheLine * 2);
 
-                ctrl_type * ctrl = old_ctrls;
-                ctrl_type * last_ctrl = old_ctrls + old_group_count * kGroupWidth;
-                ctrl_type * end_ctrl = last_ctrl - kTailGroupCount * kGroupWidth;
-                group_type group(ctrl), end_group(end_ctrl);
-                slot_type * slot_base = old_slots;
-                for (; group < end_group; ++group) {
-                    // Prefetch for read old ctrl
-                    Prefetch_Read_T0(PtrOffset(group.ctrl(), kPrefetchCtrlOffset));
+                    ctrl_type * ctrl = old_ctrls;
+                    ctrl_type * last_ctrl = old_ctrls + old_group_count * kGroupWidth;
+                    ctrl_type * end_ctrl = last_ctrl - kTailGroupCount * kGroupWidth;
+                    group_type group(ctrl), end_group(end_ctrl);
+                    slot_type * slot_base = old_slots;
+                    for (; group < end_group; ++group) {
+                        // Prefetch for read old ctrl
+                        Prefetch_Read_T0(PtrOffset(group.ctrl(), kPrefetchCtrlOffset));
 
-                    // Prefetch for read old slot
-                    if (kSlotSetp < 64) {
-                        // sizeof(value_type) = [1, 4)
-                        Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 0));
-                    } else {
-                        if (kSlotSetp >= 64 * 1) {   // >= 64
-                            // sizeof(value_type) = [4, 8)
+                        // Prefetch for read old slot
+                        if (kSlotSetp < 64) {
+                            // sizeof(value_type) = [1, 4)
                             Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 0));
+                        } else {
+                            if (kSlotSetp >= 64 * 1) {   // >= 64
+                                // sizeof(value_type) = [4, 8)
+                                Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 0));
+                            }
+                            if (kSlotSetp >= 64 * 2) {   // >= 128
+                                // sizeof(value_type) = [8, 12)
+                                Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 1));
+                            }
+                            if (kSlotSetp >= 64 * 3) {   // >= 192
+                                // sizeof(value_type) = [12, 16)
+                                Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 2));
+                            }
+                            if (kSlotSetp >= 64 * 4) {   // >= 256
+                                // sizeof(value_type) = [16, 20)
+                                Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 3));
+                            }
+                            if (kSlotSetp >= 64 * 5) {   // >= 320
+                                // sizeof(value_type) = [20, 24)
+                                Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 4));
+                            }
+                            if (kSlotSetp >= 64 * 6) {   // >= 384
+                                // sizeof(value_type) = [24, 28)
+                                Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 5));
+                            }
+                            if (kSlotSetp >= 64 * 7) {   // >= 448
+                                // sizeof(value_type) = [28, 32)
+                                Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 6));
+                            }
+                            if (kSlotSetp >= 64 * 8) {   // >= 512
+                                // sizeof(value_type) = [32, 36)
+                                Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 7));
+                            }
+                            if (kSlotSetp >= 64 * 9) {   // >= 576
+                                // sizeof(value_type) = [36, 40)
+                                Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 8));
+                            }
+                            if (kSlotSetp >= 64 * 10) {   // >= 640
+                                // sizeof(value_type) = [40, 44)
+                                Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 9));
+                            }
+                            if (kSlotSetp >= 64 * 11) {   // >= 704
+                                // sizeof(value_type) = [44, 48)
+                                Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 10));
+                            }
+                            if (kSlotSetp >= 64 * 12) {   // >= 768
+                                // sizeof(value_type) = [48, 52)
+                                Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 11));
+                            }
+                            if (kSlotSetp >= 64 * 13) {   // >= 832
+                                // sizeof(value_type) = [52, 56)
+                                Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 12));
+                            }
+                            if (kSlotSetp >= 64 * 14) {   // >= 896
+                                // sizeof(value_type) = [56, 60)
+                                Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 13));
+                            }
+                            if (kSlotSetp >= 64 * 15) {   // >= 960
+                                // sizeof(value_type) = [60, 64)
+                                Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 14));
+                            }
+                            if (kSlotSetp >= 64 * 16) {   // >= 1024
+                                // sizeof(value_type) = [64, Max)
+                                Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 15));
+                            }
                         }
-                        if (kSlotSetp >= 64 * 2) {   // >= 128
-                            // sizeof(value_type) = [8, 12)
-                            Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 1));
+
+                        std::uint32_t maskUsed = group.matchUsed();
+                        while (maskUsed != 0) {
+                            size_type pos = BitUtils::bsf32(maskUsed);
+                            maskUsed = BitUtils::clearLowBit32(maskUsed);
+                            size_type index = group.index(0, pos);
+                            slot_type * old_slot = slot_base + index;
+                            this->insert_no_grow(old_slot);
+                            this->destroy_slot(old_slot);
                         }
-                        if (kSlotSetp >= 64 * 3) {   // >= 192
-                            // sizeof(value_type) = [12, 16)
-                            Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 2));
-                        }
-                        if (kSlotSetp >= 64 * 4) {   // >= 256
-                            // sizeof(value_type) = [16, 20)
-                            Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 3));
-                        }
-                        if (kSlotSetp >= 64 * 5) {   // >= 320
-                            // sizeof(value_type) = [20, 24)
-                            Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 4));
-                        }
-                        if (kSlotSetp >= 64 * 6) {   // >= 384
-                            // sizeof(value_type) = [24, 28)
-                            Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 5));
-                        }
-                        if (kSlotSetp >= 64 * 7) {   // >= 448
-                            // sizeof(value_type) = [28, 32)
-                            Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 6));
-                        }
-                        if (kSlotSetp >= 64 * 8) {   // >= 512
-                            // sizeof(value_type) = [32, 36)
-                            Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 7));
-                        }
-                        if (kSlotSetp >= 64 * 9) {   // >= 576
-                            // sizeof(value_type) = [36, 40)
-                            Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 8));
-                        }
-                        if (kSlotSetp >= 64 * 10) {   // >= 640
-                            // sizeof(value_type) = [40, 44)
-                            Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 9));
-                        }
-                        if (kSlotSetp >= 64 * 11) {   // >= 704
-                            // sizeof(value_type) = [44, 48)
-                            Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 10));
-                        }
-                        if (kSlotSetp >= 64 * 12) {   // >= 768
-                            // sizeof(value_type) = [48, 52)
-                            Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 11));
-                        }
-                        if (kSlotSetp >= 64 * 13) {   // >= 832
-                            // sizeof(value_type) = [52, 56)
-                            Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 12));
-                        }
-                        if (kSlotSetp >= 64 * 14) {   // >= 896
-                            // sizeof(value_type) = [56, 60)
-                            Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 13));
-                        }
-                        if (kSlotSetp >= 64 * 15) {   // >= 960
-                            // sizeof(value_type) = [60, 64)
-                            Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 14));
-                        }
-                        if (kSlotSetp >= 64 * 16) {   // >= 1024
-                            // sizeof(value_type) = [64, Max)
-                            Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 15));
-                        }
+                        slot_base += kGroupWidth;
                     }
 
-                    std::uint32_t maskUsed = group.matchUsed();
-                    while (maskUsed != 0) {
-                        size_type pos = BitUtils::bsf32(maskUsed);
-                        maskUsed = BitUtils::clearLowBit32(maskUsed);
-                        size_type index = group.index(0, pos);
-                        slot_type * old_slot = slot_base + index;
-                        this->unique_insert_no_grow(old_slot);
-                        this->destroy_slot(old_slot);
+                    group_type last_group(last_ctrl);
+                    for (; group < last_group; ++group) {
+                        std::uint32_t maskUsed = group.matchUsed();
+                        while (maskUsed != 0) {
+                            size_type pos = BitUtils::bsf32(maskUsed);
+                            maskUsed = BitUtils::clearLowBit32(maskUsed);
+                            size_type index = group.index(0, pos);
+                            slot_type * old_slot = slot_base + index;
+                            this->insert_no_grow(old_slot);
+                            this->destroy_slot(old_slot);
+                        }
+                        slot_base += kGroupWidth;
                     }
-                    slot_base += kGroupWidth;
-                }
-
-                group_type last_group(last_ctrl);
-                for (; group < last_group; ++group) {
-                    std::uint32_t maskUsed = group.matchUsed();
-                    while (maskUsed != 0) {
-                        size_type pos = BitUtils::bsf32(maskUsed);
-                        maskUsed = BitUtils::clearLowBit32(maskUsed);
-                        size_type index = group.index(0, pos);
-                        slot_type * old_slot = slot_base + index;
-                        this->unique_insert_no_grow(old_slot);
-                        this->destroy_slot(old_slot);
-                    }
-                    slot_base += kGroupWidth;
-                }
 
 #else // !ROBIN_REHASH_READ_PREFETCH
 
-                ctrl_type * ctrl = old_ctrls;
-                ctrl_type * last_ctrl = old_ctrls + old_group_count * kGroupWidth;
-                group_type group(ctrl), last_group(last_ctrl);
-                slot_type * slot_base = old_slots;
+                    ctrl_type * ctrl = old_ctrls;
+                    ctrl_type * last_ctrl = old_ctrls + old_group_count * kGroupWidth;
+                    group_type group(ctrl), last_group(last_ctrl);
+                    slot_type * slot_base = old_slots;
 
-                for (; group < last_group; ++group) {
-                    std::uint32_t maskUsed = group.matchUsed();
-                    while (maskUsed != 0) {
-                        size_type pos = BitUtils::bsf32(maskUsed);
-                        maskUsed = BitUtils::clearLowBit32(maskUsed);
-                        size_type index = group.index(0, pos);
-                        slot_type * old_slot = slot_base + index;
-                        this->unique_insert_no_grow(old_slot);
-                        this->destroy_slot(old_slot);
+                    for (; group < last_group; ++group) {
+                        std::uint32_t maskUsed = group.matchUsed();
+                        while (maskUsed != 0) {
+                            size_type pos = BitUtils::bsf32(maskUsed);
+                            maskUsed = BitUtils::clearLowBit32(maskUsed);
+                            size_type index = group.index(0, pos);
+                            slot_type * old_slot = slot_base + index;
+                            this->insert_no_grow(old_slot);
+                            this->destroy_slot(old_slot);
+                        }
+                        slot_base += kGroupWidth;
                     }
-                    slot_base += kGroupWidth;
-                }
 
 #endif // ROBIN_REHASH_READ_PREFETCH
 
-            } else if (old_ctrls != default_empty_ctrls()) {
-                ctrl_type * last_ctrl = old_ctrls + old_max_slot_capacity;
-                slot_type * old_slot = old_slots;
-                for (ctrl_type * ctrl = old_ctrls; ctrl != last_ctrl; ctrl++) {
-                    if (likely(ctrl->isUsed())) {
-                        this->unique_insert_no_grow(old_slot);
-                        this->destroy_slot(old_slot);
+                } else if (old_ctrls != default_empty_ctrls()) {
+                    ctrl_type * last_ctrl = old_ctrls + old_max_slot_capacity;
+                    slot_type * old_slot = old_slots;
+                    for (ctrl_type * ctrl = old_ctrls; ctrl != last_ctrl; ctrl++) {
+                        if (likely(ctrl->isUsed())) {
+                            if (!kNeedStoreHash)
+                                this->insert_no_grow(old_slot);
+                            else
+                                this->insert_no_grow(old_slot, ctrl->getHash());
+                            this->destroy_slot(old_slot);
+                        }
+                        old_slot++;
                     }
-                    old_slot++;
+                }
+            } else {
+                // kIsIndirectKV = true
+                if (old_slot_capacity >= kGroupWidth) {
+                    ctrl_type * ctrl = old_ctrls;
+                    ctrl_type * last_ctrl = old_ctrls + old_group_count * kGroupWidth;
+                    group_type group(ctrl), last_group(last_ctrl);
+
+                    for (; group < last_group; ++group) {
+                        std::uint32_t maskUsed = group.matchUsed();
+                        while (maskUsed != 0) {
+                            size_type pos = BitUtils::bsf32(maskUsed);
+                            maskUsed = BitUtils::clearLowBit32(maskUsed);
+                            size_type index = group.index(0, pos);
+                            ctrl_type * ctrl = group.ctrl() + index;
+                            assert(!ctrl->isEmpty());
+                            size_type slot_index = ctrl->getIndex();
+                            slot_type * old_slot = old_slots + slot_index;
+                            this->indirect_insert_no_grow(old_slot, ctrl->getHash());
+                            this->destroy_slot(old_slot);
+                        }
+                    }
+                } else if (old_ctrls != default_empty_ctrls()) {
+                    ctrl_type * last_ctrl = old_ctrls + old_max_slot_capacity;
+                    for (ctrl_type * ctrl = old_ctrls; ctrl != last_ctrl; ctrl++) {
+                        if (likely(ctrl->isUsed())) {
+                            size_type slot_index = ctrl->getIndex();
+                            slot_type * old_slot = old_slots + slot_index;
+                            this->indirect_insert_no_grow(old_slot, ctrl->getHash());
+                            this->destroy_slot(old_slot);
+                        }
+                    }
                 }
             }
 
@@ -4955,10 +4975,11 @@ private:
         size_type ctrl_index = this->index_for_hash(hash_code);
         std::uint8_t ctrl_hash = this->get_ctrl_hash(hash_code);
 
+        const ctrl_type * last_ctrl = this->ctrls() + this->max_slot_capacity();
         const ctrl_type * ctrl = this->ctrl_at(ctrl_index);
         ctrl_type dist_and_0;
 
-        while (dist_and_0.value <= ctrl->value) {
+        while (dist_and_0.getLow() <= ctrl->getLow()) {
             if (!kNeedStoreHash || ctrl->hash_equals(ctrl_hash)) {
                 const slot_type * slot = this->slot_at(ctrl);
                 if (this->key_equal_(slot->value.first, key)) {
@@ -4967,46 +4988,10 @@ private:
             }
             dist_and_0.incDist();
             ctrl++;
+            assert(ctrl <= last_ctrl);
         }
 
         return this->last_slot();
-    }
-
-    template <typename KeyT>
-    size_type find_index(const KeyT & key) {
-        return const_cast<const this_type *>(this)->find_index(key);
-    }
-
-    template <typename KeyT>
-    size_type find_index(const KeyT & key) const {
-        // Prefetch for resolve potential ctrls TLB misses.
-        //Prefetch_Read_T2(this->ctrls());
-
-        if (!kIsIndirectKV) {
-            assert(false);
-            return npos;
-        }
-
-        hash_code_t hash_code = this->get_hash(key);
-        size_type ctrl_index = this->index_for_hash(hash_code);
-        std::uint8_t ctrl_hash = this->get_ctrl_hash(hash_code);
-
-        const ctrl_type * ctrl = this->ctrl_at(ctrl_index);
-        ctrl_type dist_and_0;
-
-        while (dist_and_0.value <= ctrl->value) {
-            if (!kNeedStoreHash || ctrl->hash_equals(ctrl_hash)) {
-                size_type slot_index = ctrl->getIndex();
-                const slot_type * slot = this->slot_at(slot_index);
-                if (this->key_equal_(slot->value.first, key)) {
-                    return slot_index;
-                }
-            }
-            dist_and_0.incDist();
-            ctrl++;
-        }
-
-        return npos;
     }
 
     template <typename KeyT>
@@ -5024,9 +5009,6 @@ private:
     JSTD_FORCED_INLINE
     std::pair<slot_type *, FindResult>
     direct_find_or_insert(const KeyT & key) {
-        if (kIsIndirectKV) {
-            return this->indirect_find_or_insert(key);
-        }
         hash_code_t hash_code = this->get_hash(key);
         size_type slot_index = this->index_for_hash(hash_code);
         std::uint8_t ctrl_hash = this->get_ctrl_hash(hash_code);
@@ -5181,6 +5163,7 @@ InsertOrGrow_Start:
         size_type ctrl_index = this->index_for_hash(hash_code);
         std::uint8_t ctrl_hash = this->get_ctrl_hash(hash_code);
 
+        ctrl_type * last_ctrl = this->ctrls() + this->max_slot_capacity();
         ctrl_type * ctrl = this->ctrl_at(ctrl_index);
         ctrl_type dist_and_0;
         ctrl_type dist_and_hash(no_init_t{});
@@ -5195,6 +5178,7 @@ InsertOrGrow_Start:
 
             dist_and_0.incDist();
             ctrl++;
+            assert(ctrl <= last_ctrl);
         }
 
         if (this->need_grow() || (dist_and_0.getDist() >= this->max_distance())) {
@@ -5224,11 +5208,13 @@ InsertOrGrow_Start:
     find_failed(hash_code_t hash_code, ctrl_type & o_dist_and_0) {
         size_type slot_index = this->index_for_hash(hash_code);
         ctrl_type * ctrl = this->ctrl_at(slot_index);
+        ctrl_type * last_ctrl = this->ctrls() + this->max_slot_capacity();
 
         ctrl_type dist_and_0;
         while (dist_and_0.value <= ctrl->value) {
             dist_and_0.incDist();
             ctrl++;
+            assert(ctrl <= last_ctrl);
         }
 
         slot_type * slot = this->slot_at(ctrl);
@@ -5241,11 +5227,13 @@ InsertOrGrow_Start:
     indirect_find_failed(hash_code_t hash_code, ctrl_type & o_dist_and_0) {
         size_type ctrl_index = this->index_for_hash(hash_code);
         ctrl_type * ctrl = this->ctrl_at(ctrl_index);
+        ctrl_type * last_ctrl = this->ctrls() + this->max_slot_capacity();
 
         ctrl_type dist_and_0;
         while (dist_and_0.getLow() <= ctrl->getLow()) {
             dist_and_0.incDist();
             ctrl++;
+            assert(ctrl <= last_ctrl);
         }
 
         o_dist_and_0 = dist_and_0;
@@ -5685,6 +5673,133 @@ InsertOrGrow_Start:
     }
 
     template <typename KeyT>
+    JSTD_FORCED_INLINE
+    std::pair<slot_type *, bool>
+    find_or_insert_no_grow(const KeyT & key) {
+        hash_code_t hash_code = this->get_hash(key);
+        size_type slot_index = this->index_for_hash(hash_code);
+
+        ctrl_type * ctrl = this->ctrl_at(slot_index);
+        slot_type * slot = this->slot_at(slot_index);
+        ctrl_type dist_and_0;
+
+        while (dist_and_0.value <= ctrl->value) {
+            dist_and_0.incDist();
+            ctrl++;
+        }
+
+        slot += dist_and_0.dist;
+
+        ctrl_type dist_and_hash(dist_and_0);
+
+        if (ctrl->isEmpty()) {
+            this->setUsedCtrl(ctrl, dist_and_hash);
+            return { slot, false };
+        } else {
+            bool neednt_grow = this->insert_to_place<true>(ctrl, slot, dist_and_hash);
+            return { slot, !neednt_grow };
+        }
+    }
+
+    template <typename KeyT>
+    JSTD_FORCED_INLINE
+    std::pair<slot_type *, bool>
+    find_or_insert_no_grow(const KeyT & key, std::uint8_t ctrl_hash) {
+        hash_code_t hash_code = this->get_hash(key);
+        size_type slot_index = this->index_for_hash(hash_code);
+
+        ctrl_type * ctrl = this->ctrl_at(slot_index);
+        slot_type * slot = this->slot_at(slot_index);
+        ctrl_type dist_and_0;
+
+        while (dist_and_0.value <= ctrl->value) {
+            dist_and_0.incDist();
+            ctrl++;
+        }
+
+        slot += dist_and_0.dist;
+
+        ctrl_type dist_and_hash(dist_and_0, ctrl_hash);
+
+        if (ctrl->isEmpty()) {
+            this->setUsedCtrl(ctrl, dist_and_hash);
+            return { slot, false };
+        } else {
+            bool neednt_grow = this->insert_to_place<true>(ctrl, slot, dist_and_hash);
+            return { slot, !neednt_grow };
+        }
+    }
+
+    template <typename KeyT>
+    JSTD_FORCED_INLINE
+    std::pair<slot_type *, bool>
+    indirect_find_or_insert_no_grow(const KeyT & key, std::uint8_t ctrl_hash) {
+        hash_code_t hash_code = this->get_hash(key);
+        size_type ctrl_index = this->index_for_hash(hash_code);
+        std::uint8_t _ctrl_hash = this->get_ctrl_hash(hash_code);
+        assert(_ctrl_hash == ctrl_hash);
+
+        ctrl_type * ctrl = this->ctrl_at(ctrl_index);
+        ctrl_type dist_and_0;
+
+        while (dist_and_0.getLow() <= ctrl->getLow()) {
+            dist_and_0.incDist();
+            ctrl++;
+        }
+
+        size_type slot_index = this->slot_size_;
+
+        ctrl_type dist_and_hash(dist_and_0, ctrl_hash);
+        dist_and_hash.setIndex(static_cast<slot_index_t>(slot_index));
+
+        slot_type * slot = this->slot_at(slot_index);
+
+        if (ctrl->isEmpty()) {
+            this->setUsedCtrl(ctrl, dist_and_hash);
+            return { slot, false };
+        } else {
+            bool neednt_grow = this->indirect_insert_to_place<true>(ctrl, dist_and_hash);
+            return { slot, !neednt_grow };
+        }
+    }
+
+    // Use in rehash_impl()
+    bool insert_no_grow(slot_type * old_slot) {
+        auto find_info = this->find_or_insert_no_grow(old_slot->value.first);
+        slot_type * new_slot = find_info.first;
+        bool need_grow = find_info.second;
+
+        SlotPolicyTraits::construct(&this->allocator_, new_slot, old_slot);
+        this->slot_size_++;
+        assert(this->slot_size() <= this->slot_capacity());
+        return need_grow;
+    }
+
+    // Use in rehash_impl()
+    bool insert_no_grow(slot_type * old_slot, std::uint8_t ctrl_hash) {
+        auto find_info = this->find_or_insert_no_grow(old_slot->value.first, ctrl_hash);
+        slot_type * new_slot = find_info.first;
+        bool need_grow = find_info.second;
+
+        SlotPolicyTraits::construct(&this->allocator_, new_slot, old_slot);
+        this->slot_size_++;
+        assert(this->slot_size() <= this->slot_capacity());
+        return need_grow;
+    }
+
+    // Use in rehash_impl()
+    bool indirect_insert_no_grow(slot_type * old_slot, std::uint8_t ctrl_hash) {
+        auto find_info = this->indirect_find_or_insert_no_grow(old_slot->value.first, ctrl_hash);
+        slot_type * new_slot = find_info.first;
+        bool need_grow = find_info.second;
+
+        SlotPolicyTraits::construct(&this->allocator_, new_slot, old_slot);
+        this->slot_size_++;
+        assert(this->slot_size() <= this->slot_capacity());
+        return need_grow;
+    }
+
+    template <typename KeyT>
     std::pair<slot_type *, bool>
     unique_find_or_insert(const KeyT & key) {
         hash_code_t hash_code = this->get_hash(key);
@@ -5755,48 +5870,6 @@ Insert_To_Slot:
         }
     }
 
-    template <typename KeyT>
-    JSTD_FORCED_INLINE
-    std::pair<slot_type *, bool>
-    unique_find_or_insert_no_grow(const KeyT & key) {
-        hash_code_t hash_code = this->get_hash(key);
-        size_type slot_index = this->index_for_hash(hash_code);
-        std::uint8_t ctrl_hash = this->get_ctrl_hash(hash_code);
-
-        ctrl_type * ctrl = this->ctrl_at(slot_index);
-        slot_type * slot = this->slot_at(slot_index);
-        ctrl_type dist_and_0;
-
-        while (dist_and_0.value <= ctrl->value) {
-            dist_and_0.incDist();
-            ctrl++;
-        }
-
-        slot += dist_and_0.dist;
-
-        ctrl_type dist_and_hash(dist_and_0, ctrl_hash);
-
-        if (ctrl->isEmpty()) {
-            this->setUsedCtrl(ctrl, dist_and_hash);
-            return { slot, false };
-        } else {
-            bool neednt_grow = this->insert_to_place<true>(ctrl, slot, dist_and_hash);
-            return { slot, !neednt_grow };
-        }
-    }
-
-    // Use in rehash_impl()
-    bool unique_insert_no_grow(slot_type * old_slot) {
-        auto find_info = this->unique_find_or_insert_no_grow(old_slot->value.first);
-        slot_type * new_slot = find_info.first;
-        bool need_grow = find_info.second;
-
-        SlotPolicyTraits::construct(&this->allocator_, new_slot, old_slot);
-        this->slot_size_++;
-        assert(this->slot_size() <= this->slot_capacity());
-        return need_grow;
-    }
-
     void unique_insert(const value_type & value) {
         auto find_info = this->unique_find_or_insert(value.first);
         slot_type * new_slot = find_info.first;
@@ -5843,10 +5916,47 @@ Insert_To_Slot:
     }
 
     template <typename KeyT>
+    size_type find_ctrl_index(const KeyT & key) {
+        return const_cast<const this_type *>(this)->find_ctrl_index(key);
+    }
+
+    template <typename KeyT>
+    size_type find_ctrl_index(const KeyT & key) const {
+        // Prefetch for resolve potential ctrls TLB misses.
+        //Prefetch_Read_T2(this->ctrls());
+
+        if (!kIsIndirectKV) {
+            assert(false);
+            return npos;
+        }
+
+        hash_code_t hash_code = this->get_hash(key);
+        size_type ctrl_index = this->index_for_hash(hash_code);
+        std::uint8_t ctrl_hash = this->get_ctrl_hash(hash_code);
+
+        const ctrl_type * ctrl = this->ctrl_at(ctrl_index);
+        ctrl_type dist_and_0;
+
+        while (dist_and_0.value <= ctrl->value) {
+            if (!kNeedStoreHash || ctrl->hash_equals(ctrl_hash)) {
+                size_type slot_index = ctrl->getIndex();
+                const slot_type * slot = this->slot_at(slot_index);
+                if (this->key_equal_(slot->value.first, key)) {
+                    return this->index_of(ctrl);
+                }
+            }
+            dist_and_0.incDist();
+            ctrl++;
+        }
+
+        return npos;
+    }
+
+    template <typename KeyT>
     JSTD_FORCED_INLINE
     size_type find_and_erase(const KeyT & key) {
         if (kIsIndirectKV) {
-            size_type to_erase = this->find_index(key);
+            size_type to_erase = this->find_ctrl_index(key);
             if (likely(to_erase != npos)) {
                 this->indirect_erase_slot(to_erase);
                 return 1;
