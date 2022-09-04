@@ -2240,8 +2240,8 @@ public:
             __m256i empty_bits = _mm256_set1_epi64x((std::int64_t)kEmptySlot64);
                     ctrl_bits  = _mm256_and_si256(ctrl_bits, empty_bits);
             __m256i match_mask = _mm256_cmpeq_epi64(empty_bits, ctrl_bits);
-            std::uint32_t maskUsed = (std::uint32_t)_mm256_movepi64_mask(match_mask);
-            return mask;
+            std::uint32_t maskEmpty = (std::uint32_t)_mm256_movepi64_mask(match_mask);
+            return maskEmpty;
         }
 
         std::uint32_t matchNonEmpty() const {
@@ -2437,8 +2437,8 @@ public:
                     ctrl_bits  = _mm256_and_si256(ctrl_bits, empty_bits);
             __m256i match_mask = _mm256_cmpeq_epi64(empty_bits, ctrl_bits);
                     match_mask = _mm256_srli_epi64(match_mask, 56);
-            std::uint32_t maskUsed = (std::uint32_t)_mm256_movemask_epi8(match_mask);
-            return mask;
+            std::uint32_t maskEmpty = (std::uint32_t)_mm256_movemask_epi8(match_mask);
+            return maskEmpty;
         }
 
         std::uint32_t matchNonEmpty() const {
@@ -3858,7 +3858,7 @@ private:
 
     inline slot_type * slot_at_by_ctrl(size_type ctrl_index) noexcept {
         assert(ctrl_index <= this->max_slot_capacity());
-        size_type;
+        size_type slot_index;
         if (kIsIndirectKV)
             slot_index = this->get_ctrl_index(ctrl_index);
         else
@@ -3868,7 +3868,7 @@ private:
 
     inline const slot_type * slot_at_by_ctrl(size_type ctrl_index) const noexcept {
         assert(slot_index <= this->max_slot_capacity());
-        size_type;
+        size_type slot_index;
         if (kIsIndirectKV)
             slot_index = this->get_ctrl_index(ctrl_index);
         else
