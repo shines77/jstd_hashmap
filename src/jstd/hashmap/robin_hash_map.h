@@ -99,6 +99,7 @@
 #endif // _MSC_VER
 
 #define ROBIN_USE_HASH_POLICY       0
+#define ROBIN_USE_SEPARATE_SLOTS    1
 #define ROBIN_USE_SWAP_TRAITS       1
 
 #define ROBIN_REHASH_READ_PREFETCH  0
@@ -3958,7 +3959,9 @@ private:
         this->clear_slots();
 
         if (this->slots_ != nullptr) {
-            //SlotAllocTraits::deallocate(this->slot_allocator_, this->slots_, this->max_slot_capacity());
+#if ROBIN_USE_SEPARATE_SLOTS
+            SlotAllocTraits::deallocate(this->slot_allocator_, this->slots_, this->max_slot_capacity());
+#endif
         }
         this->slots_ = nullptr;
         this->last_slot_ = nullptr;
@@ -3969,9 +3972,13 @@ private:
     void destroy_ctrls() noexcept {
         if (this->ctrls_ != this_type::default_empty_ctrls()) {
             size_type max_ctrl_capacity = (this->group_count() + 1) * kGroupWidth;
+#if ROBIN_USE_SEPARATE_SLOTS
+            CtrlAllocTraits::deallocate(this->ctrl_allocator_, this->ctrls_, max_ctrl_capacity);
+#else
             size_type total_alloc_size = this->TotalAllocSize<kSlotAlignment>(
                                                max_ctrl_capacity, this->max_slot_capacity());
             CtrlAllocTraits::deallocate(this->ctrl_allocator_, this->ctrls_, total_alloc_size);
+#endif
         }
         this->ctrls_ = this_type::default_empty_ctrls();
     }
@@ -3991,11 +3998,11 @@ private:
             assert(ctrl != nullptr);
             for (size_type index = 0; index < this->max_slot_capacity(); index++) {
                 if (ctrl->isUsed()) {
-                    if (kIsIndirectKV) {
+                    if (!kIsIndirectKV) {
+                        this->destroy_slot(index);
+                    } else {
                         size_type slot_index = ctrl->getIndex();
                         this->destroy_slot(slot_index);
-                    } else {
-                        this->destroy_slot(index);
                     }
                 }
                 ctrl++;
@@ -4123,18 +4130,26 @@ private:
         assert(new_group_count > 0);
         size_type ctrl_alloc_size = (new_group_count + 1) * kGroupWidth;
 
+#if ROBIN_USE_SEPARATE_SLOTS
+        ctrl_type * new_ctrls = CtrlAllocTraits::allocate(this->ctrl_allocator_, ctrl_alloc_size);
+#else
         size_type new_slot_capacity = this->mul_mlf(new_capacity) + new_max_lookups + 1;
         size_type total_alloc_size = this->TotalAllocSize<kSlotAlignment>(ctrl_alloc_size,
                                            kIsIndirectKV ? new_slot_capacity : new_ctrl_capacity);
 
         ctrl_type * new_ctrls = CtrlAllocTraits::allocate(this->ctrl_allocator_, total_alloc_size);
+#endif
         // Prefetch for resolve potential ctrls TLB misses.
         //Prefetch_Write_T2(new_ctrls);
 
         // Reset ctrls to default state
         this->clear_ctrls(new_ctrls, new_capacity, new_max_lookups, new_group_count);
 
+#if ROBIN_USE_SEPARATE_SLOTS
+        slot_type * new_slots = SlotAllocTraits::allocate(this->slot_allocator_, new_ctrl_capacity);
+#else
         slot_type * new_slots = this->AlignedSlots<kSlotAlignment>(new_ctrls, ctrl_alloc_size);
+#endif
         // Prefetch for resolve potential ctrls TLB misses.
         Prefetch_Write_T2(new_slots);
 
@@ -4176,7 +4191,9 @@ private:
             size_type old_max_slot_capacity = this->max_slot_capacity();
 
             // Prefetch for resolve potential ctrls TLB misses.
-            Prefetch_Read_T2(old_ctrls);
+            if (!kIsIndirectKV) {
+                Prefetch_Read_T2(old_ctrls);
+            }
             Prefetch_Read_T2(old_slots);
 
             this->create_slots<false>(new_capacity);
@@ -4388,10 +4405,20 @@ private:
 
             if (old_ctrls != this->default_empty_ctrls()) {
                 size_type old_max_ctrl_capacity = (old_group_count + 1) * kGroupWidth;
+#if ROBIN_USE_SEPARATE_SLOTS
+                CtrlAllocTraits::deallocate(this->ctrl_allocator_, old_ctrls, old_max_ctrl_capacity);
+#else
                 size_type total_alloc_size = this->TotalAllocSize<kSlotAlignment>(
                                                    old_max_ctrl_capacity, old_max_slot_capacity);
                 CtrlAllocTraits::deallocate(this->ctrl_allocator_, old_ctrls, total_alloc_size);
+#endif
             }
+
+#if ROBIN_USE_SEPARATE_SLOTS
+            if (old_slots != nullptr) {
+                SlotAllocTraits::deallocate(this->slot_allocator_, old_slots, old_max_slot_capacity);
+            }
+#endif
         }
     }
 
