@@ -1620,7 +1620,7 @@ int main(int argc, char * argv[])
 
         if (0) {
             // Dummy header
-        } else if (::strcmp(arg, "bigobject") == 0) {
+        } else if (::strcmp(arg, "big") == 0 || ::strcmp(arg, "bigobject") == 0) {
             FLAGS_test_bigobject_only = true;
         } else if (n == (argc - 1)) {
             // first arg is # of iterations
