@@ -399,7 +399,7 @@ public:
 
         if (remain > 0) {
             std::uint8_t * rbuf = (std::uint8_t *)&this->buffer_[length];
-            std::uint8_t ch = std::uint8_t(static_cast<std::size_t>(key) & 0xFFul);
+            std::uint8_t ch = std::uint8_t(std::size_t(key) & 0xFFul);
             for (std::ptrdiff_t i = 0; i < remain; i++) {
                 *rbuf++ = ch;
             }
@@ -645,6 +645,7 @@ struct HashFn {
 
     template <typename KeyT, typename std::enable_if<
                              !jstd::is_same_ex<KeyT, argument_type>::value &&
+                             !jstd::is_same_ex<KeyT, argument_type *>::value &&
                              (Size <= sizeof(KeyT))>::type * = nullptr>
     result_type operator () (const KeyT & key) const noexcept {
         if (isSpecial)
