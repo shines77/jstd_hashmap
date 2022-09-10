@@ -384,9 +384,9 @@ public:
     static constexpr std::uint64_t kUnusedMask64 = 0x0000000080000000ull;
 
     enum FindResult {
-        kNeedGrow = 0,
-        kIsNotExists = 1,
-        kIsExists = 2
+        kNeedGrow = -1,
+        kIsNotExists = 0,
+        kIsExists = 1
     };
 
     enum CompareOp {
@@ -3395,11 +3395,16 @@ public:
     }
 
     const_iterator find(const key_type & key) const {
-        size_type ctrl_index = this->find_index(key);
-        if (ctrl_index != npos)
-            return this->iterator_at(ctrl_index);
-        else
-            return this->cend();
+        if (!kIsIndirectKV) {
+            const slot_type * slot = this->find_impl(key);
+            return this->iterator_at(this->index_of(slot));
+        } else {
+            size_type ctrl_index = this->find_index(key);
+            if (ctrl_index != npos)
+                return this->iterator_at(ctrl_index);
+            else
+                return this->cend();
+        }
     }
 
     std::pair<iterator, iterator> equal_range(const key_type & key) {
@@ -5371,8 +5376,8 @@ InsertOrGrow_Start:
             this->setUsedCtrl(ctrl, dist_and_hash);
             return { slot, kIsNotExists };
         } else {
-            bool neednt_grow = this->insert_to_place<false>(ctrl, slot, dist_and_hash);
-            return { slot, static_cast<FindResult>(neednt_grow) };
+            FindResult neednt_grow = this->insert_to_place<false>(ctrl, slot, dist_and_hash);
+            return { slot, neednt_grow };
         }
     }
 
@@ -5422,8 +5427,8 @@ InsertOrGrow_Start:
             this->setUsedCtrl(ctrl, dist_and_hash);
             return { slot, kIsNotExists };
         } else {
-            bool neednt_grow = this->indirect_insert_to_place<false>(ctrl, dist_and_hash);
-            return { slot, static_cast<FindResult>(neednt_grow) };
+            FindResult neednt_grow = this->indirect_insert_to_place<false>(ctrl, dist_and_hash);
+            return { slot, neednt_grow };
         }
     }
 
@@ -5466,7 +5471,7 @@ InsertOrGrow_Start:
 
     template <bool isRehashing>
     JSTD_FORCED_INLINE
-    bool insert_to_place(ctrl_type * insert_ctrl, slot_type * insert_slot, const ctrl_type & dist_and_hash) {
+    FindResult insert_to_place(ctrl_type * insert_ctrl, slot_type * insert_slot, const ctrl_type & dist_and_hash) {
         ctrl_type * ctrl = insert_ctrl;
         slot_type * target = insert_slot;
         ctrl_type rich_ctrl(dist_and_hash);
@@ -5506,7 +5511,7 @@ InsertOrGrow_Start:
             if (ctrl->isEmpty()) {
                 this->emplace_rich_slot(ctrl, target, insert, rich_ctrl);
                 this->destroy_empty_slot(empty);
-                return true;
+                return kIsNotExists;
             } else if (rich_ctrl.dist > ctrl->dist) {
                 std::swap(rich_ctrl.value, ctrl->value);
                 if (kIsPlainKV) {
@@ -5530,19 +5535,19 @@ InsertOrGrow_Start:
                 if (rich_ctrl.uvalue >= this->max_distance()) {
                     this->emplace_rich_slot(insert_ctrl, insert_slot, insert, rich_ctrl);
                     this->destroy_empty_slot(empty);
-                    return false;
+                    return kNeedGrow;
                 }
             }
         }
 
         this->emplace_rich_slot(insert_ctrl, insert_slot, insert, rich_ctrl);
         this->destroy_empty_slot(empty);
-        return false;
+        return kNeedGrow;
     }
 
     template <bool isRehashing>
     JSTD_FORCED_INLINE
-    bool indirect_insert_to_place(ctrl_type * insert_ctrl, const ctrl_type & dist_and_hash) {
+    FindResult indirect_insert_to_place(ctrl_type * insert_ctrl, const ctrl_type & dist_and_hash) {
         ctrl_type * ctrl = insert_ctrl;
         ctrl_type rich_ctrl(dist_and_hash);
         assert(!ctrl->isEmpty());
@@ -5555,7 +5560,7 @@ InsertOrGrow_Start:
         while (ctrl < last_ctrl) {
             if (ctrl->isEmpty()) {
                 ctrl->setValue(rich_ctrl);
-                return true;
+                return kIsNotExists;
             } else if (rich_ctrl.dist > ctrl->dist) {
                 std::swap(rich_ctrl.value, ctrl->value);
             }
@@ -5569,13 +5574,13 @@ InsertOrGrow_Start:
             } else {
                 if (rich_ctrl.getDist() >= this->max_distance()) {
                     insert_ctrl->setValue(rich_ctrl);
-                    return false;
+                    return kNeedGrow;
                 }
             }
         }
 
         insert_ctrl->setValue(rich_ctrl);
-        return false;
+        return kNeedGrow;
     }
 
     JSTD_FORCED_INLINE
@@ -5635,14 +5640,10 @@ InsertOrGrow_Start:
         size_type ctrl_idx;
         auto find_info = this->find_or_insert(value.first, ctrl_idx);
         slot_type * slot = find_info.first;
-        size_type is_exists = find_info.second;
-        if (is_exists != kIsExists) {
+        FindResult is_exists = find_info.second;
+        if (is_exists == kIsNotExists) {
             // The key to be inserted is not exists.
             assert(slot != nullptr);
-            if (is_exists == kNeedGrow) {
-                this->grow_if_necessary();
-                return this->emplace_impl<AlwaysUpdate>(value);
-            }
 
             SlotPolicyTraits::construct(&this->allocator_, slot, value);
             this->slot_size_++;
@@ -5650,8 +5651,9 @@ InsertOrGrow_Start:
                 return { this->iterator_at(slot), true };
             else
                 return { this->iterator_at(ctrl_idx), true };
-        } else {
+        } else if (is_exists > kIsNotExists) {
             // The key to be inserted already exists.
+            assert(is_exists == kIsExists);
             if (AlwaysUpdate) {
                 slot->value.second = value.second;
             }
@@ -5659,6 +5661,9 @@ InsertOrGrow_Start:
                 return { this->iterator_at(slot), false };
             else
                 return { this->iterator_at(ctrl_idx), false };
+        } else {
+            this->grow_if_necessary();
+            return this->emplace_impl<AlwaysUpdate>(value);
         }
     }
 
@@ -5667,14 +5672,10 @@ InsertOrGrow_Start:
         size_type ctrl_idx;
         auto find_info = this->find_or_insert(value.first, ctrl_idx);
         slot_type * slot = find_info.first;
-        size_type is_exists = find_info.second;
-        if (is_exists != kIsExists) {
+        FindResult is_exists = find_info.second;
+        if (is_exists == kIsNotExists) {
             // The key to be inserted is not exists.
             assert(slot != nullptr);
-            if (is_exists == kNeedGrow) {
-                this->grow_if_necessary();
-                return this->emplace_impl<AlwaysUpdate>(std::forward<actual_value_type>(value));
-            }
 
             SlotPolicyTraits::construct(&this->allocator_, slot, std::forward<actual_value_type>(value));
             this->slot_size_++;
@@ -5682,8 +5683,9 @@ InsertOrGrow_Start:
                 return { this->iterator_at(slot), true };
             else
                 return { this->iterator_at(ctrl_idx), true };
-        } else {
+        } else if (is_exists > kIsNotExists) {
             // The key to be inserted already exists.
+            assert(is_exists == kIsExists);
             if (AlwaysUpdate) {
                 static constexpr bool is_rvalue_ref = std::is_rvalue_reference<decltype(value)>::value;
                 if (is_rvalue_ref)
@@ -5695,6 +5697,10 @@ InsertOrGrow_Start:
                 return { this->iterator_at(slot), false };
             else
                 return { this->iterator_at(ctrl_idx), false };
+        } else {
+            assert(is_exists == kNeedGrow);
+            this->grow_if_necessary();
+            return this->emplace_impl<AlwaysUpdate>(std::forward<actual_value_type>(value));
         }
     }
 
@@ -5712,16 +5718,10 @@ InsertOrGrow_Start:
         size_type ctrl_idx;
         auto find_info = this->find_or_insert(key, ctrl_idx);
         slot_type * slot = find_info.first;
-        size_type is_exists = find_info.second;
-        if (is_exists != kIsExists) {
+        FindResult is_exists = find_info.second;
+        if (is_exists == kIsNotExists) {
             // The key to be inserted is not exists.
             assert(slot != nullptr);
-            if (is_exists == kNeedGrow) {
-                this->grow_if_necessary();
-                return this->emplace_impl<AlwaysUpdate, KeyT, MappedT>(
-                        std::forward<KeyT>(key), std::forward<MappedT>(value)
-                    );
-            }
 
             SlotPolicyTraits::construct(&this->allocator_, slot,
                                         std::forward<KeyT>(key),
@@ -5731,8 +5731,9 @@ InsertOrGrow_Start:
                 return { this->iterator_at(slot), true };
             else
                 return { this->iterator_at(ctrl_idx), true };
-        } else {
+        } else if (is_exists > kIsNotExists) {
             // The key to be inserted already exists.
+            assert(is_exists == kIsExists);
             static constexpr bool isMappedType = jstd::is_same_ex<MappedT, mapped_type>::value;
             if (AlwaysUpdate) {
                 if (isMappedType) {
@@ -5746,6 +5747,12 @@ InsertOrGrow_Start:
                 return { this->iterator_at(slot), false };
             else
                 return { this->iterator_at(ctrl_idx), false };
+        } else {
+            assert(is_exists == kNeedGrow);
+            this->grow_if_necessary();
+            return this->emplace_impl<AlwaysUpdate, KeyT, MappedT>(
+                    std::forward<KeyT>(key), std::forward<MappedT>(value)
+                );
         }
     }
 
@@ -5762,16 +5769,10 @@ InsertOrGrow_Start:
         size_type ctrl_idx;
         auto find_info = this->find_or_insert(key, ctrl_idx);
         slot_type * slot = find_info.first;
-        size_type is_exists = find_info.second;
-        if (is_exists != kIsExists) {
+        FindResult is_exists = find_info.second;
+        if (is_exists == kIsNotExists) {
             // The key to be inserted is not exists.
             assert(slot != nullptr);
-            if (is_exists == kNeedGrow) {
-                this->grow_if_necessary();
-                return this->emplace(std::piecewise_construct,
-                                     std::forward_as_tuple(std::forward<KeyT>(key)),
-                                     std::forward_as_tuple(std::forward<Args>(args)...));
-            }
 
             SlotPolicyTraits::construct(&this->allocator_, slot,
                                         std::piecewise_construct,
@@ -5782,8 +5783,9 @@ InsertOrGrow_Start:
                 return { this->iterator_at(slot), true };
             else
                 return { this->iterator_at(ctrl_idx), true };
-        } else {
+        } else if (is_exists > kIsNotExists) {
             // The key to be inserted already exists.
+            assert(is_exists == kIsExists);
             if (AlwaysUpdate) {
                 mapped_type mapped_value(std::forward<Args>(args)...);
                 slot->value.second = std::move(mapped_value);
@@ -5792,6 +5794,12 @@ InsertOrGrow_Start:
                 return { this->iterator_at(slot), false };
             else
                 return { this->iterator_at(ctrl_idx), false };
+        } else {
+            assert (is_exists == kNeedGrow);
+            this->grow_if_necessary();
+            return this->emplace(std::piecewise_construct,
+                                    std::forward_as_tuple(std::forward<KeyT>(key)),
+                                    std::forward_as_tuple(std::forward<Args>(args)...));
         }
     }
 
@@ -5811,16 +5819,10 @@ InsertOrGrow_Start:
         size_type ctrl_idx;
         auto find_info = this->find_or_insert(key_wrapper.value(), ctrl_idx);
         slot_type * slot = find_info.first;
-        size_type is_exists = find_info.second;
-        if (is_exists != kIsExists) {
+        FindResult is_exists = find_info.second;
+        if (is_exists == kIsNotExists) {
             // The key to be inserted is not exists.
             assert(slot != nullptr);
-            if (is_exists == kNeedGrow) {
-                this->grow_if_necessary();
-                return this->emplace(std::piecewise_construct,
-                                     std::forward<std::tuple<Ts1...>>(first),
-                                     std::forward<std::tuple<Ts2...>>(second));
-            }
 
             SlotPolicyTraits::construct(&this->allocator_, slot,
                                         std::piecewise_construct,
@@ -5831,8 +5833,9 @@ InsertOrGrow_Start:
                 return { this->iterator_at(slot), true };
             else
                 return { this->iterator_at(ctrl_idx), true };
-        } else {
+        } else if (is_exists > kIsNotExists) {
             // The key to be inserted already exists.
+            assert(is_exists == kIsExists);
             if (AlwaysUpdate) {
                 tuple_wrapper2<mapped_type> mapped_wrapper(std::move(second));
                 slot->value.second = std::move(mapped_wrapper.value());
@@ -5841,6 +5844,12 @@ InsertOrGrow_Start:
                 return { this->iterator_at(slot), false };
             else
                 return { this->iterator_at(ctrl_idx), false };
+        } else {
+            assert (is_exists == kNeedGrow);
+            this->grow_if_necessary();
+            return this->emplace(std::piecewise_construct,
+                                    std::forward<std::tuple<Ts1...>>(first),
+                                    std::forward<std::tuple<Ts2...>>(second));
         }
     }
 
@@ -5864,17 +5873,10 @@ InsertOrGrow_Start:
         size_type ctrl_idx;
         auto find_info = this->find_or_insert(tmp_slot->value.first, ctrl_idx);
         slot_type * slot = find_info.first;
-        size_type is_exists = find_info.second;
-        if (is_exists != kIsExists) {
+        FindResult is_exists = find_info.second;
+        if (is_exists == kIsNotExists) {
             // The key to be inserted is not exists.
             assert(slot != nullptr);
-            if (is_exists == kNeedGrow) {
-                this->grow_if_necessary();
-                if (kIsCompatibleLayout)
-                    return this->emplace(std::move(tmp_slot->mutable_value));
-                else
-                    return this->emplace(std::move(tmp_slot->value));
-            }
 
             SlotPolicyTraits::transfer(&this->allocator_, slot, tmp_slot);
             this->slot_size_++;
@@ -5882,8 +5884,9 @@ InsertOrGrow_Start:
                 return { this->iterator_at(slot), true };
             else
                 return { this->iterator_at(ctrl_idx), true };
-        } else {
+        } else if (is_exists > kIsNotExists) {
             // The key to be inserted already exists.
+            assert(is_exists == kIsExists);
             if (AlwaysUpdate) {
                 slot->value.second = std::move(tmp_slot->value.second);
             }
@@ -5892,6 +5895,13 @@ InsertOrGrow_Start:
                 return { this->iterator_at(slot), false };
             else
                 return { this->iterator_at(ctrl_idx), false };
+        } else {
+            assert (is_exists == kNeedGrow);
+            this->grow_if_necessary();
+            if (kIsCompatibleLayout)
+                return this->emplace(std::move(tmp_slot->mutable_value));
+            else
+                return this->emplace(std::move(tmp_slot->value));
         }
     }
 
@@ -5902,7 +5912,7 @@ InsertOrGrow_Start:
         size_type ctrl_idx;
         auto find_info = this->find_or_insert(key, ctrl_idx);
         slot_type * slot = find_info.first;
-        size_type is_exists = find_info.second;
+        FindResult is_exists = find_info.second;
         if (is_exists == kIsNotExists) {
             // The key to be inserted is not exists.
             assert(slot != nullptr);
@@ -5911,7 +5921,8 @@ InsertOrGrow_Start:
                                         std::forward_as_tuple(key),
                                         std::forward_as_tuple(std::forward<Args>(args)...));
             this->slot_size_++;            
-        } else if (is_exists == kNeedGrow) {
+        } else if (is_exists < kIsNotExists) {
+            assert(is_exists == kNeedGrow);
             this->grow_if_necessary();
             return this->try_emplace_impl(key, std::forward<Args>(args)...);
         }
@@ -5926,7 +5937,7 @@ InsertOrGrow_Start:
         size_type ctrl_idx;
         auto find_info = this->find_or_insert(key, ctrl_idx);
         slot_type * slot = find_info.first;
-        size_type is_exists = find_info.second;
+        FindResult is_exists = find_info.second;
         if (is_exists == kIsNotExists) {
             // The key to be inserted is not exists.
             assert(slot != nullptr);
@@ -5935,7 +5946,8 @@ InsertOrGrow_Start:
                                         std::forward_as_tuple(std::forward<key_type>(key)),
                                         std::forward_as_tuple(std::forward<Args>(args)...));
             this->slot_size_++;
-        } else if (is_exists == kNeedGrow) {
+        } else if (is_exists < kIsNotExists) {
+            assert(is_exists == kNeedGrow);
             this->grow_if_necessary();
             return this->try_emplace_impl(std::forward<key_type>(key),
                                             std::forward<Args>(args)...);
@@ -5950,8 +5962,7 @@ InsertOrGrow_Start:
 
     template <typename KeyT>
     JSTD_FORCED_INLINE
-    std::pair<slot_type *, bool>
-    find_or_insert_no_grow(const KeyT & key) {
+    slot_type * find_or_insert_no_grow(const KeyT & key) {
         hash_code_t hash_code = this->get_hash(key);
         size_type slot_index = this->index_for_hash(hash_code);
 
@@ -5970,17 +5981,17 @@ InsertOrGrow_Start:
 
         if (ctrl->isEmpty()) {
             this->setUsedCtrl(ctrl, dist_and_hash);
-            return { slot, false };
+            return slot;
         } else {
-            bool neednt_grow = this->insert_to_place<true>(ctrl, slot, dist_and_hash);
-            return { slot, !neednt_grow };
+            FindResult neednt_grow = this->insert_to_place<true>(ctrl, slot, dist_and_hash);
+            assert(neednt_grow == kIsNotExists);
+            return slot;
         }
     }
 
     template <typename KeyT>
     JSTD_FORCED_INLINE
-    std::pair<slot_type *, bool>
-    find_or_insert_no_grow(const KeyT & key, std::uint8_t ctrl_hash) {
+    slot_type * find_or_insert_no_grow(const KeyT & key, std::uint8_t ctrl_hash) {
         hash_code_t hash_code = this->get_hash(key);
         size_type slot_index = this->index_for_hash(hash_code);
 
@@ -5999,17 +6010,17 @@ InsertOrGrow_Start:
 
         if (ctrl->isEmpty()) {
             this->setUsedCtrl(ctrl, dist_and_hash);
-            return { slot, false };
+            return slot;
         } else {
-            bool neednt_grow = this->insert_to_place<true>(ctrl, slot, dist_and_hash);
-            return { slot, !neednt_grow };
+            FindResult neednt_grow = this->insert_to_place<true>(ctrl, slot, dist_and_hash);
+            assert(neednt_grow == kIsNotExists);
+            return slot;
         }
     }
 
     template <typename KeyT>
     JSTD_FORCED_INLINE
-    std::pair<slot_type *, bool>
-    indirect_find_or_insert_no_grow(const KeyT & key) {
+    slot_type * indirect_find_or_insert_no_grow(const KeyT & key) {
         hash_code_t hash_code = this->get_hash(key);
         size_type ctrl_index = this->index_for_hash(hash_code);
         std::uint8_t ctrl_hash = this->get_ctrl_hash(hash_code);
@@ -6031,17 +6042,17 @@ InsertOrGrow_Start:
 
         if (ctrl->isEmpty()) {
             this->setUsedCtrl(ctrl, dist_and_hash);
-            return { slot, false };
+            return slot;
         } else {
-            bool neednt_grow = this->indirect_insert_to_place<true>(ctrl, dist_and_hash);
-            return { slot, !neednt_grow };
+            FindResult neednt_grow = this->indirect_insert_to_place<true>(ctrl, dist_and_hash);
+            assert(neednt_grow == kIsNotExists);
+            return slot;
         }
     }
 
     template <typename KeyT>
     JSTD_FORCED_INLINE
-    std::pair<slot_type *, bool>
-    indirect_find_or_insert_no_grow(const KeyT & key, std::uint8_t ctrl_hash) {
+    slot_type * indirect_find_or_insert_no_grow(const KeyT & key, std::uint8_t ctrl_hash) {
         hash_code_t hash_code = this->get_hash(key);
         size_type ctrl_index = this->index_for_hash(hash_code);
         std::uint8_t _ctrl_hash = this->get_ctrl_hash(hash_code);
@@ -6064,59 +6075,48 @@ InsertOrGrow_Start:
 
         if (ctrl->isEmpty()) {
             this->setUsedCtrl(ctrl, dist_and_hash);
-            return { slot, false };
+            return slot;
         } else {
-            bool neednt_grow = this->indirect_insert_to_place<true>(ctrl, dist_and_hash);
-            return { slot, !neednt_grow };
+            FindResult neednt_grow = this->indirect_insert_to_place<true>(ctrl, dist_and_hash);
+            assert(neednt_grow == kIsNotExists);
+            return slot;
         }
     }
 
     // Use in rehash_impl()
-    bool insert_no_grow(slot_type * old_slot) {
-        auto find_info = this->find_or_insert_no_grow(old_slot->value.first);
-        slot_type * new_slot = find_info.first;
-        bool need_grow = find_info.second;
+    void insert_no_grow(slot_type * old_slot) {
+        slot_type * new_slot = this->find_or_insert_no_grow(old_slot->value.first);
 
         SlotPolicyTraits::construct(&this->allocator_, new_slot, old_slot);
         this->slot_size_++;
         assert(this->slot_size() <= this->slot_capacity());
-        return need_grow;
     }
 
     // Use in rehash_impl()
-    bool insert_no_grow(slot_type * old_slot, std::uint8_t ctrl_hash) {
-        auto find_info = this->find_or_insert_no_grow(old_slot->value.first, ctrl_hash);
-        slot_type * new_slot = find_info.first;
-        bool need_grow = find_info.second;
+    void insert_no_grow(slot_type * old_slot, std::uint8_t ctrl_hash) {
+        slot_type * new_slot = this->find_or_insert_no_grow(old_slot->value.first, ctrl_hash);
 
         SlotPolicyTraits::construct(&this->allocator_, new_slot, old_slot);
         this->slot_size_++;
         assert(this->slot_size() <= this->slot_capacity());
-        return need_grow;
     }
 
     // Use in rehash_impl()
-    bool indirect_insert_no_grow(slot_type * old_slot) {
-        auto find_info = this->indirect_find_or_insert_no_grow(old_slot->value.first);
-        slot_type * new_slot = find_info.first;
-        bool need_grow = find_info.second;
+    void indirect_insert_no_grow(slot_type * old_slot) {
+        slot_type * new_slot = this->indirect_find_or_insert_no_grow(old_slot->value.first);
 
         SlotPolicyTraits::construct(&this->allocator_, new_slot, old_slot);
         this->slot_size_++;
         assert(this->slot_size() <= this->slot_capacity());
-        return need_grow;
     }
 
     // Use in rehash_impl()
-    bool indirect_insert_no_grow(slot_type * old_slot, std::uint8_t ctrl_hash) {
-        auto find_info = this->indirect_find_or_insert_no_grow(old_slot->value.first, ctrl_hash);
-        slot_type * new_slot = find_info.first;
-        bool need_grow = find_info.second;
+    void indirect_insert_no_grow(slot_type * old_slot, std::uint8_t ctrl_hash) {
+        slot_type * new_slot = this->indirect_find_or_insert_no_grow(old_slot->value.first, ctrl_hash);
 
         SlotPolicyTraits::construct(&this->allocator_, new_slot, old_slot);
         this->slot_size_++;
         assert(this->slot_size() <= this->slot_capacity());
-        return need_grow;
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////
@@ -6187,8 +6187,8 @@ Insert_To_Slot:
             this->setUsedCtrl(ctrl, dist_and_hash);
             return { slot, false };
         } else {
-            bool neednt_grow = this->insert_to_place<false>(ctrl, slot, dist_and_hash);
-            return { slot, !neednt_grow };
+            FindResult neednt_grow = this->insert_to_place<false>(ctrl, slot, dist_and_hash);
+            return { slot, neednt_grow };
         }
     }
 
