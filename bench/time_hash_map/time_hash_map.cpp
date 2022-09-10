@@ -643,6 +643,16 @@ struct HashFn {
     static const std::size_t bucket_size = 4;
     static const std::size_t min_buckets = 8;
 
+    template <typename KeyT, typename std::enable_if<
+                             !jstd::is_same_ex<KeyT, argument_type>::value &&
+                             (Size <= sizeof(KeyT))>::type * = nullptr>
+    result_type operator () (const KeyT & key) const noexcept {
+        if (isSpecial)
+            return static_cast<result_type>(test::MumHash<KeyT>()(key));
+        else
+            return static_cast<result_type>(HASH_MAP_FUNCTION<KeyT>()(key));
+    }
+
     template <typename ArgumentT, typename std::enable_if<
                                   jstd::is_same_ex<ArgumentT, argument_type>::value, int>::type = 0>
     result_type operator () (const ArgumentT & obj) const noexcept {
@@ -655,16 +665,6 @@ struct HashFn {
     // Do the identity hash for pointers.
     result_type operator () (const argument_type * obj) const noexcept {
         return reinterpret_cast<result_type>(obj);
-    }
-
-    template <typename KeyT, typename std::enable_if<
-                             !jstd::is_same_ex<KeyT, argument_type>::value &&
-                             (Size <= sizeof(KeyT))>::type * = nullptr>
-    result_type operator () (const KeyT & key) const noexcept {
-        if (isSpecial)
-            return static_cast<result_type>(test::MumHash<KeyT>()(key));
-        else
-            return static_cast<result_type>(HASH_MAP_FUNCTION<KeyT>()(key));
     }
 
     // Less operator for MSVC's hash containers.
