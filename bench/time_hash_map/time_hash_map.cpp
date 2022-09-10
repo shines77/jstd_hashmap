@@ -661,7 +661,10 @@ struct HashFn {
                              !jstd::is_same_ex<KeyT, argument_type>::value &&
                              (Size <= sizeof(KeyT))>::type * = nullptr>
     result_type operator () (const KeyT & key) const noexcept {
-        return static_cast<result_type>(HASH_MAP_FUNCTION<KeyT>()(key));
+        if (isSpecial)
+            return static_cast<result_type>(test::MumHash<KeyT>()(key));
+        else
+            return static_cast<result_type>(HASH_MAP_FUNCTION<KeyT>()(key));
     }
 
     // Less operator for MSVC's hash containers.
@@ -1151,24 +1154,7 @@ static void report_result(char const * title, double ut, double lf, std::size_t 
     ::fflush(stdout);
 }
 
-#if 0
-
 // Apply a pseudorandom permutation to the given vector.
-template <typename Vector>
-void shuffle_vector(Vector & vector, int seed = 0) {
-    // shuffle
-    //::srand(9);
-    if (seed == 0)
-        seed = 20200831;
-    jstd::RandomGen RandomGen(seed);
-    for (std::size_t n = vector.size(); n >= 2; n--) {
-        std::size_t rnd_idx = std::size_t(jstd::RandomGen::nextUInt32()) % n;
-        std::swap(vector[n - 1], vector[rnd_idx]);
-    }
-}
-
-#else
-
 template <typename Vector>
 void shuffle_vector(Vector & vector, int seed = 0) {
     // shuffle
@@ -1180,8 +1166,6 @@ void shuffle_vector(Vector & vector, int seed = 0) {
         std::swap(vector[n - 1], vector[rnd_idx]);
     }
 }
-
-#endif
 
 /* The implementation of test routine */
 #include "time_hash_map_func.hpp"
@@ -1285,7 +1269,7 @@ static void test_all_hashmaps(std::size_t obj_size, std::size_t iters) {
     const bool has_stress_hash_function = (obj_size <= 8);
 
 #if USE_STD_HASH_MAP
-    if (1) {
+    if (0) {
         measure_hashmap<StdHashMap<HashObj, Value,
                         HashFn<typename HashObj::key_type, false, HashObj::cSize, HashObj::cHashSize>,
                         HashEqualTo<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>,
