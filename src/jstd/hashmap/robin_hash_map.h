@@ -438,6 +438,8 @@ public:
         }
     };
 
+    #pragma pack(push, 1)
+
     //
     // GCC unsupported class-scope explicit specialization until gcc 12.x,
     // so we add an useless T type (dummy template argument) to solve.
@@ -1459,6 +1461,8 @@ public:
         ctrl_data() {}
         using Base::Base;
     };
+
+    #pragma pack(pop)
 
     typedef ctrl_data<void, kNeedStoreHash, kIsIndirectKV> ctrl_type;
 
