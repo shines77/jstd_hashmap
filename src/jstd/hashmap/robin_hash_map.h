@@ -379,9 +379,9 @@ public:
     static constexpr std::uint32_t kFullMask32_Half  = 0x55555555ul;
     static constexpr std::uint32_t kFullMask32_Half2 = 0xAAAAAAAAul;
 
-    static constexpr std::uint64_t kEmptySlot64  = 0x00000000FFFF0000ull;
-    static constexpr std::uint64_t kEndOfMark64  = 0x00000000FFFE0000ull;
-    static constexpr std::uint64_t kUnusedMask64 = 0x0000000080000000ull;
+    static constexpr std::uint64_t kEmptySlot64  = 0x000000000000FF00ull;
+    static constexpr std::uint64_t kEndOfMark64  = 0x000000000000FE00ull;
+    static constexpr std::uint64_t kUnusedMask64 = 0x0000000000008000ull;
 
     enum FindResult {
         kNeedGrow = -1,
@@ -2197,11 +2197,11 @@ public:
         }
 
         void fillAllEmpty() {
-            this->fillAll<static_cast<std::int64_t>(kEmptySlot16)>(this->ctrl);
+            this->fillAll<kEmptySlot64>(this->ctrl);
         }
 
         void fillAllEndOf() {
-            this->fillAll<static_cast<std::int64_t>(kEndOfMark16)>(this->ctrl);
+            this->fillAll<kEndOfMark64>(this->ctrl);
         }
 
         std::uint32_t matchTag(std::int16_t ctrl_tag) const {
@@ -2247,7 +2247,7 @@ public:
 
         std::uint32_t matchEmpty() const {
             __m256i ctrl_bits  = _mm256_loadu_si256((const __m256i *)this->ctrl);
-            __m256i empty_bits = _mm256_set1_epi64x((std::int64_t)kEmptySlot16);
+            __m256i empty_bits = _mm256_set1_epi64x((std::int64_t)kEmptySlot64);
                     ctrl_bits  = _mm256_and_si256(ctrl_bits, empty_bits);
             __m256i match_mask = _mm256_cmpeq_epi64(empty_bits, ctrl_bits);
             std::uint32_t maskEmpty = (std::uint32_t)_mm256_movepi64_mask(match_mask);
@@ -2256,7 +2256,7 @@ public:
 
         std::uint32_t matchNonEmpty() const {
             __m256i ctrl_bits  = _mm256_loadu_si256((const __m256i *)this->ctrl);
-            __m256i empty_bits = _mm256_set1_epi64x((std::int64_t)kEmptySlot16);
+            __m256i empty_bits = _mm256_set1_epi64x((std::int64_t)kEmptySlot64);
                     ctrl_bits  = _mm256_and_si256(ctrl_bits, empty_bits);
             __m256i match_mask = _mm256_cmpgt_epi64(empty_bits, ctrl_bits);
             std::uint32_t maskUsed = (std::uint32_t)_mm256_movepi64_mask(match_mask);
@@ -2392,11 +2392,11 @@ public:
         }
 
         void fillAllEmpty() {
-            this->fillAll<static_cast<std::int64_t>(kEmptySlot16)>(this->ctrl);
+            this->fillAll<kEmptySlot64>(this->ctrl);
         }
 
         void fillAllEndOf() {
-            this->fillAll<static_cast<std::int64_t>(kEndOfMark16)>(this->ctrl);
+            this->fillAll<kEndOfMark64>(this->ctrl);
         }
 
         std::uint32_t matchTag(std::int16_t ctrl_tag) const {
@@ -2443,7 +2443,7 @@ public:
 
         std::uint32_t matchEmpty() const {
             __m256i ctrl_bits  = _mm256_loadu_si256((const __m256i *)this->ctrl);
-            __m256i empty_bits = _mm256_set1_epi64x((std::int64_t)kEmptySlot16);
+            __m256i empty_bits = _mm256_set1_epi64x((std::int64_t)kEmptySlot64);
                     ctrl_bits  = _mm256_and_si256(ctrl_bits, empty_bits);
             __m256i match_mask = _mm256_cmpeq_epi64(empty_bits, ctrl_bits);
                     match_mask = _mm256_srli_epi64(match_mask, 56);
@@ -2453,7 +2453,7 @@ public:
 
         std::uint32_t matchNonEmpty() const {
             __m256i ctrl_bits  = _mm256_loadu_si256((const __m256i *)this->ctrl);
-            __m256i empty_bits = _mm256_set1_epi64x((std::int64_t)kEmptySlot16);
+            __m256i empty_bits = _mm256_set1_epi64x((std::int64_t)kEmptySlot64);
                     ctrl_bits  = _mm256_and_si256(ctrl_bits, empty_bits);
             __m256i match_mask = _mm256_cmpgt_epi64(empty_bits, ctrl_bits);
                     match_mask = _mm256_srli_epi64(match_mask, 56);
