@@ -893,8 +893,8 @@ public:
         }
 
         bool isUnusedOrZero() const {
-            return (this->dist <= 0);
-            //return (this->value < kDistInc16);
+            // return (this->dist <= 0);
+            return (this->value < kDistInc16);
         }
 
         std::uint8_t getHash() const {
@@ -1119,20 +1119,15 @@ public:
         typedef std::int64_t  value_type;
         typedef std::uint64_t uvalue_type;
         typedef std::uint32_t index_type;
-        typedef std::int8_t   dist_type;
-        typedef std::uint8_t  udist_type;
+        typedef std::int16_t  dist_type;
+        typedef std::uint16_t udist_type;
 
         union {
             struct {
                 std::uint8_t  hash;
+                std::uint8_t  first;
                 dist_type     dist;
-                std::int16_t  reserve;
                 index_type    index;
-            };
-            struct {
-                std::int16_t  ilow16;
-                std::int16_t  reserve_1;
-                index_type    index_1;
             };
             struct {
                 std::int32_t ilow;
@@ -1162,7 +1157,7 @@ public:
         }
 
         ctrl_data(dist_type dist, std::uint8_t hash) noexcept
-            : hash(hash), dist(dist), reserve(0), index(0) {
+            : hash(hash), first(0), dist(dist), index(0) {
         }
 
         ctrl_data(const ctrl_data & other, std::uint8_t hash) noexcept
@@ -1180,27 +1175,27 @@ public:
         }
 
         static value_type make(dist_type dist, std::uint8_t hash) {
-            return value_type((uvalue_type((udist_type)dist) << 8) | hash);
+            return value_type((uvalue_type((udist_type)dist) << 16) | hash);
         }
 
         static uvalue_type makeu(dist_type dist, std::uint8_t hash) {
-            return uvalue_type((uvalue_type((udist_type)dist) << 8) | hash);
+            return uvalue_type((uvalue_type((udist_type)dist) << 16) | hash);
         }
 
         static constexpr value_type make_dist(size_type n) {
-            return static_cast<value_type>(n * kDistInc16);
+            return static_cast<value_type>(n * kDistInc32);
         }
 
         size_type distance() const {
-            return static_cast<size_type>(this->uvalue & 0x000000000000FF00ull);
+            return static_cast<size_type>(this->low & 0xFFFF0000u);
         }
 
         bool isEmpty() const {
-            return (this->dist == kEmptySlot);
+            return (this->dist == kEmptySlot16b);
         }
 
         static bool isEmpty(dist_type tag) {
-            return (tag == kEmptySlot);
+            return (tag == kEmptySlot16b);
         }
 
         bool isNonEmpty() const {
@@ -1212,7 +1207,7 @@ public:
         }
 
         bool isEndOf() const {
-            return (this->dist == kEndOfMark);
+            return (this->dist == kEndOfMark16b);
         }
 
         bool isUsed() const {
@@ -1232,7 +1227,7 @@ public:
         }
 
         bool isEmptyOrZero() const {
-            //return (this->dist == 0 || this->dist == kEmptySlot);
+            //return (this->dist == 0 || this->dist == kEmptySlot16b);
             return (udist_type(this->dist + 1) <= 1);
         }
 
@@ -1248,8 +1243,8 @@ public:
             return static_cast<udist_type>(this->dist);
         }
 
-        std::int16_t getLow() const {
-            return this->ilow16;
+        std::int32_t getLow() const {
+            return this->ilow;
         }
 
         size_type getIndex() const {
@@ -1257,15 +1252,15 @@ public:
         }
 
         void setEmpty() {
-            this->ilow = kEmptySlot16;
+            this->uvalue = kEmptySlot64;
         }
 
         void setEndOf() {
-            this->ilow = kEndOfMark16;
+            this->uvalue = kEndOfMark64;
         }
 
         void setUnused() {
-            this->ilow = kEmptySlot16;
+            this->uvalue = kEmptySlot64;
         }
 
         void setDist(dist_type dist) {
@@ -1277,7 +1272,7 @@ public:
         }
 
         void setValue(dist_type dist, std::uint8_t hash) {
-            assert(dist >= 0 && dist <= kMaxDist);
+            assert(dist >= 0 && dist <= kMaxDist16b);
 #if 1
             this->value = ctrl_data::make(dist, hash);
 #else
@@ -1311,19 +1306,19 @@ public:
         }
 
         void incDist() {
-            this->uvalue += kDistInc16;
+            this->uvalue += kDistInc32;
         }
 
         void decDist() {
-            this->uvalue -= kDistInc16;
+            this->uvalue -= kDistInc32;
         }
 
         void incDist(size_type width) {
-            this->uvalue += static_cast<uvalue_type>(kDistInc16 * width);
+            this->uvalue += static_cast<uvalue_type>(kDistInc32 * width);
         }
 
         void decDist(size_type width) {
-            this->uvalue -= static_cast<uvalue_type>(kDistInc16 * width);
+            this->uvalue -= static_cast<uvalue_type>(kDistInc32 * width);
         }
 
         bool hash_equals(std::uint8_t ctrl_hash) const {
@@ -2197,11 +2192,11 @@ public:
         }
 
         void fillAllEmpty() {
-            this->fillAll<static_cast<std::int64_t>(kEmptySlot16)>(this->ctrl);
+            fillAll<kEmptySlot64>(this->ctrl);
         }
 
         void fillAllEndOf() {
-            this->fillAll<static_cast<std::int64_t>(kEndOfMark16)>(this->ctrl);
+            fillAll<kEndOfMark64>(this->ctrl);
         }
 
         std::uint32_t matchTag(std::int16_t ctrl_tag) const {
@@ -2247,7 +2242,7 @@ public:
 
         std::uint32_t matchEmpty() const {
             __m256i ctrl_bits  = _mm256_loadu_si256((const __m256i *)this->ctrl);
-            __m256i empty_bits = _mm256_set1_epi64x((std::int64_t)kEmptySlot16);
+            __m256i empty_bits = _mm256_set1_epi64x((std::int64_t)kEmptySlot64);
                     ctrl_bits  = _mm256_and_si256(ctrl_bits, empty_bits);
             __m256i match_mask = _mm256_cmpeq_epi64(empty_bits, ctrl_bits);
             std::uint32_t maskEmpty = (std::uint32_t)_mm256_movepi64_mask(match_mask);
@@ -2256,7 +2251,7 @@ public:
 
         std::uint32_t matchNonEmpty() const {
             __m256i ctrl_bits  = _mm256_loadu_si256((const __m256i *)this->ctrl);
-            __m256i empty_bits = _mm256_set1_epi64x((std::int64_t)kEmptySlot16);
+            __m256i empty_bits = _mm256_set1_epi64x((std::int64_t)kEmptySlot64);
                     ctrl_bits  = _mm256_and_si256(ctrl_bits, empty_bits);
             __m256i match_mask = _mm256_cmpgt_epi64(empty_bits, ctrl_bits);
             std::uint32_t maskUsed = (std::uint32_t)_mm256_movepi64_mask(match_mask);
@@ -2392,11 +2387,11 @@ public:
         }
 
         void fillAllEmpty() {
-            this->fillAll<static_cast<std::int64_t>(kEmptySlot16)>(this->ctrl);
+            fillAll<kEmptySlot64>(this->ctrl);
         }
 
         void fillAllEndOf() {
-            this->fillAll<static_cast<std::int64_t>(kEndOfMark16)>(this->ctrl);
+            fillAll<kEndOfMark64>(this->ctrl);
         }
 
         std::uint32_t matchTag(std::int16_t ctrl_tag) const {
@@ -2443,7 +2438,7 @@ public:
 
         std::uint32_t matchEmpty() const {
             __m256i ctrl_bits  = _mm256_loadu_si256((const __m256i *)this->ctrl);
-            __m256i empty_bits = _mm256_set1_epi64x((std::int64_t)kEmptySlot16);
+            __m256i empty_bits = _mm256_set1_epi64x((std::int64_t)kEmptySlot64);
                     ctrl_bits  = _mm256_and_si256(ctrl_bits, empty_bits);
             __m256i match_mask = _mm256_cmpeq_epi64(empty_bits, ctrl_bits);
                     match_mask = _mm256_srli_epi64(match_mask, 56);
@@ -2453,7 +2448,7 @@ public:
 
         std::uint32_t matchNonEmpty() const {
             __m256i ctrl_bits  = _mm256_loadu_si256((const __m256i *)this->ctrl);
-            __m256i empty_bits = _mm256_set1_epi64x((std::int64_t)kEmptySlot16);
+            __m256i empty_bits = _mm256_set1_epi64x((std::int64_t)kEmptySlot64);
                     ctrl_bits  = _mm256_and_si256(ctrl_bits, empty_bits);
             __m256i match_mask = _mm256_cmpgt_epi64(empty_bits, ctrl_bits);
                     match_mask = _mm256_srli_epi64(match_mask, 56);
