@@ -620,10 +620,8 @@ static void map_iterate(std::size_t iters, const PairVector & kvs) {
         __COMPILER_BARRIER();
 
         // keep compiler from optimizing away r (we never call rand())
-        ::srand(static_cast<unsigned int>(r));
-
         // Ensure the HashMap is not destructed
-        ::srand(static_cast<unsigned int>(hashmap.size()));
+        ::srand(static_cast<unsigned int>(r + hashmap.size()));
 
         double lf = hashmap.load_factor();
         report_result("iterate", ut, lf, iters, start, finish);
