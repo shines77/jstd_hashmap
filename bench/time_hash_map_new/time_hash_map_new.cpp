@@ -100,7 +100,7 @@
 #define USE_JSTD_ROBIN_HASH_MAP         1
 #define USE_JSTD_ROBIN_HASH_MAP_V1      0
 #define USE_JSTD_ROBIN_HASH_MAP_V2      0
-#define USE_JSTD_ROBIN_HASH_MAP_V3      1
+#define USE_JSTD_ROBIN_HASH_MAP_V3      0
 #define USE_JSTD_ROBIN_HASH_MAP_V4      1
 #endif // _DEBUG
 

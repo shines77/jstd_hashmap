@@ -1135,6 +1135,11 @@ public:
                 index_type    index_1;
             };
             struct {
+                std::uint16_t ulow16;
+                std::uint16_t reserve_2;
+                index_type    index_2;
+            };
+            struct {
                 std::int32_t ilow;
                 std::int32_t ihigh;
             };
@@ -1298,8 +1303,8 @@ public:
             this->value = ctrl.value;
         }
 
-        void setLow(std::int32_t low) {
-            this->ilow = low;
+        void setLow(std::int16_t low) {
+            this->ilow16 = low;
         }
 
         void setIndex(index_type index) {
@@ -1311,19 +1316,19 @@ public:
         }
 
         void incDist() {
-            this->uvalue += kDistInc16;
+            this->ulow16 += static_cast<std::uint16_t>(kDistInc16);
         }
 
         void decDist() {
-            this->uvalue -= kDistInc16;
+            this->ulow16 -= static_cast<std::uint16_t>(kDistInc16);
         }
 
         void incDist(size_type width) {
-            this->uvalue += static_cast<uvalue_type>(kDistInc16 * width);
+            this->ulow16 += static_cast<std::uint16_t>(kDistInc16 * width);
         }
 
         void decDist(size_type width) {
-            this->uvalue -= static_cast<uvalue_type>(kDistInc16 * width);
+            this->ulow16 -= static_cast<std::uint16_t>(kDistInc16 * width);
         }
 
         bool hash_equals(std::uint8_t ctrl_hash) const {
@@ -2731,7 +2736,7 @@ public:
     static constexpr size_type kGroupWidth = group_mask::kGroupWidth;
     static constexpr size_type kGroupSize = kGroupWidth * sizeof(ctrl_type);
 
-    template <typename ValueType, bool IsIndirectKV>
+    template <typename ValueType, bool IsIndirectKV /* = false */>
     class basic_iterator {
     public:
         using iterator_category = std::forward_iterator_tag;
@@ -2873,27 +2878,153 @@ public:
         }
 
         slot_type * slot() {
-            if (IsIndirectKV) {
-                const ctrl_type * ctrl = this->owner_->ctrl_at(this->index_);
-                size_type slot_index = ctrl->getIndex();
-                slot_type * _slot = const_cast<this_type *>(this->owner_)->slot_at(slot_index);
-                return _slot;
-            } else {
-                slot_type * _slot = const_cast<this_type *>(this->owner_)->slot_at(this->index_);
-                return _slot;
-            }
+            const slot_type * _slot = this->owner_->slot_at(this->index_);
+            return const_cast<this_type *>(_slot);
         }
 
         const slot_type * slot() const {
-            if (IsIndirectKV) {
-                const ctrl_type * ctrl = this->owner_->ctrl_at(this->index_);
-                size_type slot_index = ctrl->getIndex();
-                const slot_type * _slot = this->owner_->slot_at(slot_index);
-                return _slot;
-            } else {
-                const slot_type * _slot = this->owner_->slot_at(this->index_);
-                return _slot;
-            }
+            const slot_type * _slot = this->owner_->slot_at(this->index_);
+            return _slot;
+        }
+    };
+
+    template <typename ValueType>
+    class basic_iterator<ValueType, true> {
+    public:
+        using iterator_category = std::forward_iterator_tag;
+
+        using value_type = ValueType;
+        using pointer = ValueType *;
+        using reference = ValueType &;
+
+        using mutable_value_type = typename std::remove_const<ValueType>::type;
+        using const_value_type = typename std::add_const<mutable_value_type>::type;
+
+        using opp_value_type = typename std::conditional<std::is_const<ValueType>::value,
+                                                         mutable_value_type,
+                                                         const_value_type>::type;
+        using opp_basic_iterator = basic_iterator<opp_value_type, true>;
+
+        using size_type = std::size_t;
+        using difference_type = std::ptrdiff_t;
+
+    private:
+        const this_type * owner_;
+        size_type index_;
+
+    public:
+        basic_iterator() noexcept : owner_(nullptr), index_(0) {
+        }
+        basic_iterator(this_type * owner, size_type index) noexcept
+            : owner_(const_cast<const this_type *>(owner)), index_(index) {
+        }
+        basic_iterator(const this_type * owner, size_type index) noexcept
+            : owner_(owner), index_(index) {
+        }
+        basic_iterator(const basic_iterator & src) noexcept
+            : owner_(src.owner_), index_(src.index_) {
+        }
+        basic_iterator(const opp_basic_iterator & src) noexcept
+            : owner_(src.owner()), index_(src.index()) {
+        }
+
+        basic_iterator & operator = (const basic_iterator & rhs) noexcept {
+            this->owner_ = rhs.owner_;
+            this->index_ = rhs.index_;
+            return *this;
+        }
+
+        basic_iterator & operator = (const opp_basic_iterator & rhs) noexcept {
+            this->owner_ = rhs.owner();
+            this->index_ = rhs.index();
+            return *this;
+        }
+
+        friend bool operator == (const basic_iterator & lhs, const basic_iterator & rhs) noexcept {
+            return (lhs.index_ == rhs.index_) && (lhs.owner_ == rhs.owner_);
+        }
+
+        friend bool operator != (const basic_iterator & lhs, const basic_iterator & rhs) noexcept {
+            return (lhs.index_ != rhs.index_) || (lhs.owner_ != rhs.owner_);
+        }
+
+        friend bool operator == (const basic_iterator & lhs, const opp_basic_iterator & rhs) noexcept {
+            return (lhs.index() == rhs.index()) && (lhs.owner() == rhs.owner());
+        }
+
+        friend bool operator != (const basic_iterator & lhs, const opp_basic_iterator & rhs) noexcept {
+            return (lhs.index() != rhs.index()) || (lhs.owner() != rhs.owner());
+        }
+
+        basic_iterator & operator ++ () {
+            size_type max_size = this->owner_->size();
+            do {
+                ++(this->index_);
+            } while (this->index_ < max_size);
+            return *this;
+        }
+
+        basic_iterator operator ++ (int) {
+            basic_iterator copy(*this);
+            ++*this;
+            return copy;
+        }
+
+        basic_iterator & operator -- () {
+            while (this->index_ != 0) {
+                --(this->index_);
+            }  
+            return *this;
+        }
+
+        basic_iterator operator -- (int) {
+            basic_iterator copy(*this);
+            --*this;
+            return copy;
+        }
+
+        reference operator * () const {
+            const slot_type * _slot = this->slot();
+            return const_cast<slot_type *>(_slot)->value;
+        }
+
+        pointer operator -> () const {
+            const slot_type * _slot = this->slot();
+            return std::addressof(const_cast<slot_type *>(_slot)->value);
+        }
+
+        this_type * owner() {
+            return this->owner_;
+        }
+
+        const this_type * owner() const {
+            return this->owner_;
+        }
+
+        size_type index() {
+            return this->index_;
+        }
+
+        size_type index() const {
+            return this->index_;
+        }
+
+        ctrl_type * ctrl() {
+            return nullptr;
+        }
+
+        const ctrl_type * ctrl() const {
+            return nullptr;
+        }
+
+        slot_type * slot() {
+            const slot_type * _slot = this->owner_->slot_at(this->index_);
+            return const_cast<slot_type *>(_slot);
+        }
+
+        const slot_type * slot() const {
+            const slot_type * _slot = this->owner_->slot_at(this->index_);
+            return _slot;
         }
     };
 
@@ -3192,7 +3323,7 @@ public:
     }
 
     size_type bucket(const key_type & key) const {
-        size_type ctrl_index = this->find_index(key);
+        size_type ctrl_index = this->find_ctrl_index(key);
         return ctrl_index;
     }
 
@@ -3246,33 +3377,40 @@ public:
     }
 
     iterator begin() {
+        if (!kIsIndirectKV) {
 #if 1
-        ctrl_type * ctrl = this->ctrls();
-        ctrl_type * last_ctrl = this->ctrls() + this->group_count() * kGroupWidth;
-        group_type group(ctrl), last_group(last_ctrl);
-        size_type slot_index = 0;
-        for (; group < last_group; ++group) {
-            std::uint32_t maskUsed = group.matchUsed();
-            if (maskUsed != 0) {
-                size_type pos = BitUtils::bsf32(maskUsed);
-                size_type index = group.index(slot_index, pos);
-                return this->iterator_at(index);
+            ctrl_type * ctrl = this->ctrls();
+            ctrl_type * last_ctrl = this->ctrls() + this->group_count() * kGroupWidth;
+            group_type group(ctrl), last_group(last_ctrl);
+            size_type slot_index = 0;
+            for (; group < last_group; ++group) {
+                std::uint32_t maskUsed = group.matchUsed();
+                if (maskUsed != 0) {
+                    size_type pos = BitUtils::bsf32(maskUsed);
+                    size_type index = group.index(slot_index, pos);
+                    return this->iterator_at(index);
+                }
+                slot_index += kGroupWidth;
             }
-            slot_index += kGroupWidth;
-        }
 
-        return this->end();
+            return this->end();
 #else
-        ctrl_type * ctrl = this->ctrls();
-        size_type index;
-        for (index = 0; index < this->max_slot_capacity(); index++) {
-            if (ctrl->isUsed()) {
-                return { this, index };
+            ctrl_type * ctrl = this->ctrls();
+            size_type index;
+            for (index = 0; index < this->max_slot_capacity(); index++) {
+                if (ctrl->isUsed()) {
+                    return { this, index };
+                }
+                ctrl++;
             }
-            ctrl++;
-        }
-        return { this, index };
+            return { this, index };
 #endif
+        } else {
+            if (this->size() != 0)
+                return this->iterator_at(size_type(0));
+            else
+                return this->end();
+        }
     }
 
     const_iterator begin() const {
@@ -3408,11 +3546,8 @@ public:
             const slot_type * slot = this->find_impl(key);
             return this->iterator_at(this->index_of(slot));
         } else {
-            size_type ctrl_index = this->find_index(key);
-            if (ctrl_index != npos)
-                return this->iterator_at(ctrl_index);
-            else
-                return this->cend();
+            size_type slot_index = this->find_slot_index(key);
+            return this->iterator_at(slot_index);
         }
     }
 
@@ -3761,14 +3896,24 @@ private:
 
     iterator next_valid_iterator(iterator iter) {
         size_type index = this->index_of(iter);
-        ctrl_type * ctrl = this->ctrl_at(index);
-        return this->next_valid_iterator(ctrl, iter);
+        if (!kIsIndirectKV) {
+            ctrl_type * ctrl = this->ctrl_at(index);
+            return this->next_valid_iterator(ctrl, iter);
+        } else {
+            ++iter;
+            return iter;
+        }
     }
 
     const_iterator next_valid_iterator(const_iterator iter) {
         size_type index = this->index_of(iter);
-        ctrl_type * ctrl = this->ctrl_at(index);
-        return this->next_valid_iterator(ctrl, iter);
+        if (!kIsIndirectKV) {
+            ctrl_type * ctrl = this->ctrl_at(index);
+            return this->next_valid_iterator(ctrl, iter);
+        } else {
+            ++iter;
+            return iter;
+        }
     }
 
     inline size_type index_salt() const noexcept {
@@ -5003,13 +5148,6 @@ private:
     }
 
     template <typename KeyT>
-    slot_type * indirect_find(const KeyT & key) {
-        return const_cast<slot_type *>(
-            const_cast<const this_type *>(this)->indirect_find(key)
-        );
-    }
-
-    template <typename KeyT>
     const slot_type * indirect_find(const KeyT & key) const {
         // Prefetch for resolve potential ctrls TLB misses.
         //Prefetch_Read_T2(this->ctrls());
@@ -5038,20 +5176,40 @@ private:
     }
 
     template <typename KeyT>
-    size_type find_index(const KeyT & key) {
-        return const_cast<const this_type *>(this)->find_index(key);
+    size_type find_ctrl_index(const KeyT & key) {
+        return const_cast<const this_type *>(this)->find_ctrl_index(key);
     }
 
     template <typename KeyT>
+    size_type find_ctrl_index(const KeyT & key) const {
+        return this->find_index<KeyT, true>(key);
+    }
+
+    template <typename KeyT>
+    size_type find_slot_index(const KeyT & key) {
+        return const_cast<const this_type *>(this)->find_slot_index(key);
+    }
+
+    template <typename KeyT>
+    size_type find_slot_index(const KeyT & key) const {
+        return this->find_index<KeyT, false>(key);
+    }
+
+    template <typename KeyT, bool IsCtrlIndex>
+    size_type find_index(const KeyT & key) {
+        return const_cast<const this_type *>(this)->find_index<KeyT, IsCtrlIndex>(key);
+    }
+
+    template <typename KeyT, bool IsCtrlIndex>
     size_type find_index(const KeyT & key) const {
         if (!kIsIndirectKV) {
-            return this->direct_find_index(key);
+            return this->direct_find_index<KeyT, IsCtrlIndex>(key);
         } else {
-            return this->indirect_find_index(key);
+            return this->indirect_find_index<KeyT, IsCtrlIndex>(key);
         }
     }
 
-    template <typename KeyT>
+    template <typename KeyT, bool IsCtrlIndex>
     size_type direct_find_index(const KeyT & key) const {
         // Prefetch for resolve potential ctrls TLB misses.
         //Prefetch_Read_T2(this->ctrls());
@@ -5084,7 +5242,7 @@ private:
             ctrl++;
         } while (1);
 
-        return npos;
+        return this->max_slot_capacity();
 #elif 0
         dist_and_hash.setValue(static_cast<ctrl_value_t>(ctrl_hash));
 
@@ -5104,7 +5262,7 @@ private:
             ctrl++;
         } while (dist_and_hash.dist <= ctrl->dist);
 
-        return npos;
+        return this->max_slot_capacity();
 #elif 0
         ctrl_type dist_and_0;
 
@@ -5117,7 +5275,7 @@ private:
             slot++;
         }
 
-        return npos;
+        return this->max_slot_capacity();
 #elif 1
         ctrl_type dist_and_0;
 
@@ -5132,7 +5290,7 @@ private:
             slot++;
         }
 
-        return npos;
+        return this->max_slot_capacity();
 #else
         if (ctrl->value >= ctrl_type::make_dist(0)) {
             if (!kNeedStoreHash || ctrl->hash_equals(ctrl_hash)) {
@@ -5141,7 +5299,7 @@ private:
                 }
             }
         } else {
-            return npos;
+            return this->max_slot_capacity();
         }
 
         ctrl++;
@@ -5154,7 +5312,7 @@ private:
                 }
             }
         } else {
-            return npos;
+            return this->max_slot_capacity();
         }
 
         ctrl++;
@@ -5186,23 +5344,17 @@ private:
             slot += kGroupWidth;
         }
 
-        return npos;
+        return this->max_slot_capacity();
 #endif
     }
 
-    template <typename KeyT>
-    size_type indirect_find_index(const KeyT & key) {
-        return const_cast<const this_type *>(this)->indirect_find_index(key);
-    }
-
-    template <typename KeyT>
+    template <typename KeyT, bool IsCtrlIndex>
     size_type indirect_find_index(const KeyT & key) const {
         // Prefetch for resolve potential ctrls TLB misses.
         //Prefetch_Read_T2(this->ctrls());
 
         if (!kIsIndirectKV) {
             assert(false);
-            return npos;
         }
 
         hash_code_t hash_code = this->get_hash(key);
@@ -5218,7 +5370,10 @@ private:
                 size_type slot_index = ctrl->getIndex();
                 const slot_type * slot = this->slot_at(slot_index);
                 if (this->key_equal_(slot->value.first, key)) {
-                    return this->index_of(ctrl);
+                    if (IsCtrlIndex)
+                        return this->index_of(ctrl);
+                    else
+                        return this->index_of(slot);
                 }
             }
             dist_and_0.incDist();
@@ -5226,17 +5381,17 @@ private:
             assert(ctrl <= last_ctrl);
         }
 
-        return npos;
+        return this->max_slot_capacity();
     }
 
     template <typename KeyT>
     JSTD_NO_INLINE
     std::pair<slot_type *, FindResult>
-    find_or_insert(const KeyT & key, size_type & ctrl_idx) {
+    find_or_insert(const KeyT & key, size_type & slot_idx) {
         if (!kIsIndirectKV) {
             return this->direct_find_or_insert(key);
         } else {
-            return this->indirect_find_or_insert(key, ctrl_idx);
+            return this->indirect_find_or_insert(key, slot_idx);
         }
     }
 
@@ -5393,7 +5548,7 @@ InsertOrGrow_Start:
     template <typename KeyT>
     JSTD_FORCED_INLINE
     std::pair<slot_type *, FindResult>
-    indirect_find_or_insert(const KeyT & key, size_type & ctrl_idx) {
+    indirect_find_or_insert(const KeyT & key, size_type & slot_idx) {
         hash_code_t hash_code = this->get_hash(key);
         size_type ctrl_index = this->index_for_hash(hash_code);
         std::uint8_t ctrl_hash = this->get_ctrl_hash(hash_code);
@@ -5405,9 +5560,10 @@ InsertOrGrow_Start:
 
         while (dist_and_0.getLow() <= ctrl->getLow()) {
             if (!kNeedStoreHash || ctrl->hash_equals(ctrl_hash)) {
-                slot_type * target = this->slot_at(ctrl);
+                size_type slot_index = ctrl->getIndex();
+                slot_type * target = this->slot_at(slot_index);
                 if (this->key_equal_(target->value.first, key)) {
-                    ctrl_idx = this->index_of(ctrl);
+                    slot_idx = slot_index;
                     return { target, kIsExists };
                 }
             }
@@ -5417,27 +5573,26 @@ InsertOrGrow_Start:
             assert(ctrl <= last_ctrl);
         }
 
-        if (this->need_grow() || (dist_and_0.getDist() >= this->max_distance())) {
+        if (this->need_grow() || (dist_and_0.getDist() > static_cast<udist_type>(kMaxDist))) {
             // The size of slot reach the slot threshold or hashmap is full.
             this->grow_if_necessary();
 
             ctrl = this->indirect_find_failed(hash_code, dist_and_0);
         }
 
-        ctrl_idx = this->index_of(ctrl);
-
-        size_type slot_index = this->slot_size_;
+        size_type new_slot_index = this->slot_size_;
+        slot_idx = new_slot_index;
         dist_and_hash.mergeHash(dist_and_0, ctrl_hash);
-        dist_and_hash.setIndex(static_cast<slot_index_t>(slot_index));
+        dist_and_hash.setIndex(static_cast<slot_index_t>(new_slot_index));
 
-        slot_type * slot = this->slot_at(slot_index);
+        slot_type * new_slot = this->slot_at(new_slot_index);
 
         if (ctrl->isEmpty()) {
             this->setUsedCtrl(ctrl, dist_and_hash);
-            return { slot, kIsNotExists };
+            return { new_slot, kIsNotExists };
         } else {
             FindResult neednt_grow = this->indirect_insert_to_place<false>(ctrl, dist_and_hash);
-            return { slot, neednt_grow };
+            return { new_slot, neednt_grow };
         }
     }
 
@@ -5579,9 +5734,9 @@ InsertOrGrow_Start:
             assert(rich_ctrl.getDist() <= static_cast<udist_type>(kMaxDist));
 
             if (isRehashing) {
-                assert(rich_ctrl.getDist() < this->max_distance());
+                assert(rich_ctrl.getDist() <= static_cast<udist_type>(kMaxDist));
             } else {
-                if (rich_ctrl.getDist() >= this->max_distance()) {
+                if (rich_ctrl.getDist() > static_cast<udist_type>(kMaxDist)) {
                     insert_ctrl->setValue(rich_ctrl);
                     return kNeedGrow;
                 }
@@ -5646,8 +5801,8 @@ InsertOrGrow_Start:
 
     template <bool AlwaysUpdate>
     std::pair<iterator, bool> emplace_impl(const actual_value_type & value) {
-        size_type ctrl_idx;
-        auto find_info = this->find_or_insert(value.first, ctrl_idx);
+        size_type slot_idx;
+        auto find_info = this->find_or_insert(value.first, slot_idx);
         slot_type * slot = find_info.first;
         FindResult is_exists = find_info.second;
         if (is_exists == kIsNotExists) {
@@ -5659,7 +5814,7 @@ InsertOrGrow_Start:
             if (!kIsIndirectKV)
                 return { this->iterator_at(slot), true };
             else
-                return { this->iterator_at(ctrl_idx), true };
+                return { this->iterator_at(slot_idx), true };
         } else if (is_exists > kIsNotExists) {
             // The key to be inserted already exists.
             assert(is_exists == kIsExists);
@@ -5669,7 +5824,7 @@ InsertOrGrow_Start:
             if (!kIsIndirectKV)
                 return { this->iterator_at(slot), false };
             else
-                return { this->iterator_at(ctrl_idx), false };
+                return { this->iterator_at(slot_idx), false };
         } else {
             this->grow_if_necessary();
             return this->emplace_impl<AlwaysUpdate>(value);
@@ -5678,8 +5833,8 @@ InsertOrGrow_Start:
 
     template <bool AlwaysUpdate>
     std::pair<iterator, bool> emplace_impl(actual_value_type && value) {
-        size_type ctrl_idx;
-        auto find_info = this->find_or_insert(value.first, ctrl_idx);
+        size_type slot_idx;
+        auto find_info = this->find_or_insert(value.first, slot_idx);
         slot_type * slot = find_info.first;
         FindResult is_exists = find_info.second;
         if (is_exists == kIsNotExists) {
@@ -5691,7 +5846,7 @@ InsertOrGrow_Start:
             if (!kIsIndirectKV)
                 return { this->iterator_at(slot), true };
             else
-                return { this->iterator_at(ctrl_idx), true };
+                return { this->iterator_at(slot_idx), true };
         } else if (is_exists > kIsNotExists) {
             // The key to be inserted already exists.
             assert(is_exists == kIsExists);
@@ -5705,7 +5860,7 @@ InsertOrGrow_Start:
             if (!kIsIndirectKV)
                 return { this->iterator_at(slot), false };
             else
-                return { this->iterator_at(ctrl_idx), false };
+                return { this->iterator_at(slot_idx), false };
         } else {
             assert(is_exists == kNeedGrow);
             this->grow_if_necessary();
@@ -5724,8 +5879,8 @@ InsertOrGrow_Start:
               (jstd::is_same_ex<MappedT, mapped_type>::value ||
                std::is_constructible<mapped_type, MappedT &&>::value)>::type * = nullptr>
     std::pair<iterator, bool> emplace_impl(KeyT && key, MappedT && value) {
-        size_type ctrl_idx;
-        auto find_info = this->find_or_insert(key, ctrl_idx);
+        size_type slot_idx;
+        auto find_info = this->find_or_insert(key, slot_idx);
         slot_type * slot = find_info.first;
         FindResult is_exists = find_info.second;
         if (is_exists == kIsNotExists) {
@@ -5739,7 +5894,7 @@ InsertOrGrow_Start:
             if (!kIsIndirectKV)
                 return { this->iterator_at(slot), true };
             else
-                return { this->iterator_at(ctrl_idx), true };
+                return { this->iterator_at(slot_idx), true };
         } else if (is_exists > kIsNotExists) {
             // The key to be inserted already exists.
             assert(is_exists == kIsExists);
@@ -5755,7 +5910,7 @@ InsertOrGrow_Start:
             if (!kIsIndirectKV)
                 return { this->iterator_at(slot), false };
             else
-                return { this->iterator_at(ctrl_idx), false };
+                return { this->iterator_at(slot_idx), false };
         } else {
             assert(is_exists == kNeedGrow);
             this->grow_if_necessary();
@@ -5775,8 +5930,8 @@ InsertOrGrow_Start:
                std::is_constructible<key_type, KeyT &&>::value)>::type * = nullptr,
               typename ... Args>
     std::pair<iterator, bool> emplace_impl(KeyT && key, Args && ... args) {
-        size_type ctrl_idx;
-        auto find_info = this->find_or_insert(key, ctrl_idx);
+        size_type slot_idx;
+        auto find_info = this->find_or_insert(key, slot_idx);
         slot_type * slot = find_info.first;
         FindResult is_exists = find_info.second;
         if (is_exists == kIsNotExists) {
@@ -5791,7 +5946,7 @@ InsertOrGrow_Start:
             if (!kIsIndirectKV)
                 return { this->iterator_at(slot), true };
             else
-                return { this->iterator_at(ctrl_idx), true };
+                return { this->iterator_at(slot_idx), true };
         } else if (is_exists > kIsNotExists) {
             // The key to be inserted already exists.
             assert(is_exists == kIsExists);
@@ -5802,7 +5957,7 @@ InsertOrGrow_Start:
             if (!kIsIndirectKV)
                 return { this->iterator_at(slot), false };
             else
-                return { this->iterator_at(ctrl_idx), false };
+                return { this->iterator_at(slot_idx), false };
         } else {
             assert (is_exists == kNeedGrow);
             this->grow_if_necessary();
@@ -5825,8 +5980,8 @@ InsertOrGrow_Start:
                                            std::tuple<Ts1...> && first,
                                            std::tuple<Ts2...> && second) {
         tuple_wrapper2<key_type> key_wrapper(first);
-        size_type ctrl_idx;
-        auto find_info = this->find_or_insert(key_wrapper.value(), ctrl_idx);
+        size_type slot_idx;
+        auto find_info = this->find_or_insert(key_wrapper.value(), slot_idx);
         slot_type * slot = find_info.first;
         FindResult is_exists = find_info.second;
         if (is_exists == kIsNotExists) {
@@ -5841,7 +5996,7 @@ InsertOrGrow_Start:
             if (!kIsIndirectKV)
                 return { this->iterator_at(slot), true };
             else
-                return { this->iterator_at(ctrl_idx), true };
+                return { this->iterator_at(slot_idx), true };
         } else if (is_exists > kIsNotExists) {
             // The key to be inserted already exists.
             assert(is_exists == kIsExists);
@@ -5852,7 +6007,7 @@ InsertOrGrow_Start:
             if (!kIsIndirectKV)
                 return { this->iterator_at(slot), false };
             else
-                return { this->iterator_at(ctrl_idx), false };
+                return { this->iterator_at(slot_idx), false };
         } else {
             assert (is_exists == kNeedGrow);
             this->grow_if_necessary();
@@ -5879,8 +6034,8 @@ InsertOrGrow_Start:
                                     std::forward<First>(first),
                                     std::forward<Args>(args)...);
 
-        size_type ctrl_idx;
-        auto find_info = this->find_or_insert(tmp_slot->value.first, ctrl_idx);
+        size_type slot_idx;
+        auto find_info = this->find_or_insert(tmp_slot->value.first, slot_idx);
         slot_type * slot = find_info.first;
         FindResult is_exists = find_info.second;
         if (is_exists == kIsNotExists) {
@@ -5892,7 +6047,7 @@ InsertOrGrow_Start:
             if (!kIsIndirectKV)
                 return { this->iterator_at(slot), true };
             else
-                return { this->iterator_at(ctrl_idx), true };
+                return { this->iterator_at(slot_idx), true };
         } else if (is_exists > kIsNotExists) {
             // The key to be inserted already exists.
             assert(is_exists == kIsExists);
@@ -5903,7 +6058,7 @@ InsertOrGrow_Start:
             if (!kIsIndirectKV)
                 return { this->iterator_at(slot), false };
             else
-                return { this->iterator_at(ctrl_idx), false };
+                return { this->iterator_at(slot_idx), false };
         } else {
             assert (is_exists == kNeedGrow);
             this->grow_if_necessary();
@@ -5918,8 +6073,8 @@ InsertOrGrow_Start:
 
     template <typename KeyT = key_type, typename ... Args>
     std::pair<iterator, bool> try_emplace_impl(const KeyT & key, Args && ... args) {
-        size_type ctrl_idx;
-        auto find_info = this->find_or_insert(key, ctrl_idx);
+        size_type slot_idx;
+        auto find_info = this->find_or_insert(key, slot_idx);
         slot_type * slot = find_info.first;
         FindResult is_exists = find_info.second;
         if (is_exists == kIsNotExists) {
@@ -5936,15 +6091,15 @@ InsertOrGrow_Start:
             return this->try_emplace_impl(key, std::forward<Args>(args)...);
         }
         if (!kIsIndirectKV)
-            return { this->iterator_at(slot), (is_exists != kIsExists) };
+            return { this->iterator_at(slot), (is_exists == kIsNotExists) };
         else
-            return { this->iterator_at(ctrl_idx), (is_exists != kIsExists) };
+            return { this->iterator_at(slot_idx), (is_exists == kIsNotExists) };
     }
 
     template <typename KeyT = key_type, typename ... Args>
     std::pair<iterator, bool> try_emplace_impl(KeyT && key, Args && ... args) {
-        size_type ctrl_idx;
-        auto find_info = this->find_or_insert(key, ctrl_idx);
+        size_type slot_idx;
+        auto find_info = this->find_or_insert(key, slot_idx);
         slot_type * slot = find_info.first;
         FindResult is_exists = find_info.second;
         if (is_exists == kIsNotExists) {
@@ -5952,19 +6107,19 @@ InsertOrGrow_Start:
             assert(slot != nullptr);
             SlotPolicyTraits::construct(&this->allocator_, slot,
                                         std::piecewise_construct,
-                                        std::forward_as_tuple(std::forward<key_type>(key)),
+                                        std::forward_as_tuple(std::forward<KeyT>(key)),
                                         std::forward_as_tuple(std::forward<Args>(args)...));
             this->slot_size_++;
         } else if (is_exists < kIsNotExists) {
             assert(is_exists == kNeedGrow);
             this->grow_if_necessary();
-            return this->try_emplace_impl(std::forward<key_type>(key),
-                                            std::forward<Args>(args)...);
+            return this->try_emplace_impl(std::forward<KeyT>(key),
+                                          std::forward<Args>(args)...);
         }
         if (!kIsIndirectKV)
-            return { this->iterator_at(slot), (is_exists != kIsExists) };
+            return { this->iterator_at(slot), (is_exists == kIsNotExists) };
         else
-            return { this->iterator_at(ctrl_idx), (is_exists != kIsExists) };
+            return { this->iterator_at(slot_idx), (is_exists == kIsNotExists) };
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////
@@ -6251,8 +6406,8 @@ Insert_To_Slot:
     template <typename KeyT>
     JSTD_FORCED_INLINE
     size_type find_and_erase(const KeyT & key) {
-        size_type to_erase_idx = this->find_index(key);
-        if (likely(to_erase_idx != npos)) {
+        size_type to_erase_idx = this->find_ctrl_index(key);
+        if (likely(to_erase_idx != this->max_slot_capacity())) {
             if (!kIsIndirectKV)
                 this->erase_slot(to_erase_idx);
             else
