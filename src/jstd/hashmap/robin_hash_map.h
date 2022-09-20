@@ -3402,11 +3402,17 @@ public:
     }
 
     iterator end() {
-        return this->iterator_at(this->max_slot_capacity());
+        if (!kIsIndirectKV)
+            return this->iterator_at(this->max_slot_capacity());
+        else
+            return this->iterator_at(this->size());
     }
 
     const_iterator end() const {
-        return this->iterator_at(this->max_slot_capacity());
+        if (!kIsIndirectKV)
+            return this->iterator_at(this->max_slot_capacity());
+        else
+            return this->iterator_at(this->size());
     }
 
     const_iterator cend() const {
