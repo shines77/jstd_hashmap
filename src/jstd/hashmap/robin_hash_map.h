@@ -2957,10 +2957,7 @@ public:
         }
 
         basic_iterator & operator ++ () {
-            size_type max_size = this->owner_->size();
-            do {
-                ++(this->index_);
-            } while (this->index_ < max_size);
+            ++(this->index_);
             return *this;
         }
 
@@ -2971,9 +2968,7 @@ public:
         }
 
         basic_iterator & operator -- () {
-            while (this->index_ != 0) {
-                --(this->index_);
-            }  
+            --(this->index_);
             return *this;
         }
 
