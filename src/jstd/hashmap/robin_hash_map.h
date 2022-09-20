@@ -5419,7 +5419,6 @@ private:
     }
 
     template <typename KeyT>
-    JSTD_NO_INLINE
     std::pair<slot_type *, FindResult>
     find_or_insert(const KeyT & key) {
         if (!kIsIndirectKV) {
