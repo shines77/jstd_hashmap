@@ -39,8 +39,7 @@
 #endif // (_MSC_VER && _MSC_VER >= 1500)
 
 namespace jstd {
-
-struct BitUtils {
+namespace BitUtils {
 
     //
     // popcount() algorithm
@@ -504,8 +503,8 @@ struct BitUtils {
 #ifdef _MSC_VER
 #pragma warning (pop)
 #endif
-};
 
+} // namespace BitUtils
 } // namespace jstd
 
 #endif // JSTD_BITUTILS_H
