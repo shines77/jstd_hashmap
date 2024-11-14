@@ -4,7 +4,7 @@
 
 ## Chinese / 中文版
 
-TODO: //
+高性能哈希表：jstd::robin_hash_map，关键技术：Cache Friendly
 
 ## 编译和使用方法
 

@@ -4,7 +4,7 @@
 
 ## English / 英文版
 
-TODO: //
+High performance hash table: jstd::robin_hash_map, key technology: Cache Friendly
 
 ## Compile and usage
 
