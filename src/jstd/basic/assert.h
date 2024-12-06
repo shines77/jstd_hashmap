@@ -17,7 +17,7 @@
 #else
 #define JSTD_EXPORTED_FUNC
 #endif
-#endif  /* JSTD_EXPORTED_FUNC */
+#endif // JSTD_EXPORTED_FUNC
 
 #if JSTD_USE_ASSERT
 

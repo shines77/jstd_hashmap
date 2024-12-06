@@ -6,11 +6,56 @@
 #pragma once
 #endif
 
-#include "jstd/basic/compiler.h"
+#define JSTD_PLATFORM_WINDOWS   0
+#define JSTD_PLATFORM_UNIX      1
+#define JSTD_PLATFORM_APPLE     2
+#define JSTD_PLATFORM_INTEL     3
 
-#ifndef JSTD_DEFINED
-#define JSTD_DEFINED(X)                 ((##X) && (##X != 0))
+// Must be first (win 64 also define _WIN32)
+#if defined(_WIN64)
+#  define JSTD_PLATFORM     JSTD_PLATFORM_WINDOWS
+#elif defined(__WIN32__) || defined(WIN32) || defined(_WIN32)
+#  define JSTD_PLATFORM     JSTD_PLATFORM_WINDOWS
+#elif defined(__APPLE_CC__)
+#  define JSTD_PLATFORM     JSTD_PLATFORM_APPLE
+#elif defined(__INTEL_COMPILER)
+#  define JSTD_PLATFORM     JSTD_PLATFORM_INTEL
+#else
+#  define JSTD_PLATFORM     JSTD_PLATFORM_UNIX
 #endif
+
+#if defined(_M_X64) || defined(_M_IX64) || defined(_M_AMD64) \
+ || defined(_M_IA64) || defined(__amd64__) || defined(__x86_64__)
+  #define JSTD_IS_X86           1
+  #define JSTD_IS_X86_64        1
+  #define JSTD_WORD_LEN         64
+#elif defined (_M_IX86) || defined(__i386__)
+  #define JSTD_IS_X86           1
+  #define JSTD_IS_X86_I386      1
+  #define JSTD_WORD_LEN         32
+#elif defined(__aarch64__) || defined(_M_ARM64) || defined(__ARM64__) || defined(__arm64__)
+  #define JSTD_IS_ARM           1
+  #define JSTD_IS_ARM64         1
+  #define JSTD_WORD_LEN         64
+#elif defined(__aarch32__) || defined(_M_ARM) || defined(__ARM__) || defined(__arm__)
+  #define JSTD_IS_ARM           1
+  #define JSTD_IS_ARM32         1
+  #define JSTD_WORD_LEN         32
+#elif defined(_M_MPPC)
+  // Power Macintosh PowerPC
+  #define JSTD_WORD_LEN         32
+#elif defined(_M_PPC)
+  // PowerPC
+  #define JSTD_WORD_LEN         32
+#endif
+
+#ifndef JSTD_WORD_LEN
+  #if defined(WIN32) || defined(_WIN32)
+    #define JSTD_WORD_LEN       32
+  #elif defined(WIN64) || defined(_WIN64)
+    #define JSTD_WORD_LEN       64
+  #endif
+#endif // !JSTD_WORD_LEN
 
 /**
  Config of jimi project, per target platform.

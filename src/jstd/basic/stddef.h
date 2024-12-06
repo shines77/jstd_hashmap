@@ -26,6 +26,21 @@
   #define DLL_IMPORT
 #endif
 
+////////////////////////////////////////////////////////////////////////////////
+
+/**
+ * For exported func
+ */
+#if defined(_MSC_VER) && (_MSC_VER >= 1400)
+  #define JSTD_EXPORTED_FUNC        __cdecl
+  #define JSTD_EXPORTED_METHOD      __thiscall
+#else
+  #define JSTD_EXPORTED_FUNC
+  #define JSTD_EXPORTED_METHOD
+#endif
+
+////////////////////////////////////////////////////////////////////////////////
+
 #if __is_identifier(__wchar_t)
   // __wchar_t is not a reserved keyword
   #if !defined(_MSC_VER)
@@ -226,34 +241,17 @@
 #endif
 #endif // JSTD_CDECL
 
-/**
- * For exported func
- */
-#if defined(_MSC_VER) && (_MSC_VER >= 1400)
-  #define JSTD_EXPORTED_FUNC        __cdecl
-  #define JSTD_EXPORTED_METHOD      __thiscall
-#else
-  #define JSTD_EXPORTED_FUNC
-  #define JSTD_EXPORTED_METHOD
-#endif
-
-#ifndef __cplusplus
+#if !defined(__cplusplus) || (defined(_MSC_VER) && (_MSC_VER < 1400))
   #ifndef nullptr
     #define nullptr     ((void *)NULL)
   #endif
 #endif // __cplusplus
 
-#ifndef JSTD_UNUSED_VAR
-#define JSTD_UNUSED_VAR(x)      ((void)(x))
-#endif
-
-#define UNUSED_VARIABLE(var) \
+#ifndef JSTD_UNUSED
+#define JSTD_UNUSED(var) \
     do { \
         (void)var; \
     } while (0)
-
-#ifndef JSTD_TO_STRING
-#define JSTD_TO_STRING(Text)    #Text
 #endif
 
 #define STD_IOS_RIGHT(width, var) \
