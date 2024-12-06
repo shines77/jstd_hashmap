@@ -65,17 +65,22 @@
 #endif
 
 #if defined(JSTD_IS_MSVC)  /* is microsoft visual studio ? */
-    #if defined(JSTD_DECLARE_EXPORT)              /* build a dll library */
+    #if defined(JSTD_BUILD_SHARED)      /* build a dll library */
         #define JSTD_DLL                __declspec(dllexport)
         #define JSTD_DLL_TPL            __declspec(dllexport)
         #define JSTD_PRIVATE
         #define JSTD_EXPIMP_TEMPLATE
-    #elif defined(JSTD_DECLARE_IMPORT)            /* use a dll library */
+    #elif defined(JSTD_USE_SHARED)      /* use a dll library */
         #define JSTD_DLL                __declspec(dllimport)
         #define JSTD_DLL_TPL            __declspec(dllimport)   // or don't defined it!
         #define JSTD_PRIVATE
         #define JSTD_EXPIMP_TEMPLATE    extern
-    #else /* defined(JSTD_DECLARE_STATIC) */      /* build a static library or use static library */
+    #elif JSTD_BUILD_STATIC             /* build a static library */
+        #define JSTD_DLL
+        #define JSTD_DLL_TPL
+        #define JSTD_PRIVATE
+        #define JSTD_EXPIMP_TEMPLATE
+    #else                               /* use a static library */
         #define JSTD_DLL
         #define JSTD_DLL_TPL
         #define JSTD_PRIVATE
