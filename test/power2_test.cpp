@@ -613,8 +613,9 @@ int main(int argc, char * argv[])
 
     cpu_warm_up(1000);
 
-    std::unique_ptr<char> src(new char[kBufSize]);
-    std::unique_ptr<char> dest(new char[kBufSize]);
+    std::unique_ptr<char, std::default_delete<char[]>> src(new char[kBufSize]);
+    std::unique_ptr<char, std::default_delete<char[]>> dest(new char[kBufSize], = [](
+        delete[] ptr));
 
     double time1 = 0.0, time2 = 0.0, time3 = 0.0, time4 = 0.0;
     std::vector<std::string> results;

@@ -154,7 +154,7 @@
   #define JSTD_CC_GNUC          JSTD_MAKE_DEC2(__GNUC__, __GNUC_MINOR__)
   // Alias
   #define JSTD_IS_GCC           JSTD_IS_GNUC
-  #define JSTD_CC_GNUC          JSTD_CC_GNUC
+  #define JSTD_CC_GCC           JSTD_CC_GNUC
 
   #if defined(__MINGW32__)
     #define JSTD_IS_MINGW       1
