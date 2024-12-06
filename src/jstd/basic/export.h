@@ -107,4 +107,35 @@
     #endif
 #endif
 
+////////////////////////////////////////////////////////////////////////////////
+
+#if defined(_MSC_VER) || __has_declspec_attribute(dllexport)
+  #define DLL_EXPORT        __declspec(dllexport)
+#else
+  #if defined(__GNUC__) || defined(__clang__) || defined(__linux__)
+    #define DLL_EXPORT      __attribute__((visibility("default")))
+  #else
+    #define DLL_EXPORT
+  #endif
+#endif
+
+#if defined(_MSC_VER) || __has_declspec_attribute(dllimport)
+  #define DLL_IMPORT        __declspec(dllimport)
+#else
+  #define DLL_IMPORT
+#endif
+
+////////////////////////////////////////////////////////////////////////////////
+
+/**
+ * For exported func
+ */
+#if defined(_MSC_VER) && (_MSC_VER >= 1400)
+  #define JSTD_EXPORTED_FUNC        __cdecl
+  #define JSTD_EXPORTED_METHOD      __thiscall
+#else
+  #define JSTD_EXPORTED_FUNC
+  #define JSTD_EXPORTED_METHOD
+#endif
+
 #endif // JSTD_BASIC_EXPORT_H

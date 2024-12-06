@@ -1,7 +1,7 @@
 
 #include "jstd/dll.h"
 
-int dll_main()
+int jstd_dll_main()
 {
     return 0;
 }

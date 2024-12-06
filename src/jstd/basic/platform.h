@@ -149,6 +149,15 @@
     #endif
 #endif
 
+// mac
+#if defined(__APPLE__) || defined(__APPLE_CC__)
+    #undef  JSTD_TARGET_OS
+    #define JSTD_TARGET_OS          JSTD_OS_MAC
+    #ifndef JSTD_IS_OS_MAC
+    #define JSTD_IS_OS_MAC          1
+    #endif
+#endif
+
 // iphone
 #if defined(JSTD_TARGET_OS_IPHONE)
     #undef  JSTD_TARGET_OS
@@ -164,15 +173,6 @@
     #define JSTD_TARGET_OS          JSTD_OS_IOS
     #ifndef JSTD_IS_OS_IPAD
     #define JSTD_IS_OS_IPAD         1
-    #endif
-#endif
-
-// mac
-#if defined(__APPLE_CC__)
-    #undef  JSTD_TARGET_OS
-    #define JSTD_TARGET_OS          JSTD_OS_MAC
-    #ifndef JSTD_IS_OS_MAC
-    #define JSTD_IS_OS_MAC          1
     #endif
 #endif
 
@@ -238,8 +238,8 @@
 
 #if (defined(JSTD_IS_WIN32) || defined(JSTD_IS_WIN64)) && !(defined(__GNUC__) || defined(__MINGW__) \
     || defined(__MINGW32__) || defined(__MINGW64__))
-#ifndef JSTD_IS_WINDOWS
-#define JSTD_IS_WINDOWS             (JSTD_CHECK_OS(WIN32) || JSTD_CHECK_OS(WIN64))
+#ifndef JSTD_IS_WIN
+#define JSTD_IS_WIN                 (JSTD_CHECK_OS(WIN32) || JSTD_CHECK_OS(WIN64))
 #endif
 #endif
 
@@ -300,6 +300,7 @@
 
 #if (JSTD_TARGET_OS == JSTD_OS_WIN32 || JSTD_TARGET_OS == JSTD_OS_WIN64)
 #pragma warning (disable:4127)
+#pragma warning (disable:4996)
 #endif // JSTD_OS_WIN32
 
 #endif // JSTD_BASIC_PLATFORM_H

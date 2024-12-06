@@ -53,6 +53,8 @@
                                 (JSTD_TO_DEC5(a) + JSTD_TO_DEC4(b) + \
                                  JSTD_TO_DEC3(c) + JSTD_TO_DEC (d))
 
+#define JSTD_MAKE_DEC2(a, b)    JSTD_MAKE_DEC4(0, 0, a, b)
+
 #define JSTD_MAKE_DEC3(a, b, c) JSTD_MAKE_DEC4(0, a, b, c)
 
 #define JSTD_MAKE_DEC3_(a, b, c) \

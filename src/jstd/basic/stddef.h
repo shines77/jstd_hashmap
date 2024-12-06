@@ -10,37 +10,6 @@
 
 ////////////////////////////////////////////////////////////////////////////////
 
-#if defined(_MSC_VER) || __has_declspec_attribute(dllexport)
-  #define DLL_EXPORT        __declspec(dllexport)
-#else
-  #if defined(__GNUC__) || defined(__clang__) || defined(__linux__)
-    #define DLL_EXPORT      __attribute__((visibility("default")))
-  #else
-    #define DLL_EXPORT
-  #endif
-#endif
-
-#if defined(_MSC_VER) || __has_declspec_attribute(dllimport)
-  #define DLL_IMPORT        __declspec(dllimport)
-#else
-  #define DLL_IMPORT
-#endif
-
-////////////////////////////////////////////////////////////////////////////////
-
-/**
- * For exported func
- */
-#if defined(_MSC_VER) && (_MSC_VER >= 1400)
-  #define JSTD_EXPORTED_FUNC        __cdecl
-  #define JSTD_EXPORTED_METHOD      __thiscall
-#else
-  #define JSTD_EXPORTED_FUNC
-  #define JSTD_EXPORTED_METHOD
-#endif
-
-////////////////////////////////////////////////////////////////////////////////
-
 #if __is_identifier(__wchar_t)
   // __wchar_t is not a reserved keyword
   #if !defined(_MSC_VER)
@@ -142,15 +111,7 @@
 # define JSTD_ASSUME_ALIGNED(ptr, alignment) \
            (((uintptr_t(ptr) % (alignment)) == 0) ? (ptr) : (LLVM_BUILTIN_UNREACHABLE, (ptr)))
 #else
-# define JSTD_ASSUME_ALIGNED(ptr, alignment)  (ptr)
-#endif
-
-#if __has_builtin(__builtin_assume_aligned) && __CLANG_PREREQ(3, 6)
-#define ASSUME_IS_ALIGNED(ptr, alignment)   __builtin_assume_aligned((ptr), (alignment))
-#elif __has_builtin(__builtin_assume_aligned) && __GNUC_PREREQ(4, 7)
-#define ASSUME_IS_ALIGNED(ptr, alignment)   __builtin_assume_aligned((ptr), (alignment))
-#else
-#define ASSUME_IS_ALIGNED(ptr, alignment)   ((void *)(ptr))
+# define JSTD_ASSUME_ALIGNED(ptr, alignment)  ((void *)(ptr))
 #endif
 
 #if defined(__GNUC__) && !defined(__GNUC_STDC_INLINE__) && !defined(__GNUC_GNU_INLINE__)
