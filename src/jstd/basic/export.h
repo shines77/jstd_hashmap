@@ -75,7 +75,7 @@
         #define JSTD_DLL_TPL            __declspec(dllimport)   // or don't defined it!
         #define JSTD_PRIVATE
         #define JSTD_EXPIMP_TEMPLATE    extern
-    #elif JSTD_BUILD_STATIC             /* build a static library */
+    #elif defined(JSTD_BUILD_STATIC)    /* build a static library */
         #define JSTD_DLL
         #define JSTD_DLL_TPL
         #define JSTD_PRIVATE
@@ -91,7 +91,7 @@
     #define JSTD_DLL                    __attribute__ ((visibility ("default")))
     #define JSTD_DLL_TPL                __attribute__ ((visibility ("default")))
     #define JSTD_PRIVATE                __attribute__ ((visibility ("default")))
-    #if defined(JSTD_DECLARE_IMPORT)
+    #if defined(JSTD_USE_SHARED)
         #define JSTD_EXPIMP_TEMPLATE    extern
     #else
         #define JSTD_EXPIMP_TEMPLATE
@@ -100,22 +100,11 @@
     #define JSTD_DLL
     #define JSTD_DLL_TPL
     #define JSTD_PRIVATE
-    #if defined(JSTD_DECLARE_IMPORT)
+    #if defined(JSTD_USE_SHARED)
         #define JSTD_EXPIMP_TEMPLATE    extern
     #else
         #define JSTD_EXPIMP_TEMPLATE
     #endif
 #endif
-
-#ifdef JSTDC_DLL
-#undef JSTDC_DLL
-#endif
-
-#ifdef JSTDC_PRIVATE
-#undef JSTDC_PRIVATE
-#endif
-
-#define JSTDC_DLL               JSTD_DLL
-#define JSTDC_PRIVATE           JSTD_PRIVATE
 
 #endif // JSTD_BASIC_EXPORT_H

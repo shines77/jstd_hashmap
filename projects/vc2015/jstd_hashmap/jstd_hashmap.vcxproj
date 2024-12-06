@@ -23,6 +23,7 @@
     <ClInclude Include="..\..\..\src\jstd\basic\compiler.h" />
     <ClInclude Include="..\..\..\src\jstd\basic\export.h" />
     <ClInclude Include="..\..\..\src\jstd\basic\inttypes.h" />
+    <ClInclude Include="..\..\..\src\jstd\basic\macros.h" />
     <ClInclude Include="..\..\..\src\jstd\basic\msvc\inttypes.h" />
     <ClInclude Include="..\..\..\src\jstd\basic\msvc\stdbool.h" />
     <ClInclude Include="..\..\..\src\jstd\basic\msvc\stdint.h" />
@@ -34,6 +35,12 @@
     <ClInclude Include="..\..\..\src\jstd\basic\vld.h" />
     <ClInclude Include="..\..\..\src\jstd\basic\vld_def.h" />
     <ClInclude Include="..\..\..\src\jstd\config\config.h" />
+    <ClInclude Include="..\..\..\src\jstd\config\config_cxx.h" />
+    <ClInclude Include="..\..\..\src\jstd\config\config_hw.h" />
+    <ClInclude Include="..\..\..\src\jstd\config\config_hw_detect.h" />
+    <ClInclude Include="..\..\..\src\jstd\config\config_post.h" />
+    <ClInclude Include="..\..\..\src\jstd\config\config_pre.h" />
+    <ClInclude Include="..\..\..\src\jstd\config\version.h" />
     <ClInclude Include="..\..\..\src\jstd\hasher\fnv1a.h" />
     <ClInclude Include="..\..\..\src\jstd\hasher\hashes.h" />
     <ClInclude Include="..\..\..\src\jstd\hasher\hash_crc32.h" />
@@ -100,7 +107,7 @@
     <ClInclude Include="..\..\..\src\jstd\utility\integer_sequence.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\..\src\jstd\basic\assert-c.c" />
+    <ClCompile Include="..\..\..\src\jstd\basic\assert.c" />
     <ClCompile Include="..\..\..\src\jstd\dll_main.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
@@ -176,7 +183,7 @@
       </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_LIB;WIN32;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(SolutionDir)src;..\..\..\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
     </ClCompile>
@@ -193,7 +200,7 @@
       </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_LIB;WIN64;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(SolutionDir)src;..\..\..\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <EnableEnhancedInstructionSet>AdvancedVectorExtensions2</EnableEnhancedInstructionSet>
     </ClCompile>
@@ -212,7 +219,7 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_LIB;WIN32;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(SolutionDir)src;..\..\..\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
     </ClCompile>
@@ -233,7 +240,7 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_LIB;WIN64;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(SolutionDir)src;..\..\..\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <EnableEnhancedInstructionSet>AdvancedVectorExtensions2</EnableEnhancedInstructionSet>
     </ClCompile>

@@ -286,12 +286,33 @@
     <ClInclude Include="..\..\..\src\jstd\hashmap\dev\robin_hash_map_v4.h">
       <Filter>src\hashmap\dev</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\config\config_hw.h">
+      <Filter>src\config</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\config\config_hw_detect.h">
+      <Filter>src\config</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\config\version.h">
+      <Filter>src\config</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\basic\macros.h">
+      <Filter>src\basic</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\config\config_post.h">
+      <Filter>src\config</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\config\config_pre.h">
+      <Filter>src\config</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\config\config_cxx.h">
+      <Filter>src\config</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\src\jstd\dll_main.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\src\jstd\basic\assert-c.c">
+    <ClCompile Include="..\..\..\src\jstd\basic\assert.c">
       <Filter>src\basic</Filter>
     </ClCompile>
   </ItemGroup>

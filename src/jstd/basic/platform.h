@@ -254,13 +254,13 @@
 
 #if defined(JSTD_IS_OS_UNIX)
 #ifndef JSTD_IS_UNIX
-#define JSTD_IS_UNIX                (JSTD_CHECK_OS(UNIX))
+#define JSTD_IS_UNIX                JSTD_CHECK_OS(UNIX)
 #endif
 #endif
 
 #if defined(JSTD_IS_OS_LINUX)
 #ifndef JSTD_IS_LINUX
-#define JSTD_IS_LINUX               (JSTD_CHECK_OS(LINUX))
+#define JSTD_IS_LINUX               JSTD_CHECK_OS(LINUX)
 #endif
 #endif
 

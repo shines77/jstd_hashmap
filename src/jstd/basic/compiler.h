@@ -50,7 +50,7 @@
   #if defined(__SC__) && (__SC__ < 0x750)
     #error "Compiler not supported"
   #endif
-#if defined(_MSC_VER)
+#elif defined(_MSC_VER)
   #ifdef __clang__
     #define JSTD_IS_CLANG       1
     #define JSTD_CC_CLANG       1
@@ -68,8 +68,8 @@
   #if (__BORLANDC__ < 0x502)
     #error "Compiler not supported"
   #endif
-#elif defined(__INTEL_COMPILER) || defined(__ICL) || defined(__ICC) || defined(__ECC) \
-   || defined(__ICPC) || defined(__ECL)
+#elif defined(__INTEL_COMPILER) || defined(__ICL) || defined(__ICC) \
+   || defined(__ECC) || defined(__ICPC) || defined(__ECL)
   #define JSTD_IS_INTEL         1
   //
   // Intel C++ compiler version
@@ -131,7 +131,7 @@
   #define JSTD_IS_WATCOM        1
   #define JSTD_CC_WATCOM        __WATCOMC__
 #else
-#  error "FATAL ERROR: Unknown compiler."
+  #error "FATAL ERROR: Unknown compiler."
 #endif
 
 #if defined(__GNUC__) || defined(__clang__) || (defined(JSTD_IS_ICC) && defined(__linux__))
@@ -139,7 +139,7 @@
 #endif
 
 #if defined(__GNUC__) && (!defined(__clang__) && !defined(JSTD_IS_ICC) && \
-  (!defined(__ARMCC__) && !defined(__CC_ARM))
+    (!defined(__ARMCC__) && !defined(__CC_ARM)))
 #define JSTD_IS_PURE_GCC        1
 #endif
 
