@@ -57,54 +57,82 @@
 #elif defined(_MSC_VER)
   #ifdef __clang__
     #define JSTD_IS_CLANG       1
-    #define JSTD_CC_CLANG       1
-  #else
-    #define JSTD_IS_MSVC        1
-    #define JSTD_CC_MSVC        (_MSC_VER)
+    #define JSTD_CC_CLANG       JSTD_MAKE_DEC2(__clang_major__, __clang_minor__)
   #endif
+  /* MSVC  */
+  #define JSTD_IS_MSVC          1
+  #define JSTD_CC_MSVC          (_MSC_VER)
+  #define JSTD_CC_MSVC_NET
+  #define JSTD_OUTOFLINE_TEMPLATE   inline
+  #define JSTD_COMPILER_MANGLES_RETURN_TYPE
+  #define JSTD_FUNC_INFO            __FUNCSIG__
+  #define JSTD_ALIGNOF(type)        __alignof(type)
+  #define JSTD_DECL_ALIGN(n)        __declspec(align(n))
+  #define JSTD_ASSUME_IMPL(expr)    __assume(expr)
+  #define JSTD_UNREACHABLE_IMPL()   __assume(0)
+  #define JSTD_NORETURN             __declspec(noreturn)
+  #define JSTD_DECL_DEPRECATED      __declspec(deprecated)
+  #ifndef JSTD_CC_CLANG
+    #define JSTD_DECL_DEPRECATED_X(text) __declspec(deprecated(text))
+  #endif
+  #define JSTD_DECL_EXPORT          __declspec(dllexport)
+  #define JSTD_DECL_IMPORT          __declspec(dllimport)
+  #define QT_MAKE_UNCHECKED_ARRAY_ITERATOR(x)   stdext::make_unchecked_array_iterator(x)            // Since _MSC_VER >= 1800
+  #define QT_MAKE_CHECKED_ARRAY_ITERATOR(x, N)  stdext::make_checked_array_iterator(x, size_t(N))   // Since _MSC_VER >= 1500
+  /* Intel C++ disguising as Visual C++: the `using' keyword avoids warnings */
+  #if defined(__INTEL_COMPILER) || defined(__ICL) || defined(__ICC) \
+   || defined(__ECC) || defined(__ICPC) || defined(__ECL)
+    #define JSTD_DECL_VARIABLE_DEPRECATED
+    #define JSTD_CC_ICC         __INTEL_COMPILER
+  #endif
+
+  /* only defined for MSVC since that's the only compiler that actually optimizes for this */
+  /* might get overridden further down when JSTD_COMPILER_NOEXCEPT is detected */
+  #ifdef __cplusplus
+    #define JSTD_DECL_NOEXCEPT  noexcept
+    #define JSTD_DECL_NOTHROW   throw()
+  #endif
+
 #elif defined(__BORLANDC__) || defined(__TURBOC__)
   #define JSTD_IS_BORLAND       1
   #if defined(__BORLANDC__)
     #define JSTD_CC_BORLAND     (__BORLANDC__)
   #else
-    #define JSTD_CC_BORLAND     (__TURBOC__)
+    #define JSTD_CC_BORLAND     __TURBOC__
   #endif
   #if (__BORLANDC__ < 0x502)
     #error "Compiler not supported"
   #endif
 #elif defined(__INTEL_COMPILER) || defined(__ICL) || defined(__ICC) \
    || defined(__ECC) || defined(__ICPC) || defined(__ECL)
-  #define JSTD_IS_INTEL         1
+  #define JSTD_IS_ICC           1
   //
   // Intel C++ compiler version
   //
   #if (__INTEL_COMPILER == 9999)
-    #define JSTD_CC_INTEL       (1200)  // Intel's bug in 12.1.
+    #define JSTD_CC_ICC         (1200)  // Intel's bug in 12.1.
   #elif defined(__INTEL_COMPILER)
-    #define JSTD_CC_INTEL       (__INTEL_COMPILER)
+    #define JSTD_CC_ICC         (__INTEL_COMPILER)
   #elif defined(__ICL)
-    #define JSTD_CC_INTEL       (__ICL)
+    #define JSTD_CC_ICC         __ICL
   #elif defined(__ICC)
-    #define JSTD_CC_INTEL       (__ICC)
+    #define JSTD_CC_ICC         __ICC
   #elif defined(__ECC)
-    #define JSTD_CC_INTEL       (__ECC)
+    #define JSTD_CC_ICC         __ECC
   #elif defined(__ICPC)
-    #define JSTD_CC_INTEL       (__ICPC)
+    #define JSTD_CC_ICC         __ICPC
   #elif defined(__ECL)
-    #define JSTD_CC_INTEL       (__ECL)
+    #define JSTD_CC_ICC         __ECL
   #endif
-  // Alias
-  #define JSTD_IS_ICC           1
-  #define JSTD_CC_ICC           JSTD_CC_INTEL
 #elif defined(__ARMCC__) || defined(__CC_ARM)
   /* ARM Realview Compiler Suite
      RVCT compiler also defines __EDG__ and __GNUC__ (if --gnu flag is given),
      so check for it before that */
   #define JSTD_IS_RVCT          1
   #if defined(__ARMCC__)
-    #define JSTD_CC_RVCT        (__ARMCC__)
+    #define JSTD_CC_RVCT        __ARMCC__
   #elif defined(__CC_ARM)
-    #define JSTD_CC_RVCT        (__CC_ARM)
+    #define JSTD_CC_RVCT        __CC_ARM
   #else
     #error "It's unreachable"
   #endif
@@ -130,15 +158,14 @@
 
   #if defined(__MINGW32__)
     #define JSTD_IS_MINGW       1
-    #define JSTD_CC_MINGW       (__MINGW32__)
+    #define JSTD_CC_MINGW       __MINGW32__
   #endif
 
-  #if defined(__INTEL_COMPILER)
+  #if defined(__INTEL_COMPILER) || defined(__ICL) || defined(__ICC) \
+   || defined(__ECC) || defined(__ICPC) || defined(__ECL)
     #define JSTD_IS_ICC         1
-    #define JSTD_IS_INTEL       1
     /* Intel C++ also masquerades as GCC */
-    #define JSTD_CC_ICC         (__INTEL_COMPILER)
-    #define JSTD_CC_INTEL       (__INTEL_COMPILER)
+    #define JSTD_CC_ICC         __INTEL_COMPILER
     #ifdef __clang__
       #define JSTD_IS_CLANG     1
       /* Intel C++ masquerades as Clang masquerading as GCC */
@@ -210,12 +237,12 @@
   #endif
 
   #ifdef JSTD_IS_WIN
-    #define JSTD_DECL_EXPORT    __declspec(dllexport)
-    #define JSTD_DECL_IMPORT    __declspec(dllimport)
+    #define JSTD_DECL_EXPORT        __declspec(dllexport)
+    #define JSTD_DECL_IMPORT        __declspec(dllimport)
   #elif defined(JSTD_VISIBILITY_AVAILABLE)
-    #define JSTD_DECL_EXPORT    __attribute__((visibility("default")))
-    #define JSTD_DECL_IMPORT    __attribute__((visibility("default")))
-    #define JSTD_DECL_HIDDEN    __attribute__((visibility("hidden")))
+    #define JSTD_DECL_EXPORT        __attribute__((visibility("default")))
+    #define JSTD_DECL_IMPORT        __attribute__((visibility("default")))
+    #define JSTD_DECL_HIDDEN        __attribute__((visibility("hidden")))
   #endif
 
   #define JSTD_FUNC_INFO            __PRETTY_FUNCTION__
