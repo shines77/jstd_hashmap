@@ -41,10 +41,10 @@
 
 //                               0 ~ 99
 #define JSTD_TO_DEC1(n)         ((n) & 0x7Fu)
-#define JSTD_TO_DEC2(n)         ((n) & 0x7Fu) * 100)
-#define JSTD_TO_DEC3(n)         ((n) & 0x7Fu) * 10000)
-#define JSTD_TO_DEC4(n)         ((n) & 0x7Fu) * 1000000)
-#define JSTD_TO_DEC5(n)         ((n) & 0x7Fu) * 100000000)
+#define JSTD_TO_DEC2(n)         (((n) & 0x7Fu) * 100)
+#define JSTD_TO_DEC3(n)         (((n) & 0x7Fu) * 10000)
+#define JSTD_TO_DEC4(n)         (((n) & 0x7Fu) * 1000000)
+#define JSTD_TO_DEC5(n)         (((n) & 0x7Fu) * 100000000)
 
 #define JSTD_MAKE_DEC4(a, b, c, d) \
                                 (JSTD_TO_DEC4(a) + JSTD_TO_DEC3(b) + \
