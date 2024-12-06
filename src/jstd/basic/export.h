@@ -30,7 +30,7 @@
     #ifndef JSTD_USE_SHARED
         #define JSTD_USE_SHARED
     #endif
-#else defined(JSTD_BUILD_LIB) || defined(BUILD_LIB) || defined(_LIB) \
+#elif defined(JSTD_BUILD_LIB) || defined(BUILD_LIB) || defined(_LIB) \
     || defined(JSTD_LIB) || defined(JSTD_IS_LIB) \
     || defined(JSTD_STATIC) || defined(JSTD_BUILD_STATIC) \
     || defined(JSTD_ENABLED_STATIC) || defined(ENABLED_STATIC)

@@ -77,5 +77,24 @@
 
 ////////////////////////////////////////////////////////////////////////////////
 
+/// \macro __GNUC_PREREQ
+/// \brief Defines __GNUC_PREREQ if glibc's features.h isn't available.
+#ifndef __GNUC_PREREQ
+  #if defined(__GNUC__) && defined(__GNUC_MINOR__)
+    #define __GNUC_PREREQ(major, minor) \
+        (((__GNUC__ << 16) + __GNUC_MINOR__) >= (((major) << 16) + (minor)))
+  #else
+    #define __GNUC_PREREQ(major, minor)     0
+  #endif
+#endif
+
+#ifndef __CLANG_PREREQ
+  #if defined(__clang__) && defined(__clang_major__) && defined(__clang_minor__)
+    #define __CLANG_PREREQ(major, minor) \
+        (((__clang_major__ << 16) + __clang_minor__) >= (((major) << 16) + (minor)))
+  #else
+    #define __CLANG_PREREQ(major, minor)    0
+  #endif
+#endif
 
 #endif // JSTD_CONFIG_CONFIG_PRE_H

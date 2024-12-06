@@ -14,12 +14,18 @@
 #endif
 
 #include "jstd/config/config_pre.h"
+
+#include "jstd/basic/export.h"
+#include "jstd/basic/compiler.h"
+#include "jstd/basic/platform.h"
+
 #include "jstd/config/version.h"
 #include "jstd/config/config_jstd.h"
 #include "jstd/config/config_hw.h"
 #if JSTD_USE_HW_DETECT
 #include "jstd/config/config_hw_detect.h"
 #endif
+#include "jstd/config/config_cxx.h"
 #include "jstd/config/config_post.h"
 
 #if (__has_cpp_attribute(noreturn) >= 200809L) || defined(JSTD_IS_CXX_11)
