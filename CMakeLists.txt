@@ -87,7 +87,7 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 
 include("${PROJECT_SOURCE_DIR}/cmake/utils.cmake")
 include("${PROJECT_SOURCE_DIR}/cmake/system.cmake")
-include("${PROJECT_SOURCE_DIR}/cmake/detect_cpu_architectures.cmake")
+include("${PROJECT_SOURCE_DIR}/cmake/DetectCPUArchitectures.cmake")
 
 ## include(CMakeASM_NASMInformation)
 include(DetectCPUArchitectures)
