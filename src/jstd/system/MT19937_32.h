@@ -134,7 +134,7 @@
 
 namespace jstd {
 
-JSTD_DLL class MT19937_32
+class JSTD_DLL MT19937_32
 {
 public:
     typedef std::uint32_t value_type;

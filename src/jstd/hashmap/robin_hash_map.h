@@ -107,7 +107,7 @@
 namespace jstd {
 
 template <typename Key, typename Value, typename SlotType>
-JSTD_DLL struct robin_hash_map_slot_policy {
+struct JSTD_DLL robin_hash_map_slot_policy {
     using slot_policy = map_slot_policy<Key, Value, SlotType>;
 
     using slot_type   = typename slot_policy::slot_type;
@@ -178,7 +178,7 @@ template < typename Key, typename Value,
            typename LayoutPolicy = jstd::default_layout_policy<Key, Value>,
            typename Allocator = std::allocator<std::pair<typename std::add_const<typename std::remove_const<Key>::type>::type,
                                                          typename std::remove_const<Value>::type>> >
-JSTD_DLL class robin_hash_map {
+class JSTD_DLL robin_hash_map {
 public:
     static constexpr bool kUseIndexSalt = false;
     static constexpr bool kEnableExchange = true;

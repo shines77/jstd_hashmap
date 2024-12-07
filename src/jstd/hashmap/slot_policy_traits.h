@@ -31,7 +31,7 @@ namespace jstd {
 //                       transfer, swap or exchange.
 //
 template <typename SlotPolicy, typename = void>
-JSTD_DLL class slot_policy_traits {
+class JSTD_DLL slot_policy_traits {
 public:
     // The slot policy of hash table.
     using slot_policy = SlotPolicy;

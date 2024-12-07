@@ -67,7 +67,7 @@
 
 namespace jstd {
 
-JSTD_DLL struct LibcRand {
+struct JSTD_DLL LibcRand {
     typedef std::uint32_t value_type;
     typedef std::size_t   size_type;
 

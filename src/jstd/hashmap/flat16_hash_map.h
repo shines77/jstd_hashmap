@@ -95,7 +95,7 @@ template < typename Key, typename Value,
            typename KeyEqual = std::equal_to<typename std::remove_cv<Key>::type>,
            typename Allocator = std::allocator<std::pair<typename std::remove_const<typename std::remove_cv<Key>::type>::type,
                                                          typename std::remove_cv<Value>::type>> >
-JSTD_DLL class flat16_hash_map {
+class JSTD_DLL flat16_hash_map {
 public:
     typedef typename std::remove_cv<Key>::type      key_type;
     typedef typename std::remove_cv<Value>::type    mapped_type;

@@ -87,7 +87,7 @@ template < typename Key, typename Value,
            typename KeyEqual = std::equal_to<Key>,
            typename LayoutPolicy = jstd::default_layout_policy<Key, Value>,
            typename Allocator = std::allocator<std::pair<const Key, Value>> >
-JSTD_DLL class unordered_map {
+class JSTD_DLL unordered_map {
 public:
     typedef Key                             key_type;
     typedef Value                           mapped_type;

@@ -34,7 +34,7 @@
 namespace jstd {
 
 template <typename CharT, typename Traits = jstd::string_traits<CharT>>
-JSTD_DLL class basic_string_view {
+class JSTD_DLL basic_string_view {
 public:
     typedef CharT               char_type;
     typedef CharT               value_type;

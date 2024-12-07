@@ -210,7 +210,7 @@ BOOL RecoverConsoleTextColor()
 
 #endif // _MSC_VER && !__clang__
 
-JSTD_DLL class Console
+class JSTD_DLL Console
 {
 public:
     Console() = default;

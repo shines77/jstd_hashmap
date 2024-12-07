@@ -23,7 +23,7 @@ namespace jstd {
 // iterator for non-mutable string
 
 template <typename T>
-JSTD_DLL class const_string_iterator
+class JSTD_DLL const_string_iterator
         : public iterator<random_access_iterator_tag,
                           typename T::value_type,
                           typename T::difference_type,

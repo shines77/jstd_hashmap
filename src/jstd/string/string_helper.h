@@ -23,7 +23,7 @@
 namespace jstd {
 
 template <typename StringTy, typename CharTy>
-JSTD_DLL class basic_string_helper {
+class JSTD_DLL basic_string_helper {
 public:
     typedef basic_string_helper<StringTy, CharTy>
                                 this_type;

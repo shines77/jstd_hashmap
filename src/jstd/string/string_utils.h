@@ -38,28 +38,28 @@ static constexpr bool kAssumeAlwaysNotEqual = true;
 template <typename T,
           bool isIntegral = std::is_integral<T>::value,
           bool hasCStr = has_c_str<T, char>::value>
-JSTD_DLL struct string_format {
+struct JSTD_DLL string_format {
     std::string to_string(const T & val) {
         return std::string("");
     }
 };
 
 template <typename T>
-JSTD_DLL struct string_format<T, true, false> {
+struct JSTD_DLL string_format<T, true, false> {
     std::string to_string(const T & val) {
         return std::to_string(val);
     }
 };
 
 template <typename T>
-JSTD_DLL struct string_format<T, false, true> {
+struct JSTD_DLL string_format<T, false, true> {
     std::string to_string(const T & val) {
         return std::string(val.c_str(), val.size());
     }
 };
 
 template <typename T>
-JSTD_DLL struct string_format<T, false, false> {
+struct JSTD_DLL string_format<T, false, false> {
     std::string to_string(const T & val) {
         return (std::string("0x") + std::string(std::pointer_traits<T>::pointer_to(val)));
     }

@@ -26,7 +26,7 @@
 namespace jstd {
 
 template <typename Container>
-JSTD_DLL class HashMapAnalyzer {
+class JSTD_DLL HashMapAnalyzer {
 public:
     typedef Container                           container_type;
     typedef typename Container::size_type       size_type;

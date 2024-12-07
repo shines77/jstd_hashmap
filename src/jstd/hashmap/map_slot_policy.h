@@ -44,7 +44,7 @@ public:
 };
 
 template <typename Key, typename Value, typename SlotType>
-JSTD_DLL class map_slot_policy {
+class JSTD_DLL map_slot_policy {
 public:
     using slot_type = SlotType;
     using key_type = typename slot_type::key_type;
