@@ -60,8 +60,8 @@
     #define JSTD_CC_CLANG       JSTD_MAKE_DEC2(__clang_major__, __clang_minor__)
   #endif
   /* MSVC  */
-  #define JSTD_IS_MSVC          1
-  #define JSTD_CC_MSVC          (_MSC_VER)
+  #define JSTD_IS_MSVC              1
+  #define JSTD_CC_MSVC              (_MSC_VER)
   #define JSTD_CC_MSVC_NET
   #define JSTD_OUTOFLINE_TEMPLATE   inline
   #define JSTD_COMPILER_MANGLES_RETURN_TYPE
@@ -77,8 +77,8 @@
   #endif
   #define JSTD_DECL_EXPORT          __declspec(dllexport)
   #define JSTD_DECL_IMPORT          __declspec(dllimport)
-  #define QT_MAKE_UNCHECKED_ARRAY_ITERATOR(x)   stdext::make_unchecked_array_iterator(x)            // Since _MSC_VER >= 1800
-  #define QT_MAKE_CHECKED_ARRAY_ITERATOR(x, N)  stdext::make_checked_array_iterator(x, size_t(N))   // Since _MSC_VER >= 1500
+  #define JSTD_MAKE_UNCHECKED_ARRAY_ITERATOR(x)   stdext::make_unchecked_array_iterator(x)          // Since _MSC_VER >= 1800
+  #define JSTD_MAKE_CHECKED_ARRAY_ITERATOR(x, N)  stdext::make_checked_array_iterator(x, size_t(N)) // Since _MSC_VER >= 1500
   /* Intel C++ disguising as Visual C++: the `using' keyword avoids warnings */
   #if defined(__INTEL_COMPILER) || defined(__ICL) || defined(__ICC) \
    || defined(__ECC) || defined(__ICPC) || defined(__ECL)

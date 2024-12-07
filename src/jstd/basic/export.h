@@ -55,6 +55,34 @@
     #endif
 #endif
 
+////////////////////////////////////////////////////////////////////////////////
+
+#if defined(_MSC_VER) || __has_declspec_attribute(dllexport)
+  #ifndef JSTD_DECL_EXPORT
+    #define JSTD_DECL_EXPORT    __declspec(dllexport)
+  #endif
+#else
+  #if defined(__GNUC__) || defined(__clang__) || defined(__linux__)
+    #ifndef JSTD_DECL_EXPORT
+      #define JSTD_DECL_EXPORT  __attribute__((visibility("default")))
+    #endif
+  #endif
+#endif
+
+#if defined(_MSC_VER) || __has_declspec_attribute(dllimport)
+  #ifndef JSTD_DECL_EXPORT
+    #define JSTD_DECL_IMPORT    __declspec(dllimport)
+  #endif
+#else
+  #if defined(__GNUC__) || defined(__clang__) || defined(__linux__)
+    #ifndef JSTD_DECL_IMPORT
+      #define JSTD_DECL_IMPORT  __attribute__((visibility("default")))
+    #endif
+  #endif
+#endif
+
+////////////////////////////////////////////////////////////////////////////////
+
 /**************************************************************************************
    Dynamic Library import / export / static control conditional
    (Define JSTD_DECLARE_EXPORT to export symbols, else they are imported or static)
@@ -65,65 +93,56 @@
 #endif
 
 #if defined(JSTD_IS_MSVC)  /* is microsoft visual studio ? */
-    #if defined(JSTD_BUILD_SHARED)      /* build a dll library */
-        #define JSTD_DLL                __declspec(dllexport)
-        #define JSTD_DLL_TPL            __declspec(dllexport)
-        #define JSTD_PRIVATE
-        #define JSTD_EXPIMP_TEMPLATE
-    #elif defined(JSTD_USE_SHARED)      /* use a dll library */
-        #define JSTD_DLL                __declspec(dllimport)
-        #define JSTD_DLL_TPL            __declspec(dllimport)   // or don't defined it!
-        #define JSTD_PRIVATE
-        #define JSTD_EXPIMP_TEMPLATE    extern
-    #elif defined(JSTD_BUILD_STATIC)    /* build a static library */
-        #define JSTD_DLL
-        #define JSTD_DLL_TPL
-        #define JSTD_PRIVATE
-        #define JSTD_EXPIMP_TEMPLATE
-    #else                               /* use a static library */
-        #define JSTD_DLL
-        #define JSTD_DLL_TPL
-        #define JSTD_PRIVATE
-        #define JSTD_EXPIMP_TEMPLATE
-    #endif
-#elif defined(JSTD_IS_GNUC)
-    #define JSTD_DLL                    __attribute__ ((visibility ("default")))
-    #define JSTD_DLL                    __attribute__ ((visibility ("default")))
-    #define JSTD_DLL_TPL                __attribute__ ((visibility ("default")))
-    #define JSTD_PRIVATE                __attribute__ ((visibility ("default")))
-    #if defined(JSTD_USE_SHARED)
-        #define JSTD_EXPIMP_TEMPLATE    extern
-    #else
-        #define JSTD_EXPIMP_TEMPLATE
-    #endif
-#else  /* not is msvc and not is gunc! */
+  #if defined(JSTD_BUILD_SHARED)    /* build a dll library */
+    #define JSTD_DLL                JSTD_DECL_EXPORT
+    #define JSTD_DLL_TPL            JSTD_DECL_EXPORT
+    #define JSTD_PRIVATE            JSTD_DECL_HIDDEN
+    #define JSTD_EXPIMP_TEMPLATE
+  #elif defined(JSTD_USE_SHARED)    /* use a dll library */
+    #define JSTD_DLL                JSTD_DECL_IMPORT
+    #define JSTD_DLL_TPL            JSTD_DECL_IMPORT   // or don't defined it!
+    #define JSTD_PRIVATE            JSTD_DECL_HIDDEN
+    #define JSTD_EXPIMP_TEMPLATE    extern
+  #elif defined(JSTD_BUILD_STATIC)  /* build a static library */
     #define JSTD_DLL
     #define JSTD_DLL_TPL
     #define JSTD_PRIVATE
-    #if defined(JSTD_USE_SHARED)
-        #define JSTD_EXPIMP_TEMPLATE    extern
-    #else
-        #define JSTD_EXPIMP_TEMPLATE
-    #endif
-#endif
-
-////////////////////////////////////////////////////////////////////////////////
-
-#if defined(_MSC_VER) || __has_declspec_attribute(dllexport)
-  #define DLL_EXPORT        __declspec(dllexport)
-#else
-  #if defined(__GNUC__) || defined(__clang__) || defined(__linux__)
-    #define DLL_EXPORT      __attribute__((visibility("default")))
-  #else
-    #define DLL_EXPORT
+    #define JSTD_EXPIMP_TEMPLATE
+  #else                             /* use a static library */
+    #define JSTD_DLL
+    #define JSTD_DLL_TPL
+    #define JSTD_PRIVATE
+    #define JSTD_EXPIMP_TEMPLATE
   #endif
-#endif
-
-#if defined(_MSC_VER) || __has_declspec_attribute(dllimport)
-  #define DLL_IMPORT        __declspec(dllimport)
-#else
-  #define DLL_IMPORT
-#endif
+#elif defined(JSTD_IS_GNUC) || defined(JSTD_IS_CLANG)
+  #if defined(JSTD_BUILD_SHARED) \
+    defined(JSTD_BUILD_STATIC)      /* build a dll library */
+                                    /* build a static library */
+    #define JSTD_DLL                JSTD_DECL_EXPORT
+    #define JSTD_DLL_TPL            JSTD_DECL_EXPORT
+    #define JSTD_PRIVATE            JSTD_DECL_HIDDEN
+    #define JSTD_EXPIMP_TEMPLATE
+  #else                             /* use a static library or dll library */
+    #define JSTD_DLL                JSTD_DECL_IMPORT
+    #define JSTD_DLL_TPL            JSTD_DECL_IMPORT   // or don't defined it!
+    #define JSTD_PRIVATE            JSTD_DECL_HIDDEN
+    #define JSTD_EXPIMP_TEMPLATE    extern
+  #endif
+#else  /* not is msvc and not is gunc, clang! */
+  #if defined(JSTD_BUILD_SHARED) \
+    defined(JSTD_BUILD_STATIC)      /* build a dll library */
+                                    /* build a static library */
+    #define JSTD_DLL                JSTD_DECL_EXPORT
+    #define JSTD_DLL_TPL            JSTD_DECL_EXPORT
+    #define JSTD_PRIVATE            JSTD_DECL_HIDDEN
+    #define JSTD_EXPIMP_TEMPLATE
+  #else                             /* use a static library or dll library */
+    #define JSTD_DLL                JSTD_DECL_IMPORT
+    #define JSTD_DLL_TPL            JSTD_DECL_IMPORT   // or don't defined it!
+    #define JSTD_PRIVATE            JSTD_DECL_HIDDEN
+    #define JSTD_EXPIMP_TEMPLATE    extern
+  #endif
+#endif // JSTD_IS_MSVC
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -137,5 +156,7 @@
   #define JSTD_EXPORTED_FUNC
   #define JSTD_EXPORTED_METHOD
 #endif
+
+////////////////////////////////////////////////////////////////////////////////
 
 #endif // JSTD_BASIC_EXPORT_H
