@@ -45,7 +45,7 @@ endif()
 
 set(TARGET_CONF "config_hw_autodetect.h")
 set(TARGET_CONF_DIR ${PROJECT_BINARY_DIR}/src/jstd/config/)
-set(TARGET_CONF_TAGGET_DIR ${PROJECT_SOURCE_DIR}/src/jstd/config/)
+set(TARGET_CONF_TARGET_DIR ${PROJECT_SOURCE_DIR}/src/jstd/config/)
 
 set(TARGET_CONF_TEMP "${PROJECT_BINARY_DIR}/src/jstd/config/${TARGET_CONF}.tmp")
 
