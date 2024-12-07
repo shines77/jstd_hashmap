@@ -45,6 +45,7 @@ endif()
 
 set(TARGET_CONF "config_hw_autodetect.h")
 set(TARGET_CONF_DIR ${PROJECT_BINARY_DIR}/src/jstd/config/)
+set(TARGET_CONF_TAGGET_DIR ${PROJECT_SOURCE_DIR}/src/jstd/config/)
 
 set(TARGET_CONF_TEMP "${PROJECT_BINARY_DIR}/src/jstd/config/${TARGET_CONF}.tmp")
 
@@ -530,6 +531,9 @@ else(NOT CMAKE_CROSSCOMPILING)
 
     # append config data from getarch to the TARGET file and read in CMake vars
     file(APPEND ${TARGET_CONF_TEMP} ${GETARCH_CONF_OUT})
+
+    # Copy config header file to source folder
+    file(COPY "${TARGET_CONF_DIR}/${TARGET_CONF}" DESTINATION "${TARGET_CONF_TARGET_DIR}")
 
     ParseGetArchVars(${GETARCH_MAKE_OUT})
 
