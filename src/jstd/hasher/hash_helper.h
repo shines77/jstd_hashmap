@@ -119,7 +119,7 @@
 
 namespace jstd {
 
-JSTD_DLL enum hashes_id_t {
+enum JSTD_DLL hashes_id_t {
     HashFunc_CRC32C,
     HashFunc_Time31,
     HashFunc_Time31Std,
