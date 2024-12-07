@@ -115,8 +115,8 @@
     #define JSTD_EXPIMP_TEMPLATE
   #endif
 #elif defined(JSTD_IS_GNUC) || defined(JSTD_IS_CLANG)
-  #if defined(JSTD_BUILD_SHARED) \
-    defined(JSTD_BUILD_STATIC)      /* build a dll library */
+  #if defined(JSTD_BUILD_SHARED) || defined(JSTD_BUILD_STATIC)
+                                    /* build a dll library */
                                     /* build a static library */
     #define JSTD_DLL                JSTD_DECL_EXPORT
     #define JSTD_DLL_TPL            JSTD_DECL_EXPORT
@@ -129,8 +129,8 @@
     #define JSTD_EXPIMP_TEMPLATE    extern
   #endif
 #else  /* not is msvc and not is gunc, clang! */
-  #if defined(JSTD_BUILD_SHARED) \
-    defined(JSTD_BUILD_STATIC)      /* build a dll library */
+  #if defined(JSTD_BUILD_SHARED) || defined(JSTD_BUILD_STATIC)
+                                    /* build a dll library */
                                     /* build a static library */
     #define JSTD_DLL                JSTD_DECL_EXPORT
     #define JSTD_DLL_TPL            JSTD_DECL_EXPORT
