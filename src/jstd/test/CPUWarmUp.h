@@ -93,7 +93,7 @@ void warm_up(DWORD delayMillsecs)
 
 #endif // _MSC_VER
 
-struct WarmUp {
+JSTD_DLL struct WarmUp {
     WarmUp(unsigned int delayMillsecs = 1000) {
         //
         // See: https://stackoverflow.com/questions/40579342/is-there-any-compiler-barrier-which-is-equal-to-asm-memory-in-c11

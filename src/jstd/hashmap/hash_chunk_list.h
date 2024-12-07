@@ -26,7 +26,7 @@ namespace jstd {
 // hash_entry_chunk<T>
 //
 template <typename T>
-struct hash_entry_chunk {
+JSTD_DLL struct hash_entry_chunk {
     typedef T               entry_type;
     typedef std::size_t     size_type;
 
@@ -124,7 +124,7 @@ inline void swap(hash_entry_chunk<T> & lhs, hash_entry_chunk<T> & rhs) {
 }
 
 template <typename T, typename Allocator, typename EntryAllocator>
-class hash_entry_chunk_list {
+JSTD_DLL class hash_entry_chunk_list {
 public:
     typedef T                                       entry_type;
     typedef hash_entry_chunk<T>                     entry_chunk_t;

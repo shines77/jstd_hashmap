@@ -63,7 +63,7 @@
 namespace jstd {
 
 template <typename RandomAlgorithm>
-class BasicRandomGenerator {
+JSTD_DLL class BasicRandomGenerator {
 public:
     typedef BasicRandomGenerator<RandomAlgorithm>   this_type;
     typedef RandomAlgorithm                         random_algorithm_t;

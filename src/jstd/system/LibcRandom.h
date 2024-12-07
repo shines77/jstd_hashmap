@@ -66,7 +66,7 @@
 
 namespace jstd {
 
-class LibcRandom {
+JSTD_DLL class LibcRandom {
 public:
     typedef std::uint32_t   value_type;
     typedef std::size_t     size_type;

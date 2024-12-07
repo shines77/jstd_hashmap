@@ -43,7 +43,7 @@
 namespace jtest {
 
 template <typename T>
-struct TimeRatio {
+JSTD_DLL struct TimeRatio {
     typedef T   time_value_t;
 
     // 1 second = 1000 millisecond
@@ -74,7 +74,7 @@ TimeRatio<T>::nanosecs = static_cast<typename TimeRatio<T>::time_value_t>(100000
 namespace detail {
 
 template <typename T>
-class duration_time {
+JSTD_DLL class duration_time {
 public:
     typedef T   time_value_t;
 
@@ -106,7 +106,7 @@ public:
 } // namespace detail
 
 template <typename T>
-class StopWatchBase {
+JSTD_DLL class StopWatchBase {
 public:
     typedef T                                   impl_type;
     typedef typename impl_type::time_float_t    time_float_t;
@@ -224,7 +224,7 @@ typename StopWatchBase<T>::time_point_t
 StopWatchBase<T>::base_time_ = StopWatchBase<T>::impl_type::now();
 
 template <typename T>
-class StopWatchExBase {
+JSTD_DLL class StopWatchExBase {
 public:
     typedef T                                   impl_type;
     typedef StopWatchExBase<T>                  this_type;
@@ -459,7 +459,7 @@ typename StopWatchExBase<T>::time_float_t
 StopWatchExBase<T>::kTimeZero = static_cast<typename StopWatchExBase<T>::time_float_t>(0.0);
 
 template <typename TimeFloatTy>
-class clockStopWatchImpl {
+JSTD_DLL class clockStopWatchImpl {
 public:
     typedef TimeFloatTy                                     time_float_t;
     typedef clock_t                                         time_stamp_t;
@@ -493,7 +493,7 @@ typedef StopWatchBase< clockStopWatchImpl<double> >         clockStopWatch;
 typedef StopWatchExBase< clockStopWatchImpl<double> >       clockStopWatchEx;
 
 template <typename TimeFloatTy>
-class defaultStopWatchImpl {
+JSTD_DLL class defaultStopWatchImpl {
 public:
     typedef TimeFloatTy                                     time_float_t;
     typedef int64_t                                         time_stamp_t;
@@ -531,7 +531,7 @@ public:
 #if HAVE_STD_CHRONO_H
 
 template <typename TimeFloatTy>
-class StdStopWatchImpl {
+JSTD_DLL class StdStopWatchImpl {
 public:
     typedef TimeFloatTy                                     time_float_t;
     typedef std::uint64_t                                   time_stamp_t;
@@ -579,7 +579,7 @@ typedef StopWatchExBase< defaultStopWatchImpl<double> >     defaultStopWatchEx;
 #if defined(_WIN32) || defined(WIN32) || defined(OS_WINDOWS) || defined(_WINDOWS_)
 
 template <typename TimeFloatTy>
-class timeGetTimeImpl {
+JSTD_DLL class timeGetTimeImpl {
 public:
     typedef TimeFloatTy     time_float_t;
     typedef DWORD           time_stamp_t;
@@ -617,7 +617,7 @@ typedef StopWatchExBase< defaultStopWatchImpl<double> > timeGetTimeStopWatchEx;
 #if defined(_WIN32) || defined(WIN32) || defined(OS_WINDOWS) || defined(_WINDOWS_)
 
 template <typename TimeFloatTy>
-class getTickCountImpl {
+JSTD_DLL class getTickCountImpl {
 public:
     typedef TimeFloatTy     time_float_t;
     typedef DWORD           time_stamp_t;

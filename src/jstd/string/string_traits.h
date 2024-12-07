@@ -18,7 +18,7 @@
 namespace jstd {
 
 template <typename CharTy>
-struct string_traits {
+JSTD_DLL struct string_traits {
     typedef CharTy          char_type;
     typedef std::int32_t    int_type;
     typedef std::size_t     size_type;

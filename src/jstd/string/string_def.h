@@ -8,7 +8,7 @@
 
 namespace jstd {
 
-struct CompareResult {
+JSTD_DLL struct CompareResult {
     enum {
         IsSmaller = -1,
         IsEqual = 0,

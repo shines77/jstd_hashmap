@@ -27,7 +27,7 @@
 namespace jstd {
 
 template <typename Key, typename Value>
-union map_slot_type {
+JSTD_DLL union map_slot_type {
 public:
     using key_type = typename std::remove_const<Key>::type;
     using mapped_type = typename std::remove_const<Value>::type;
@@ -44,7 +44,7 @@ public:
 };
 
 template <typename Key, typename Value, typename SlotType>
-class map_slot_policy {
+JSTD_DLL class map_slot_policy {
 public:
     using slot_type = SlotType;
     using key_type = typename slot_type::key_type;

@@ -24,7 +24,7 @@
 
 #define HASH_HELPER_CHAR(KeyType, ResultType, HashFuncId, HashFunc)             \
     template <>                                                                 \
-    struct hash_helper<KeyType, ResultType, HashFuncId> {                       \
+    JSTD_DLL struct hash_helper<KeyType, ResultType, HashFuncId> {              \
         typedef ResultType  result_type;                                        \
         typedef typename std::remove_pointer<KeyType>::type char_type;          \
                                                                                 \
@@ -66,7 +66,7 @@
 
 #define HASH_HELPER_INTEGRAL(KeyType, ResultType, HashFuncId)                   \
     template <>                                                                 \
-    struct hash_helper<KeyType, ResultType, HashFuncId> {                       \
+    JSTD_DLL struct hash_helper<KeyType, ResultType, HashFuncId> {              \
         typedef ResultType  result_type;                                        \
         typedef typename std::remove_pointer<KeyType>::type pod_type;           \
                                                                                 \
@@ -98,7 +98,7 @@
 
 #define HASH_HELPER_FLOAT(KeyType, ResultType, HashFuncId, HashFunc)            \
     template <>                                                                 \
-    struct hash_helper<KeyType, ResultType, HashFuncId> {                       \
+    JSTD_DLL struct hash_helper<KeyType, ResultType, HashFuncId> {              \
         typedef ResultType  result_type;                                        \
         typedef typename std::remove_pointer<KeyType>::type pod_type;           \
                                                                                 \
@@ -119,7 +119,7 @@
 
 namespace jstd {
 
-enum hashes_id_t {
+JSTD_DLL enum hashes_id_t {
     HashFunc_CRC32C,
     HashFunc_Time31,
     HashFunc_Time31Std,
@@ -130,7 +130,7 @@ enum hashes_id_t {
 template <typename T,
           typename ResultType = std::uint32_t,
           std::size_t HashFunc = HashFunc_Default>
-struct hash_helper {
+JSTD_DLL struct hash_helper {
     typedef ResultType  result_type;
 
     typedef typename std::remove_pointer<
@@ -154,7 +154,7 @@ struct hash_helper {
 template <typename T,
          typename ResultType,
          std::size_t HashFunc>
-struct hash_helper<T *, ResultType, HashFunc> {
+JSTD_DLL struct hash_helper<T *, ResultType, HashFunc> {
     typedef ResultType  result_type;
 
     typedef typename std::remove_pointer<
@@ -178,7 +178,7 @@ struct hash_helper<T *, ResultType, HashFunc> {
 template <typename T,
           typename ResultType = std::uint32_t,
           std::size_t HashFunc = HashFunc_Default>
-struct string_hash_helper {
+JSTD_DLL struct string_hash_helper {
     typedef ResultType  result_type;
 
     typedef typename std::remove_pointer<
@@ -222,7 +222,7 @@ HASH_HELPER_INTEGRAL_ALL(HASH_HELPER_INTEGRAL, std::uint32_t, HashFunc_CRC32C);
 HASH_HELPER_FLOAT_ALL(HASH_HELPER_FLOAT, std::uint32_t, HashFunc_CRC32C, jstd::hashes::hash_crc32);
 
 template <>
-struct hash_helper<std::string, std::uint32_t, HashFunc_CRC32C> {
+JSTD_DLL struct hash_helper<std::string, std::uint32_t, HashFunc_CRC32C> {
     typedef std::uint32_t  result_type;
 
     static std::uint32_t getHashCode(const std::string & key) {
@@ -234,7 +234,7 @@ struct hash_helper<std::string, std::uint32_t, HashFunc_CRC32C> {
 };
 
 template <>
-struct hash_helper<std::wstring, std::uint32_t, HashFunc_CRC32C> {
+JSTD_DLL struct hash_helper<std::wstring, std::uint32_t, HashFunc_CRC32C> {
     typedef std::uint32_t  result_type;
 
     static std::uint32_t getHashCode(const std::wstring & key) {
@@ -246,7 +246,7 @@ struct hash_helper<std::wstring, std::uint32_t, HashFunc_CRC32C> {
 };
 
 template <>
-struct hash_helper<jstd::string_view, std::uint32_t, HashFunc_CRC32C> {
+JSTD_DLL struct hash_helper<jstd::string_view, std::uint32_t, HashFunc_CRC32C> {
     typedef std::uint32_t  result_type;
 
     static std::uint32_t getHashCode(const jstd::string_view & key) {
@@ -258,7 +258,7 @@ struct hash_helper<jstd::string_view, std::uint32_t, HashFunc_CRC32C> {
 };
 
 template <>
-struct hash_helper<jstd::wstring_view, std::uint32_t, HashFunc_CRC32C> {
+JSTD_DLL struct hash_helper<jstd::wstring_view, std::uint32_t, HashFunc_CRC32C> {
     typedef std::uint32_t  result_type;
 
     static std::uint32_t getHashCode(const jstd::wstring_view & key) {
@@ -270,7 +270,7 @@ struct hash_helper<jstd::wstring_view, std::uint32_t, HashFunc_CRC32C> {
 };
 
 template <>
-struct hash_helper<jstd::basic_string_view<char, jstd::char_traits<char>>, std::uint32_t, HashFunc_CRC32C> {
+JSTD_DLL struct hash_helper<jstd::basic_string_view<char, jstd::char_traits<char>>, std::uint32_t, HashFunc_CRC32C> {
     typedef std::uint32_t  result_type;
 
     static std::uint32_t getHashCode(const jstd::basic_string_view<char, jstd::char_traits<char>> & key) {
@@ -282,7 +282,7 @@ struct hash_helper<jstd::basic_string_view<char, jstd::char_traits<char>>, std::
 };
 
 template <>
-struct hash_helper<jstd::basic_string_view<wchar_t, jstd::char_traits<wchar_t>>, std::uint32_t, HashFunc_CRC32C> {
+JSTD_DLL struct hash_helper<jstd::basic_string_view<wchar_t, jstd::char_traits<wchar_t>>, std::uint32_t, HashFunc_CRC32C> {
     typedef std::uint32_t  result_type;
 
     static std::uint32_t getHashCode(const jstd::basic_string_view<wchar_t, jstd::char_traits<wchar_t>> & key) {
@@ -311,7 +311,7 @@ HASH_HELPER_INTEGRAL_ALL(HASH_HELPER_INTEGRAL, std::uint32_t, HashFunc_Time31);
 HASH_HELPER_FLOAT_ALL(HASH_HELPER_FLOAT, std::uint32_t, HashFunc_Time31, hashes::Times31);
 
 template <>
-struct hash_helper<std::string, std::uint32_t, HashFunc_Time31> {
+JSTD_DLL struct hash_helper<std::string, std::uint32_t, HashFunc_Time31> {
     typedef std::uint32_t  result_type;
 
     static std::uint32_t getHashCode(const std::string & key) {
@@ -323,7 +323,7 @@ struct hash_helper<std::string, std::uint32_t, HashFunc_Time31> {
 };
 
 template <>
-struct hash_helper<std::wstring, std::uint32_t, HashFunc_Time31> {
+JSTD_DLL struct hash_helper<std::wstring, std::uint32_t, HashFunc_Time31> {
     typedef std::uint32_t  result_type;
 
     static std::uint32_t getHashCode(const std::wstring & key) {
@@ -335,7 +335,7 @@ struct hash_helper<std::wstring, std::uint32_t, HashFunc_Time31> {
 };
 
 template <>
-struct hash_helper<jstd::string_view, std::uint32_t, HashFunc_Time31> {
+JSTD_DLL struct hash_helper<jstd::string_view, std::uint32_t, HashFunc_Time31> {
     typedef std::uint32_t  result_type;
 
     static std::uint32_t getHashCode(const jstd::string_view & key) {
@@ -347,7 +347,7 @@ struct hash_helper<jstd::string_view, std::uint32_t, HashFunc_Time31> {
 };
 
 template <>
-struct hash_helper<jstd::wstring_view, std::uint32_t, HashFunc_Time31> {
+JSTD_DLL struct hash_helper<jstd::wstring_view, std::uint32_t, HashFunc_Time31> {
     typedef std::uint32_t  result_type;
 
     static std::uint32_t getHashCode(const jstd::wstring_view & key) {
@@ -359,7 +359,7 @@ struct hash_helper<jstd::wstring_view, std::uint32_t, HashFunc_Time31> {
 };
 
 template <>
-struct hash_helper<jstd::basic_string_view<char, jstd::char_traits<char>>, std::uint32_t, HashFunc_Time31> {
+JSTD_DLL struct hash_helper<jstd::basic_string_view<char, jstd::char_traits<char>>, std::uint32_t, HashFunc_Time31> {
     typedef std::uint32_t  result_type;
 
     static std::uint32_t getHashCode(const jstd::basic_string_view<char, jstd::char_traits<char>> & key) {
@@ -371,7 +371,7 @@ struct hash_helper<jstd::basic_string_view<char, jstd::char_traits<char>>, std::
 };
 
 template <>
-struct hash_helper<jstd::basic_string_view<wchar_t, jstd::char_traits<wchar_t>>, std::uint32_t, HashFunc_Time31> {
+JSTD_DLL struct hash_helper<jstd::basic_string_view<wchar_t, jstd::char_traits<wchar_t>>, std::uint32_t, HashFunc_Time31> {
     typedef std::uint32_t  result_type;
 
     static std::uint32_t getHashCode(const jstd::basic_string_view<wchar_t, jstd::char_traits<wchar_t>> & key) {
@@ -398,7 +398,7 @@ HASH_HELPER_INTEGRAL_ALL(HASH_HELPER_INTEGRAL, std::uint32_t, HashFunc_Time31Std
 HASH_HELPER_FLOAT_ALL(HASH_HELPER_FLOAT, std::uint32_t, HashFunc_Time31Std, hashes::Times31Std);
 
 template <>
-struct hash_helper<std::string, std::uint32_t, HashFunc_Time31Std> {
+JSTD_DLL struct hash_helper<std::string, std::uint32_t, HashFunc_Time31Std> {
     typedef std::uint32_t  result_type;
 
     static std::uint32_t getHashCode(const std::string & key) {
@@ -410,7 +410,7 @@ struct hash_helper<std::string, std::uint32_t, HashFunc_Time31Std> {
 };
 
 template <>
-struct hash_helper<std::wstring, std::uint32_t, HashFunc_Time31Std> {
+JSTD_DLL struct hash_helper<std::wstring, std::uint32_t, HashFunc_Time31Std> {
     typedef std::uint32_t  result_type;
 
     static std::uint32_t getHashCode(const std::wstring & key) {
@@ -422,7 +422,7 @@ struct hash_helper<std::wstring, std::uint32_t, HashFunc_Time31Std> {
 };
 
 template <>
-struct hash_helper<jstd::string_view, std::uint32_t, HashFunc_Time31Std> {
+JSTD_DLL struct hash_helper<jstd::string_view, std::uint32_t, HashFunc_Time31Std> {
     typedef std::uint32_t  result_type;
 
     static std::uint32_t getHashCode(const jstd::string_view & key) {
@@ -434,7 +434,7 @@ struct hash_helper<jstd::string_view, std::uint32_t, HashFunc_Time31Std> {
 };
 
 template <>
-struct hash_helper<jstd::wstring_view, std::uint32_t, HashFunc_Time31Std> {
+JSTD_DLL struct hash_helper<jstd::wstring_view, std::uint32_t, HashFunc_Time31Std> {
     typedef std::uint32_t  result_type;
 
     static std::uint32_t getHashCode(const jstd::wstring_view & key) {
@@ -446,7 +446,7 @@ struct hash_helper<jstd::wstring_view, std::uint32_t, HashFunc_Time31Std> {
 };
 
 template <>
-struct hash_helper<jstd::basic_string_view<char, jstd::char_traits<char>>, std::uint32_t, HashFunc_Time31Std> {
+JSTD_DLL struct hash_helper<jstd::basic_string_view<char, jstd::char_traits<char>>, std::uint32_t, HashFunc_Time31Std> {
     typedef std::uint32_t  result_type;
 
     static std::uint32_t getHashCode(const jstd::basic_string_view<char, jstd::char_traits<char>> & key) {
@@ -458,7 +458,7 @@ struct hash_helper<jstd::basic_string_view<char, jstd::char_traits<char>>, std::
 };
 
 template <>
-struct hash_helper<jstd::basic_string_view<wchar_t, jstd::char_traits<wchar_t>>, std::uint32_t, HashFunc_Time31Std> {
+JSTD_DLL struct hash_helper<jstd::basic_string_view<wchar_t, jstd::char_traits<wchar_t>>, std::uint32_t, HashFunc_Time31Std> {
     typedef std::uint32_t  result_type;
 
     static std::uint32_t getHashCode(const jstd::basic_string_view<wchar_t, jstd::char_traits<wchar_t>> & key) {
@@ -496,7 +496,7 @@ struct hash_helper<jstd::basic_string_view<wchar_t, jstd::char_traits<wchar_t>>,
 ***********************************************************************/
 
 template <typename ResultType>
-struct hash_traits {
+JSTD_DLL struct hash_traits {
 
     // The invalid hash value.
     static const ResultType kInvalidHash = static_cast<ResultType>(-1);
@@ -512,7 +512,7 @@ struct hash_traits {
 
 template <typename Key, typename ResultType = std::uint32_t,
                         std::size_t HashFunc = HashFunc_Default>
-struct hash {
+JSTD_DLL struct hash {
     typedef typename std::remove_pointer<
                 typename std::remove_cv<
                     typename std::remove_reference<Key>::type

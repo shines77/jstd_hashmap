@@ -20,18 +20,18 @@ namespace jstd {
 //////////////////////////////////////////////////////////////////////////
 
 template <typename Pair>
-struct pair_traits {
+JSTD_DLL struct pair_traits {
     typedef typename Pair::first_type   first_type;
     typedef typename Pair::second_type  second_type;
 };
 
 template <typename T1, typename T2>
-struct pair_traits< std::pair<T1, T2> > {
+JSTD_DLL struct pair_traits< std::pair<T1, T2> > {
     typedef T1  first_type;
     typedef T2  second_type;
 };
 
-struct no_key_t {
+JSTD_DLL struct no_key_t {
     no_key_t() {}
 
     template <typename T>
@@ -47,7 +47,7 @@ struct no_key_t {
 //////////////////////////////////////////////////////////////////////////
 
 template <typename ValueType>
-struct key_extractor {
+JSTD_DLL struct key_extractor {
     typedef ValueType   value_type;
     typedef typename std::remove_const<
                 typename pair_traits<ValueType>::first_type
