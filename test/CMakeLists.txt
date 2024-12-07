@@ -22,6 +22,7 @@ endif()
 target_link_libraries(power2_test
 PUBLIC
     ${EXTRA_LIBS}
+    ${JSTD_HASHMAP_LIBNAME}
 )
 
 target_include_directories(power2_test
@@ -54,6 +55,7 @@ endif()
 target_link_libraries(class_trivial
 PUBLIC
     ${EXTRA_LIBS}
+    ${JSTD_HASHMAP_LIBNAME}
 )
 
 target_include_directories(class_trivial
@@ -86,6 +88,7 @@ endif()
 target_link_libraries(feature_test
 PUBLIC
     ${EXTRA_LIBS}
+    ${JSTD_HASHMAP_LIBNAME}
 )
 
 target_include_directories(feature_test

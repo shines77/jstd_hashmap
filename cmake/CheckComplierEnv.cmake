@@ -1,5 +1,5 @@
 function (CheckCompilerEnvironment)
-    if (JLANG_CMAKE_SHOW_DETAIL)
+    if (JSTD_CMAKE_SHOW_DETAIL)
         message(STATUS "------------------ Compiler Environment ------------------")
         message(STATUS "CMAKE_C_COMPILER_ID   = ${CMAKE_C_COMPILER_ID}")
         message(STATUS "CMAKE_CXX_COMPILER_ID = ${CMAKE_CXX_COMPILER_ID}")

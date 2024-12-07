@@ -22,6 +22,7 @@ endif()
 target_link_libraries(benchmark
 PUBLIC
     ${EXTRA_LIBS}
+    ${JSTD_HASHMAP_LIBNAME}
 )
 
 target_include_directories(benchmark
@@ -54,6 +55,7 @@ endif()
 target_link_libraries(time_hash_map
 PUBLIC
     ${EXTRA_LIBS}
+    ${JSTD_HASHMAP_LIBNAME}
 )
 
 target_include_directories(time_hash_map
@@ -86,6 +88,7 @@ endif()
 target_link_libraries(time_hash_map_new
 PUBLIC
     ${EXTRA_LIBS}
+    ${JSTD_HASHMAP_LIBNAME}
 )
 
 target_include_directories(time_hash_map_new
@@ -118,6 +121,7 @@ endif()
 target_link_libraries(cardinal_bench
 PUBLIC
     ${EXTRA_LIBS}
+    ${JSTD_HASHMAP_LIBNAME}
 )
 
 target_include_directories(cardinal_bench

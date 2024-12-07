@@ -1,0 +1,11 @@
+libdir=@CMAKE_INSTALL_FULL_LIBDIR@
+libsuffix=@SUFFIX64_UNDERSCORE@
+includedir=@CMAKE_INSTALL_FULL_INCLUDEDIR@
+
+jstd_config=USE_64BITINT=@USE_64BITINT@ NO_AFFINITY=@NO_AFFINITY@ USE_OPENMP=@USE_OPENMP@ @CORE@ MAX_THREADS=@NUM_THREADS@
+Name: jstd_hashmap
+Description: JStd_HashMap is an optimized C++ standard library based on jstd_hashmap 1.0.1 version
+Version: @JSTD_HASHMAP_VERSION@
+URL: https://github.com/shines77/jstd_hashmap
+Libs: -L${libdir} -ljstd_hashmap${libsuffix}
+Cflags: -I${includedir}
