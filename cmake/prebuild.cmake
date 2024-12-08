@@ -66,15 +66,15 @@ endif()
 string(TOUPPER ${ARCH} UC_ARCH)
 
 file (WRITE ${TARGET_CONF_TEMP}
-  "#define JSTD_OS_${HOST_OS}\t1\n"
-  "#define JSTD_ARCH_${UC_ARCH}\t1\n"
-  "#define JSTD_C_${COMPILER_ID}\t1\n"
-  "#define JSTD___${BINARY}BIT__\t1\n"
-  "#define JSTD_FUNDERSCORE\t${FU}\n")
+  "#define OS_${HOST_OS}\t1\n"
+  "#define ARCH_${UC_ARCH}\t1\n"
+  "#define C_${COMPILER_ID}\t1\n"
+  "#define __${BINARY}BIT__\t1\n"
+  "#define FUNDERSCORE\t${FU}\n")
 
 if (${HOST_OS} STREQUAL "WINDOWSSTORE")
     file(APPEND ${TARGET_CONF_TEMP}
-        "#define JSTD_OS_WINNT\t1\n")
+        "#define OS_WINNT\t1\n")
 endif()
 
 # Cannot run getarch on target if we are cross-compiling
@@ -89,28 +89,28 @@ if (DEFINED CORE AND CMAKE_CROSSCOMPILING AND NOT (${HOST_OS} STREQUAL "WINDOWSS
     # TODO: Set up defines that getarch sets up based on every other target
     # Perhaps this should be inside a different file as it grows larger
     file(APPEND ${TARGET_CONF_TEMP}
-        "#define JSTD_${TCORE}\n"
-        "#define JSTD_CORE_${TCORE}\n"
-        "#define JSTD_CHAR_CORENAME \"${TCORE}\"\n")
+        "#define ${TCORE}\n"
+        "#define CORE_${TCORE}\n"
+        "#define CHAR_CORENAME \"${TCORE}\"\n")
 
     if ("${TCORE}" STREQUAL "CORE2")
         file(APPEND ${TARGET_CONF_TEMP}
-            "#define JSTD_L1_DATA_SIZE\t32768\n"
-            "#define JSTD_L1_DATA_LINESIZE\t64\n"
-            "#define JSTD_L2_SIZE\t1048576\n"
-            "#define JSTD_L2_LINESIZE\t64\n"
-            "#define JSTD_DTB_DEFAULT_ENTRIES\t256\n"
-            "#define JSTD_DTB_SIZE\t4096\n"
-            "#define JSTD_HAVE_CMOV\n"
-            "#define JSTD_HAVE_MMX\n"
-            "#define JSTD_HAVE_SSE\n"
-            "#define JSTD_HAVE_SSE2\n"
-            "#define JSTD_HAVE_SSE3\n"
-            "#define JSTD_HAVE_SSSE3\n"
-            "#define JSTD_SLOCAL_BUFFER_SIZE\t16384\n"
-            "#define JSTD_DLOCAL_BUFFER_SIZE\t16384\n"
-            "#define JSTD_CLOCAL_BUFFER_SIZE\t16384\n"
-            "#define JSTD_ZLOCAL_BUFFER_SIZE\t16384\n")
+            "#define L1_DATA_SIZE\t32768\n"
+            "#define L1_DATA_LINESIZE\t64\n"
+            "#define L2_SIZE\t1048576\n"
+            "#define L2_LINESIZE\t64\n"
+            "#define DTB_DEFAULT_ENTRIES\t256\n"
+            "#define DTB_SIZE\t4096\n"
+            "#define HAVE_CMOV\n"
+            "#define HAVE_MMX\n"
+            "#define HAVE_SSE\n"
+            "#define HAVE_SSE2\n"
+            "#define HAVE_SSE3\n"
+            "#define HAVE_SSSE3\n"
+            "#define SLOCAL_BUFFER_SIZE\t16384\n"
+            "#define DLOCAL_BUFFER_SIZE\t16384\n"
+            "#define CLOCAL_BUFFER_SIZE\t16384\n"
+            "#define ZLOCAL_BUFFER_SIZE\t16384\n")
         set(SGEMM_UNROLL_M 8)
         set(SGEMM_UNROLL_N 4)
         set(DGEMM_UNROLL_M 4)
@@ -125,15 +125,15 @@ if (DEFINED CORE AND CMAKE_CROSSCOMPILING AND NOT (${HOST_OS} STREQUAL "WINDOWSS
         set(ZGEMM3M_UNROLL_N 4)
     elseif ("${TCORE}" STREQUAL "ARMV7")
         file(APPEND ${TARGET_CONF_TEMP}
-            "#define JSTD_L1_DATA_SIZE\t65536\n"
-            "#define JSTD_L1_DATA_LINESIZE\t32\n"
-            "#define JSTD_L2_SIZE\t512488\n"
-            "#define JSTD_L2_LINESIZE\t32\n"
-            "#define JSTD_DTB_DEFAULT_ENTRIES\t64\n"
-            "#define JSTD_DTB_SIZE\t4096\n"
-            "#define JSTD_L2_ASSOCIATIVE\t4\n"
-            "#define JSTD_HAVE_VFPV3\n"
-            "#define JSTD_HAVE_VFP\n")
+            "#define L1_DATA_SIZE\t65536\n"
+            "#define L1_DATA_LINESIZE\t32\n"
+            "#define L2_SIZE\t512488\n"
+            "#define L2_LINESIZE\t32\n"
+            "#define DTB_DEFAULT_ENTRIES\t64\n"
+            "#define DTB_SIZE\t4096\n"
+            "#define L2_ASSOCIATIVE\t4\n"
+            "#define HAVE_VFPV3\n"
+            "#define HAVE_VFP\n")
         set(SGEMM_UNROLL_M 4)
         set(SGEMM_UNROLL_N 4)
         set(DGEMM_UNROLL_M 4)
@@ -144,14 +144,14 @@ if (DEFINED CORE AND CMAKE_CROSSCOMPILING AND NOT (${HOST_OS} STREQUAL "WINDOWSS
         set(ZGEMM_UNROLL_N 2)
     elseif ("${TCORE}" STREQUAL "ARMV8")
         file(APPEND ${TARGET_CONF_TEMP}
-            "#define JSTD_L1_DATA_SIZE\t32768\n"
-            "#define JSTD_L1_DATA_LINESIZE\t64\n"
-            "#define JSTD_L2_SIZE\t262144\n"
-            "#define JSTD_L2_LINESIZE\t64\n"
-            "#define JSTD_DTB_DEFAULT_ENTRIES\t64\n"
-            "#define JSTD_DTB_SIZE\t4096\n"
-            "#define JSTD_L2_ASSOCIATIVE\t32\n"
-            "#define JSTD_ARMV8\n")
+            "#define L1_DATA_SIZE\t32768\n"
+            "#define L1_DATA_LINESIZE\t64\n"
+            "#define L2_SIZE\t262144\n"
+            "#define L2_LINESIZE\t64\n"
+            "#define DTB_DEFAULT_ENTRIES\t64\n"
+            "#define DTB_SIZE\t4096\n"
+            "#define L2_ASSOCIATIVE\t32\n"
+            "#define ARMV8\n")
         set(SGEMM_UNROLL_M 16)
         set(SGEMM_UNROLL_N 4)
         set(DGEMM_UNROLL_M 8)
@@ -163,22 +163,22 @@ if (DEFINED CORE AND CMAKE_CROSSCOMPILING AND NOT (${HOST_OS} STREQUAL "WINDOWSS
         set(SYMV_P 16)
     elseif ("${TCORE}" STREQUAL "CORTEXA57" OR "${TCORE}" STREQUAL "CORTEXA53")
         file(APPEND ${TARGET_CONF_TEMP}
-            "#define JSTD_L1_CODE_SIZE\t32768\n"
-            "#define JSTD_L1_CODE_LINESIZE\t64\n"
-            "#define JSTD_L1_CODE_ASSOCIATIVE\t3\n"
-            "#define JSTD_L1_DATA_SIZE\t32768\n"
-            "#define JSTD_L1_DATA_LINESIZE\t64\n"
-            "#define JSTD_L1_DATA_ASSOCIATIVE\t2\n"
-            "#define JSTD_L2_SIZE\t262144\n"
-            "#define JSTD_L2_LINESIZE\t64\n"
-            "#define JSTD_L2_ASSOCIATIVE\t16\n"
-            "#define JSTD_DTB_DEFAULT_ENTRIES\t64\n"
-            "#define JSTD_DTB_SIZE\t4096\n"
-            "#define JSTD_HAVE_VFPV4\n"
-            "#define JSTD_HAVE_VFPV3\n"
-            "#define JSTD_HAVE_VFP\n"
-            "#define JSTD_HAVE_NEON\n"
-            "#define JSTD_ARMV8\n")
+            "#define L1_CODE_SIZE\t32768\n"
+            "#define L1_CODE_LINESIZE\t64\n"
+            "#define L1_CODE_ASSOCIATIVE\t3\n"
+            "#define L1_DATA_SIZE\t32768\n"
+            "#define L1_DATA_LINESIZE\t64\n"
+            "#define L1_DATA_ASSOCIATIVE\t2\n"
+            "#define L2_SIZE\t262144\n"
+            "#define L2_LINESIZE\t64\n"
+            "#define L2_ASSOCIATIVE\t16\n"
+            "#define DTB_DEFAULT_ENTRIES\t64\n"
+            "#define DTB_SIZE\t4096\n"
+            "#define HAVE_VFPV4\n"
+            "#define HAVE_VFPV3\n"
+            "#define HAVE_VFP\n"
+            "#define HAVE_NEON\n"
+            "#define ARMV8\n")
         if ("${TCORE}" STREQUAL "CORTEXA57")
             set(SGEMM_UNROLL_M 16)
             set(SGEMM_UNROLL_N 4)
@@ -195,22 +195,22 @@ if (DEFINED CORE AND CMAKE_CROSSCOMPILING AND NOT (${HOST_OS} STREQUAL "WINDOWSS
         set(SYMV_P 16)
     elseif ("${TCORE}" STREQUAL "CORTEXA72" OR "${TCORE}" STREQUAL "CORTEXA73")
         file(APPEND ${TARGET_CONF_TEMP}
-            "#define JSTD_L1_CODE_SIZE\t49152\n"
-            "#define JSTD_L1_CODE_LINESIZE\t64\n"
-            "#define JSTD_L1_CODE_ASSOCIATIVE\t3\n"
-            "#define JSTD_L1_DATA_SIZE\t32768\n"
-            "#define JSTD_L1_DATA_LINESIZE\t64\n"
-            "#define JSTD_L1_DATA_ASSOCIATIVE\t2\n"
-            "#define JSTD_L2_SIZE\t524288\n"
-            "#define JSTD_L2_LINESIZE\t64\n"
-            "#define JSTD_L2_ASSOCIATIVE\t16\n"
-            "#define JSTD_DTB_DEFAULT_ENTRIES\t64\n"
-            "#define JSTD_DTB_SIZE\t4096\n"
-            "#define JSTD_HAVE_VFPV4\n"
-            "#define JSTD_HAVE_VFPV3\n"
-            "#define JSTD_HAVE_VFP\n"
-            "#define JSTD_HAVE_NEON\n"
-            "#define JSTD_ARMV8\n")
+            "#define L1_CODE_SIZE\t49152\n"
+            "#define L1_CODE_LINESIZE\t64\n"
+            "#define L1_CODE_ASSOCIATIVE\t3\n"
+            "#define L1_DATA_SIZE\t32768\n"
+            "#define L1_DATA_LINESIZE\t64\n"
+            "#define L1_DATA_ASSOCIATIVE\t2\n"
+            "#define L2_SIZE\t524288\n"
+            "#define L2_LINESIZE\t64\n"
+            "#define L2_ASSOCIATIVE\t16\n"
+            "#define DTB_DEFAULT_ENTRIES\t64\n"
+            "#define DTB_SIZE\t4096\n"
+            "#define HAVE_VFPV4\n"
+            "#define HAVE_VFPV3\n"
+            "#define HAVE_VFP\n"
+            "#define HAVE_NEON\n"
+            "#define ARMV8\n")
         set(SGEMM_UNROLL_M 16)
         set(SGEMM_UNROLL_N 4)
         set(DGEMM_UNROLL_M 8)
@@ -222,22 +222,22 @@ if (DEFINED CORE AND CMAKE_CROSSCOMPILING AND NOT (${HOST_OS} STREQUAL "WINDOWSS
         set(SYMV_P 16)
     elseif ("${TCORE}" STREQUAL "NEOVERSEN1")
         file(APPEND ${TARGET_CONF_TEMP}
-            "#define JSTD_L1_CODE_SIZE\t65536\n"
-            "#define JSTD_L1_CODE_LINESIZE\t64\n"
-            "#define JSTD_L1_CODE_ASSOCIATIVE\t4\n"
-            "#define JSTD_L1_DATA_SIZE\t65536\n"
-            "#define JSTD_L1_DATA_LINESIZE\t64\n"
-            "#define JSTD_L1_DATA_ASSOCIATIVE\t2\n"
-            "#define JSTD_L2_SIZE\t1048576\n\n"
-            "#define JSTD_L2_LINESIZE\t64\n"
-            "#define JSTD_L2_ASSOCIATIVE\t16\n"
-            "#define JSTD_DTB_DEFAULT_ENTRIES\t64\n"
-            "#define JSTD_DTB_SIZE\t4096\n"
-            "#define JSTD_HAVE_VFPV4\n"
-            "#define JSTD_HAVE_VFPV3\n"
-            "#define JSTD_HAVE_VFP\n"
-            "#define JSTD_HAVE_NEON\n"
-            "#define JSTD_ARMV8\n")
+            "#define L1_CODE_SIZE\t65536\n"
+            "#define L1_CODE_LINESIZE\t64\n"
+            "#define L1_CODE_ASSOCIATIVE\t4\n"
+            "#define L1_DATA_SIZE\t65536\n"
+            "#define L1_DATA_LINESIZE\t64\n"
+            "#define L1_DATA_ASSOCIATIVE\t2\n"
+            "#define L2_SIZE\t1048576\n\n"
+            "#define L2_LINESIZE\t64\n"
+            "#define L2_ASSOCIATIVE\t16\n"
+            "#define DTB_DEFAULT_ENTRIES\t64\n"
+            "#define DTB_SIZE\t4096\n"
+            "#define HAVE_VFPV4\n"
+            "#define HAVE_VFPV3\n"
+            "#define HAVE_VFP\n"
+            "#define HAVE_NEON\n"
+            "#define ARMV8\n")
         set(SGEMM_UNROLL_M 16)
         set(SGEMM_UNROLL_N 4)
         set(DGEMM_UNROLL_M 8)
@@ -249,22 +249,22 @@ if (DEFINED CORE AND CMAKE_CROSSCOMPILING AND NOT (${HOST_OS} STREQUAL "WINDOWSS
         set(SYMV_P 16)
     elseif ("${TCORE}" STREQUAL "FALKOR")
         file(APPEND ${TARGET_CONF_TEMP}
-            "#define JSTD_L1_CODE_SIZE\t65536\n"
-            "#define JSTD_L1_CODE_LINESIZE\t64\n"
-            "#define JSTD_L1_CODE_ASSOCIATIVE\t3\n"
-            "#define JSTD_L1_DATA_SIZE\t32768\n"
-            "#define JSTD_L1_DATA_LINESIZE\t128\n"
-            "#define JSTD_L1_DATA_ASSOCIATIVE\t2\n"
-            "#define JSTD_L2_SIZE\t524288\n"
-            "#define JSTD_L2_LINESIZE\t64\n"
-            "#define JSTD_L2_ASSOCIATIVE\t16\n"
-            "#define JSTD_DTB_DEFAULT_ENTRIES\t64\n"
-            "#define JSTD_DTB_SIZE\t4096\n"
-            "#define JSTD_HAVE_VFPV4\n"
-            "#define JSTD_HAVE_VFPV3\n"
-            "#define JSTD_HAVE_VFP\n"
-            "#define JSTD_HAVE_NEON\n"
-            "#define JSTD_ARMV8\n")
+            "#define L1_CODE_SIZE\t65536\n"
+            "#define L1_CODE_LINESIZE\t64\n"
+            "#define L1_CODE_ASSOCIATIVE\t3\n"
+            "#define L1_DATA_SIZE\t32768\n"
+            "#define L1_DATA_LINESIZE\t128\n"
+            "#define L1_DATA_ASSOCIATIVE\t2\n"
+            "#define L2_SIZE\t524288\n"
+            "#define L2_LINESIZE\t64\n"
+            "#define L2_ASSOCIATIVE\t16\n"
+            "#define DTB_DEFAULT_ENTRIES\t64\n"
+            "#define DTB_SIZE\t4096\n"
+            "#define HAVE_VFPV4\n"
+            "#define HAVE_VFPV3\n"
+            "#define HAVE_VFP\n"
+            "#define HAVE_NEON\n"
+            "#define ARMV8\n")
         set(SGEMM_UNROLL_M 16)
         set(SGEMM_UNROLL_N 4)
         set(DGEMM_UNROLL_M 8)
@@ -276,22 +276,22 @@ if (DEFINED CORE AND CMAKE_CROSSCOMPILING AND NOT (${HOST_OS} STREQUAL "WINDOWSS
         set(SYMV_P 16)
     elseif ("${TCORE}" STREQUAL "THUNDERX")
         file(APPEND ${TARGET_CONF_TEMP}
-            "#define JSTD_L1_CODE_SIZE\t32768\n"
-            "#define JSTD_L1_CODE_LINESIZE\t64\n"
-            "#define JSTD_L1_CODE_ASSOCIATIVE\t3\n"
-            "#define JSTD_L1_DATA_SIZE\t32768\n"
-            "#define JSTD_L1_DATA_LINESIZE\t128\n"
-            "#define JSTD_L1_DATA_ASSOCIATIVE\t2\n"
-            "#define JSTD_L2_SIZE\t167772164\n"
-            "#define JSTD_L2_LINESIZE\t128\n"
-            "#define JSTD_L2_ASSOCIATIVE\t16\n"
-            "#define JSTD_DTB_DEFAULT_ENTRIES\t64\n"
-            "#define JSTD_DTB_SIZE\t4096\n"
-            "#define JSTD_HAVE_VFPV4\n"
-            "#define JSTD_HAVE_VFPV3\n"
-            "#define JSTD_HAVE_VFP\n"
-            "#define JSTD_HAVE_NEON\n"
-            "#define JSTD_ARMV8\n")
+            "#define L1_CODE_SIZE\t32768\n"
+            "#define L1_CODE_LINESIZE\t64\n"
+            "#define L1_CODE_ASSOCIATIVE\t3\n"
+            "#define L1_DATA_SIZE\t32768\n"
+            "#define L1_DATA_LINESIZE\t128\n"
+            "#define L1_DATA_ASSOCIATIVE\t2\n"
+            "#define L2_SIZE\t167772164\n"
+            "#define L2_LINESIZE\t128\n"
+            "#define L2_ASSOCIATIVE\t16\n"
+            "#define DTB_DEFAULT_ENTRIES\t64\n"
+            "#define DTB_SIZE\t4096\n"
+            "#define HAVE_VFPV4\n"
+            "#define HAVE_VFPV3\n"
+            "#define HAVE_VFP\n"
+            "#define HAVE_NEON\n"
+            "#define ARMV8\n")
         set(SGEMM_UNROLL_M 4)
         set(SGEMM_UNROLL_N 4)
         set(DGEMM_UNROLL_M 2)
@@ -303,21 +303,21 @@ if (DEFINED CORE AND CMAKE_CROSSCOMPILING AND NOT (${HOST_OS} STREQUAL "WINDOWSS
         set(SYMV_P 16)
     elseif ("${TCORE}" STREQUAL "THUNDERX2T99")
         file(APPEND ${TARGET_CONF_TEMP}
-            "#define JSTD_L1_CODE_SIZE\t32768\n"
-            "#define JSTD_L1_CODE_LINESIZE\t64\n"
-            "#define JSTD_L1_CODE_ASSOCIATIVE\t8\n"
-            "#define JSTD_L1_DATA_SIZE\t32768\n"
-            "#define JSTD_L1_DATA_LINESIZE\t64\n"
-            "#define JSTD_L1_DATA_ASSOCIATIVE\t8\n"
-            "#define JSTD_L2_SIZE\t262144\n"
-            "#define JSTD_L2_LINESIZE\t64\n"
-            "#define JSTD_L2_ASSOCIATIVE\t8\n"
-            "#define JSTD_L3_SIZE\t33554432\n"
-            "#define JSTD_L3_LINESIZE\t64\n"
-            "#define JSTD_L3_ASSOCIATIVE\t32\n"
-            "#define JSTD_DTB_DEFAULT_ENTRIES\t64\n"
-            "#define JSTD_DTB_SIZE\t4096\n"
-            "#define JSTD_ARMV8\n")
+            "#define L1_CODE_SIZE\t32768\n"
+            "#define L1_CODE_LINESIZE\t64\n"
+            "#define L1_CODE_ASSOCIATIVE\t8\n"
+            "#define L1_DATA_SIZE\t32768\n"
+            "#define L1_DATA_LINESIZE\t64\n"
+            "#define L1_DATA_ASSOCIATIVE\t8\n"
+            "#define L2_SIZE\t262144\n"
+            "#define L2_LINESIZE\t64\n"
+            "#define L2_ASSOCIATIVE\t8\n"
+            "#define L3_SIZE\t33554432\n"
+            "#define L3_LINESIZE\t64\n"
+            "#define L3_ASSOCIATIVE\t32\n"
+            "#define DTB_DEFAULT_ENTRIES\t64\n"
+            "#define DTB_SIZE\t4096\n"
+            "#define ARMV8\n")
         set(SGEMM_UNROLL_M 16)
         set(SGEMM_UNROLL_N 4)
         set(DGEMM_UNROLL_M 8)
@@ -329,22 +329,22 @@ if (DEFINED CORE AND CMAKE_CROSSCOMPILING AND NOT (${HOST_OS} STREQUAL "WINDOWSS
         set(SYMV_P 16)
     elseif ("${TCORE}" STREQUAL "THUNDERX3T110")
         file(APPEND ${TARGET_CONF_TEMP}
-            "#define JSTD_THUNDERX3T110\n"
-            "#define JSTD_L1_CODE_SIZE\t65536\n"
-            "#define JSTD_L1_CODE_LINESIZE\t64\n"
-            "#define JSTD_L1_CODE_ASSOCIATIVE\t8\n"
-            "#define JSTD_L1_DATA_SIZE\t65536\n"
-            "#define JSTD_L1_DATA_LINESIZE\t64\n"
-            "#define JSTD_L1_DATA_ASSOCIATIVE\t8\n"
-            "#define JSTD_L2_SIZE\t524288\n"
-            "#define JSTD_L2_LINESIZE\t64\n"
-            "#define JSTD_L2_ASSOCIATIVE\t8\n"
-            "#define JSTD_L3_SIZE\t94371840\n"
-            "#define JSTD_L3_LINESIZE\t64\n"
-            "#define JSTD_L3_ASSOCIATIVE\t32\n"
-            "#define JSTD_DTB_DEFAULT_ENTRIES\t64\n"
-            "#define JSTD_DTB_SIZE\t4096\n"
-            "#define JSTD_ARMV8\n")
+            "#define THUNDERX3T110\n"
+            "#define L1_CODE_SIZE\t65536\n"
+            "#define L1_CODE_LINESIZE\t64\n"
+            "#define L1_CODE_ASSOCIATIVE\t8\n"
+            "#define L1_DATA_SIZE\t65536\n"
+            "#define L1_DATA_LINESIZE\t64\n"
+            "#define L1_DATA_ASSOCIATIVE\t8\n"
+            "#define L2_SIZE\t524288\n"
+            "#define L2_LINESIZE\t64\n"
+            "#define L2_ASSOCIATIVE\t8\n"
+            "#define L3_SIZE\t94371840\n"
+            "#define L3_LINESIZE\t64\n"
+            "#define L3_ASSOCIATIVE\t32\n"
+            "#define DTB_DEFAULT_ENTRIES\t64\n"
+            "#define DTB_SIZE\t4096\n"
+            "#define ARMV8\n")
         set(SGEMM_UNROLL_M 16)
         set(SGEMM_UNROLL_N 4)
         set(DGEMM_UNROLL_M 8)
@@ -356,18 +356,18 @@ if (DEFINED CORE AND CMAKE_CROSSCOMPILING AND NOT (${HOST_OS} STREQUAL "WINDOWSS
         set(SYMV_P 16)
     elseif ("${TCORE}" STREQUAL "TSV110")
         file(APPEND ${TARGET_CONF_TEMP}
-            "#define JSTD_ARMV8\n"
-            "#define JSTD_L1_CODE_SIZE\t65536\n"
-            "#define JSTD_L1_CODE_LINESIZE\t64\n"
-            "#define JSTD_L1_CODE_ASSOCIATIVE\t4\n"
-            "#define JSTD_L1_DATA_SIZE\t65536\n"
-            "#define JSTD_L1_DATA_LINESIZE\t64\n"
-            "#define JSTD_L1_DATA_ASSOCIATIVE\t4\n"
-            "#define JSTD_L2_SIZE\t524288\n"
-            "#define JSTD_L2_LINESIZE\t64\n"
-            "#define JSTD_L2_ASSOCIATIVE\t8\n"
-            "#define JSTD_DTB_DEFAULT_ENTRIES\t64\n"
-            "#define JSTD_DTB_SIZE\t4096\n")
+            "#define ARMV8\n"
+            "#define L1_CODE_SIZE\t65536\n"
+            "#define L1_CODE_LINESIZE\t64\n"
+            "#define L1_CODE_ASSOCIATIVE\t4\n"
+            "#define L1_DATA_SIZE\t65536\n"
+            "#define L1_DATA_LINESIZE\t64\n"
+            "#define L1_DATA_ASSOCIATIVE\t4\n"
+            "#define L2_SIZE\t524288\n"
+            "#define L2_LINESIZE\t64\n"
+            "#define L2_ASSOCIATIVE\t8\n"
+            "#define DTB_DEFAULT_ENTRIES\t64\n"
+            "#define DTB_SIZE\t4096\n")
         set(SGEMM_UNROLL_M 16)
         set(SGEMM_UNROLL_N 4)
         set(DGEMM_UNROLL_M 8)
@@ -379,18 +379,18 @@ if (DEFINED CORE AND CMAKE_CROSSCOMPILING AND NOT (${HOST_OS} STREQUAL "WINDOWSS
         set(SYMV_P 16)
     elseif ("${TCORE}" STREQUAL "EMAG8180")
         file(APPEND ${TARGET_CONF_TEMP}
-            "#define JSTD_ARMV8\n"
-            "#define JSTD_L1_CODE_SIZE\t32768\n"
-            "#define JSTD_L1_CODE_LINESIZE\t64\n"
-            "#define JSTD_L1_CODE_ASSOCIATIVE\t4\n"
-            "#define JSTD_L1_DATA_SIZE\t32768\n"
-            "#define JSTD_L1_DATA_LINESIZE\t64\n"
-            "#define JSTD_L1_DATA_ASSOCIATIVE\t4\n"
-            "#define JSTD_L2_SIZE\t5262144\n"
-            "#define JSTD_L2_LINESIZE\t64\n"
-            "#define JSTD_L2_ASSOCIATIVE\t8\n"
-            "#define JSTD_DTB_DEFAULT_ENTRIES\t64\n"
-            "#define JSTD_DTB_SIZE\t4096\n")
+            "#define ARMV8\n"
+            "#define L1_CODE_SIZE\t32768\n"
+            "#define L1_CODE_LINESIZE\t64\n"
+            "#define L1_CODE_ASSOCIATIVE\t4\n"
+            "#define L1_DATA_SIZE\t32768\n"
+            "#define L1_DATA_LINESIZE\t64\n"
+            "#define L1_DATA_ASSOCIATIVE\t4\n"
+            "#define L2_SIZE\t5262144\n"
+            "#define L2_LINESIZE\t64\n"
+            "#define L2_ASSOCIATIVE\t8\n"
+            "#define DTB_DEFAULT_ENTRIES\t64\n"
+            "#define DTB_SIZE\t4096\n")
         set(SGEMM_UNROLL_M 16)
         set(SGEMM_UNROLL_N 4)
         set(DGEMM_UNROLL_M 8)
@@ -402,13 +402,13 @@ if (DEFINED CORE AND CMAKE_CROSSCOMPILING AND NOT (${HOST_OS} STREQUAL "WINDOWSS
         set(SYMV_P 16)
     elseif ("${TCORE}" STREQUAL "POWER6")
         file(APPEND ${TARGET_CONF_TEMP}
-            "#define JSTD_L1_DATA_SIZE 32768\n"
-            "#define JSTD_L1_DATA_LINESIZE 128\n"
-            "#define JSTD_L2_SIZE 524288\n"
-            "#define JSTD_L2_LINESIZE 128 \n"
-            "#define JSTD_DTB_DEFAULT_ENTRIES 128\n"
-            "#define JSTD_DTB_SIZE 4096\n"
-            "#define JSTD_L2_ASSOCIATIVE 8\n")
+            "#define L1_DATA_SIZE 32768\n"
+            "#define L1_DATA_LINESIZE 128\n"
+            "#define L2_SIZE 524288\n"
+            "#define L2_LINESIZE 128 \n"
+            "#define DTB_DEFAULT_ENTRIES 128\n"
+            "#define DTB_SIZE 4096\n"
+            "#define L2_ASSOCIATIVE 8\n")
         set(SGEMM_UNROLL_M 4)
         set(SGEMM_UNROLL_N 4)
         set(DGEMM_UNROLL_M 4)
@@ -420,13 +420,13 @@ if (DEFINED CORE AND CMAKE_CROSSCOMPILING AND NOT (${HOST_OS} STREQUAL "WINDOWSS
         set(SYMV_P 8)
     elseif ("${TCORE}" STREQUAL "POWER8")
         file(APPEND ${TARGET_CONF_TEMP}
-            "#define JSTD_L1_DATA_SIZE 32768\n"
-            "#define JSTD_L1_DATA_LINESIZE 128\n"
-            "#define JSTD_L2_SIZE 524288\n"
-            "#define JSTD_L2_LINESIZE 128 \n"
-            "#define JSTD_DTB_DEFAULT_ENTRIES 128\n"
-            "#define JSTD_DTB_SIZE 4096\n"
-            "#define JSTD_L2_ASSOCIATIVE 8\n")
+            "#define L1_DATA_SIZE 32768\n"
+            "#define L1_DATA_LINESIZE 128\n"
+            "#define L2_SIZE 524288\n"
+            "#define L2_LINESIZE 128 \n"
+            "#define DTB_DEFAULT_ENTRIES 128\n"
+            "#define DTB_SIZE 4096\n"
+            "#define L2_ASSOCIATIVE 8\n")
         set(SGEMM_UNROLL_M 16)
         set(SGEMM_UNROLL_N 8)
         set(DGEMM_UNROLL_M 16)
@@ -438,13 +438,13 @@ if (DEFINED CORE AND CMAKE_CROSSCOMPILING AND NOT (${HOST_OS} STREQUAL "WINDOWSS
         set(SYMV_P 8)
     elseif ("${TCORE}" STREQUAL "POWER9" OR "${TCORE}" STREQUAL "POWER10")
         file(APPEND ${TARGET_CONF_TEMP}
-            "#define JSTD_L1_DATA_SIZE 32768\n"
-            "#define JSTD_L1_DATA_LINESIZE 128\n"
-            "#define JSTD_L2_SIZE 524288\n"
-            "#define JSTD_L2_LINESIZE 128 \n"
-            "#define JSTD_DTB_DEFAULT_ENTRIES 128\n"
-            "#define JSTD_DTB_SIZE 4096\n"
-            "#define JSTD_L2_ASSOCIATIVE 8\n")
+            "#define L1_DATA_SIZE 32768\n"
+            "#define L1_DATA_LINESIZE 128\n"
+            "#define L2_SIZE 524288\n"
+            "#define L2_LINESIZE 128 \n"
+            "#define DTB_DEFAULT_ENTRIES 128\n"
+            "#define DTB_SIZE 4096\n"
+            "#define L2_ASSOCIATIVE 8\n")
         set(SGEMM_UNROLL_M 16)
         set(SGEMM_UNROLL_N 8)
         set(DGEMM_UNROLL_M 16)
@@ -461,7 +461,7 @@ if (DEFINED CORE AND CMAKE_CROSSCOMPILING AND NOT (${HOST_OS} STREQUAL "WINDOWSS
 
     # Or should this actually be NUM_CORES?
     if (${NUM_THREADS} GREATER 0)
-        file(APPEND ${TARGET_CONF_TEMP} "#define JSTD_NUM_CORES\t${NUM_THREADS}\n")
+        file(APPEND ${TARGET_CONF_TEMP} "#define NUM_CORES\t${NUM_THREADS}\n")
     endif()
 
     # GetArch_2nd
@@ -475,7 +475,7 @@ if (DEFINED CORE AND CMAKE_CROSSCOMPILING AND NOT (${HOST_OS} STREQUAL "WINDOWSS
     endforeach()
 
     file(APPEND ${TARGET_CONF_TEMP}
-        "#define JSTD_GEMM_MULTITHREAD_THRESHOLD\t${GEMM_MULTITHREAD_THRESHOLD}\n")
+        "#define GEMM_MULTITHREAD_THRESHOLD\t${GEMM_MULTITHREAD_THRESHOLD}\n")
 
     # Move to where gen_config_h would place it
     file(MAKE_DIRECTORY ${TARGET_CONF_DIR})
