@@ -1,65 +1,38 @@
-
-#ifndef JSTD_CONFIG_CONFIG_HW_DETECT_H
-#define JSTD_CONFIG_CONFIG_HW_DETECT_H
-
-#if defined(_MSC_VER) && (_MSC_VER >= 1020)
-#pragma once
-#endif
-
-#ifndef JSTD_HAVE_MMX
-#define JSTD_HAVE_MMX           1
-#endif
-
-#ifndef JSTD_HAVE_SSE
-#define JSTD_HAVE_SSE           1
-#endif
-
-#ifndef JSTD_HAVE_SSE2
-#define JSTD_HAVE_SSE2          1
-#endif
-
-#ifndef JSTD_HAVE_AES
-#define JSTD_HAVE_AES           1
-#endif
-
-#ifndef JSTD_HAVE_MMX
-#define JSTD_HAVE_SSE3          1
-#endif
-
-#ifndef JSTD_HAVE_SSSE3
-#define JSTD_HAVE_SSSE3         1
-#endif
-
-#ifndef JSTD_HAVE_SSE4_1
-#define JSTD_HAVE_SSE4_1        1
-#endif
-
-#ifndef JSTD_HAVE_SSE4_2
-#define JSTD_HAVE_SSE4_2        1
-#endif
-
-#ifndef JSTD_HAVE_AVX
-#define JSTD_HAVE_AVX           1
-#endif
-
-#ifndef JSTD_HAVE_AVX2
-#define JSTD_HAVE_AVX2          1
-#endif
-
-#ifndef JSTD_HAVE_AVX512
-#define JSTD_HAVE_AVX512        0
-#endif
-
-#ifndef JSTD_HAVE_F16C
-#define JSTD_HAVE_F16C          1
-#endif
-
-#ifndef JSTD_HAVE_RDRND
-#define JSTD_HAVE_RDRND         1
-#endif
-
-#ifndef JSTD_HAVE_SHA
-#define JSTD_HAVE_SHA           1
-#endif
-
-#endif // JSTD_CONFIG_CONFIG_HW_DETECT_H
+#define OS_LINUX   1
+#define ARCH_X86_64        1
+#define C_GCC      1
+#define __64BIT__  1
+#define FUNDERSCORE        
+#define SKYLAKEX
+#define L1_CODE_SIZE 32768
+#define L1_CODE_ASSOCIATIVE 8
+#define L1_CODE_LINESIZE 64
+#define L1_DATA_SIZE 32768
+#define L1_DATA_ASSOCIATIVE 8
+#define L1_DATA_LINESIZE 64
+#define L2_SIZE 262144
+#define L2_ASSOCIATIVE 8
+#define L2_LINESIZE 64
+#define ITB_SIZE 2097152
+#define ITB_ASSOCIATIVE 0
+#define ITB_ENTRIES 8
+#define DTB_SIZE 4096
+#define DTB_ASSOCIATIVE 4
+#define DTB_DEFAULT_ENTRIES 64
+#define HAVE_CMOV
+#define HAVE_MMX
+#define HAVE_SSE
+#define HAVE_SSE2
+#define HAVE_SSE3
+#define HAVE_SSSE3
+#define HAVE_SSE4_1
+#define HAVE_SSE4_2
+#define HAVE_AVX
+#define HAVE_AVX2
+//#define HAVE_AVX512VL
+#define HAVE_FMA3
+#define HAVE_CFLUSH
+#define HAVE_HIT 1
+#define NUM_SHAREDCACHE 2
+#define NUM_CORES 2
+#define CORE_SKYLAKEX

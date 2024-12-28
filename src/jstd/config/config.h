@@ -23,9 +23,6 @@
 #include "jstd/config/version.h"
 #include "jstd/config/config_jstd.h"
 #include "jstd/config/config_hw.h"
-#if JSTD_USE_HW_DETECT
-#include "jstd/config/config_hw_detect.h"
-#endif
 #include "jstd/config/config_cxx.h"
 #include "jstd/config/config_post.h"
 

@@ -43,7 +43,7 @@ if (DEFINED CPUIDEMU)
     set(EXFLAGS "-DCPUIDEMU -DVENDOR=99")
 endif()
 
-set(TARGET_CONF "config_hw_autodetect.h")
+set(TARGET_CONF "config_hw_detect.h")
 set(TARGET_CONF_DIR ${PROJECT_BINARY_DIR}/src/jstd/config/)
 set(TARGET_CONF_TARGET_DIR ${PROJECT_SOURCE_DIR}/src/jstd/config/)
 
