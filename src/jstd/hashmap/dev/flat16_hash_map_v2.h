@@ -69,9 +69,9 @@
 #include <type_traits>
 #include <stdexcept>
 
-#include "jstd/type_traits.h"
+#include "jstd/traits/type_traits.h"
 #include "jstd/iterator.h"
-#include "jstd/utility.h"
+#include "jstd/utility/utility.h"
 #include "jstd/support/BitUtils.h"
 #include "jstd/support/Power2.h"
 #include "jstd/support/BitVec.h"

@@ -28,7 +28,7 @@
 #include "jstd/string/char_traits.h"
 #include "jstd/support/SSEHelper.h"
 
-#include "jstd/type_traits.h"
+#include "jstd/traits/type_traits.h"
 
 namespace jstd {
 namespace str_utils {

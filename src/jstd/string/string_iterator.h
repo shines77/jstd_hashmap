@@ -16,7 +16,7 @@
 #include <type_traits>
 
 #include "jstd/iterator.h"
-#include "jstd/utility.h"
+#include "jstd/utility/utility.h"
 
 namespace jstd {
 

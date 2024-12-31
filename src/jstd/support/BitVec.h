@@ -387,6 +387,18 @@ uint32_t mm_cvtsi128_si32_high(__m128i m128)
 
 #if defined(JSTD_IS_X86_I386)
 
+#if 0
+
+#define _mm_extract_epi8(x, imm) \
+    ((((imm) & 0x1) == 0) ? \
+    _mm_extract_epi16((x), (imm) >> 1) & 0xff : \
+    _mm_extract_epi16(_mm_srli_epi16((x), 8), (imm) >> 1))
+
+#define _mm_extract_epi32(x, imm) \
+    _mm_cvtsi128_si32(_mm_srli_si128((x), 4 * (imm)))
+
+#endif
+
 template <int index>
 static inline
 int64_t mm_extract_epi64(__m128i src)

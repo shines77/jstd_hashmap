@@ -20,7 +20,7 @@
 #include <string>
 #include <vector>
 
-#include "jstd/type_traits.h"
+#include "jstd/traits/type_traits.h"
 #include "jstd/string/string_utils.h"
 
 namespace jstd {

@@ -100,7 +100,7 @@ uint32_t FNV1A_Yoshimura(const char * data, size_t data_len)
     const char * p = data;
 
     // kStepSize = (2 * sizeof(uint32_t)) * 2 = 16
-    if (data_len >= kStepSize) {      
+    if (data_len >= kStepSize) {
         size_t loop_cnt = data_len / kStepSize;
         if ((data_len % kStepSize) != 0) {
             loop_cnt++;
@@ -109,8 +109,8 @@ uint32_t FNV1A_Yoshimura(const char * data, size_t data_len)
         size_t line_offset = data_len - loop_cnt * kHalfStepSize;
         for (; loop_cnt > 0; loop_cnt--) {
             // revision 1:
-            // hash32A = (hash32A ^ (_rotl_KAZE32(*(uint32_t *)(p + 0), 5) ^ *(uint32_t *)(p + 4))) * kPRIME;        
-            // hash32B = (hash32B ^ (_rotl_KAZE32(*(uint32_t *)(p + 0 + line_offset), 5) ^ *(uint32_t *)(p + 4 + line_offset))) * kPRIME;        
+            // hash32A = (hash32A ^ (_rotl_KAZE32(*(uint32_t *)(p + 0), 5) ^ *(uint32_t *)(p + 4))) * kPRIME;
+            // hash32B = (hash32B ^ (_rotl_KAZE32(*(uint32_t *)(p + 0 + line_offset), 5) ^ *(uint32_t *)(p + 4 + line_offset))) * kPRIME;
             // revision 2:
             hash32A = (hash32A ^ (_rotl_twise32(*(uint32_t *)(p + 0), 5) ^ *(uint32_t *)(p + 0 + line_offset))) * kPRIME;
             hash32B = (hash32B ^ (_rotl_twise32(*(uint32_t *)(p + 4 + line_offset), 5) ^ *(uint32_t *)(p + 4))) * kPRIME;
@@ -298,7 +298,7 @@ uint32_t FNV1A_Yoshimitsu_TRIADii_xmm(const char * data, size_t data_len)
 }
 
 //
-// PENUMBRA: Any partial shade or shadow round a thing; a surrounding area of uncertain extent (lit. & fig.). 
+// PENUMBRA: Any partial shade or shadow round a thing; a surrounding area of uncertain extent (lit. & fig.).
 //           [mod. Latin, from Latin paene almost + umbra shadow.]
 //
 // Many dependencies, many mini-goals, many restrictions... Blah-blah-blah...

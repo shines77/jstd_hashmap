@@ -74,8 +74,8 @@
 
 #include "jstd/hashmap/map_layout_policy.h"
 #include "jstd/hashmap/hash_chunk_list.h"
-#include "jstd/type_traits.h"
-#include "jstd/utility.h"
+#include "jstd/traits/type_traits.h"
+#include "jstd/utility/utility.h"
 #include "jstd/support/BitUtils.h"
 #include "jstd/support/Power2.h"
 #include "jstd/support/BitVec.h"

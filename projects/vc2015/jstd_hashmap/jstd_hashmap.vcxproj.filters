@@ -94,14 +94,8 @@
     <ClInclude Include="..\..\..\src\jstd\hashmap\unordered_map.h">
       <Filter>src\hashmap</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\src\jstd\type_traits.h">
-      <Filter>src</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\..\src\jstd\traits\has_member.h">
       <Filter>src\traits</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\src\jstd\utility.h">
-      <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\src\jstd\utility\integer_sequence.h">
       <Filter>src\utility</Filter>
@@ -292,9 +286,6 @@
     <ClInclude Include="..\..\..\src\jstd\config\config_hw_detect.h">
       <Filter>src\config</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\src\jstd\config\version.h">
-      <Filter>src\config</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\..\src\jstd\basic\macros.h">
       <Filter>src\basic</Filter>
     </ClInclude>
@@ -306,6 +297,15 @@
     </ClInclude>
     <ClInclude Include="..\..\..\src\jstd\config\config_cxx.h">
       <Filter>src\config</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\traits\type_traits.h">
+      <Filter>src\traits</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\utility\utility.h">
+      <Filter>src\utility</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\version.h">
+      <Filter>src</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

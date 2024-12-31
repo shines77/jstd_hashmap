@@ -70,9 +70,9 @@
 #include <stdexcept>
 
 #include "jstd/basic/stddef.h"
-#include "jstd/type_traits.h"
+#include "jstd/traits/type_traits.h"
 #include "jstd/iterator.h"
-#include "jstd/utility.h"
+#include "jstd/utility/utility.h"
 #include "jstd/lang/launder.h"
 #include "jstd/hasher/hashes.h"
 #include "jstd/hasher/hash_crc32.h"

@@ -197,6 +197,9 @@ _ReSharper*/
 # Ignore VLD local switch define
 /src/jstd/basic/vld_def.h
 
+# Ignore hardware detect config file
+/src/jstd/config/config_hw_detect.h
+
 # Ignore jstd exe filename
 jstd.exe
 jstd-unittest.exe

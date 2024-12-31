@@ -20,7 +20,7 @@
 #include "jstd/basic/compiler.h"
 #include "jstd/basic/export.h"
 
-#include "jstd/config/version.h"
+#include "jstd/version.h"
 #include "jstd/config/config_jstd.h"
 #include "jstd/config/config_hw.h"
 #include "jstd/config/config_cxx.h"

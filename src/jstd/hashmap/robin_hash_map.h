@@ -70,9 +70,9 @@
 #include <stdexcept>
 
 #include "jstd/basic/stddef.h"
-#include "jstd/type_traits.h"
+#include "jstd/traits/type_traits.h"
 #include "jstd/iterator.h"
-#include "jstd/utility.h"
+#include "jstd/utility/utility.h"
 #include "jstd/lang/launder.h"
 #include "jstd/hasher/hashes.h"
 #include "jstd/hasher/hash_crc32.h"
@@ -403,7 +403,7 @@ public:
     public:
         typedef T value_type;
 
-    private:        
+    private:
         value_type hash_;
 
     public:
@@ -1652,7 +1652,7 @@ public:
             return maskEmpty;
         }
 
-        bool hasAnyMatch( std::uint8_t ctrl_hash) const {
+        bool hasAnyMatch(std::uint8_t ctrl_hash) const {
             (void)ctrl_hash;
             return true;
         }
@@ -2833,7 +2833,7 @@ public:
                 --ctrl;
                 if (!ctrl->isEmpty())
                     break;
-            }  
+            }
             return *this;
         }
 
@@ -3016,7 +3016,7 @@ public:
     typedef typename std::allocator_traits<allocator_type>::template rebind_alloc<ctrl_type>
                                         ctrl_allocator_type;
     typedef typename std::allocator_traits<allocator_type>::template rebind_alloc<slot_type>
-                                        slot_allocator_type;    
+                                        slot_allocator_type;
 
     typedef typename std::allocator_traits<allocator_type>::template rebind_traits<ctrl_type>
                                         CtrlAllocTraits;
@@ -6072,7 +6072,7 @@ InsertOrGrow_Start:
                                         std::piecewise_construct,
                                         std::forward_as_tuple(key),
                                         std::forward_as_tuple(std::forward<Args>(args)...));
-            this->slot_size_++;            
+            this->slot_size_++;
         } else if (is_exists < kIsNotExists) {
             assert(is_exists == kNeedGrow);
             this->grow_if_necessary();
@@ -6487,7 +6487,7 @@ Insert_To_Slot:
         slot_type * last_slot = this->slot_at(last_slot_index);
 
         if (erase_slot_index != last_slot_index) {
-            slot_type * erase_slot = this->slot_at(erase_slot_index);    
+            slot_type * erase_slot = this->slot_at(erase_slot_index);
 
             ctrl_type * last_key_ctrl = this->find_ctrl(last_slot->key, last_slot_index);
             assert(last_key_ctrl != nullptr);

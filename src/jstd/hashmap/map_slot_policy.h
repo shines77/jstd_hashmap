@@ -22,7 +22,7 @@
 #include <utility>      // For std::pair<First, Second>
 #include <type_traits>
 
-#include "jstd/type_traits.h"
+#include "jstd/traits/type_traits.h"
 
 namespace jstd {
 

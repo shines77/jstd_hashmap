@@ -7,7 +7,7 @@
 #endif
 
 #include "jstd/basic/stdint.h"
-#include "jstd/type_traits.h"
+#include "jstd/traits/type_traits.h"
 
 #include <cstdint>
 #include <memory>           // For std::pointer_traits<T>
@@ -705,7 +705,7 @@ constexpr typename std::iterator_traits<Iter>::difference_type
 {
     using category = typename std::iterator_traits<Iter>::iterator_category;
     static_assert(std::is_base_of<std::input_iterator_tag, category>::value);
- 
+
     if constexpr (std::is_base_of<std::random_access_iterator_tag, category>::value) {
         return (last - first);
     } else {
@@ -722,9 +722,9 @@ constexpr typename std::iterator_traits<Iter>::difference_type
 
 // implementation via tag dispatch, available in C++98 with constexpr removed
 namespace detail {
- 
+
 template <typename Iter>
-typename std::iterator_traits<Iter>::difference_type 
+typename std::iterator_traits<Iter>::difference_type
 do_distance(Iter first, Iter last, std::input_iterator_tag)
 {
     typename std::iterator_traits<Iter>::difference_type result = 0;
@@ -734,18 +734,18 @@ do_distance(Iter first, Iter last, std::input_iterator_tag)
     }
     return result;
 }
- 
+
 template <typename Iter>
-typename std::iterator_traits<Iter>::difference_type 
+typename std::iterator_traits<Iter>::difference_type
 do_distance(Iter first, Iter last, std::random_access_iterator_tag)
 {
     return (last - first);
 }
- 
+
 } // namespace detail
- 
+
 template <typename Iter>
-typename std::iterator_traits<Iter>::difference_type 
+typename std::iterator_traits<Iter>::difference_type
 distance(Iter first, Iter last)
 {
     return detail::do_distance(first, last,
