@@ -48,7 +48,7 @@ class JSTD_DLL map_slot_policy {
 public:
     using slot_type = SlotType;
     using key_type = typename slot_type::key_type;
-    using mapped_type = typename slot_type::mapped_type;    
+    using mapped_type = typename slot_type::mapped_type;
     using value_type = typename slot_type::value_type;
     using mutable_value_type = typename slot_type::mutable_value_type;
     using init_type = typename slot_type::init_type;

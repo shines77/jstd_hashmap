@@ -118,12 +118,12 @@ public:
     //
     template <typename Alloc>
     static void assign(Alloc * alloc, slot_type * dest_slot, slot_type * src_slot) {
-        slot_policy_traits::assign_impl(alloc, dest_slot, src_slot, 0);
+        assign_impl(alloc, dest_slot, src_slot, 0);
     }
 
     template <typename Alloc>
     static void mutable_assign(Alloc * alloc, slot_type * dest_slot, slot_type * src_slot) {
-        slot_policy_traits::mutable_assign_impl(alloc, dest_slot, src_slot, 0);
+        mutable_assign_impl(alloc, dest_slot, src_slot, 0);
     }
 
     //
@@ -138,12 +138,12 @@ public:
     //
     template <typename Alloc>
     static void assign(Alloc * alloc, slot_type * dest_slot, const slot_type * src_slot) {
-        slot_policy_traits::assign_impl(alloc, dest_slot, src_slot, 0);
+        assign_impl(alloc, dest_slot, src_slot, 0);
     }
 
     template <typename Alloc>
     static void mutable_assign(Alloc * alloc, slot_type * dest_slot, const slot_type * src_slot) {
-        slot_policy_traits::mutable_assign_impl(alloc, dest_slot, src_slot, 0);
+        mutable_assign_impl(alloc, dest_slot, src_slot, 0);
     }
 
     //
@@ -160,7 +160,7 @@ public:
     //
     template <typename Alloc>
     static void transfer(Alloc * alloc, slot_type * new_slot, slot_type * old_slot) {
-        slot_policy_traits::transfer_impl(alloc, new_slot, old_slot, 0);
+        transfer_impl(alloc, new_slot, old_slot, 0);
     }
 
     //
@@ -175,7 +175,7 @@ public:
     //
     template <typename Alloc>
     static void swap(Alloc * alloc, slot_type * slot1, slot_type * slot2, slot_type * tmp) {
-        slot_policy_traits::swap_impl(alloc, slot1, slot2, tmp, 0);
+        swap_impl(alloc, slot1, slot2, tmp, 0);
     }
 
     //
@@ -190,7 +190,7 @@ public:
     //
     template <typename Alloc>
     static void move_assign_swap(Alloc * alloc, slot_type * slot1, slot_type * slot2, slot_type * tmp) {
-        slot_policy_traits::move_assign_swap_impl(alloc, slot1, slot2, tmp, 0);
+        move_assign_swap_impl(alloc, slot1, slot2, tmp, 0);
     }
 
     //
@@ -205,7 +205,7 @@ public:
     //
     template <typename Alloc>
     static void exchange(Alloc * alloc, slot_type * src, slot_type * dest, slot_type * empty) {
-        slot_policy_traits::exchange_impl(alloc, src, dest, empty, 0);
+        exchange_impl(alloc, src, dest, empty, 0);
     }
 
     // PRECONDITION:  `slot` is INITIALIZED
@@ -225,8 +225,8 @@ private:
 
     template <typename Alloc>
     static void assign_impl(Alloc * alloc, slot_type * dest_slot, slot_type * src_slot, char) {
-        slot_policy_traits::construct(alloc, dest_slot, std::move(element(src_slot)));
-        slot_policy_traits::destroy(alloc, src_slot);
+        construct(alloc, dest_slot, std::move(element(src_slot)));
+        destroy(alloc, src_slot);
     }
 
     // Use auto -> decltype as an enabler.
@@ -238,8 +238,8 @@ private:
 
     template <typename Alloc>
     static void assign_impl(Alloc * alloc, slot_type * dest_slot, const slot_type * src_slot, char) {
-        slot_policy_traits::construct(alloc, dest_slot, std::move(element(src_slot)));
-        slot_policy_traits::destroy(alloc, src_slot);
+        construct(alloc, dest_slot, std::move(element(src_slot)));
+        destroy(alloc, src_slot);
     }
 
     // Use auto -> decltype as an enabler.
@@ -251,8 +251,8 @@ private:
 
     template <typename Alloc>
     static void mutable_assign_impl(Alloc * alloc, slot_type * dest_slot, slot_type * src_slot, char) {
-        slot_policy_traits::construct(alloc, dest_slot, std::move(element(src_slot)));
-        slot_policy_traits::destroy(alloc, src_slot);
+        construct(alloc, dest_slot, std::move(element(src_slot)));
+        destroy(alloc, src_slot);
     }
 
     // Use auto -> decltype as an enabler.
@@ -264,8 +264,8 @@ private:
 
     template <typename Alloc>
     static void mutable_assign_impl(Alloc * alloc, slot_type * dest_slot, const slot_type * src_slot, char) {
-        slot_policy_traits::construct(alloc, dest_slot, std::move(element(src_slot)));
-        slot_policy_traits::destroy(alloc, src_slot);
+        construct(alloc, dest_slot, std::move(element(src_slot)));
+        destroy(alloc, src_slot);
     }
 
     // Use auto -> decltype as an enabler.
@@ -277,8 +277,8 @@ private:
 
     template <typename Alloc>
     static void transfer_impl(Alloc * alloc, slot_type * new_slot, slot_type * old_slot, char) {
-        slot_policy_traits::construct(alloc, new_slot, std::move(element(old_slot)));
-        slot_policy_traits::destroy(alloc, old_slot);
+        construct(alloc, new_slot, std::move(element(old_slot)));
+        destroy(alloc, old_slot);
     }
 
     // Use auto -> decltype as an enabler.
@@ -290,12 +290,12 @@ private:
 
     template <typename Alloc>
     static void swap_impl(Alloc * alloc, slot_type * slot1, slot_type * slot2, slot_type * tmp, char) {
-        slot_policy_traits::construct(alloc, tmp, std::move(element(slot2)));
-        slot_policy_traits::destroy(alloc, slot2);
-        slot_policy_traits::construct(alloc, slot2, std::move(element(slot1)));
-        slot_policy_traits::destroy(alloc, slot1);
-        slot_policy_traits::construct(alloc, slot1, std::move(element(tmp)));
-        slot_policy_traits::destroy(alloc, tmp);
+        construct(alloc, tmp, std::move(element(slot2)));
+        destroy(alloc, slot2);
+        construct(alloc, slot2, std::move(element(slot1)));
+        destroy(alloc, slot1);
+        construct(alloc, slot1, std::move(element(tmp)));
+        destroy(alloc, tmp);
     }
 
     // Use auto -> decltype as an enabler.
@@ -307,10 +307,10 @@ private:
 
     template <typename Alloc>
     static void exchange_impl(Alloc * alloc,  slot_type * src, slot_type * dest, slot_type * empty, char) {
-        slot_policy_traits::construct(alloc, empty, std::move(element(dest)));
-        slot_policy_traits::destroy(alloc, dest);
-        slot_policy_traits::construct(alloc, dest, std::move(element(src)));
-        slot_policy_traits::destroy(alloc, src);
+        construct(alloc, empty, std::move(element(dest)));
+        destroy(alloc, dest);
+        construct(alloc, dest, std::move(element(src)));
+        destroy(alloc, src);
     }
 
     // Use auto -> decltype as an enabler.
@@ -322,9 +322,9 @@ private:
 
     template <typename Alloc>
     static void move_assign_swap_impl(Alloc * alloc, slot_type * slot1, slot_type * slot2, slot_type * tmp, char) {
-        slot_policy_traits::mutable_assign(alloc, tmp, slot2);
-        slot_policy_traits::mutable_assign(alloc, slot2, slot1);
-        slot_policy_traits::mutable_assign(alloc, slot1, tmp);
+        mutable_assign(alloc, tmp, slot2);
+        mutable_assign(alloc, slot2, slot1);
+        mutable_assign(alloc, slot1, tmp);
     }
 };
 

@@ -279,7 +279,7 @@ public:
     static constexpr float kDefaultLoadFactor = 0.5f;
 
     // Don't modify this value at will
-    static constexpr size_type kLoadFactorAmplify = 65536;
+    static constexpr size_type kLoadFactorAmplify = 256;
 
     static constexpr std::uint32_t kDefaultLoadFactorInt =
             std::uint32_t(kDefaultLoadFactor * kLoadFactorAmplify);
