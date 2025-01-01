@@ -3286,9 +3286,6 @@ public:
     size_type slot_capacity() const { return (this->slot_mask_ + (this->slot_mask_ != 0)); }
 
     size_type slot_threshold() const { return this->slot_threshold_; }
-    size_type slot_threshold(size_type now_slow_capacity) const {
-        return (now_slow_capacity * this->integral_mlf() / kLoadFactorAmplify);
-    }
 
     size_type max_lookups() const { return this->max_lookups_; }
     std::uint16_t max_distance() const {
@@ -3814,6 +3811,10 @@ private:
             new_capacity = pow2::round_up<size_type, kMinCapacity>(new_capacity);
         }
         return new_capacity;
+    }
+
+    size_type calc_slot_threshold(size_type now_slot_capacity) const {
+        return (now_slot_capacity * this->integral_mlf() / kLoadFactorAmplify);
     }
 
     size_type calc_max_lookups(size_type new_capacity) const {
@@ -4357,7 +4358,7 @@ private:
             this->slot_size_ = 0;
         }
         this->slot_mask_ = new_capacity - 1;
-        this->slot_threshold_ = this->slot_threshold(new_capacity);
+        this->slot_threshold_ = this->calc_slot_threshold(new_capacity);
     }
 
     template <bool AllowShrink, bool AlwaysResize>
