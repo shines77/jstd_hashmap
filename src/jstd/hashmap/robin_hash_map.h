@@ -5421,18 +5421,18 @@ private:
 
     template <typename KeyT>
     std::pair<slot_type *, FindResult>
-    find_or_insert(const KeyT & key) {
+    find_and_insert(const KeyT & key) {
         if (!kIsIndirectKV) {
-            return this->direct_find_or_insert(key);
+            return this->direct_find_and_insert(key);
         } else {
-            return this->indirect_find_or_insert(key);
+            return this->indirect_find_and_insert(key);
         }
     }
 
     template <typename KeyT>
     JSTD_FORCED_INLINE
     std::pair<slot_type *, FindResult>
-    direct_find_or_insert(const KeyT & key) {
+    direct_find_and_insert(const KeyT & key) {
         hash_code_t hash_code = this->get_hash(key);
         size_type slot_index = this->index_for_hash(hash_code);
         std::uint8_t ctrl_hash = this->get_ctrl_hash(hash_code);
@@ -5582,7 +5582,7 @@ InsertOrGrow_Start:
     template <typename KeyT>
     JSTD_FORCED_INLINE
     std::pair<slot_type *, FindResult>
-    indirect_find_or_insert(const KeyT & key) {
+    indirect_find_and_insert(const KeyT & key) {
         hash_code_t hash_code = this->get_hash(key);
         size_type ctrl_index = this->index_for_hash(hash_code);
         std::uint8_t ctrl_hash = this->get_ctrl_hash(hash_code);
@@ -5833,7 +5833,7 @@ InsertOrGrow_Start:
 
     template <bool AlwaysUpdate>
     std::pair<iterator, bool> emplace_impl(const actual_value_type & value) {
-        auto find_info = this->find_or_insert(value.first);
+        auto find_info = this->find_and_insert(value.first);
         slot_type * slot = find_info.first;
         FindResult is_exists = find_info.second;
         if (is_exists == kIsNotExists) {
@@ -5858,7 +5858,7 @@ InsertOrGrow_Start:
 
     template <bool AlwaysUpdate>
     std::pair<iterator, bool> emplace_impl(actual_value_type && value) {
-        auto find_info = this->find_or_insert(value.first);
+        auto find_info = this->find_and_insert(value.first);
         slot_type * slot = find_info.first;
         FindResult is_exists = find_info.second;
         if (is_exists == kIsNotExists) {
@@ -5897,7 +5897,7 @@ InsertOrGrow_Start:
               (jstd::is_same_ex<MappedT, mapped_type>::value ||
                std::is_constructible<mapped_type, MappedT &&>::value)>::type * = nullptr>
     std::pair<iterator, bool> emplace_impl(KeyT && key, MappedT && value) {
-        auto find_info = this->find_or_insert(key);
+        auto find_info = this->find_and_insert(key);
         slot_type * slot = find_info.first;
         FindResult is_exists = find_info.second;
         if (is_exists == kIsNotExists) {
@@ -5941,7 +5941,7 @@ InsertOrGrow_Start:
                std::is_constructible<key_type, KeyT &&>::value)>::type * = nullptr,
               typename ... Args>
     std::pair<iterator, bool> emplace_impl(KeyT && key, Args && ... args) {
-        auto find_info = this->find_or_insert(key);
+        auto find_info = this->find_and_insert(key);
         slot_type * slot = find_info.first;
         FindResult is_exists = find_info.second;
         if (is_exists == kIsNotExists) {
@@ -5984,7 +5984,7 @@ InsertOrGrow_Start:
                                            std::tuple<Ts1...> && first,
                                            std::tuple<Ts2...> && second) {
         tuple_wrapper2<key_type> key_wrapper(first);
-        auto find_info = this->find_or_insert(key_wrapper.value());
+        auto find_info = this->find_and_insert(key_wrapper.value());
         slot_type * slot = find_info.first;
         FindResult is_exists = find_info.second;
         if (is_exists == kIsNotExists) {
@@ -6031,7 +6031,7 @@ InsertOrGrow_Start:
                                     std::forward<First>(first),
                                     std::forward<Args>(args)...);
 
-        auto find_info = this->find_or_insert(tmp_slot->value.first);
+        auto find_info = this->find_and_insert(tmp_slot->value.first);
         slot_type * slot = find_info.first;
         FindResult is_exists = find_info.second;
         if (is_exists == kIsNotExists) {
@@ -6063,7 +6063,7 @@ InsertOrGrow_Start:
 
     template <typename KeyT = key_type, typename ... Args>
     std::pair<iterator, bool> try_emplace_impl(const KeyT & key, Args && ... args) {
-        auto find_info = this->find_or_insert(key);
+        auto find_info = this->find_and_insert(key);
         slot_type * slot = find_info.first;
         FindResult is_exists = find_info.second;
         if (is_exists == kIsNotExists) {
@@ -6084,7 +6084,7 @@ InsertOrGrow_Start:
 
     template <typename KeyT = key_type, typename ... Args>
     std::pair<iterator, bool> try_emplace_impl(KeyT && key, Args && ... args) {
-        auto find_info = this->find_or_insert(key);
+        auto find_info = this->find_and_insert(key);
         slot_type * slot = find_info.first;
         FindResult is_exists = find_info.second;
         if (is_exists == kIsNotExists) {
@@ -6108,7 +6108,7 @@ InsertOrGrow_Start:
 
     template <typename KeyT>
     JSTD_FORCED_INLINE
-    slot_type * find_or_insert_no_grow(const KeyT & key) {
+    slot_type * find_and_insert_no_grow(const KeyT & key) {
         hash_code_t hash_code = this->get_hash(key);
         size_type slot_index = this->index_for_hash(hash_code);
 
@@ -6137,7 +6137,7 @@ InsertOrGrow_Start:
 
     template <typename KeyT>
     JSTD_FORCED_INLINE
-    slot_type * find_or_insert_no_grow(const KeyT & key, std::uint8_t ctrl_hash) {
+    slot_type * find_and_insert_no_grow(const KeyT & key, std::uint8_t ctrl_hash) {
         hash_code_t hash_code = this->get_hash(key);
         size_type slot_index = this->index_for_hash(hash_code);
 
@@ -6166,7 +6166,7 @@ InsertOrGrow_Start:
 
     template <typename KeyT>
     JSTD_FORCED_INLINE
-    slot_type * indirect_find_or_insert_no_grow(const KeyT & key) {
+    slot_type * indirect_find_and_insert_no_grow(const KeyT & key) {
         hash_code_t hash_code = this->get_hash(key);
         size_type ctrl_index = this->index_for_hash(hash_code);
         std::uint8_t ctrl_hash = this->get_ctrl_hash(hash_code);
@@ -6198,7 +6198,7 @@ InsertOrGrow_Start:
 
     template <typename KeyT>
     JSTD_FORCED_INLINE
-    slot_type * indirect_find_or_insert_no_grow(const KeyT & key, std::uint8_t ctrl_hash) {
+    slot_type * indirect_find_and_insert_no_grow(const KeyT & key, std::uint8_t ctrl_hash) {
         hash_code_t hash_code = this->get_hash(key);
         size_type ctrl_index = this->index_for_hash(hash_code);
         std::uint8_t _ctrl_hash = this->get_ctrl_hash(hash_code);
@@ -6231,7 +6231,7 @@ InsertOrGrow_Start:
 
     // Use in rehash_impl()
     void insert_no_grow(slot_type * old_slot) {
-        slot_type * new_slot = this->find_or_insert_no_grow(old_slot->value.first);
+        slot_type * new_slot = this->find_and_insert_no_grow(old_slot->value.first);
 
         SlotPolicyTraits::construct(&this->allocator_, new_slot, old_slot);
         this->slot_size_++;
@@ -6240,7 +6240,7 @@ InsertOrGrow_Start:
 
     // Use in rehash_impl()
     void insert_no_grow(slot_type * old_slot, std::uint8_t ctrl_hash) {
-        slot_type * new_slot = this->find_or_insert_no_grow(old_slot->value.first, ctrl_hash);
+        slot_type * new_slot = this->find_and_insert_no_grow(old_slot->value.first, ctrl_hash);
 
         SlotPolicyTraits::construct(&this->allocator_, new_slot, old_slot);
         this->slot_size_++;
@@ -6249,7 +6249,7 @@ InsertOrGrow_Start:
 
     // Use in rehash_impl()
     void indirect_insert_no_grow(slot_type * old_slot) {
-        slot_type * new_slot = this->indirect_find_or_insert_no_grow(old_slot->value.first);
+        slot_type * new_slot = this->indirect_find_and_insert_no_grow(old_slot->value.first);
 
         SlotPolicyTraits::construct(&this->allocator_, new_slot, old_slot);
         this->slot_size_++;
@@ -6258,7 +6258,7 @@ InsertOrGrow_Start:
 
     // Use in rehash_impl()
     void indirect_insert_no_grow(slot_type * old_slot, std::uint8_t ctrl_hash) {
-        slot_type * new_slot = this->indirect_find_or_insert_no_grow(old_slot->value.first, ctrl_hash);
+        slot_type * new_slot = this->indirect_find_and_insert_no_grow(old_slot->value.first, ctrl_hash);
 
         SlotPolicyTraits::construct(&this->allocator_, new_slot, old_slot);
         this->slot_size_++;
@@ -6269,15 +6269,15 @@ InsertOrGrow_Start:
 
     template <typename KeyT>
     std::pair<slot_type *, bool>
-    unique_find_or_insert(const KeyT & key) {
+    unique_find_and_insert(const KeyT & key) {
         hash_code_t hash_code = this->get_hash(key);
-        return this->unique_find_or_insert(key, hash_code);
+        return this->unique_find_and_insert(key, hash_code);
     }
 
     template <typename KeyT>
     JSTD_NO_INLINE
     std::pair<slot_type *, bool>
-    unique_find_or_insert(const KeyT & key, hash_code_t hash_code) {
+    unique_find_and_insert(const KeyT & key, hash_code_t hash_code) {
         size_type slot_index = this->index_for_hash(hash_code);
         std::uint8_t ctrl_hash = this->get_ctrl_hash(hash_code);
 
@@ -6339,7 +6339,7 @@ Insert_To_Slot:
     }
 
     void unique_insert(const value_type & value) {
-        auto find_info = this->unique_find_or_insert(value.first);
+        auto find_info = this->unique_find_and_insert(value.first);
         slot_type * new_slot = find_info.first;
         bool need_grow = find_info.second;
 
@@ -6355,7 +6355,7 @@ Insert_To_Slot:
     }
 
     void unique_insert(value_type && value) {
-        auto find_info = this->unique_find_or_insert(value.first);
+        auto find_info = this->unique_find_and_insert(value.first);
         slot_type * new_slot = find_info.first;
         bool need_grow = find_info.second;
 
