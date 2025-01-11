@@ -2245,23 +2245,23 @@ void flat16_hash_map_string_string_test()
 }
 
 template <typename Key, typename Value>
-bool is_compatible_layout_pair()
+bool is_layout_compatible_pair()
 {
-    static constexpr bool is_compatible_layout =
-        jstd::is_compatible_pair_layout<std::pair<const Key, Value>, std::pair<Key, Value>>::value;
-    return is_compatible_layout;
+    static constexpr bool is_layout_compatible =
+        jstd::is_layout_compatible_pair<std::pair<const Key, Value>, std::pair<Key, Value>>::value;
+    return is_layout_compatible;
 }
 
-void is_compatible_layout_test()
+void is_layout_compatible_test()
 {
-    printf("jstd::is_compatible_layout<int, int> = %u\n",
-            (uint32_t)is_compatible_layout_pair<int, int>());
-    printf("jstd::is_compatible_layout<size_t, size_t> = %u\n",
-            (uint32_t)is_compatible_layout_pair<size_t, size_t>());
-    printf("jstd::is_compatible_layout<std::string, std::string> = %u\n",
-            (uint32_t)is_compatible_layout_pair<std::string, std::string>());
-    printf("jstd::is_compatible_layout<jstd::string_view, jstd::string_view> = %u\n",
-            (uint32_t)is_compatible_layout_pair<jstd::string_view, jstd::string_view>());
+    printf("jstd::is_layout_compatible<int, int> = %u\n",
+            (uint32_t)is_layout_compatible_pair<int, int>());
+    printf("jstd::is_layout_compatible<size_t, size_t> = %u\n",
+            (uint32_t)is_layout_compatible_pair<size_t, size_t>());
+    printf("jstd::is_layout_compatible<std::string, std::string> = %u\n",
+            (uint32_t)is_layout_compatible_pair<std::string, std::string>());
+    printf("jstd::is_layout_compatible<jstd::string_view, jstd::string_view> = %u\n",
+            (uint32_t)is_layout_compatible_pair<jstd::string_view, jstd::string_view>());
     printf("\n");
 }
 
@@ -2274,7 +2274,7 @@ int main(int argc, char * argv[])
     if (1) { flat16_hash_map_int_int_test(); }
     if (1) { flat16_hash_map_int64_string_test(); }
     if (1) { flat16_hash_map_string_string_test(); }
-    if (1) { is_compatible_layout_test(); }
+    if (1) { is_layout_compatible_test(); }
 
     printf("sizeof(jstd::flat_hash_map<K, V>) = %u\n\n", (uint32_t)sizeof(jstd::flat16_hash_map<int, int>));
 

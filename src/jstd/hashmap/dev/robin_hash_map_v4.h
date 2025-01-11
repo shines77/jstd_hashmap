@@ -211,7 +211,7 @@ public:
         //
         static constexpr bool kIsCompatibleLayout =
                 std::is_same<value_type, mutable_value_type>::value ||
-                jstd::is_compatible_pair_layout<value_type, mutable_value_type>::value;
+                jstd::is_layout_compatible_pair<value_type, mutable_value_type>::value;
 
         using actual_value_type = typename std::conditional<kIsCompatibleLayout,
                                            mutable_value_type, value_type>::type;

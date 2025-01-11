@@ -113,7 +113,7 @@ public:
 
     static constexpr bool kIsCompatibleLayout =
             std::is_same<value_type, mutable_value_type>::value ||
-            is_compatible_pair_layout<value_type, mutable_value_type>::value;
+            is_layout_compatible_pair<value_type, mutable_value_type>::value;
 
     typedef typename std::conditional<kIsCompatibleLayout, mutable_value_type, value_type>::type
                                                     actual_value_type;

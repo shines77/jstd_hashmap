@@ -527,7 +527,7 @@ struct PairOffsetOf<Pair, typename std::is_standard_layout<Pair>::type> {
 };
 
 template <typename Key, typename Value>
-struct is_compatible_kv_layout {
+struct is_layout_compatible_kv {
 private:
     struct Pair {
         Key     first;
@@ -537,7 +537,7 @@ private:
 public:
     // Is class P layout-compatible with class Pair ?
     template <typename P>
-    static constexpr bool isCompatiblePairLayout() {
+    static constexpr bool isLayoutCompatiblePair() {
         return (std::is_standard_layout<P>() &&
                (sizeof(P) == sizeof(Pair)) &&
                (alignof(P) == alignof(Pair)) &&
@@ -550,8 +550,8 @@ public:
     static constexpr bool value = std::is_standard_layout<Key>() &&
                                   std::is_standard_layout<Pair>() &&
                                   (PairOffsetOf<Pair>::kFirst == 0) &&
-                                  isCompatiblePairLayout<std::pair<Key, Value>>() &&
-                                  isCompatiblePairLayout<std::pair<const Key, Value>>();
+                                  isLayoutCompatiblePair<std::pair<Key, Value>>() &&
+                                  isLayoutCompatiblePair<std::pair<const Key, Value>>();
 };
 
 //
@@ -559,7 +559,7 @@ public:
 // MutablePair = std::pair<Key, Value>
 //
 template <typename ConstPair, typename MutablePair>
-struct is_compatible_pair_layout {
+struct is_layout_compatible_pair {
 public:
     typedef typename ConstPair::first_type      First;
     typedef typename ConstPair::second_type     Second;
@@ -574,7 +574,7 @@ private:
 
     // Is class P layout-compatible with class Pair ?
     template <typename P>
-    static constexpr bool isCompatiblePairLayout() {
+    static constexpr bool isLayoutCompatiblePair() {
         return (std::is_standard_layout<P>() &&
                (sizeof(P) == sizeof(Pair)) &&
                (alignof(P) == alignof(Pair)) &&
@@ -588,8 +588,8 @@ public:
     static constexpr bool value = std::is_standard_layout<MutableFirst>() &&
                                   std::is_standard_layout<Pair>() &&
                                   (PairOffsetOf<Pair>::kFirst == 0) &&
-                                  isCompatiblePairLayout<ConstPair>() &&
-                                  isCompatiblePairLayout<MutablePair>();
+                                  isLayoutCompatiblePair<ConstPair>() &&
+                                  isLayoutCompatiblePair<MutablePair>();
 };
 
 //////////////////////////////////////////////////////////////////////////////////

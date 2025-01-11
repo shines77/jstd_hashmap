@@ -1521,7 +1521,7 @@ template <typename Key, typename Value>
 bool is_compatible_layout_pair()
 {
     static constexpr bool isCompatibleLayout =
-        jstd::is_compatible_pair_layout<std::pair<const Key, Value>, std::pair<Key, Value>>::value;
+        jstd::is_layout_compatible_pair<std::pair<const Key, Value>, std::pair<Key, Value>>::value;
     return isCompatibleLayout;
 }
 
@@ -1533,11 +1533,11 @@ void is_compatible_layout_ex_test(const std::string & key, const std::string & v
     static constexpr bool isStandardLayoutConstPair = std::is_standard_layout<std::pair<const Key, Value>>::value;
 
     static constexpr bool isCompatiblePairLayout =
-        jstd::is_compatible_kv_layout<Key, Value>::template isCompatiblePairLayout<std::pair<Key, Value>>();
+        jstd::is_layout_compatible_kv<Key, Value>::template isLayoutCompatiblePair<std::pair<Key, Value>>();
     static constexpr bool isCompatibleConstPairLayout =
-        jstd::is_compatible_kv_layout<Key, Value>::template isCompatiblePairLayout<std::pair<const Key, Value>>();
+        jstd::is_layout_compatible_kv<Key, Value>::template isLayoutCompatiblePair<std::pair<const Key, Value>>();
 
-    static constexpr bool isCompatibleKVLayoutKey = jstd::is_compatible_kv_layout<Key, Value>::value;
+    static constexpr bool isCompatibleKVLayoutKey = jstd::is_layout_compatible_kv<Key, Value>::value;
 
     printf("\n");
     printf("jstd::is_standard_layout<%s>::value = %s\n",
