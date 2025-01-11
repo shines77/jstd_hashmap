@@ -3698,7 +3698,7 @@ public:
     }
 
     iterator erase(iterator pos) {
-        if (likely(first->owner() == std::addressof(*this))) {
+        if (likely(pos->owner() == std::addressof(*this))) {
             size_type ctrl_index = this->index_of(pos);
             this->erase_slot(ctrl_index);
             ctrl_type * ctrl = this->ctrl_at(ctrl_index);
