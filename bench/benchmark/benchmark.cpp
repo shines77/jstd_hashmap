@@ -1941,6 +1941,15 @@ void RandomGenerator_test()
     printf("\n");
 }
 
+void test_hashmap()
+{
+    jstd::robin_hash_map<std::string, std::string> hashmap;
+
+    hashmap.insert(std::make_pair("abc", "123"));
+
+    printf("hashmap.size() = %d\n", (int)hashmap.size());
+}
+
 int main(int argc, char * argv[])
 {
     jstd::MtRandomGen mtRandomGen(20200831);
@@ -1953,6 +1962,8 @@ int main(int argc, char * argv[])
     }
 
     jtest::CPU::warm_up(1000);
+
+    if (1) { test_hashmap(); }
 
 #if USE_JSTD_FLAT16_HASH_MAP
     if (1)

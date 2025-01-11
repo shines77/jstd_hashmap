@@ -248,7 +248,7 @@ public:
     // Tip of the Week #144: Heterogeneous Lookup in Associative Containers
     // See: https://abseil.io/tips/144 (Transparent Functors)
     //
-    static constexpr bool kIsTransparent = (is_transparent<Hash>::value && is_transparent<KeyEqual>::value);
+    static constexpr bool kIsTransparent = (jstd::is_transparent<Hash>::value && jstd::is_transparent<KeyEqual>::value);
 
     template <typename K>
     using key_arg = typename key_arg_selector<K, key_type, kIsTransparent>::type;
@@ -3548,36 +3548,32 @@ public:
             return { iter, iter };
     }
 
-    std::pair<iterator, bool> insert(const actual_value_type & value) {
+    std::pair<iterator, bool> insert(const value_type & value) {
         return this->emplace_impl<false>(value);
     }
 
-    std::pair<iterator, bool> insert(actual_value_type && value) {
+    std::pair<iterator, bool> insert(value_type && value) {
         return this->emplace_impl<false>(std::move(value));
     }
 
     template <typename P, typename std::enable_if<
               (!jstd::is_same_ex<P, value_type>::value) &&
-              (!jstd::is_same_ex<P, init_type>::value) &&
-              (std::is_constructible<value_type, P &&>::value ||
-               std::is_constructible<init_type, P &&>::value)>::type * = nullptr>
+              std::is_constructible<value_type, P &&>::value>::type * = nullptr>
     std::pair<iterator, bool> insert(P && value) {
         return this->emplace_impl<false>(std::forward<P>(value));
     }
 
-    iterator insert(const_iterator hint, const actual_value_type & value) {
+    iterator insert(const_iterator hint, const value_type & value) {
         return this->emplace_impl<false>(value).first;
     }
 
-    iterator insert(const_iterator hint, actual_value_type && value) {
+    iterator insert(const_iterator hint, value_type && value) {
         return this->emplace_impl<false>(std::move(value)).first;
     }
 
     template <typename P, typename std::enable_if<
               (!jstd::is_same_ex<P, value_type>::value) &&
-              (!jstd::is_same_ex<P, init_type>::value) &&
-              (std::is_constructible<value_type, P &&>::value ||
-               std::is_constructible<init_type, P &&>::value)>::type * = nullptr>
+              std::is_constructible<value_type, P &&>::value>::type * = nullptr>
     std::pair<iterator, bool> insert(const_iterator hint, P && value) {
         return this->emplace_impl<false>(std::forward<P>(value));
     }
@@ -3589,8 +3585,8 @@ public:
         }
     }
 
-    void insert(std::initializer_list<actual_value_type> ilist) {
-        this->insert(ilist.begin(), ilist.end());
+    void insert(std::initializer_list<value_type> ilist) {
+        this->insert(ilist.cbegin(), ilist.cend());
     }
 
     template <typename KeyType, typename MappedType>
@@ -3621,19 +3617,9 @@ public:
         return this->emplace_impl<true>(std::move(value));
     }
 
-    std::pair<iterator, bool> insert_always(const init_type & value) {
-        return this->emplace_impl<true>(value);
-    }
-
-    std::pair<iterator, bool> insert_always(init_type && value) {
-        return this->emplace_impl<true>(std::move(value));
-    }
-
     template <typename P, typename std::enable_if<
               (!jstd::is_same_ex<P, value_type>::value) &&
-              (!jstd::is_same_ex<P, init_type>::value) &&
-              (std::is_constructible<value_type, P &&>::value ||
-               std::is_constructible<init_type, P &&>::value)>::type * = nullptr>
+              std::is_constructible<value_type, P &&>::value>::type * = nullptr>
     std::pair<iterator, bool> insert_always(P && value) {
         return this->emplace_impl<true>(std::forward<P>(value));
     }
@@ -3649,13 +3635,15 @@ public:
     }
 
     template <typename KeyT = key_type, typename ... Args,
-              typename std::enable_if<!std::is_convertible<KeyT, const_iterator>::value, int>::type = 0>
+              typename std::enable_if<!std::is_convertible<KeyT, const_iterator>::value &&
+                                      !std::is_convertible<KeyT, iterator>::value, int>::type = 0>
     std::pair<iterator, bool> try_emplace(const key_arg<KeyT> & key, Args && ... args) {
         return this->try_emplace_impl(key, std::forward<Args>(args)...);
     }
 
     template <typename KeyT = key_type, typename ... Args,
-              typename std::enable_if<!std::is_convertible<KeyT, const_iterator>::value, int>::type = 0,
+              typename std::enable_if<!std::is_convertible<KeyT, const_iterator>::value &&
+                                      !std::is_convertible<KeyT, iterator>::value, int>::type = 0,
               KeyT * = nullptr>
     std::pair<iterator, bool> try_emplace(key_arg<KeyT> && key, Args && ... args) {
         return this->try_emplace_impl(std::forward<KeyT>(key), std::forward<Args>(args)...);
@@ -3709,36 +3697,55 @@ public:
         return num_deleted;
     }
 
-    template <typename InputIter>
+    iterator erase(iterator pos) {
+        if (likely(first->owner() == std::addressof(*this))) {
+            size_type ctrl_index = this->index_of(pos);
+            this->erase_slot(ctrl_index);
+            ctrl_type * ctrl = this->ctrl_at(ctrl_index);
+            return this->next_valid_iterator(ctrl, pos);
+        } else {
+            size_type to_erase_idx = this->find_ctrl_index(pos);
+            if (likely(to_erase_idx != this->max_slot_capacity())) {
+                if (!kIsIndirectKV)
+                    this->erase_slot(to_erase_idx);
+                else
+                    this->indirect_erase_slot(to_erase_idx);
+                ctrl_type * ctrl = this->ctrl_at(to_erase_idx);
+                return this->next_valid_iterator(ctrl, iterator(this, to_erase_idx));
+            } else {
+                return { this, this->max_slot_capacity() };
+            }
+        }
+    }
+
+    iterator erase(const_iterator pos) {
+        return this->erase(iterator(pos));
+    }
+
+    iterator erase(const_iterator first, const_iterator last) {
+        // TODO: There is a bug, which needs to be traversed from the last to the first.
+        if (likely(first->owner() == std::addressof(*this))) {
+            for (; first != last; ++first) {
+                size_type ctrl_index = this->index_of(first);
+                this->erase_slot(ctrl_index);
+            }
+        } else {
+            for (; first != last; ++first) {
+                this->erase_slot(*first);
+            }
+        }
+        return { first };
+    }
+
+    template <typename InputIter, typename std::enable_if<
+              !jstd::is_same_ex<InputIter, iterator      >::value &&
+              !jstd::is_same_ex<InputIter, const_iterator>::value>::type * = nullptr>
     size_type erase(InputIter first, InputIter last) {
         size_type num_deleted = 0;
         for (; first != last; ++first) {
             num_deleted += static_cast<size_type>(this->erase(*first));
         }
         return num_deleted;
-    }
-
-    iterator erase(iterator pos) {
-        size_type ctrl_index = this->index_of(pos);
-        this->erase_slot(ctrl_index);
-        ctrl_type * ctrl = this->ctrl_at(ctrl_index);
-        return this->next_valid_iterator(ctrl, pos);
-    }
-
-    const_iterator erase(const_iterator pos) {
-        size_type ctrl_index = this->index_of(pos);
-        this->erase_slot(ctrl_index);
-        ctrl_type * ctrl = this->ctrl_at(ctrl_index);
-        return this->next_valid_iterator(ctrl, pos);
-    }
-
-    iterator erase(const_iterator first, const_iterator last) {
-        // TODO: There is a bug, which needs to be traversed from the last to the first.
-        for (; first != last; ++first) {
-            size_type ctrl_index = this->index_of(first);
-            this->erase_slot(ctrl_index);
-        }
-        return { first };
     }
 
     void swap(robin_hash_map & other) {
