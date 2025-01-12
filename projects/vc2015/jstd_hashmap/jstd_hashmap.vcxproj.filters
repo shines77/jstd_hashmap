@@ -44,8 +44,8 @@
     <Filter Include="src\lang">
       <UniqueIdentifier>{835340cb-6b9d-4313-8fff-d2c95c7138a1}</UniqueIdentifier>
     </Filter>
-    <Filter Include="src\hashmap\dev">
-      <UniqueIdentifier>{c506441c-e4b2-4111-9bba-86aa618cd511}</UniqueIdentifier>
+    <Filter Include="src\hashmap\detail">
+      <UniqueIdentifier>{1f5f05df-396e-49bf-9775-25c2c74f6387}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -262,24 +262,6 @@
     <ClInclude Include="..\..\..\src\jstd\support\CPUPrefetch.h">
       <Filter>src\support</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\src\jstd\hashmap\dev\flat16_hash_map_v1.h">
-      <Filter>src\hashmap\dev</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\src\jstd\hashmap\dev\flat16_hash_map_v2.h">
-      <Filter>src\hashmap\dev</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\src\jstd\hashmap\dev\robin_hash_map_v1.h">
-      <Filter>src\hashmap\dev</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\src\jstd\hashmap\dev\robin_hash_map_v2.h">
-      <Filter>src\hashmap\dev</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\src\jstd\hashmap\dev\robin_hash_map_v3.h">
-      <Filter>src\hashmap\dev</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\src\jstd\hashmap\dev\robin_hash_map_v4.h">
-      <Filter>src\hashmap\dev</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\..\src\jstd\config\config_hw.h">
       <Filter>src\config</Filter>
     </ClInclude>
@@ -306,6 +288,36 @@
     </ClInclude>
     <ClInclude Include="..\..\..\src\jstd\version.h">
       <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\memory\memory_barrier.h">
+      <Filter>src\memory</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\hashmap\flat_map_cluster.hpp">
+      <Filter>src\hashmap</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\hashmap\flat_map_iterator.hpp">
+      <Filter>src\hashmap</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\hashmap\flat_map_slot_policy.hpp">
+      <Filter>src\hashmap</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\hashmap\flat_map_slot_storage.hpp">
+      <Filter>src\hashmap</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\hashmap\flat_map_type_policy.hpp">
+      <Filter>src\hashmap</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\hashmap\cluster_flat_map.hpp">
+      <Filter>src\hashmap</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\hashmap\cluster_flat_table.hpp">
+      <Filter>src\hashmap</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\hashmap\detail\hashmap_traits.h">
+      <Filter>src\hashmap\detail</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\hashmap\map_types_constructibility.hpp">
+      <Filter>src\hashmap</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

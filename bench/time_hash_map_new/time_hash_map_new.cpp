@@ -3,7 +3,7 @@
 
   CC BY-SA 4.0 License
 
-  Copyright (c) 2020-2022 XiongHui Guo (gz_shines at msn.com)
+  Copyright (c) 2020-2025 XiongHui Guo (gz_shines at msn.com)
 
   https://github.com/shines77/jstd_hashmap
   https://gitee.com/shines77/jstd_hashmap
@@ -89,19 +89,11 @@
 #define USE_JSTD_FLAT16_HASH_MAP        0
 #define USE_JSTD_ROBIN16_HASH_MAP       1
 #define USE_JSTD_ROBIN_HASH_MAP         1
-#define USE_JSTD_ROBIN_HASH_MAP_V1      0
-#define USE_JSTD_ROBIN_HASH_MAP_V2      0
-#define USE_JSTD_ROBIN_HASH_MAP_V3      0
-#define USE_JSTD_ROBIN_HASH_MAP_V4      1
 #else
 #define USE_STD_UNORDERED_MAP           0
 #define USE_JSTD_FLAT16_HASH_MAP        0
 #define USE_JSTD_ROBIN16_HASH_MAP       0
 #define USE_JSTD_ROBIN_HASH_MAP         1
-#define USE_JSTD_ROBIN_HASH_MAP_V1      0
-#define USE_JSTD_ROBIN_HASH_MAP_V2      0
-#define USE_JSTD_ROBIN_HASH_MAP_V3      0
-#define USE_JSTD_ROBIN_HASH_MAP_V4      1
 #endif // _DEBUG
 
 #ifdef __SSE4_2__
@@ -150,18 +142,6 @@
 #endif
 #if USE_JSTD_ROBIN_HASH_MAP
 #include <jstd/hashmap/robin_hash_map.h>
-#endif
-#if USE_JSTD_ROBIN_HASH_MAP_V1
-#include <jstd/hashmap/dev/robin_hash_map_v1.h>
-#endif
-#if USE_JSTD_ROBIN_HASH_MAP_V2
-#include <jstd/hashmap/dev/robin_hash_map_v2.h>
-#endif
-#if USE_JSTD_ROBIN_HASH_MAP_V3
-#include <jstd/hashmap/dev/robin_hash_map_v3.h>
-#endif
-#if USE_JSTD_ROBIN_HASH_MAP_V4
-#include <jstd/hashmap/dev/robin_hash_map_v4.h>
 #endif
 #include <jstd/hashmap/hashmap_analyzer.h>
 #include <jstd/hasher/hashes.h>
@@ -855,38 +835,6 @@ void test_all_hashmaps(std::size_t obj_size, std::size_t iters)
             ("jstd::robin_hash_map<K, V>", obj_size, iters, has_stress_hash_function);
     }
 #endif
-
-#if USE_JSTD_ROBIN_HASH_MAP_V4
-    if (1) {
-        measure_hashmap<jstd::v4::robin_hash_map<Key,   Value, HASH_MAP_FUNCTION<Key>>,
-                        jstd::v4::robin_hash_map<Key *, Value, HASH_MAP_FUNCTION<Key *>>>
-            ("jstd::v4::robin_hash_map<K, V>", obj_size, iters, has_stress_hash_function);
-    }
-#endif
-
-#if USE_JSTD_ROBIN_HASH_MAP_V3
-    if (1) {
-        measure_hashmap<jstd::v3::robin_hash_map<Key,   Value, HASH_MAP_FUNCTION<Key>>,
-                        jstd::v3::robin_hash_map<Key *, Value, HASH_MAP_FUNCTION<Key *>>>
-            ("jstd::v3::robin_hash_map<K, V>", obj_size, iters, has_stress_hash_function);
-    }
-#endif
-
-#if USE_JSTD_ROBIN_HASH_MAP_V2
-    if (1) {
-        measure_hashmap<jstd::v2::robin_hash_map<Key,   Value, HASH_MAP_FUNCTION<Key>>,
-                        jstd::v2::robin_hash_map<Key *, Value, HASH_MAP_FUNCTION<Key *>>>
-            ("jstd::v2::robin_hash_map<K, V>", obj_size, iters, has_stress_hash_function);
-    }
-#endif
-
-#if USE_JSTD_ROBIN_HASH_MAP_V1
-    if (1) {
-        measure_hashmap<jstd::v1::robin_hash_map<Key,   Value, HASH_MAP_FUNCTION<Key>>,
-                        jstd::v1::robin_hash_map<Key *, Value, HASH_MAP_FUNCTION<Key *>>>
-            ("jstd::v1::robin_hash_map<K, V>", obj_size, iters, has_stress_hash_function);
-    }
-#endif
 }
 
 template <typename Key, typename Value>
@@ -930,34 +878,6 @@ void test_all_hashmaps_for_string(std::size_t obj_size, std::size_t iters)
     if (1) {
         measure_string_hashmap<jstd::robin_hash_map<Key, Value>>
             ("jstd::robin_hash_map<K, V>", obj_size, iters);
-    }
-#endif
-
-#if USE_JSTD_ROBIN_HASH_MAP_V4
-    if (1) {
-        measure_string_hashmap<jstd::v4::robin_hash_map<Key, Value>>
-            ("jstd::v4::robin_hash_map<K, V>", obj_size, iters);
-    }
-#endif
-
-#if USE_JSTD_ROBIN_HASH_MAP_V3
-    if (1) {
-        measure_string_hashmap<jstd::v3::robin_hash_map<Key, Value>>
-            ("jstd::v3::robin_hash_map<K, V>", obj_size, iters);
-    }
-#endif
-
-#if USE_JSTD_ROBIN_HASH_MAP_V2
-    if (1) {
-        measure_string_hashmap<jstd::v2::robin_hash_map<Key, Value>>
-            ("jstd::v2::robin_hash_map<K, V>", obj_size, iters);
-    }
-#endif
-
-#if USE_JSTD_ROBIN_HASH_MAP_V1
-    if (1) {
-        measure_string_hashmap<jstd::v1::robin_hash_map<Key, Value>>
-            ("jstd::v1::robin_hash_map<K, V>", obj_size, iters);
     }
 #endif
 }
@@ -1078,10 +998,10 @@ void is_compatible_layout_ex_test(const std::string & key, const std::string & v
     static constexpr bool isStandardLayoutPair = std::is_standard_layout<std::pair<Key, Value>>::value;
     static constexpr bool isStandardLayoutConstPair = std::is_standard_layout<std::pair<const Key, Value>>::value;
 
-    static constexpr bool isLayoutCompatiblePair =
-        jstd::is_layout_compatible_kv<Key, Value>::template isLayoutCompatiblePair<std::pair<Key, Value>>();
+    static constexpr bool isLayoutCompatible =
+        jstd::is_layout_compatible_kv<Key, Value>::template isLayoutCompatible<std::pair<Key, Value>>();
     static constexpr bool isLayoutCompatibleConstPair =
-        jstd::is_layout_compatible_kv<Key, Value>::template isLayoutCompatiblePair<std::pair<const Key, Value>>();
+        jstd::is_layout_compatible_kv<Key, Value>::template isLayoutCompatible<std::pair<const Key, Value>>();
 
     static constexpr bool isLayoutCompatibleKVKey = jstd::is_layout_compatible_kv<Key, Value>::value;
 
@@ -1092,9 +1012,9 @@ void is_compatible_layout_ex_test(const std::string & key, const std::string & v
     printf("jstd::is_standard_layout<std::pair<const %s, %s>>::value = %s\n",
            key.c_str(), value.c_str(), (isStandardLayoutConstPair ? "True" : "False"));
 
-    printf("jstd::is_layout_compatible_kv::isLayoutCompatiblePair<std::pair<%s, %s>>() = %s\n",
-           key.c_str(), value.c_str(), (isLayoutCompatiblePair ? "True" : "False"));
-    printf("jstd::is_layout_compatible_kv::isLayoutCompatiblePair<std::pair<const %s, %s>>() = %s\n",
+    printf("jstd::is_layout_compatible_kv::isLayoutCompatible<std::pair<%s, %s>>() = %s\n",
+           key.c_str(), value.c_str(), (isLayoutCompatible ? "True" : "False"));
+    printf("jstd::is_layout_compatible_kv::isLayoutCompatible<std::pair<const %s, %s>>() = %s\n",
            key.c_str(), value.c_str(), (isLayoutCompatibleConstPair ? "True" : "False"));
 
     printf("jstd::is_layout_compatible_kv<%s, %s>::value = %s\n",

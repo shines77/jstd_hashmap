@@ -3,7 +3,7 @@
 
   CC BY-SA 4.0 License
 
-  Copyright (c) 2020-2022 XiongHui Guo (gz_shines at msn.com)
+  Copyright (c) 2020-2025 XiongHui Guo (gz_shines at msn.com)
 
   https://github.com/shines77/jstd_hashmap
   https://gitee.com/shines77/jstd_hashmap
@@ -89,19 +89,11 @@
 #define USE_JSTD_FLAT16_HASH_MAP        0
 #define USE_JSTD_ROBIN16_HASH_MAP       1
 #define USE_JSTD_ROBIN_HASH_MAP         1
-#define USE_JSTD_ROBIN_HASH_MAP_V1      0
-#define USE_JSTD_ROBIN_HASH_MAP_V2      0
-#define USE_JSTD_ROBIN_HASH_MAP_V3      0
-#define USE_JSTD_ROBIN_HASH_MAP_V4      1
 #else
 #define USE_STD_UNORDERED_MAP           0
 #define USE_JSTD_FLAT16_HASH_MAP        0
 #define USE_JSTD_ROBIN16_HASH_MAP       0
 #define USE_JSTD_ROBIN_HASH_MAP         1
-#define USE_JSTD_ROBIN_HASH_MAP_V1      0
-#define USE_JSTD_ROBIN_HASH_MAP_V2      0
-#define USE_JSTD_ROBIN_HASH_MAP_V3      0
-#define USE_JSTD_ROBIN_HASH_MAP_V4      1
 #endif // _DEBUG
 
 #ifdef __SSE4_2__
@@ -149,18 +141,6 @@
 #endif
 #if USE_JSTD_ROBIN_HASH_MAP
 #include <jstd/hashmap/robin_hash_map.h>
-#endif
-#if USE_JSTD_ROBIN_HASH_MAP_V1
-#include <jstd/hashmap/dev/robin_hash_map_v1.h>
-#endif
-#if USE_JSTD_ROBIN_HASH_MAP_V2
-#include <jstd/hashmap/dev/robin_hash_map_v2.h>
-#endif
-#if USE_JSTD_ROBIN_HASH_MAP_V3
-#include <jstd/hashmap/dev/robin_hash_map_v3.h>
-#endif
-#if USE_JSTD_ROBIN_HASH_MAP_V4
-#include <jstd/hashmap/dev/robin_hash_map_v4.h>
 #endif
 #include <jstd/hashmap/hashmap_analyzer.h>
 #include <jstd/hasher/hashes.h>
@@ -1328,54 +1308,6 @@ static void test_all_hashmaps(std::size_t obj_size, std::size_t iters) {
             "jstd::robin_hash_map<K, V>", obj_size, iters, has_stress_hash_function);
     }
 #endif
-
-#if USE_JSTD_ROBIN_HASH_MAP_V4
-    if (1) {
-        measure_hashmap<jstd::v4::robin_hash_map<HashObj, Value,
-                        HashFn<typename HashObj::key_type, false, HashObj::cSize, HashObj::cHashSize>,
-                        HashEqualTo<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>,
-                        jstd::v4::robin_hash_map<HashObj *, Value,
-                        HashFn<typename HashObj::key_type, false, HashObj::cSize, HashObj::cHashSize>>
-                        >(
-            "jstd::v4::robin_hash_map<K, V>", obj_size, iters, has_stress_hash_function);
-    }
-#endif
-
-#if USE_JSTD_ROBIN_HASH_MAP_V3
-    if (1) {
-        measure_hashmap<jstd::v3::robin_hash_map<HashObj, Value,
-                        HashFn<typename HashObj::key_type, false, HashObj::cSize, HashObj::cHashSize>,
-                        HashEqualTo<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>,
-                        jstd::v3::robin_hash_map<HashObj *, Value,
-                        HashFn<typename HashObj::key_type, false, HashObj::cSize, HashObj::cHashSize>>
-                        >(
-            "jstd::v3::robin_hash_map<K, V>", obj_size, iters, has_stress_hash_function);
-    }
-#endif
-
-#if USE_JSTD_ROBIN_HASH_MAP_V2
-    if (1) {
-        measure_hashmap<jstd::v2::robin_hash_map<HashObj, Value,
-                        HashFn<typename HashObj::key_type, false, HashObj::cSize, HashObj::cHashSize>,
-                        HashEqualTo<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>,
-                        jstd::v2::robin_hash_map<HashObj *, Value,
-                        HashFn<typename HashObj::key_type, false, HashObj::cSize, HashObj::cHashSize>>
-                        >(
-            "jstd::v2::robin_hash_map<K, V>", obj_size, iters, has_stress_hash_function);
-    }
-#endif
-
-#if USE_JSTD_ROBIN_HASH_MAP_V1
-    if (1) {
-        measure_hashmap<jstd::v1::robin_hash_map<HashObj, Value,
-                        HashFn<typename HashObj::key_type, false, HashObj::cSize, HashObj::cHashSize>,
-                        HashEqualTo<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>,
-                        jstd::v1::robin_hash_map<HashObj *, Value,
-                        HashFn<typename HashObj::key_type, false, HashObj::cSize, HashObj::cHashSize>>
-                        >(
-            "jstd::v1::robin_hash_map<K, V>", obj_size, iters, has_stress_hash_function);
-    }
-#endif
 }
 
 void benchmark_all_hashmaps(std::size_t iters)
@@ -1533,9 +1465,9 @@ void is_compatible_layout_ex_test(const std::string & key, const std::string & v
     static constexpr bool isStandardLayoutConstPair = std::is_standard_layout<std::pair<const Key, Value>>::value;
 
     static constexpr bool isCompatiblePairLayout =
-        jstd::is_layout_compatible_kv<Key, Value>::template isLayoutCompatiblePair<std::pair<Key, Value>>();
+        jstd::is_layout_compatible_kv<Key, Value>::template isLayoutCompatible<std::pair<Key, Value>>();
     static constexpr bool isCompatibleConstPairLayout =
-        jstd::is_layout_compatible_kv<Key, Value>::template isLayoutCompatiblePair<std::pair<const Key, Value>>();
+        jstd::is_layout_compatible_kv<Key, Value>::template isLayoutCompatible<std::pair<const Key, Value>>();
 
     static constexpr bool isCompatibleKVLayoutKey = jstd::is_layout_compatible_kv<Key, Value>::value;
 

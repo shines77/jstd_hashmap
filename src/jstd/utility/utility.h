@@ -6,6 +6,8 @@
 #pragma once
 #endif
 
+#include <cstdio>
+#include <iostream>
 #include <cstdint>
 #include <cstddef>
 #include <cstdbool>

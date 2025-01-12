@@ -3,7 +3,7 @@
 
   CC BY-SA 4.0 License
 
-  Copyright (c) 2022 XiongHui Guo (gz_shines at msn.com)
+  Copyright (c) 2022-2025 XiongHui Guo (gz_shines at msn.com)
 
   https://github.com/shines77/jstd_hashmap
   https://gitee.com/shines77/jstd_hashmap
@@ -211,11 +211,11 @@ public:
         // we can accept one or the other via slot_type. We are also free to
         // access the key via slot_type::key in this case.
         //
-        static constexpr bool kIsCompatibleLayout =
+        static constexpr bool kIsMutableKey =
                 std::is_same<value_type, mutable_value_type>::value ||
                 jstd::is_layout_compatible_pair<value_type, mutable_value_type>::value;
 
-        using actual_value_type = typename std::conditional<kIsCompatibleLayout,
+        using actual_value_type = typename std::conditional<kIsMutableKey,
                                            mutable_value_type, value_type>::type;
 
         value_type          value;
@@ -238,7 +238,7 @@ public:
     typedef typename slot_type::actual_value_type   actual_value_type;
     typedef typename slot_type::init_type           init_type;
 
-    static constexpr bool kIsCompatibleLayout = slot_type::kIsCompatibleLayout;
+    static constexpr bool kIsLayoutCompatible = slot_type::kIsMutableKey;
 
     typedef robin_hash_map_slot_policy<Key, Value, slot_type>
                                                     slot_policy_t;
@@ -4939,7 +4939,7 @@ private:
 
     JSTD_FORCED_INLINE
     void exchange_slot(slot_type * src, slot_type * dest, slot_type * empty) {
-        if (kIsCompatibleLayout) {
+        if (kIsLayoutCompatible) {
             static constexpr bool isNoexceptMoveAssign = is_noexcept_move_assignable<mutable_value_type>::value;
             slot_adapter<mutable_value_type, true, isNoexceptMoveAssign>
                 ::exchange(&this->allocator_, src, dest, empty);
@@ -4952,7 +4952,7 @@ private:
 
     JSTD_FORCED_INLINE
     void swap_slot(slot_type * slot1, slot_type * slot2) {
-        if (kIsCompatibleLayout) {
+        if (kIsLayoutCompatible) {
             static constexpr bool isNoexceptMoveAssign = is_noexcept_move_assignable<mutable_value_type>::value;
             slot_adapter<mutable_value_type, true, isNoexceptMoveAssign>
                 ::swap(&this->allocator_, slot1, slot2);
@@ -4965,7 +4965,7 @@ private:
 
     JSTD_FORCED_INLINE
     void swap_slot(slot_type * slot1, slot_type * slot2, slot_type * tmp) {
-        if (kIsCompatibleLayout) {
+        if (kIsLayoutCompatible) {
             static constexpr bool isNoexceptMoveAssign = is_noexcept_move_assignable<mutable_value_type>::value;
             slot_adapter<mutable_value_type, true, isNoexceptMoveAssign>
                 ::swap(&this->allocator_, slot1, slot2, tmp);
@@ -4978,7 +4978,7 @@ private:
 
     JSTD_FORCED_INLINE
     void swap_plain_slot(slot_type * slot1, slot_type * slot2, slot_type * tmp) {
-        if (kIsCompatibleLayout) {
+        if (kIsLayoutCompatible) {
             static constexpr bool isNoexceptMoveAssign = is_noexcept_move_assignable<mutable_value_type>::value;
             slot_adapter<mutable_value_type, true, isNoexceptMoveAssign>
                 ::swap_plain(&this->allocator_, slot1, slot2, tmp);
@@ -5800,7 +5800,7 @@ InsertOrGrow_Start:
 
         if ((!is_slot_trivial_destructor) && (!kIsPlainKV) &&
             (!kIsSwappableKV) && (!kIsSmallValueType) && kEnableExchange) {
-            if (kIsCompatibleLayout) {
+            if (kIsLayoutCompatible) {
                 if (isMutableNoexceptMoveAssignable) {
                     this->construct_slot(empty);
                     return;
@@ -5824,7 +5824,7 @@ InsertOrGrow_Start:
 
         if ((!is_slot_trivial_destructor) && (!kIsPlainKV) &&
             (!kIsSwappableKV) && (!kIsSmallValueType) && kEnableExchange) {
-            if (kIsCompatibleLayout) {
+            if (kIsLayoutCompatible) {
                 if (isMutableNoexceptMoveAssignable) {
                     this->destroy_slot(empty);
                 }
@@ -6059,7 +6059,7 @@ InsertOrGrow_Start:
         } else {
             assert (is_exists == kNeedGrow);
             this->grow_if_necessary();
-            if (kIsCompatibleLayout)
+            if (kIsLayoutCompatible)
                 return this->emplace(std::move(tmp_slot->mutable_value));
             else
                 return this->emplace(std::move(tmp_slot->value));
@@ -6372,7 +6372,7 @@ Insert_To_Slot:
             return;
         }
 
-        if (kIsCompatibleLayout) {
+        if (kIsLayoutCompatible) {
             SlotPolicyTraits::construct(&this->allocator_, new_slot,
                                         std::move(*static_cast<mutable_value_type *>(&value)));
         } else {

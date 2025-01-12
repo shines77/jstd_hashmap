@@ -1,10 +1,12 @@
 
+#ifndef JSTD_LANG_LAUNDER_H
+#define JSTD_LANG_LAUNDER_H
+
 #pragma once
 
 #include <new>
 
 #include "jstd/basic/stddef.h"
-#include "jstd/config/config.h"
 
 #if defined(_WIN32)
 #ifndef WIN32_LEAN_AND_MEAN
@@ -44,15 +46,15 @@ T * launder(T * p) noexcept
 #if __has_builtin(__builtin_launder) || (__GNUC__ >= 7)
     // The builtin has no unwanted side-effects.
     return __builtin_launder(p);
-#elif defined(__GNUC__)
-    // This inline assembler block declares that `p` is an input and an output,
-    // so the compiler has to assume that it has been changed inside the block.
-    __asm__("" : "+r"(p));
-    return p;
-#elif defined(_WIN32)
+#elif defined(_MSC_VER)
     // MSVC does not currently have optimizations around const members of structs.
     // _ReadWriteBarrier() will prevent compiler reordering memory accesses.
     _ReadWriteBarrier();
+    return p;
+#elif defined(__GNUC__) || defined(__clang__)
+    // This inline assembler block declares that `p` is an input and an output,
+    // so the compiler has to assume that it has been changed inside the block.
+    __asm__("" : "+r"(p));
     return p;
 #else
     static_assert(false, "jstd::launder() is not implemented for this environment.");
@@ -79,3 +81,5 @@ void launder(T (*)(Args...)) = delete;
 #endif // JSTD_STD_LAUNDER
 
 } // namespace jstd
+
+#endif // JSTD_LANG_LAUNDER_H

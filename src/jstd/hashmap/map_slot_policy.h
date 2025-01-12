@@ -1,9 +1,8 @@
-
 /************************************************************************************
 
   CC BY-SA 4.0 License
 
-  Copyright (c) 2018-2022 XiongHui Guo (gz_shines at msn.com)
+  Copyright (c) 2018-2024 XiongHui Guo (gz_shines at msn.com)
 
   https://github.com/shines77/jstd_hashmap
   https://gitee.com/shines77/jstd_hashmap
@@ -16,12 +15,17 @@
 
 ************************************************************************************/
 
+#ifndef JSTD_HASHMAP_MAP_SLOT_POLICY_HPP
+#define JSTD_HASHMAP_MAP_SLOT_POLICY_HPP
+
 #pragma once
 
 #include <memory>       // For std::allocator<T>
 #include <utility>      // For std::pair<First, Second>
 #include <type_traits>
 
+#include "jstd/basic/stddef.h"
+#include "jstd/lang/launder.h"
 #include "jstd/traits/type_traits.h"
 
 namespace jstd {
@@ -33,6 +37,14 @@ public:
     using mapped_type = typename std::remove_const<Value>::type;
     using value_type = std::pair<const key_type, mapped_type>;
     using mutable_value_type = std::pair<key_type, mapped_type>;
+    using init_type = std::pair<key_type, mapped_type>;
+
+    //
+    // If std::pair<const K, V> and std::pair<K, V> are layout-compatible,
+    // we can accept one or the other via slot_type. We are also free to
+    // access the key via slot_type::key in this case.
+    //
+    static constexpr bool kIsMutableKey = jstd::is_layout_compatible_kv<Key, Value>::value;
 
     value_type          value;
     mutable_value_type  mutable_value;
@@ -60,13 +72,47 @@ public:
     // we can accept one or the other via slot_type. We are also free to
     // access the key via slot_type::key in this case.
     //
-    static constexpr bool kIsCompatibleLayout = slot_type::kIsCompatibleLayout;
+    static constexpr bool kIsMutableKey = slot_type::kIsMutableKey;
+
+private:
+    static void emplace(slot_type * slot) {
+        // The construction of union doesn't do anything at runtime but it allows us
+        // to access its members without violating aliasing rules.
+        new (slot) slot_type;
+    }
 
 public:
+    static value_type & element(slot_type * slot) {
+        return slot->value;
+    }
+
+    static const value_type & element(const slot_type * slot) {
+        return slot->value;
+    }
+
+    // When C++17 is available, we can use std::launder to provide mutable
+    // access to the key for use in node handle.
+#if defined(__cpp_lib_launder) && (__cpp_lib_launder >= 201606)
+    static Key & mutable_key(slot_type * slot) {
+        // Still check for kMutableKeys so that we can avoid calling std::launder
+        // unless necessary because it can interfere with optimizations.
+        return (kIsMutableKey ? slot->mutable_key :
+                *jstd::launder(const_cast<Key *>(std::addressof(slot->value.first))));
+    }
+#else  // !(defined(__cpp_lib_launder) && (__cpp_lib_launder >= 201606))
+    static const Key & mutable_key(slot_type * slot) {
+        return key(slot);
+    }
+#endif
+
+    static const Key & key(const slot_type * slot) {
+        return (kIsMutableKey ? slot->mutable_key : slot->value.first);
+    }
+
     template <typename Allocator, typename ... Args>
     static void construct(Allocator * alloc, slot_type * slot, Args && ... args) {
         this_type::emplace(slot);
-        if (kIsCompatibleLayout) {
+        if (kIsMutableKey) {
             std::allocator_traits<Allocator>::construct(*alloc, &slot->mutable_value,
                                                         std::forward<Args>(args)...);
         } else {
@@ -81,7 +127,7 @@ public:
     template <typename Allocator>
     static void construct(Allocator * alloc, slot_type * slot, slot_type * other) {
         this_type::emplace(slot);
-        if (kIsCompatibleLayout) {
+        if (kIsMutableKey) {
             std::allocator_traits<Allocator>::construct(*alloc, &slot->mutable_value,
                                                         std::move(other->mutable_value));
         } else {
@@ -96,7 +142,7 @@ public:
     template <typename Allocator>
     static void construct(Allocator * alloc, slot_type * slot, const slot_type * other) {
         this_type::emplace(slot);
-        if (kIsCompatibleLayout) {
+        if (kIsMutableKey) {
             std::allocator_traits<Allocator>::construct(*alloc, &slot->mutable_value,
                                                         other->mutable_value);
         } else {
@@ -106,7 +152,7 @@ public:
 
     template <typename Allocator>
     static void destroy(Allocator * alloc, slot_type * slot) {
-        if (kIsCompatibleLayout) {
+        if (kIsMutableKey) {
             std::allocator_traits<Allocator>::destroy(*alloc, &slot->mutable_value);
         } else {
             std::allocator_traits<Allocator>::destroy(*alloc, &slot->value);
@@ -115,7 +161,7 @@ public:
 
     template <typename Allocator>
     static void assign(Allocator * alloc, slot_type * dest_slot, slot_type * src_slot) {
-        if (kIsCompatibleLayout) {
+        if (kIsMutableKey) {
             dest_slot->mutable_value = std::move(src_slot->mutable_value);
         } else {
             dest_slot->value = std::move(src_slot->value);
@@ -124,7 +170,7 @@ public:
 
     template <typename Allocator>
     static void assign(Allocator * alloc, slot_type * dest_slot, const slot_type * src_slot) {
-        if (kIsCompatibleLayout) {
+        if (kIsMutableKey) {
             dest_slot->mutable_value = src_slot->mutable_value;
         } else {
             dest_slot->value = src_slot->value;
@@ -144,7 +190,7 @@ public:
     template <typename Allocator>
     static void transfer(Allocator * alloc, slot_type * new_slot, slot_type * old_slot) {
         this_type::emplace(new_slot);
-        if (kIsCompatibleLayout) {
+        if (kIsMutableKey) {
             std::allocator_traits<Allocator>::construct(*alloc, &new_slot->mutable_value,
                                                         std::move(old_slot->mutable_value));
         } else {
@@ -156,30 +202,25 @@ public:
 
     template <typename Allocator>
     static void swap(Allocator * alloc, slot_type * slot1, slot_type * slot2, slot_type * tmp) {
-        transfer(alloc, tmp, slot2);
-        transfer(alloc, slot2, slot1);
-        transfer(alloc, slot1, tmp);
+        this_type::transfer(alloc, tmp, slot2);
+        this_type::transfer(alloc, slot2, slot1);
+        this_type::transfer(alloc, slot1, tmp);
     }
 
     template <typename Allocator>
     static void exchange(Allocator * alloc, slot_type * src, slot_type * dest, slot_type * empty) {
-        transfer(alloc, empty, dest);
-        transfer(alloc, dest, src);
+        this_type::transfer(alloc, empty, dest);
+        this_type::transfer(alloc, dest, src);
     }
 
     template <typename Allocator>
     static void move_assign_swap(Allocator * alloc, slot_type * slot1, slot_type * slot2, slot_type * tmp) {
-        mutable_assign(alloc, tmp, slot2);
-        mutable_assign(alloc, slot2, slot1);
-        mutable_assign(alloc, slot1, tmp);
-    }
-
-private:
-    static void emplace(slot_type * slot) {
-        // The construction of union doesn't do anything at runtime but it allows us
-        // to access its members without violating aliasing rules.
-        new (slot) slot_type;
+        this_type::mutable_assign(alloc, tmp, slot2);
+        this_type::mutable_assign(alloc, slot2, slot1);
+        this_type::mutable_assign(alloc, slot1, tmp);
     }
 };
 
 } // namespace jstd
+
+#endif // JSTD_HASHMAP_MAP_SLOT_POLICY_HPP

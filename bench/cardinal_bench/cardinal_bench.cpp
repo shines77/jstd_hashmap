@@ -3,7 +3,7 @@
 
   CC BY-SA 4.0 License
 
-  Copyright (c) 2020-2022 XiongHui Guo (gz_shines at msn.com)
+  Copyright (c) 2020-2024 XiongHui Guo (gz_shines at msn.com)
 
   https://github.com/shines77/jstd_hashmap
   https://gitee.com/shines77/jstd_hashmap
@@ -84,21 +84,15 @@
 #ifndef _DEBUG
 #define USE_STD_UNORDERED_MAP           1
 #define USE_JSTD_FLAT16_HASH_MAP        0
-#define USE_JSTD_ROBIN16_HASH_MAP       1
+#define USE_JSTD_ROBIN16_HASH_MAP       0
 #define USE_JSTD_ROBIN_HASH_MAP         1
-#define USE_JSTD_ROBIN_HASH_MAP_V1      0
-#define USE_JSTD_ROBIN_HASH_MAP_V2      1
-#define USE_JSTD_ROBIN_HASH_MAP_V3      1
-#define USE_JSTD_ROBIN_HASH_MAP_V4      1
+#define USE_JSTD_CLUSTER_FALT_MAP       1
 #else
 #define USE_STD_UNORDERED_MAP           0
 #define USE_JSTD_FLAT16_HASH_MAP        0
-#define USE_JSTD_ROBIN16_HASH_MAP       1
+#define USE_JSTD_ROBIN16_HASH_MAP       0
 #define USE_JSTD_ROBIN_HASH_MAP         1
-#define USE_JSTD_ROBIN_HASH_MAP_V1      0
-#define USE_JSTD_ROBIN_HASH_MAP_V2      0
-#define USE_JSTD_ROBIN_HASH_MAP_V3      0
-#define USE_JSTD_ROBIN_HASH_MAP_V4      0
+#define USE_JSTD_CLUSTER_FALT_MAP       1
 #endif // _DEBUG
 
 #ifdef __SSE4_2__
@@ -135,17 +129,8 @@
 #if USE_JSTD_ROBIN_HASH_MAP
 #include <jstd/hashmap/robin_hash_map.h>
 #endif
-#if USE_JSTD_ROBIN_HASH_MAP_V1
-#include <jstd/hashmap/dev/robin_hash_map_v1.h>
-#endif
-#if USE_JSTD_ROBIN_HASH_MAP_V2
-#include <jstd/hashmap/dev/robin_hash_map_v2.h>
-#endif
-#if USE_JSTD_ROBIN_HASH_MAP_V3
-#include <jstd/hashmap/dev/robin_hash_map_v3.h>
-#endif
-#if USE_JSTD_ROBIN_HASH_MAP_V4
-#include <jstd/hashmap/dev/robin_hash_map_v4.h>
+#if USE_JSTD_CLUSTER_FALT_MAP
+#include <jstd/hashmap/cluster_flat_map.hpp>
 #endif
 #include <jstd/hashmap/hashmap_analyzer.h>
 #include <jstd/hasher/hashes.h>
@@ -482,21 +467,9 @@ void benchmark_insert_random_impl()
     run_insert_random<jstd::robin_hash_map<Key, Value>>
         ("jstd::robin_hash_map", keys, Cardinal);
 #endif
-#if USE_JSTD_ROBIN_HASH_MAP_V1
-    run_insert_random<jstd::v1::robin_hash_map<Key, Value>>
-        ("jstd::v1::robin_hash_map", keys, Cardinal);
-#endif
-#if USE_JSTD_ROBIN_HASH_MAP_V2
-    run_insert_random<jstd::v2::robin_hash_map<Key, Value>>
-        ("jstd::v2::robin_hash_map", keys, Cardinal);
-#endif
-#if USE_JSTD_ROBIN_HASH_MAP_V3
-    run_insert_random<jstd::v3::robin_hash_map<Key, Value>>
-        ("jstd::v3::robin_hash_map", keys, Cardinal);
-#endif
-#if USE_JSTD_ROBIN_HASH_MAP_V4
-    run_insert_random<jstd::v4::robin_hash_map<Key, Value>>
-        ("jstd::v4::robin_hash_map", keys, Cardinal);
+#if USE_JSTD_CLUSTER_FALT_MAP
+    run_insert_random<jstd::cluster_flat_map<Key, Value>>
+        ("jstd::cluster_flat_map", keys, Cardinal);
 #endif
 }
 
@@ -546,14 +519,12 @@ void benchmark_insert_random(std::size_t iters)
 template <typename Key, typename Value, std::size_t DataSize, std::size_t Cardinal>
 void benchmark_MumHash_insert_random_impl()
 {
-    std::string name0, name1, name2, name3, name4, name5, name6;
+    std::string name0, name1, name2, name3, name4;
     name0 = format_hashmap_name<Key, Value>("std::unordered_map<%s, %s>");
     name1 = format_hashmap_name<Key, Value>("jstd::flat16_hash_map<%s, %s>");
     name2 = format_hashmap_name<Key, Value>("jstd::robin16_hash_map<%s, %s>");
     name3 = format_hashmap_name<Key, Value>("jstd::robin_hash_map<%s, %s>");
-    name4 = format_hashmap_name<Key, Value>("jstd::v1::robin_hash_map<%s, %s>");
-    name5 = format_hashmap_name<Key, Value>("jstd::v2::robin_hash_map<%s, %s>");
-    name6 = format_hashmap_name<Key, Value>("jstd::v3::robin_hash_map<%s, %s>");
+    name4 = format_hashmap_name<Key, Value>("jstd::cluster_flat_map<%s, %s>");
 
     std::vector<Key> keys;
     generate_random_keys<Key, Cardinal>(keys, DataSize);
@@ -574,21 +545,9 @@ void benchmark_MumHash_insert_random_impl()
     run_insert_random<jstd::robin_hash_map<Key, Value, test::MumHash<Key>>>
         ("jstd::robin_hash_map", keys, Cardinal);
 #endif
-#if USE_JSTD_ROBIN_HASH_MAP_V1
-    run_insert_random<jstd::v1::robin_hash_map<Key, Value, test::MumHash<Key>>>
-        ("jstd::v1::robin_hash_map", keys, Cardinal);
-#endif
-#if USE_JSTD_ROBIN_HASH_MAP_V2
-    run_insert_random<jstd::v2::robin_hash_map<Key, Value, test::MumHash<Key>>>
-        ("jstd::v2::robin_hash_map", keys, Cardinal);
-#endif
-#if USE_JSTD_ROBIN_HASH_MAP_V3
-    run_insert_random<jstd::v3::robin_hash_map<Key, Value, test::MumHash<Key>>>
-        ("jstd::v3::robin_hash_map", keys, Cardinal);
-#endif
-#if USE_JSTD_ROBIN_HASH_MAP_V4
-    run_insert_random<jstd::v4::robin_hash_map<Key, Value, test::MumHash<Key>>>
-        ("jstd::v4::robin_hash_map", keys, Cardinal);
+#if USE_JSTD_CLUSTER_FALT_MAP
+    run_insert_random<jstd::cluster_flat_map<Key, Value, test::MumHash<Key>>>
+        ("jstd::cluster_flat_map", keys, Cardinal);
 #endif
 }
 
@@ -723,6 +682,90 @@ void int_hash_crc32c_test()
     printf("\n");
 }
 
+template <typename K, typename V>
+union map_slot_type {
+public:
+    using key_type = typename std::remove_const<K>::type;
+    using mapped_type = typename std::remove_const<V>::type;
+    using value_type = std::pair<const key_type, mapped_type>;
+    using init_type = std::pair<key_type, mapped_type>;
+
+    //
+    // If std::pair<const K, V> and std::pair<K, V> are layout-compatible,
+    // we can accept one or the other via slot_type. We are also free to
+    // access the key via slot_type::key in this case.
+    //
+    static constexpr bool kIsLayoutCompatible = jstd::is_layout_compatible_kv<K, V>::value;
+
+    using actual_value_type = typename std::conditional<kIsLayoutCompatible,
+                                       init_type, value_type>::type;
+
+    value_type          value;
+    init_type           mutable_value;
+    const key_type      key;
+    key_type            mutable_key;
+
+    map_slot_type() {}
+    ~map_slot_type() {};
+};
+
+template <typename Key, typename Value>
+void test_hashmap()
+{
+    struct Pair {
+        Key   first;
+        Value second;
+    };
+
+    bool string_is_standard_layout = std::is_standard_layout<Key>::value;
+    bool pair_is_standard_layout = std::is_standard_layout<Pair>::value;
+    bool std_pair_is_standard_layout = jstd::is_layout_compatible_kv<Key, Value>::template isLayoutCompatible<std::pair<Key, Value>>();
+    bool std_const_pair_is_standard_layout = jstd::is_layout_compatible_kv<Key, Value>::template isLayoutCompatible<std::pair<const Key, Value>>();
+    bool is_layout_compatible = jstd::is_layout_compatible_kv<Key, Value>::value;
+
+    printf("is_standard_layout<Key> = %d\n", (int)string_is_standard_layout);
+    printf("is_standard_layout<Pair> = %d\n", (int)pair_is_standard_layout);
+    printf("jstd::isLayoutCompatible<std::pair<Key, Value>> = %d\n", (int)std_pair_is_standard_layout);
+    printf("jstd::isLayoutCompatible<std::pair<const Key, Value>> = %d\n", (int)std_const_pair_is_standard_layout);
+    printf("\n");
+    printf("jstd::is_layout_compatible_kv<Key, Value>::value = %d\n", (int)is_layout_compatible);
+    printf("\n");
+
+    jstd::cluster_flat_map<std::string, std::string> string_hash_map;
+
+    string_hash_map.insert(std::make_pair(std::string("abc"), std::string("123")));
+
+    std::pair<const Key, Value> const_pair("efg", "456");
+    string_hash_map.insert(const_pair);
+
+    std::pair<Key, Value> pair("hij", "789");
+    string_hash_map.insert(pair);
+
+    printf("string_hash_map.size() = %d\n", (int)string_hash_map.size());
+    printf("string_hash_map.max_load_factor() = %0.3f\n", string_hash_map.max_load_factor());
+
+    string_hash_map.erase("abc");
+
+    printf("string_hash_map.size() = %d\n", (int)string_hash_map.size());
+
+    string_hash_map.erase(std::string("abc"));
+
+    printf("string_hash_map.size() = %d\n", (int)string_hash_map.size());
+}
+
+void test_map_slot_type()
+{
+    map_slot_type<std::size_t, std::size_t> slot1;
+    printf("sizeof(map_slot_type<std::size_t, std::size_t> = %d\n",
+           (int)sizeof(slot1));
+
+    map_slot_type<std::string, std::size_t> slot2;
+    printf("sizeof(map_slot_type<std::string, std::size_t> = %d\n",
+           (int)sizeof(slot2));
+
+    printf("\n");
+}
+
 int main(int argc, char * argv[])
 {
     jstd::RandomGen   RandomGen(20200831);
@@ -738,6 +781,9 @@ int main(int argc, char * argv[])
 
     if (1) { std_hash_test(); }
     if (1) { int_hash_crc32c_test(); }
+
+    if (1) { test_map_slot_type(); }
+    if (1) { test_hashmap<std::string, std::string>(); }
 
     if (1)
     {

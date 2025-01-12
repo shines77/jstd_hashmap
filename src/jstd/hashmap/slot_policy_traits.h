@@ -19,8 +19,9 @@
 #pragma once
 
 #include <type_traits>
+#include <memory>
 
-#include "jstd/config/config.h"
+#include "jstd/basic/stddef.h"
 #include "jstd/lang/launder.h"
 #include "jstd/traits/type_traits.h"
 
@@ -82,7 +83,7 @@ private:
     };
 
     template <typename Policy>
-    struct ConstantIteratorsImpl<Policy, void_t<typename Policy::constant_iterators>>
+    struct ConstantIteratorsImpl<Policy, jstd::void_t<typename Policy::constant_iterators>>
         : Policy::constant_iterators {
     };
 
@@ -96,14 +97,14 @@ public:
     // POSTCONDITION: `slot` is INITIALIZED
     template <typename Alloc, typename ... Args>
     static void construct(Alloc * alloc, slot_type * slot, Args && ... args) {
-        SlotPolicy::construct(alloc, slot, std::forward<Args>(args)...);
+        slot_policy::construct(alloc, slot, std::forward<Args>(args)...);
     }
 
     // PRECONDITION:  `slot` is INITIALIZED
     // POSTCONDITION: `slot` is UNINITIALIZED
     template <typename Alloc>
     static void destroy(Alloc * alloc, slot_type * slot) {
-        SlotPolicy::destroy(alloc, slot);
+        slot_policy::destroy(alloc, slot);
     }
 
     //
@@ -213,6 +214,56 @@ public:
     template <typename Policy = SlotPolicy>
     static auto element(slot_type * slot) -> decltype(Policy::element(slot)) {
         return Policy::element(slot);
+    }
+
+    // Provides generalized access to the key for elements, both for elements in
+    // the table and for elements that have not yet been inserted (or even
+    // constructed).  We would like an API that allows us to say: `key(args...)`
+    // but we cannot do that for all cases, so we use this more general API that
+    // can be used for many things, including the following:
+    //
+    //   - Given an element in a table, get its key.
+    //   - Given an element initializer, get its key.
+    //   - Given `emplace()` arguments, get the element key.
+    //
+    // Implementations of this must adhere to a very strict technical
+    // specification around aliasing and consuming arguments:
+    //
+    // Let `value_type` be the result type of `element()` without ref- and
+    // cv-qualifiers. The first argument is a functor, the rest are constructor
+    // arguments for `value_type`. Returns `std::forward<F>(f)(k, xs...)`, where
+    // `k` is the element key, and `xs...` are the new constructor arguments for
+    // `value_type`. It's allowed for `k` to alias `xs...`, and for both to alias
+    // `ts...`. The key won't be touched once `xs...` are used to construct an
+    // element; `ts...` won't be touched at all, which allows `apply()` to consume
+    // any rvalues among them.
+    //
+    // If `value_type` is constructible from `Ts&&...`, `Policy::apply()` must not
+    // trigger a hard compile error unless it originates from `f`. In other words,
+    // `Policy::apply()` must be SFINAE-friendly. If `value_type` is not
+    // constructible from `Ts&&...`, either SFINAE or a hard compile error is OK.
+    //
+    // If `Ts...` is `[cv] value_type[&]` or `[cv] init_type[&]`,
+    // `Policy::apply()` must work. A compile error is not allowed, SFINAE or not.
+    template <typename First, typename ... Ts, typename Policy = SlotPolicy>
+    static auto apply(First && f, Ts && ... ts)
+        -> decltype(Policy::apply(std::forward<First>(f), std::forward<Ts>(ts)...)) {
+        return Policy::apply(std::forward<First>(f), std::forward<Ts>(ts)...);
+    }
+
+    // Returns the "key" portion of the slot.
+    // Used for node handle manipulation.
+    template <typename Policy = SlotPolicy>
+    static auto mutable_key(slot_type * slot)
+        -> decltype(Policy::apply(ReturnKey(), element(slot))) {
+        return Policy::apply(ReturnKey(), element(slot));
+    }
+
+    // Returns the "value" (as opposed to the "key") portion of the element. Used
+    // by maps to implement `operator[]`, `at()` and `insert_or_assign()`.
+    template <typename T, typename Policy = SlotPolicy>
+    static auto value(T * _element) -> decltype(Policy::value(_element)) {
+        return Policy::value(_element);
     }
 
 private:
