@@ -1055,6 +1055,12 @@ private:
         std::size_t hash_code = static_cast<std::size_t>(
             this->hash_policy_.get_hash_code(key)
         );
+#elif 1
+        std::size_t hash_code;
+        if (std::is_integral<key_type>::value)
+            hash_code = hashes::msvc_fnv_1a((const unsigned char *)&key, sizeof(key_type));
+        else
+            hash_code = static_cast<std::size_t>(this->hasher_(key));
 #elif defined(__GNUC__) || (defined(__clang__) && !defined(_MSC_VER))
         std::size_t hash_code;
         if (std::is_integral<key_type>::value && jstd::is_default_std_hash<Hash, key_type>::value)
