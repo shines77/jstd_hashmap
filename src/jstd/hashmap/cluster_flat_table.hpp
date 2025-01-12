@@ -88,7 +88,7 @@
 #define CLUSTER_USE_GROUP_SCAN      1
 
 #ifdef _DEBUG
-#define CLUSTER_DISPLAY_DEBUG_INFO  1
+#define CLUSTER_DISPLAY_DEBUG_INFO  0
 #endif
 
 namespace jstd {
@@ -869,6 +869,9 @@ public:
     JSTD_FORCED_INLINE
     size_type skip_empty_slots(size_type start_slot_index) const {
         if (this->size() != 0) {
+            start_slot_index++;
+            if (unlikely(start_slot_index >= this->slot_capacity()))
+                return this->slot_capacity();
             const group_type * group = this->group_by_slot_index(start_slot_index);
             const group_type * last_group = this->last_group();
             size_type slot_pos = start_slot_index % kGroupWidth;
@@ -887,8 +890,6 @@ public:
                         size_type slot_index = slot_base_index + used_pos;
                         return slot_index;
                     }
-                    slot_base_index += kGroupWidth;
-                    group++;
                 }
             } else {
                 size_type last_index = slot_base_index + kGroupWidth;
@@ -901,6 +902,8 @@ public:
                     ++start_slot_index;
                 }
             }
+            slot_base_index += kGroupWidth;
+            group++;
             for (; group < last_group; ++group) {
                 std::uint32_t used_mask = group->match_used();
                 if (likely(used_mask != 0)) {
