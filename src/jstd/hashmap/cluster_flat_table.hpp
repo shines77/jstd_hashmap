@@ -1055,7 +1055,7 @@ private:
         std::size_t hash_code = static_cast<std::size_t>(
             this->hash_policy_.get_hash_code(key)
         );
-#elif 1
+#elif 0
         std::size_t hash_code;
         if (std::is_integral<key_type>::value)
             hash_code = hashes::msvc_fnv_1a((const unsigned char *)&key, sizeof(key_type));
@@ -1087,9 +1087,9 @@ private:
 #if CLUSTER_USE_HASH_POLICY
         return hash_code;
 #elif 0
-        return (size_type)hashes::mum_hash64((std::uint64_t)hash_code, 11400714819323198485ull);
+        return (size_type)hashes::mum_hash(hash_code);
 #elif 1
-        return (size_type)hashes::fibonacci_hash64((size_type)hash_code);
+        return (size_type)hashes::fibonacci_hash(hash_code);
 #endif
     }
 

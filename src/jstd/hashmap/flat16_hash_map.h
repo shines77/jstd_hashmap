@@ -1542,7 +1542,7 @@ private:
         if (sizeof(size_type) == 4)
             hash_code = (hash_code_t)((size_type)value * 2654435761ul);
         else
-            hash_code = (hash_code_t)((size_type)value * 14695981039346656037ull);
+            hash_code = (hash_code_t)((size_type)value * 14695981039346655967ull);
         return hash_code;
 #endif
     }

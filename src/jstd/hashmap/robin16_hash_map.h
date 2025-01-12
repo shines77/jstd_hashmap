@@ -1952,7 +1952,7 @@ private:
 #if 1
         return value;
 #elif 1
-        return (size_type)hashes::fibonacci_hash64((size_type)value);
+        return (size_type)hashes::fibonacci_hash((size_type)value);
 #elif 1
         return (size_type)hashes::int_hash_crc32((size_type)value);
 #else
@@ -1960,7 +1960,7 @@ private:
         if (sizeof(size_type) == 4)
             hash_code = (hash_code_t)(((std::uint64_t)value * 2654435761ul) >> 12);
         else
-            hash_code = (hash_code_t)(((std::uint64_t)value * 14695981039346656037ull) >> 28);
+            hash_code = (hash_code_t)(((std::uint64_t)value * 14695981039346655967ull) >> 28);
         return hash_code;
 #endif
     }
@@ -1969,7 +1969,7 @@ private:
 #if ROBIN16_USE_HASH_POLICY
         return value;
 #elif 1
-        return (size_type)hashes::fibonacci_hash64((size_type)value);
+        return (size_type)hashes::fibonacci_hash((size_type)value);
 #elif 1
         return (size_type)hashes::simple_int_hash_crc32((size_type)value);
 #endif

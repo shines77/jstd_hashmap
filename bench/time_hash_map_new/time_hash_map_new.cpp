@@ -85,7 +85,7 @@
 #define USE_STD_HASH_MAP                0
 
 #ifndef _DEBUG
-#define USE_STD_UNORDERED_MAP           1
+#define USE_STD_UNORDERED_MAP           0
 #define USE_JSTD_FLAT16_HASH_MAP        0
 #define USE_JSTD_ROBIN16_HASH_MAP       0
 #define USE_JSTD_ROBIN_HASH_MAP         1
@@ -318,7 +318,7 @@ struct SimpleHash {
     }
 
     template <typename Argument, typename std::enable_if<
-                                  (!std::is_integral<Argument>::value ||
+                                 (!std::is_integral<Argument>::value ||
                                   sizeof(Argument) > 8)>::type * = nullptr>
     result_type operator () (const Argument & value) const
         noexcept(noexcept(std::declval<std::hash<Argument>>()(value))) {
@@ -374,7 +374,7 @@ struct MumHash
     }
 
     template <typename Argument, typename std::enable_if<
-                                  (!std::is_integral<Argument>::value ||
+                                 (!std::is_integral<Argument>::value ||
                                   sizeof(Argument) > 8)>::type * = nullptr>
     result_type operator () (const Argument & value) const
         noexcept(noexcept(std::declval<std::hash<Argument>>()(value))) {

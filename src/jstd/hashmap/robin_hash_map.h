@@ -3950,9 +3950,9 @@ private:
 #if 1
         return value;
 #elif 0
-        return (size_type)hashes::mum_hash64((std::uint64_t)value, 11400714819323198485ull);
+        return (size_type)hashes::mum_hash((size_type)value);
 #elif 0
-        return (size_type)hashes::fibonacci_hash64((size_type)value);
+        return (size_type)hashes::fibonacci_hash((size_type)value);
 #else
         return (size_type)hashes::int_hash_crc32((size_type)value);
 #endif
@@ -3983,9 +3983,9 @@ private:
 #if ROBIN_USE_HASH_POLICY
         return hash_code;
 #elif 0
-        return (size_type)hashes::mum_hash64((std::uint64_t)hash_code, 11400714819323198485ull);
+        return (size_type)hashes::mum_hash((size_type)hash_code);
 #elif 1
-        return (size_type)hashes::fibonacci_hash64((size_type)hash_code);
+        return (size_type)hashes::fibonacci_hash((size_type)hash_code);
 #elif 1
         return (size_type)hashes::simple_int_hash_crc32((size_type)hash_code);
 #endif

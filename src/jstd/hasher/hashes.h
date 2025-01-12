@@ -592,24 +592,42 @@ _uint128_t uint128_mul(uint64_t multiplicand, uint64_t multiplier)
 // See: https://www.jianshu.com/p/421aa9480e42
 //
 // 2^32 * 0.6180339887 = 2654435769.2829335552
+// Near prime is 2654435761
 //
 static inline
 std::size_t fibonacci_hash32(std::size_t value)
 {
+    // Old coeff is 2654435769ul
     std::size_t hash_code = static_cast<std::size_t>(
-        (static_cast<std::uint64_t>(value) * 2654435769ul) >> 12);
+        (static_cast<std::uint32_t>(value) * 2654435761ul) >> 12);
     return hash_code;
 }
 
 //
+// Find Prime URL: https://fyter.cn/prime.htm
+//
+
+//
 // 2^64 * 0.6180339887 = 11400714818402800990.5250107392
+// Near prime is 11400714818402800987
 //
 static inline
 std::size_t fibonacci_hash64(std::size_t value)
 {
+    // Old coeff is 11400714819323198485ull
     std::size_t hash_code = static_cast<std::size_t>(
-        (static_cast<std::uint64_t>(value) * 11400714819323198485ull) >> 28);
+        (static_cast<std::uint64_t>(value) * 11400714818402800987ull) >> 28);
     return hash_code;
+}
+
+static inline
+std::size_t fibonacci_hash(std::size_t value)
+{
+#if (JSTD_WORD_LEN == 64)
+    return fibonacci_hash64(value);
+#else
+    return fibonacci_hash32(value);
+#endif
 }
 
 static inline
@@ -630,9 +648,11 @@ static inline
 std::size_t mum_hash(std::size_t multiplicand, std::size_t multiplier)
 {
 #if (JSTD_WORD_LEN == 64)
-    return mum_hash64(multiplicand, multiplier);
+    static const std::uint64_t kMultiplier = 11400714818402800987ull;
+    return mum_hash64(multiplicand, kMultiplier);
 #else
-    return mum_hash32(multiplicand, multiplier);
+    static const std::uint32_t kMultiplier = 2654435761ul;
+    return mum_hash32(multiplicand, kMultiplier);
 #endif
 }
 
