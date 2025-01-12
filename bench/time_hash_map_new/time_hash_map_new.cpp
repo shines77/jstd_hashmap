@@ -89,11 +89,13 @@
 #define USE_JSTD_FLAT16_HASH_MAP        0
 #define USE_JSTD_ROBIN16_HASH_MAP       1
 #define USE_JSTD_ROBIN_HASH_MAP         1
+#define USE_JSTD_CLUSTER_FLAT_MAP       1
 #else
 #define USE_STD_UNORDERED_MAP           0
 #define USE_JSTD_FLAT16_HASH_MAP        0
 #define USE_JSTD_ROBIN16_HASH_MAP       0
 #define USE_JSTD_ROBIN_HASH_MAP         1
+#define USE_JSTD_CLUSTER_FLAT_MAP       1
 #endif // _DEBUG
 
 #ifdef __SSE4_2__
@@ -142,6 +144,9 @@
 #endif
 #if USE_JSTD_ROBIN_HASH_MAP
 #include <jstd/hashmap/robin_hash_map.h>
+#endif
+#if USE_JSTD_CLUSTER_FLAT_MAP
+#include <jstd/hashmap/cluster_flat_map.hpp>
 #endif
 #include <jstd/hashmap/hashmap_analyzer.h>
 #include <jstd/hasher/hashes.h>
@@ -835,6 +840,14 @@ void test_all_hashmaps(std::size_t obj_size, std::size_t iters)
             ("jstd::robin_hash_map<K, V>", obj_size, iters, has_stress_hash_function);
     }
 #endif
+
+#if USE_JSTD_CLUSTER_FLAT_MAP
+    if (1) {
+        measure_hashmap<jstd::cluster_flat_map<Key,   Value, HASH_MAP_FUNCTION<Key>>,
+                        jstd::cluster_flat_map<Key *, Value, HASH_MAP_FUNCTION<Key *>>>
+            ("jstd::cluster_flat_map<K, V>", obj_size, iters, has_stress_hash_function);
+    }
+#endif
 }
 
 template <typename Key, typename Value>
@@ -878,6 +891,13 @@ void test_all_hashmaps_for_string(std::size_t obj_size, std::size_t iters)
     if (1) {
         measure_string_hashmap<jstd::robin_hash_map<Key, Value>>
             ("jstd::robin_hash_map<K, V>", obj_size, iters);
+    }
+#endif
+
+#if USE_JSTD_CLUSTER_FLAT_MAP
+    if (1) {
+        measure_string_hashmap<jstd::cluster_flat_map<Key, Value>>
+            ("jstd::cluster_flat_map<K, V>", obj_size, iters);
     }
 #endif
 }

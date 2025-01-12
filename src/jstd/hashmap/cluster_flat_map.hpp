@@ -2,7 +2,7 @@
 
   CC BY-SA 4.0 License
 
-  Copyright (c) 2024 XiongHui Guo (gz_shines at msn.com)
+  Copyright (c) 2024-2025 XiongHui Guo (gz_shines at msn.com)
 
   https://github.com/shines77/cluster_flat_map
   https://gitee.com/shines77/cluster_flat_map
@@ -59,6 +59,8 @@
 #include <initializer_list>
 #include <type_traits>
 #include <utility>              // For std::pair<F, S>
+#include <exception>
+#include <stdexcept>
 
 #include "jstd/hashmap/detail/hashmap_traits.h"
 #include "jstd/hashmap/flat_map_type_policy.hpp"
@@ -314,23 +316,57 @@ public:
         return table_.contains(key);
     }
 
+    mapped_type & at(const key_type & key) {
+        auto pos = table_.find(key);
+        if (pos != table_.end()) {
+            return pos->second;
+        }
+        // TODO: someday refactor this to conditionally serialize the key and
+        // include it in the error message
+        //
+        throw std::out_of_range("key was not found in unordered_flat_map");
+    }
+
+    const mapped_type & at(const key_type & key) const {
+        auto pos = table_.find(key);
+        if (pos != table_.end()) {
+            return pos->second;
+        }
+
+        throw std::out_of_range("key was not found in unordered_flat_map");
+    }
+
+    JSTD_FORCED_INLINE
+    mapped_type & operator [] (const key_type & key) {
+        return table_.try_emplace(key).first->second;
+    }
+
+    JSTD_FORCED_INLINE
+    mapped_type & operator [] (key_type && key) {
+        return table_.try_emplace(std::move(key)).first->second;
+    }
+
     ///
     /// find(key)
     ///
+    JSTD_FORCED_INLINE
     iterator find(const key_type & key) {
         return table_.find(key);
     }
 
+    JSTD_FORCED_INLINE
     const_iterator find(const key_type & key) const {
         return table_.find(key);
     }
 
     template <typename KeyT>
+    JSTD_FORCED_INLINE
     iterator find(const KeyT & key) {
         return table_.find(key);
     }
 
     template <typename KeyT>
+    JSTD_FORCED_INLINE
     const_iterator find(const KeyT & key) const {
         return table_.find(key);
     }

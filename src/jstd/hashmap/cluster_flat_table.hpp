@@ -368,8 +368,8 @@ public:
         return const_cast<this_type *>(this)->end();
     }
 
-    const_iterator cbegin() const noexcept { this->begin(); }
-    const_iterator cend() const noexcept { this->end(); }
+    const_iterator cbegin() const noexcept { return this->begin(); }
+    const_iterator cend() const noexcept { return this->end(); }
 
     ///
     /// Capacity
@@ -847,6 +847,73 @@ public:
         return (this->slots() + std::ptrdiff_t(slot_index));
     }
 
+    JSTD_FORCED_INLINE
+    size_type find_first_used_index() const {
+        if (this->size() != 0) {
+            const group_type * group = this->groups();
+            const group_type * last_group = this->last_group();
+            size_type slot_base_index = 0;
+            for (; group < last_group; ++group) {
+                std::uint32_t used_mask = group->match_used();
+                if (likely(used_mask != 0)) {
+                    std::uint32_t used_pos = BitUtils::bsf32(used_mask);
+                    size_type slot_index = slot_base_index + used_pos;
+                    return slot_index;
+                }
+                slot_base_index += kGroupWidth;
+            }
+        }
+        return this->slot_capacity();
+    }
+
+    JSTD_FORCED_INLINE
+    size_type skip_empty_slots(size_type start_slot_index) const {
+        if (this->size() != 0) {
+            const group_type * group = this->group_by_slot_index(start_slot_index);
+            const group_type * last_group = this->last_group();
+            size_type slot_pos = start_slot_index % kGroupWidth;
+            size_type slot_base_index = start_slot_index - slot_pos;
+            // Last 4 items use ctrl seek, maybe faster.
+            static const size_type kCtrlFasterSeekPos = 4;
+            if (likely(slot_pos < (kGroupWidth - kCtrlFasterSeekPos))) {
+                if (group < last_group) {
+                    std::uint32_t used_mask = group->match_used();
+                    // Filter out the bits in the leading position
+                    // std::uint32_t non_excluded_mask = ~((std::uint32_t(1) << std::uint32_t(slot_pos)) - 1);
+                    std::uint32_t non_excluded_mask = (std::uint32_t(0xFFFFFFFFu) << std::uint32_t(slot_pos));
+                    used_mask &= non_excluded_mask;
+                    if (likely(used_mask != 0)) {
+                        std::uint32_t used_pos = BitUtils::bsf32(used_mask);
+                        size_type slot_index = slot_base_index + used_pos;
+                        return slot_index;
+                    }
+                    slot_base_index += kGroupWidth;
+                    group++;
+                }
+            } else {
+                size_type last_index = slot_base_index + kGroupWidth;
+                const ctrl_type * ctrl = this->ctrl_at(start_slot_index);
+                while (start_slot_index < last_index) {
+                    if (ctrl->is_used()) {
+                        return start_slot_index;
+                    }
+                    ++ctrl;
+                    ++start_slot_index;
+                }
+            }
+            for (; group < last_group; ++group) {
+                std::uint32_t used_mask = group->match_used();
+                if (likely(used_mask != 0)) {
+                    std::uint32_t used_pos = BitUtils::bsf32(used_mask);
+                    size_type slot_index = slot_base_index + used_pos;
+                    return slot_index;
+                }
+                slot_base_index += kGroupWidth;
+            }
+        }
+        return this->slot_capacity();
+    }
+
 private:
     static group_type * default_empty_groups() {
         alignas(16) static const ctrl_type s_empty_ctrls[16] = {
@@ -1117,7 +1184,19 @@ private:
     }
 
     JSTD_FORCED_INLINE
-    void init_groups(group_type * groups, size_type group_capacity) {
+    void init_groups(group_type * groups, size_type group_capacity, std::true_type) {
+        /* memset faster/not slower than manual, assumes all zeros is group_type's
+         * default layout.
+         * reinterpret_cast: GCC may complain about group_type not being trivially
+         * copy-assignable when we're relying on trivial copy constructibility.
+         */
+
+        std::memset(reinterpret_cast<unsigned char *>(groups),
+                    kEmptySlot, sizeof(group_type) * group_capacity);
+    }
+
+    JSTD_FORCED_INLINE
+    void init_groups(group_type * groups, size_type group_capacity, std::false_type) {
         if (groups != this_type::default_empty_groups()) {
             group_type * group = groups;
             group_type * last_group = group + group_capacity;
@@ -1170,11 +1249,11 @@ private:
     void clear_data() {
         // Note!!: clear_slots() need use this->ctrls(), so must clear slots first.
         this->clear_slots();
-        this->clear_ctrls();
+        this->clear_groups(this->groups(), this->group_capacity());
     }
 
     void clear_groups(group_type * groups, size_type group_capacity) {
-        init_groups(groups, group_capacity);
+        this->init_groups(groups, group_capacity, std::is_trivially_default_constructible<group_type>{});
     }
 
     JSTD_FORCED_INLINE
@@ -1474,73 +1553,6 @@ private:
         ctrl_type * ctrl = this->ctrl_at(index);
         slot_type * slot = this->slot_at(index);
         this->destroy_slot_data(ctrl, slot);
-    }
-
-    JSTD_FORCED_INLINE
-    size_type find_first_used_index() const {
-        if (this->size() != 0) {
-            group_type * group = this->groups();
-            group_type * last_group = this->last_group();
-            size_type slot_base_index = 0;
-            for (; group < last_group; ++group) {
-                std::uint32_t used_mask = group->match_used();
-                if (likely(used_mask != 0)) {
-                    std::uint32_t used_pos = BitUtils::bsf32(used_mask);
-                    size_type slot_index = slot_base_index + used_pos;
-                    return slot_index;
-                }
-                slot_base_index += kGroupWidth;
-            }
-        }
-        return this->slot_capacity();
-    }
-
-    JSTD_FORCED_INLINE
-    size_type skip_empty_slots(size_type start_slot_index) const {
-        if (this->size() != 0) {
-            group_type * group = this->group_by_slot_index(start_slot_index);
-            group_type * last_group = this->last_group();
-            size_type slot_pos = start_slot_index % kGroupWidth;
-            size_type slot_base_index = start_slot_index - slot_pos;
-            // Last 4 items use ctrl seek, maybe faster.
-            static const size_type kCtrlFasterSeekPos = 4;
-            if (likely(slot_pos < (kGroupWidth - kCtrlFasterSeekPos))) {
-                if (group < last_group) {
-                    std::uint32_t used_mask = group->match_used();
-                    // Filter out the bits in the leading position
-                    // std::uint32_t non_excluded_mask = ~((std::uint32_t(1) << std::uint32_t(slot_pos)) - 1);
-                    std::uint32_t non_excluded_mask = (std::uint32_t(0xFFFFFFFFu) << std::uint32_t(slot_pos));
-                    used_mask &= non_excluded_mask;
-                    if (likely(used_mask != 0)) {
-                        std::uint32_t used_pos = BitUtils::bsf32(used_mask);
-                        size_type slot_index = slot_base_index + used_pos;
-                        return slot_index;
-                    }
-                    slot_base_index += kGroupWidth;
-                    group++;
-                }
-            } else {
-                size_type last_index = slot_base_index + kGroupWidth;
-                ctrl_type * ctrl = this->ctrl_at(start_slot_index);
-                while (start_slot_index < last_index) {
-                    if (ctrl->is_used()) {
-                        return start_slot_index;
-                    }
-                    ++ctrl;
-                    ++start_slot_index;
-                }
-            }
-            for (; group < last_group; ++group) {
-                std::uint32_t used_mask = group->match_used();
-                if (likely(used_mask != 0)) {
-                    std::uint32_t used_pos = BitUtils::bsf32(used_mask);
-                    size_type slot_index = slot_base_index + used_pos;
-                    return slot_index;
-                }
-                slot_base_index += kGroupWidth;
-            }
-        }
-        return this->slot_capacity();
     }
 
     template <typename KeyT>
