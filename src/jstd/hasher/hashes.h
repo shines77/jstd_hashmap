@@ -645,14 +645,14 @@ std::uint64_t mum_hash64(std::uint64_t multiplicand, std::uint64_t multiplier)
 }
 
 static inline
-std::size_t mum_hash(std::size_t multiplicand, std::size_t multiplier)
+std::size_t mum_hash(std::size_t value)
 {
 #if (JSTD_WORD_LEN == 64)
     static const std::uint64_t kMultiplier = 11400714818402800987ull;
-    return mum_hash64(multiplicand, kMultiplier);
+    return mum_hash64(value, kMultiplier);
 #else
     static const std::uint32_t kMultiplier = 2654435761ul;
-    return mum_hash32(multiplicand, kMultiplier);
+    return mum_hash32(value, kMultiplier);
 #endif
 }
 
@@ -1499,7 +1499,7 @@ struct FibonacciHash
                                 (sizeof(Integer) <= 8))>::type * = nullptr>
     result_type operator () (Integer value) const noexcept {
         result_type hash_code = static_cast<result_type>(
-            hashes::fibonacci_hash64(static_cast<std::uint64_t>(value))
+            hashes::fibonacci_hash(static_cast<std::size_t>(value))
         );
         return hash_code;
     }
@@ -1525,7 +1525,7 @@ struct MumHash
                                 (sizeof(Integer) <= 8))>::type * = nullptr>
     result_type operator () (Integer value) const noexcept {
         result_type hash_code = static_cast<result_type>(
-            hashes::mum_hash64(static_cast<std::uint64_t>(value), 11400714819323198485ull)
+            hashes::mum_hash(static_cast<std::size_t>(value))
         );
         return hash_code;
     }
@@ -1590,7 +1590,7 @@ public:
         static constexpr bool isExcludedType = is_excluded_type<Key>::value;
         if (!isExcludedType) {
             hash_code = static_cast<size_type>(
-                static_cast<std::uint64_t>(hash_code) * 11400714819323198485ull
+                hashes::fibonacci_hash(static_cast<std::size_t>(hash_code));
             );
         }
         return (hash_code >> this->shift_);
@@ -1651,7 +1651,7 @@ public:
         static constexpr bool isExcludedType = is_excluded_type<Key>::value;
         if (!isExcludedType) {
             hash_code = static_cast<size_type>(
-                hashes::mum_hash64(static_cast<std::uint64_t>(hash_code), 11400714819323198485ull)
+                hashes::mum_hash(static_cast<std::size_t>(hash_code))
             );
         }
         return (hash_code >> this->shift_);
