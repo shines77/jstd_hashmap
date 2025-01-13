@@ -633,11 +633,11 @@ void measure_hashmap(const char * name, std::size_t obj_size,
     if (1) map_serial_iterate<MapType>(iters);
     if (1) printf("\n");
 
-    if (1) map_random_erase<MapType>(iters, rndIndices);
-    if (1) map_random_erase_failed<MapType>(iters, rndIndices);
-    if (1) map_random_toggle<MapType>(iters, rndIndices);
-    if (1) map_random_iterate<MapType>(iters, rndIndices);
-    if (1) printf("\n");
+    if (0) map_random_erase<MapType>(iters, rndIndices);
+    if (0) map_random_erase_failed<MapType>(iters, rndIndices);
+    if (0) map_random_toggle<MapType>(iters, rndIndices);
+    if (0) map_random_iterate<MapType>(iters, rndIndices);
+    if (0) printf("\n");
 
     //------------------------------------------------------------
 
