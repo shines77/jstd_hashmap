@@ -1590,7 +1590,7 @@ public:
         static constexpr bool isExcludedType = is_excluded_type<Key>::value;
         if (!isExcludedType) {
             hash_code = static_cast<size_type>(
-                hashes::fibonacci_hash(static_cast<std::size_t>(hash_code));
+                hashes::fibonacci_hash(static_cast<std::size_t>(hash_code))
             );
         }
         return (hash_code >> this->shift_);
