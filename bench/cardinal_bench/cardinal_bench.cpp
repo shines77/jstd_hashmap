@@ -82,15 +82,11 @@
 #define USE_JSTD_DICTIONARY             0
 
 #ifndef _DEBUG
-#define USE_STD_UNORDERED_MAP           1
-#define USE_JSTD_FLAT16_HASH_MAP        0
-#define USE_JSTD_ROBIN16_HASH_MAP       0
+#define USE_STD_UNORDERED_MAP           0
 #define USE_JSTD_ROBIN_HASH_MAP         1
 #define USE_JSTD_CLUSTER_FALT_MAP       1
 #else
 #define USE_STD_UNORDERED_MAP           0
-#define USE_JSTD_FLAT16_HASH_MAP        0
-#define USE_JSTD_ROBIN16_HASH_MAP       0
 #define USE_JSTD_ROBIN_HASH_MAP         1
 #define USE_JSTD_CLUSTER_FALT_MAP       1
 #endif // _DEBUG
@@ -119,12 +115,6 @@
 
 #if USE_STD_UNORDERED_MAP
 #include <unordered_map>
-#endif
-#if USE_JSTD_FLAT16_HASH_MAP
-#include <jstd/hashmap/flat16_hash_map.h>
-#endif
-#if USE_JSTD_ROBIN16_HASH_MAP
-#include <jstd/hashmap/robin16_hash_map.h>
 #endif
 #if USE_JSTD_ROBIN_HASH_MAP
 #include <jstd/hashmap/robin_hash_map.h>
@@ -455,14 +445,6 @@ void benchmark_insert_random_impl()
     run_insert_random<std::unordered_map<Key, Value>>
         ("std::unordered_map", keys, Cardinal);
 #endif
-#if USE_JSTD_FLAT16_HASH_MAP
-    run_insert_random<jstd::flat16_hash_map<Key, Value>>
-        ("jstd::flat16_hash_map", keys, Cardinal);
-#endif
-#if USE_JSTD_ROBIN16_HASH_MAP
-    run_insert_random<jstd::robin16_hash_map<Key, Value>>
-        ("jstd::robin16_hash_map", keys, Cardinal);
-#endif
 #if USE_JSTD_ROBIN_HASH_MAP
     run_insert_random<jstd::robin_hash_map<Key, Value>>
         ("jstd::robin_hash_map", keys, Cardinal);
@@ -510,10 +492,10 @@ void benchmark_insert_random(std::size_t iters)
     printf("-----------------------------------------------------------------------\n\n");
     benchmark_insert_random_impl<Key, Value, DataSize, Cardinal4>();
     printf("-----------------------------------------------------------------------\n\n");
-    //benchmark_insert_random_impl<Key, Value, DataSize, Cardinal5>();
+    benchmark_insert_random_impl<Key, Value, DataSize, Cardinal5>();
     //printf("-----------------------------------------------------------------------\n\n");
 #endif
-    benchmark_insert_random_impl<Key, Value, DataSize, Cardinal6>();
+    //benchmark_insert_random_impl<Key, Value, DataSize, Cardinal6>();
 }
 
 template <typename Key, typename Value, std::size_t DataSize, std::size_t Cardinal>
@@ -532,14 +514,6 @@ void benchmark_MumHash_insert_random_impl()
 #if USE_STD_UNORDERED_MAP
     run_insert_random<std::unordered_map<Key, Value, test::MumHash<Key>>>
         ("std::unordered_map", keys, Cardinal);
-#endif
-#if USE_JSTD_FLAT16_HASH_MAP
-    run_insert_random<jstd::flat16_hash_map<Key, Value, test::MumHash<Key>>>
-        ("jstd::flat16_hash_map", keys, Cardinal);
-#endif
-#if USE_JSTD_ROBIN16_HASH_MAP
-    run_insert_random<jstd::robin16_hash_map<Key, Value, test::MumHash<Key>>>
-        ("jstd::robin16_hash_map", keys, Cardinal);
 #endif
 #if USE_JSTD_ROBIN_HASH_MAP
     run_insert_random<jstd::robin_hash_map<Key, Value, test::MumHash<Key>>>
@@ -587,9 +561,9 @@ void benchmark_MumHash_insert_random(std::size_t iters)
     printf("-----------------------------------------------------------------------\n\n");
     benchmark_MumHash_insert_random_impl<Key, Value, DataSize, Cardinal4>();
     printf("-----------------------------------------------------------------------\n\n");
-    //benchmark_MumHash_insert_random_impl<Key, Value, DataSize, Cardinal5>();
+    benchmark_MumHash_insert_random_impl<Key, Value, DataSize, Cardinal5>();
     //printf("-----------------------------------------------------------------------\n\n");
-    benchmark_MumHash_insert_random_impl<Key, Value, DataSize, Cardinal6>();
+    //benchmark_MumHash_insert_random_impl<Key, Value, DataSize, Cardinal6>();
 }
 
 void benchmark_all_hashmaps(std::size_t iters)
@@ -782,8 +756,8 @@ int main(int argc, char * argv[])
     if (1) { std_hash_test(); }
     if (1) { int_hash_crc32c_test(); }
 
-    if (1) { test_map_slot_type(); }
-    if (1) { test_hashmap<std::string, std::string>(); }
+    if (0) { test_map_slot_type(); }
+    if (0) { test_hashmap<std::string, std::string>(); }
 
     if (1)
     {

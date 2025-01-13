@@ -86,14 +86,10 @@
 
 #ifndef _DEBUG
 #define USE_STD_UNORDERED_MAP           0
-#define USE_JSTD_FLAT16_HASH_MAP        0
-#define USE_JSTD_ROBIN16_HASH_MAP       0
 #define USE_JSTD_ROBIN_HASH_MAP         1
 #define USE_JSTD_CLUSTER_FLAT_MAP       1
 #else
 #define USE_STD_UNORDERED_MAP           0
-#define USE_JSTD_FLAT16_HASH_MAP        0
-#define USE_JSTD_ROBIN16_HASH_MAP       0
 #define USE_JSTD_ROBIN_HASH_MAP         1
 #define USE_JSTD_CLUSTER_FLAT_MAP       1
 #endif // _DEBUG
@@ -136,12 +132,6 @@
 #include <unordered_map>
 #endif
 
-#if USE_JSTD_FLAT16_HASH_MAP
-#include <jstd/hashmap/flat16_hash_map.h>
-#endif
-#if USE_JSTD_ROBIN16_HASH_MAP
-#include <jstd/hashmap/robin16_hash_map.h>
-#endif
 #if USE_JSTD_ROBIN_HASH_MAP
 #include <jstd/hashmap/robin_hash_map.h>
 #endif
@@ -818,22 +808,6 @@ void test_all_hashmaps(std::size_t obj_size, std::size_t iters)
     }
 #endif
 
-#if USE_JSTD_FLAT16_HASH_MAP
-    if (1) {
-        measure_hashmap<jstd::flat16_hash_map<Key,   Value, HASH_MAP_FUNCTION<Key>>,
-                        jstd::flat16_hash_map<Key *, Value, HASH_MAP_FUNCTION<Key *>>>
-            ("jstd::flat16_hash_map", obj_size, iters, has_stress_hash_function);
-    }
-#endif
-
-#if USE_JSTD_ROBIN16_HASH_MAP
-    if (1) {
-        measure_hashmap<jstd::robin16_hash_map<Key,   Value, HASH_MAP_FUNCTION<Key>>,
-                        jstd::robin16_hash_map<Key *, Value, HASH_MAP_FUNCTION<Key *>>>
-            ("jstd::robin16_hash_map", obj_size, iters, has_stress_hash_function);
-    }
-#endif
-
 #if USE_JSTD_ROBIN_HASH_MAP
     if (1) {
         measure_hashmap<jstd::robin_hash_map<Key,   Value, HASH_MAP_FUNCTION<Key>>,
@@ -871,20 +845,6 @@ void test_all_hashmaps_for_string(std::size_t obj_size, std::size_t iters)
     if (1) {
         measure_string_hashmap<std::unordered_map<Key, Value>>
             ("std::unordered_map", obj_size, iters);
-    }
-#endif
-
-#if USE_JSTD_FLAT16_HASH_MAP
-    if (1) {
-        measure_string_hashmap<jstd::flat16_hash_map<Key, Value>>
-            ("jstd::flat16_hash_map", obj_size, iters);
-    }
-#endif
-
-#if USE_JSTD_ROBIN16_HASH_MAP
-    if (1) {
-        measure_string_hashmap<jstd::robin16_hash_map<Key, Value>>
-            ("jstd::robin16_hash_map", obj_size, iters);
     }
 #endif
 
@@ -1112,8 +1072,8 @@ int main(int argc, char * argv[])
     jtest::CPU::warm_up(1000);
 
     if (1) { std_hash_test(); }
-    if (1) { need_store_hash_test(); }
-    if (1) { is_compatible_layout_test(); }
+    if (0) { need_store_hash_test(); }
+    if (0) { is_compatible_layout_test(); }
 
     if (1)
     {
