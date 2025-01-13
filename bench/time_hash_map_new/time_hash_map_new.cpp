@@ -610,20 +610,20 @@ void measure_hashmap(const char * name, std::size_t obj_size,
 
     //------------------------------------------------------------
 
-    if (1) map_random_insert<MapType>(iters, rndIndices);
-    if (1) map_random_insert_predicted<MapType>(iters, rndIndices);
-    if (1) map_random_insert_replace<MapType>(iters, rndIndices);
-    if (1) printf("\n");
+    if (0) map_random_insert<MapType>(iters, rndIndices);
+    if (0) map_random_insert_predicted<MapType>(iters, rndIndices);
+    if (0) map_random_insert_replace<MapType>(iters, rndIndices);
+    if (0) printf("\n");
 
-    if (1) map_random_emplace<MapType>(iters, rndIndices);
-    if (1) map_random_emplace_predicted<MapType>(iters, rndIndices);
-    if (1) map_random_emplace_replace<MapType>(iters, rndIndices);
-    if (1) printf("\n");
+    if (0) map_random_emplace<MapType>(iters, rndIndices);
+    if (0) map_random_emplace_predicted<MapType>(iters, rndIndices);
+    if (0) map_random_emplace_replace<MapType>(iters, rndIndices);
+    if (0) printf("\n");
 
-    if (1) map_random_operator<MapType>(iters, rndIndices);
-    if (1) map_random_operator_predicted<MapType>(iters, rndIndices);
-    if (1) map_random_operator_replace<MapType>(iters, rndIndices);
-    if (1) printf("\n");
+    if (0) map_random_operator<MapType>(iters, rndIndices);
+    if (0) map_random_operator_predicted<MapType>(iters, rndIndices);
+    if (0) map_random_operator_replace<MapType>(iters, rndIndices);
+    if (0) printf("\n");
 
     //------------------------------------------------------------
 
