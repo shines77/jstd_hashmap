@@ -58,7 +58,7 @@
 
 #include <assert.h>
 
-#define ITERATOR_USE_GROUP_SCAN  0
+#define ITERATOR_USE_GROUP_SCAN  1
 
 namespace jstd {
 
