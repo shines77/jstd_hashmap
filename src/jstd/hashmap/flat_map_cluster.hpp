@@ -67,6 +67,9 @@ public:
     static constexpr std::uint8_t kEmptySlot    = 0b00000000 & kHashMask;
     static constexpr std::uint8_t kOverflowMask = 0b10000000;
 
+    static constexpr std::uint8_t kEmptyHash    = 0x11;
+    static constexpr std::uint32_t kEmptyHash32 = 0x11111111;
+
     static_assert(((kHashMask & kOverflowMask) == 0), "kHashMask & kOverflowMask must be 0");
     static_assert(((kHashMask | kOverflowMask) == 0b11111111), "kHashMask & kOverflowMask must be 0b11111111");
 
@@ -75,6 +78,122 @@ public:
 
     cluster_meta_ctrl(value_type value = kEmptySlot) : value(value) {}
     ~cluster_meta_ctrl() {}
+
+    static inline int repeated_hash8(std::uint8_t hash) {
+        static constexpr std::uint32_t dword_hashs[] = {
+           kEmptyHash32, 0x01010101u, 0x02020202u, 0x03030303u,
+            0x04040404u, 0x05050505u, 0x06060606u, 0x07070707u,
+            0x08080808u, 0x09090909u, 0x0A0A0A0Au, 0x0B0B0B0Bu,
+            0x0C0C0C0Cu, 0x0D0D0D0Du, 0x0E0E0E0Eu, 0x0F0F0F0Fu,
+            0x10101010u, 0x11111111u, 0x12121212u, 0x13131313u,
+            0x14141414u, 0x15151515u, 0x16161616u, 0x17171717u,
+            0x18181818u, 0x19191919u, 0x1A1A1A1Au, 0x1B1B1B1Bu,
+            0x1C1C1C1Cu, 0x1D1D1D1Du, 0x1E1E1E1Eu, 0x1F1F1F1Fu,
+            0x20202020u, 0x21212121u, 0x22222222u, 0x23232323u,
+            0x24242424u, 0x25252525u, 0x26262626u, 0x27272727u,
+            0x28282828u, 0x29292929u, 0x2A2A2A2Au, 0x2B2B2B2Bu,
+            0x2C2C2C2Cu, 0x2D2D2D2Du, 0x2E2E2E2Eu, 0x2F2F2F2Fu,
+            0x30303030u, 0x31313131u, 0x32323232u, 0x33333333u,
+            0x34343434u, 0x35353535u, 0x36363636u, 0x37373737u,
+            0x38383838u, 0x39393939u, 0x3A3A3A3Au, 0x3B3B3B3Bu,
+            0x3C3C3C3Cu, 0x3D3D3D3Du, 0x3E3E3E3Eu, 0x3F3F3F3Fu,
+            0x40404040u, 0x41414141u, 0x42424242u, 0x43434343u,
+            0x44444444u, 0x45454545u, 0x46464646u, 0x47474747u,
+            0x48484848u, 0x49494949u, 0x4A4A4A4Au, 0x4B4B4B4Bu,
+            0x4C4C4C4Cu, 0x4D4D4D4Du, 0x4E4E4E4Eu, 0x4F4F4F4Fu,
+            0x50505050u, 0x51515151u, 0x52525252u, 0x53535353u,
+            0x54545454u, 0x55555555u, 0x56565656u, 0x57575757u,
+            0x58585858u, 0x59595959u, 0x5A5A5A5Au, 0x5B5B5B5Bu,
+            0x5C5C5C5Cu, 0x5D5D5D5Du, 0x5E5E5E5Eu, 0x5F5F5F5Fu,
+            0x60606060u, 0x61616161u, 0x62626262u, 0x63636363u,
+            0x64646464u, 0x65656565u, 0x66666666u, 0x67676767u,
+            0x68686868u, 0x69696969u, 0x6A6A6A6Au, 0x6B6B6B6Bu,
+            0x6C6C6C6Cu, 0x6D6D6D6Du, 0x6E6E6E6Eu, 0x6F6F6F6Fu,
+            0x70707070u, 0x71717171u, 0x72727272u, 0x73737373u,
+            0x74747474u, 0x75757575u, 0x76767676u, 0x77777777u,
+            0x78787878u, 0x79797979u, 0x7A7A7A7Au, 0x7B7B7B7Bu,
+            0x7C7C7C7Cu, 0x7D7D7D7Du, 0x7E7E7E7Eu, 0x7F7F7F7Fu,
+#if 1
+            // This is a mirror of 0 ~ 127
+           kEmptyHash32, 0x01010101u, 0x02020202u, 0x03030303u,
+            0x04040404u, 0x05050505u, 0x06060606u, 0x07070707u,
+            0x08080808u, 0x09090909u, 0x0A0A0A0Au, 0x0B0B0B0Bu,
+            0x0C0C0C0Cu, 0x0D0D0D0Du, 0x0E0E0E0Eu, 0x0F0F0F0Fu,
+            0x10101010u, 0x11111111u, 0x12121212u, 0x13131313u,
+            0x14141414u, 0x15151515u, 0x16161616u, 0x17171717u,
+            0x18181818u, 0x19191919u, 0x1A1A1A1Au, 0x1B1B1B1Bu,
+            0x1C1C1C1Cu, 0x1D1D1D1Du, 0x1E1E1E1Eu, 0x1F1F1F1Fu,
+            0x20202020u, 0x21212121u, 0x22222222u, 0x23232323u,
+            0x24242424u, 0x25252525u, 0x26262626u, 0x27272727u,
+            0x28282828u, 0x29292929u, 0x2A2A2A2Au, 0x2B2B2B2Bu,
+            0x2C2C2C2Cu, 0x2D2D2D2Du, 0x2E2E2E2Eu, 0x2F2F2F2Fu,
+            0x30303030u, 0x31313131u, 0x32323232u, 0x33333333u,
+            0x34343434u, 0x35353535u, 0x36363636u, 0x37373737u,
+            0x38383838u, 0x39393939u, 0x3A3A3A3Au, 0x3B3B3B3Bu,
+            0x3C3C3C3Cu, 0x3D3D3D3Du, 0x3E3E3E3Eu, 0x3F3F3F3Fu,
+            0x40404040u, 0x41414141u, 0x42424242u, 0x43434343u,
+            0x44444444u, 0x45454545u, 0x46464646u, 0x47474747u,
+            0x48484848u, 0x49494949u, 0x4A4A4A4Au, 0x4B4B4B4Bu,
+            0x4C4C4C4Cu, 0x4D4D4D4Du, 0x4E4E4E4Eu, 0x4F4F4F4Fu,
+            0x50505050u, 0x51515151u, 0x52525252u, 0x53535353u,
+            0x54545454u, 0x55555555u, 0x56565656u, 0x57575757u,
+            0x58585858u, 0x59595959u, 0x5A5A5A5Au, 0x5B5B5B5Bu,
+            0x5C5C5C5Cu, 0x5D5D5D5Du, 0x5E5E5E5Eu, 0x5F5F5F5Fu,
+            0x60606060u, 0x61616161u, 0x62626262u, 0x63636363u,
+            0x64646464u, 0x65656565u, 0x66666666u, 0x67676767u,
+            0x68686868u, 0x69696969u, 0x6A6A6A6Au, 0x6B6B6B6Bu,
+            0x6C6C6C6Cu, 0x6D6D6D6Du, 0x6E6E6E6Eu, 0x6F6F6F6Fu,
+            0x70707070u, 0x71717171u, 0x72727272u, 0x73737373u,
+            0x74747474u, 0x75757575u, 0x76767676u, 0x77777777u,
+            0x78787878u, 0x79797979u, 0x7A7A7A7Au, 0x7B7B7B7Bu,
+            0x7C7C7C7Cu, 0x7D7D7D7Du, 0x7E7E7E7Eu, 0x7F7F7F7Fu,
+#else
+            // Actually, it wasn't used from here on
+            0x80808080u, 0x81818181u, 0x82828282u, 0x83838383u,
+            0x84848484u, 0x85858585u, 0x86868686u, 0x87878787u,
+            0x88888888u, 0x89898989u, 0x8A8A8A8Au, 0x8B8B8B8Bu,
+            0x8C8C8C8Cu, 0x8D8D8D8Du, 0x8E8E8E8Eu, 0x8F8F8F8Fu,
+            0x90909090u, 0x91919191u, 0x92929292u, 0x93939393u,
+            0x94949494u, 0x95959595u, 0x96969696u, 0x97979797u,
+            0x98989898u, 0x99999999u, 0x9A9A9A9Au, 0x9B9B9B9Bu,
+            0x9C9C9C9Cu, 0x9D9D9D9Du, 0x9E9E9E9Eu, 0x9F9F9F9Fu,
+            0xA0A0A0A0u, 0xA1A1A1A1u, 0xA2A2A2A2u, 0xA3A3A3A3u,
+            0xA4A4A4A4u, 0xA5A5A5A5u, 0xA6A6A6A6u, 0xA7A7A7A7u,
+            0xA8A8A8A8u, 0xA9A9A9A9u, 0xAAAAAAAAu, 0xABABABABu,
+            0xACACACACu, 0xADADADADu, 0xAEAEAEAEu, 0xAFAFAFAFu,
+            0xB0B0B0B0u, 0xB1B1B1B1u, 0xB2B2B2B2u, 0xB3B3B3B3u,
+            0xB4B4B4B4u, 0xB5B5B5B5u, 0xB6B6B6B6u, 0xB7B7B7B7u,
+            0xB8B8B8B8u, 0xB9B9B9B9u, 0xBABABABAu, 0xBBBBBBBBu,
+            0xBCBCBCBCu, 0xBDBDBDBDu, 0xBEBEBEBEu, 0xBFBFBFBFu,
+            0xC0C0C0C0u, 0xC1C1C1C1u, 0xC2C2C2C2u, 0xC3C3C3C3u,
+            0xC4C4C4C4u, 0xC5C5C5C5u, 0xC6C6C6C6u, 0xC7C7C7C7u,
+            0xC8C8C8C8u, 0xC9C9C9C9u, 0xCACACACAu, 0xCBCBCBCBu,
+            0xCCCCCCCCu, 0xCDCDCDCDu, 0xCECECECEu, 0xCFCFCFCFu,
+            0xD0D0D0D0u, 0xD1D1D1D1u, 0xD2D2D2D2u, 0xD3D3D3D3u,
+            0xD4D4D4D4u, 0xD5D5D5D5u, 0xD6D6D6D6u, 0xD7D7D7D7u,
+            0xD8D8D8D8u, 0xD9D9D9D9u, 0xDADADADAu, 0xDBDBDBDBu,
+            0xDCDCDCDCu, 0xDDDDDDDDu, 0xDEDEDEDEu, 0xDFDFDFDFu,
+            0xE0E0E0E0u, 0xE1E1E1E1u, 0xE2E2E2E2u, 0xE3E3E3E3u,
+            0xE4E4E4E4u, 0xE5E5E5E5u, 0xE6E6E6E6u, 0xE7E7E7E7u,
+            0xE8E8E8E8u, 0xE9E9E9E9u, 0xEAEAEAEAu, 0xEBEBEBEBu,
+            0xECECECECu, 0xEDEDEDEDu, 0xEEEEEEEEu, 0xEFEFEFEFu,
+            0xF0F0F0F0u, 0xF1F1F1F1u, 0xF2F2F2F2u, 0xF3F3F3F3u,
+            0xF4F4F4F4u, 0xF5F5F5F5u, 0xF6F6F6F6u, 0xF7F7F7F7u,
+            0xF8F8F8F8u, 0xF9F9F9F9u, 0xFAFAFAFAu, 0xFBFBFBFBu,
+            0xFCFCFCFCu, 0xFDFDFDFDu, 0xFEFEFEFEu, 0xFFFFFFFFu,
+#endif
+        };
+
+        return (int)dword_hashs[hash];
+    }
+
+    static inline int repeated_hash(std::size_t hash) {
+        return repeated_hash8(static_cast<std::uint8_t>(hash));
+    }
+
+    static inline std::uint8_t reduced_hash(std::size_t hash) {
+        return static_cast<std::uint8_t>(repeated_hash(hash));
+    }
 
     static inline value_type hash_bits(std::size_t hash) {
         return static_cast<value_type>(hash & static_cast<std::size_t>(kHashMask));
@@ -175,9 +294,6 @@ public:
 
     static constexpr std::size_t kGroupWidth = 16;
 
-    flat_map_cluster16() {}
-    ~flat_map_cluster16() {}
-
     void init() {
         if (kEmptySlot == 0b00000000) {
             __m128i zeros = _mm_setzero_si128();
@@ -259,9 +375,9 @@ public:
     inline std::uint32_t match_empty() const {
         // Latency = 6
         __m128i ctrl_bits = _load_data();
-        __COMPILER_BARRIER();
+        //__COMPILER_BARRIER();
         __m128i mask_bits = _mm_set1_epi8(kHashMask);
-        __COMPILER_BARRIER();
+        //__COMPILER_BARRIER();
 
         __m128i empty_bits;
         if (kEmptySlot == 0b00000000)
@@ -279,9 +395,9 @@ public:
     inline std::uint32_t match_used() const {
         // Latency = 6
         __m128i ctrl_bits = _load_data();
-        __COMPILER_BARRIER();
+        //__COMPILER_BARRIER();
         __m128i mask_bits = _mm_set1_epi8(kHashMask);
-        __COMPILER_BARRIER();
+        //__COMPILER_BARRIER();
 
         __m128i empty_bits, match_mask;
         if (kEmptySlot == 0b00000000) {
@@ -307,10 +423,15 @@ public:
     inline std::uint32_t match_hash(hash_type hash) const {
         // Latency = 6
         __m128i ctrl_bits  = _load_data();
-        __COMPILER_BARRIER();
+        //__COMPILER_BARRIER();
         __m128i mask_bits  = _mm_set1_epi8(kHashMask);
-        __COMPILER_BARRIER();
+        //__COMPILER_BARRIER();
+#if 1
+        // Use lookup table
+        __m128i hash_bits  = _mm_set1_epi32(ctrl_type::repeated_hash8(hash));
+#else
         __m128i hash_bits  = _mm_set1_epi8(hash);
+#endif
         __m128i match_mask = _mm_cmpeq_epi8(_mm_and_si128(ctrl_bits, mask_bits), hash_bits);
         int mask = _mm_movemask_epi8(match_mask);
         return static_cast<std::uint32_t>(mask);

@@ -134,6 +134,7 @@ public:
     static constexpr std::uint8_t kHashMask     = ctrl_type::kHashMask;
     static constexpr std::uint8_t kEmptySlot    = ctrl_type::kEmptySlot;
     static constexpr std::uint8_t kOverflowMask = ctrl_type::kOverflowMask;
+    static constexpr std::uint8_t kEmptyHash    = ctrl_type::kEmptyHash;
 
     static constexpr size_type kGroupWidth = group_type::kGroupWidth;
 
@@ -1052,68 +1053,66 @@ private:
     inline std::size_t hash_for(const key_type & key) const
         noexcept(noexcept(this->hasher_(key))) {
 #if CLUSTER_USE_HASH_POLICY
-        std::size_t hash_code = static_cast<std::size_t>(
-            this->hash_policy_.get_hash_code(key)
-        );
+        std::size_t key_hash = static_cast<std::size_t>(this->hash_policy_.get_hash_code(key));
 #elif 0
-        std::size_t hash_code;
+        std::size_t key_hash;
         if (std::is_integral<key_type>::value)
-            hash_code = hashes::msvc_fnv_1a((const unsigned char *)&key, sizeof(key_type));
+            key_hash = hashes::msvc_fnv_1a((const unsigned char *)&key, sizeof(key_type));
         else
-            hash_code = static_cast<std::size_t>(this->hasher_(key));
+            key_hash = static_cast<std::size_t>(this->hasher_(key));
 #elif defined(__GNUC__) || (defined(__clang__) && !defined(_MSC_VER))
         std::size_t hash_code;
         if (std::is_integral<key_type>::value && jstd::is_default_std_hash<Hash, key_type>::value)
-            hash_code = hashes::msvc_fnv_1a((const unsigned char *)&key, sizeof(key_type));
+            key_hash = hashes::msvc_fnv_1a((const unsigned char *)&key, sizeof(key_type));
         else
-            hash_code = static_cast<std::size_t>(this->hasher_(key));
+            key_hash = static_cast<std::size_t>(this->hasher_(key));
 #else
-        std::size_t hash_code = static_cast<std::size_t>(this->hasher_(key));
+        std::size_t key_hash = static_cast<std::size_t>(this->hasher_(key));
 #endif
-        return hash_code;
+        return key_hash;
     }
 
     //
     // Do the index hash on the basis of hash code for the index_for_hash().
     //
-    inline std::size_t index_hasher(std::size_t value) const noexcept {
-        return value;
+    inline std::size_t index_hasher(std::size_t key_hash) const noexcept {
+        return key_hash;
     }
 
     //
     // Do the ctrl hash on the basis of hash code for the ctrl hash.
     //
-    inline std::size_t ctrl_hasher(std::size_t hash_code) const noexcept {
+    inline std::size_t ctrl_hasher(std::size_t key_hash) const noexcept {
 #if CLUSTER_USE_HASH_POLICY
-        return hash_code;
+        return key_hash;
 #elif 0
-        return (size_type)hashes::mum_hash(hash_code);
+        return (size_type)hashes::mum_hash(key_hash);
 #elif 1
-        return (size_type)hashes::fibonacci_hash(hash_code);
+        return (size_type)hashes::fibonacci_hash(key_hash);
 #endif
     }
 
-    inline size_type index_for_hash(std::size_t hash_code) const noexcept {
+    inline size_type index_for_hash(std::size_t key_hash) const noexcept {
 #if CLUSTER_USE_HASH_POLICY
         if (kUseIndexSalt) {
-            hash_code ^= this->index_salt();
+            key_hash ^= this->index_salt();
         }
-        size_type index = this->hash_policy_.template index_for_hash<key_type>(hash_code, this->slot_mask());
+        size_type index = this->hash_policy_.template index_for_hash<key_type>(key_hash, this->slot_mask());
         return index;
 #else
-        hash_code = this->index_hasher(hash_code);
+        key_hash = this->index_hasher(key_hash);
         if (kUseIndexSalt) {
-            hash_code ^= this->index_salt();
+            key_hash ^= this->index_salt();
         }
-        size_type index = hash_code & this->slot_mask();
+        size_type index = key_hash & this->slot_mask();
         return index;
 #endif
     }
 
-    inline std::uint8_t ctrl_for_hash(std::size_t hash_code) const noexcept {
-        std::size_t ctrl_hash = this->ctrl_hasher(hash_code);
+    inline std::uint8_t ctrl_for_hash(std::size_t key_hash) const noexcept {
+        std::size_t ctrl_hash = this->ctrl_hasher(key_hash);
         std::uint8_t ctrl_hash8 = ctrl_type::hash_bits(ctrl_hash);
-        return ((ctrl_hash8 != kEmptySlot) ? ctrl_hash8 : std::uint8_t(8));
+        return ((ctrl_hash8 != kEmptySlot) ? ctrl_hash8 : kEmptyHash);
     }
 
     size_type index_of(iterator iter) const {
