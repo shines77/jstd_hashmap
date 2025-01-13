@@ -58,7 +58,7 @@
 
 #include <assert.h>
 
-#define ITERATOR_USE_GROUP_SCAN  1
+#define ITERATOR_USE_GROUP_SCAN  0
 
 namespace jstd {
 
@@ -153,12 +153,12 @@ public:
         const ctrl_type * ctrl = this->map_->ctrl_at(index);
         ssize_type max_index = static_cast<ssize_type>(this->map_->slot_capacity());
 
-        do {
+        while (index < max_index) {
             ++index;
             ++ctrl;
             if (!ctrl->is_empty())
                 break;
-        } while (index < max_index);
+        }
 
         this->index_ = index;
         return *this;
@@ -175,12 +175,12 @@ public:
         ssize_type index = this->index_;
         const ctrl_type * ctrl = this->map_->ctrl_at(index);
 
-        do {
+        while (index > 0) {
             --index;
             --ctrl;
             if (!ctrl->is_empty())
                 break;
-        } while (index > 0);
+        }
 
         this->index_ = index;
         return *this;
