@@ -87,10 +87,10 @@ public:
     }
 
     template <typename First, typename ... Args>
-    static decltype(jstd::DecomposePair(
+    static decltype(jstd::DecomposePair2(
         std::declval<First>(), std::declval<Args>()...))
         apply(First && f, Args &&... args) {
-        return jstd::DecomposePair(std::forward<First>(f), std::forward<Args>(args)...);
+        return jstd::DecomposePair2(std::forward<First>(f), std::forward<Args>(args)...);
     }
 
     static std::pair<const key_type, mapped_type> & element(slot_type * slot) {

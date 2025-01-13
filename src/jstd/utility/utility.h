@@ -18,7 +18,7 @@
 #include <type_traits>
 
 #include "jstd/basic/stddef.h"
-#include "jstd/utility/integer_sequence.h"
+#include "jstd/traits/integer_sequence.h"
 #include "jstd/traits/type_traits.h"
 
 namespace jstd {

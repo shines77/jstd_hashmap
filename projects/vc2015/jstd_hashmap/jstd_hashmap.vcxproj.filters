@@ -97,9 +97,6 @@
     <ClInclude Include="..\..\..\src\jstd\traits\has_member.h">
       <Filter>src\traits</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\src\jstd\utility\integer_sequence.h">
-      <Filter>src\utility</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\..\src\jstd\support\Power2.h">
       <Filter>src\support</Filter>
     </ClInclude>
@@ -318,6 +315,9 @@
     </ClInclude>
     <ClInclude Include="..\..\..\src\jstd\hashmap\map_types_constructibility.hpp">
       <Filter>src\hashmap</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\traits\integer_sequence.h">
+      <Filter>src\traits</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

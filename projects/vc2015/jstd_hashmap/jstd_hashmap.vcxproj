@@ -105,8 +105,8 @@
     <ClInclude Include="..\..\..\src\jstd\test\StopWatch.h" />
     <ClInclude Include="..\..\..\src\jstd\test\Test.h" />
     <ClInclude Include="..\..\..\src\jstd\traits\has_member.h" />
+    <ClInclude Include="..\..\..\src\jstd\traits\integer_sequence.h" />
     <ClInclude Include="..\..\..\src\jstd\traits\type_traits.h" />
-    <ClInclude Include="..\..\..\src\jstd\utility\integer_sequence.h" />
     <ClInclude Include="..\..\..\src\jstd\utility\utility.h" />
     <ClInclude Include="..\..\..\src\jstd\version.h" />
   </ItemGroup>

@@ -942,13 +942,13 @@ WithConstructed(Tuple && t, First && first) {
 //
 inline
 std::pair<std::tuple<>, std::tuple<>>
-PairArgs() {
+PairArgs2() {
     return { };
 }
 
 template <class First, class Second>
 std::pair<std::tuple<First &&>, std::tuple<Second &&>>
-PairArgs(First && first, Second && second) {
+PairArgs2(First && first, Second && second) {
     return { std::piecewise_construct,
              std::forward_as_tuple(std::forward<First>(first)),
              std::forward_as_tuple(std::forward<Second>(second)) };
@@ -956,18 +956,18 @@ PairArgs(First && first, Second && second) {
 
 template <class First, class Second>
 std::pair<std::tuple<const First &>, std::tuple<const Second &>>
-PairArgs(const std::pair<First, Second> & pair) {
-    return PairArgs(pair.first, pair.second);
+PairArgs2(const std::pair<First, Second> & pair) {
+    return PairArgs2(pair.first, pair.second);
 }
 
 template <class First, class Second>
 std::pair<std::tuple<First &&>, std::tuple<Second &&>>
-PairArgs(std::pair<First, Second> && pair) {
-    return PairArgs(std::forward<First>(pair.first), std::forward<Second>(pair.second));
+PairArgs2(std::pair<First, Second> && pair) {
+    return PairArgs2(std::forward<First>(pair.first), std::forward<Second>(pair.second));
 }
 
 template <class First, class Second>
-auto PairArgs(std::piecewise_construct_t, First && first, Second && second)
+auto PairArgs2(std::piecewise_construct_t, First && first, Second && second)
 -> decltype(std::make_pair(TupleRef(std::forward<First>(first)),
                            TupleRef(std::forward<Second>(second)))) {
     return std::make_pair(TupleRef(std::forward<First>(first)),
@@ -976,9 +976,9 @@ auto PairArgs(std::piecewise_construct_t, First && first, Second && second)
 
 // A helper function for implementing apply() in map policies.
 template <class First, class ... Args>
-auto DecomposePair(First && f, Args && ... args)
--> decltype(DecomposePairImpl(std::forward<First>(f), PairArgs(std::forward<Args>(args)...))) {
-    return DecomposePairImpl(std::forward<First>(f), PairArgs(std::forward<Args>(args)...));
+auto DecomposePair2(First && f, Args && ... args)
+-> decltype(DecomposePairImpl(std::forward<First>(f), PairArgs2(std::forward<Args>(args)...))) {
+    return DecomposePairImpl(std::forward<First>(f), PairArgs2(std::forward<Args>(args)...));
 }
 
 // A helper function for implementing apply() in set policies.
