@@ -1061,7 +1061,7 @@ private:
         else
             key_hash = static_cast<std::size_t>(this->hasher_(key));
 #elif defined(__GNUC__) || (defined(__clang__) && !defined(_MSC_VER))
-        std::size_t hash_code;
+        std::size_t key_hash;
         if (std::is_integral<key_type>::value && jstd::is_default_std_hash<Hash, key_type>::value)
             key_hash = hashes::msvc_fnv_1a((const unsigned char *)&key, sizeof(key_type));
         else
