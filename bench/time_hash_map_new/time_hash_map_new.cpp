@@ -585,11 +585,11 @@ void measure_hashmap(const char * name, std::size_t obj_size,
     if (1) map_serial_find_empty<MapType>(iters);
     if (1) printf("\n");
 
-    if (1) map_random_find_serial<MapType>(iters, rndIndices);
-    if (1) map_random_find_random<MapType>(iters, rndIndices);
-    if (1) map_random_find_failed<MapType>(iters, rndIndices);
-    if (1) map_random_find_empty<MapType>(iters, rndIndices);
-    if (1) printf("\n");
+    if (0) map_random_find_serial<MapType>(iters, rndIndices);
+    if (0) map_random_find_random<MapType>(iters, rndIndices);
+    if (0) map_random_find_failed<MapType>(iters, rndIndices);
+    if (0) map_random_find_empty<MapType>(iters, rndIndices);
+    if (0) printf("\n");
 
     //------------------------------------------------------------
 
@@ -757,7 +757,7 @@ void measure_string_hashmap(const char * name, std::size_t obj_size, std::size_t
     //------------------------------------------------------------
 
     if (1) map_serial_find_success<MapType, PairVector, KeyVector>(iters, kvs, keys);
-    if (0) map_random_find_success<MapType, PairVector, KeyVector>(iters, kvs, rnd_keys);
+    if (1) map_random_find_success<MapType, PairVector, KeyVector>(iters, kvs, rnd_keys);
     if (1) map_find_failed<MapType, PairVector, KeyVector>(iters, kvs, miss_keys);
     if (1) map_find_empty<MapType, PairVector, KeyVector>(iters, kvs, keys);
     if (1) printf("\n");
