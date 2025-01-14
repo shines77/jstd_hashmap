@@ -76,6 +76,8 @@
 #include "jstd/hashmap/flat_map_iterator.hpp"
 #include "jstd/hashmap/flat_map_cluster.hpp"
 
+#include "jstd/hashmap/detail/hashmap_traits.h"
+
 #include "jstd/hashmap/flat_map_type_policy.hpp"
 #include "jstd/hashmap/flat_map_slot_policy.hpp"
 #include "jstd/hashmap/slot_policy_traits.h"
@@ -1060,12 +1062,17 @@ private:
             key_hash = static_cast<std::size_t>(this->hasher_(key));
 #elif defined(__GNUC__) || (defined(__clang__) && !defined(_MSC_VER))
         std::size_t key_hash;
-        if (std::is_integral<key_type>::value && jstd::is_default_std_hash<Hash, key_type>::value)
+        if (false && std::is_integral<key_type>::value && jstd::is_default_std_hash<Hash, key_type>::value) {
             key_hash = hashes::msvc_fnv_1a((const unsigned char *)&key, sizeof(key_type));
-        else
+        } else {
             key_hash = static_cast<std::size_t>(this->hasher_(key));
+            if (!jstd::detail::hash_is_avalanching<Hash>::value)
+                key_hash = hashes::mum_mul_mix(key_hash);
+        }            
 #else
         std::size_t key_hash = static_cast<std::size_t>(this->hasher_(key));
+        if (!jstd::detail::hash_is_avalanching<Hash>::value)
+            key_hash = hashes::mum_mul_mix(key_hash);
 #endif
         return key_hash;
     }
@@ -1109,7 +1116,7 @@ private:
 
     inline std::uint8_t ctrl_for_hash(std::size_t key_hash) const noexcept {
         std::size_t ctrl_hash = this->ctrl_hasher(key_hash);
-        std::uint8_t ctrl_hash8 = ctrl_type::hash_bits(ctrl_hash);
+        std::uint8_t ctrl_hash8 = ctrl_type::hash_bits(static_cast<std::uint8_t>(ctrl_hash));
         return ((ctrl_hash8 != kEmptySlot) ? ctrl_hash8 : kEmptyHash);
     }
 

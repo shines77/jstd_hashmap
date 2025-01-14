@@ -120,6 +120,21 @@
     #define _IS_32_BIT_     1
 #endif
 
+#include <climits>
+#include <cstddef>  // For SIZE_MAX, UINTPTR_MAX
+
+#if defined(SIZE_MAX)
+  /* >64 bits assumed as 64 bits */
+  #if ((((SIZE_MAX >> 16) >> 16) >> 16) >> 15) != 0
+    #define JSTD_64B_ARCHITECTURE
+  #endif
+#elif defined(UINTPTR_MAX)
+  /* used as proxy for std::size_t */
+  #if ((((UINTPTR_MAX >> 16) >> 16) >> 16) >> 15) != 0
+    #define JSTD_64B_ARCHITECTURE
+  #endif
+#endif
+
 namespace rocksdb {
 
 namespace port {
@@ -500,11 +515,18 @@ _uint128_t uint128_mul(uint64_t multiplicand, uint64_t multiplier)
     product128.high = (uint64_t)(product >> 64);
     return product128;
 
-#elif defined(_MSC_VER) && (defined(_M_X64) || defined(_M_IX64) || defined(_M_AMD64))
+#elif defined(_MSC_VER) && (defined(_M_X64) || defined(_M_IX64) || defined(_M_AMD64)) && !defined(__clang__)
 
     /* Use the _umul128 intrinsic on MSVC x64 to hint for mulq. */
     _uint128_t product128;
     product128.low = _umul128(multiplicand, multiplier, &product128.high);
+    return product128;
+
+#elif defined(_MSC_VER) && defined(__ARM64__) && !defined(__clang__)
+
+    _uint128_t product128;
+    product128.low  = multiplicand * multiplier
+    product128.high = __umulh(multiplicand, multiplier);
     return product128;
 
 #elif defined(__ARM__) || defined(__ARM64__)
@@ -657,7 +679,7 @@ std::size_t mum_hash(std::size_t value)
 }
 
 static inline
-std::size_t msvc_fnv_1a(const unsigned char * first, std::size_t count)
+std::size_t msvc_fnv_1a(const unsigned char * first, const std::size_t count)
 {
 #if (JSTD_IS_X86_64 != 0) || (JSTD_IS_ARM64 != 0)
     static_assert(sizeof(size_t) == 8, "This code is for 64-bit size_t.");
@@ -672,15 +694,15 @@ std::size_t msvc_fnv_1a(const unsigned char * first, std::size_t count)
     std::size_t value = FNV_offset_basis;
     if (count == 8) {
         const unsigned int * dword = (const unsigned int *)first;
-        count /= sizeof(unsigned int);
-        for (std::size_t next = 0; next < count; ++next) {
+        const std::size_t len = count / sizeof(unsigned int);
+        for (std::size_t next = 0; next < len; ++next) {
             value ^= (std::size_t)dword[next];
             value *= FNV_prime;
         }
     } else if (count == 4) {
         const unsigned short * word = (const unsigned short *)first;
-        count /= sizeof(unsigned short);
-        for (std::size_t next = 0; next < count; ++next) {
+        const std::size_t len = count / sizeof(unsigned short);
+        for (std::size_t next = 0; next < len; ++next) {
             value ^= (std::size_t)word[next];
             value *= FNV_prime;
         }
@@ -691,6 +713,95 @@ std::size_t msvc_fnv_1a(const unsigned char * first, std::size_t count)
         }
     }
     return value;
+}
+
+//
+// Bit mixer based on the mum_mul_mix primitive
+//
+
+#if defined(_MSC_VER) && (defined(_M_X64) || defined(_M_IX64) || defined(_M_AMD64)) && !defined(__clang__)
+
+__forceinline std::uint64_t mum_mul_mix64(std::uint64_t x, std::uint64_t y)
+{
+    std::uint64_t r2;
+    std::uint64_t r = _umul128(x, y, &r2);
+    return (r ^ r2);
+}
+
+#elif defined(_MSC_VER) && defined(_M_ARM64) && !defined(__clang__)
+
+__forceinline std::uint64_t mum_mul_mix64(std::uint64_t x, std::uint64_t y)
+{
+    std::uint64_t r = x * y;
+    std::uint64_t r2 = __umulh(x, y);
+    return (r ^ r2);
+}
+
+#elif defined(__SIZEOF_INT128__) && !defined(__wasm__)
+
+inline std::uint64_t mum_mul_mix64(std::uint64_t x, std::uint64_t y)
+{
+    __uint128_t r = (__uint128_t)x * y;
+    return ((std::uint64_t)r ^ (std::uint64_t)(r >> 64));
+}
+
+#else
+
+inline std::uint64_t mum_mul_mix64(std::uint64_t x, std::uint64_t y)
+{
+    std::uint64_t x1 = (std::uint32_t)x;
+    std::uint64_t x2 = x >> 32;
+
+    std::uint64_t y1 = (std::uint32_t)y;
+    std::uint64_t y2 = y >> 32;
+
+    std::uint64_t r3 = x2 * y2;
+    std::uint64_t r2a = x1 * y2;
+
+    r3 += r2a >> 32;
+
+    std::uint64_t r2b = x2 * y1;
+    r3 += r2b >> 32;
+
+    std::uint64_t r1 = x1 * y1;
+    std::uint64_t r2 = (r1 >> 32) + (std::uint32_t)r2a + (std::uint32_t)r2b;
+
+    r1 = (r2 << 32) + (std::uint32_t)r1;
+    r3 += r2 >> 32;
+
+    return (r1 ^ r3);
+}
+
+#endif // mum_mul_mix64
+
+inline std::uint32_t mum_mul_mix32(std::uint32_t x, std::uint32_t y)
+{
+    std::uint64_t r = (std::uint64_t)x * y;
+
+#if defined(__MSVC_RUNTIME_CHECKS)
+    return ((std::uint32_t)(r & UINT32_MAX) ^ (std::uint32_t)(r >> 32));
+#else
+    return ((std::uint32_t)r ^ (std::uint32_t)(r >> 32));
+#endif
+}
+
+//
+// Find Prime URL: https://fyter.cn/prime.htm
+//
+
+inline std::size_t mum_mul_mix(std::size_t value) noexcept
+{
+#if defined(JSTD_64B_ARCHITECTURE)
+
+    // Multiplier is phi
+    return (std::size_t)mum_mul_mix64((std::uint64_t)value, 0x9E3779B97F4A7C15ull);
+
+#else /* 32 bits assumed */
+
+    // Multiplier from https://arxiv.org/abs/2001.05304
+    return (std::size_t)mum_mul_mix32(value, 0xE817FB2Du);
+
+#endif
 }
 
 } // namespace hashes

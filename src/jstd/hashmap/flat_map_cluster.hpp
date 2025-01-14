@@ -259,7 +259,7 @@ public:
 
     inline void set_used64(std::size_t hash) {
         assert(hash_bits(hash) != kEmptySlot);
-        this->value = hash_bits(hash);
+        this->value = static_cast<value_type>(hash_bits64(hash));
     }
 
     inline void set_used_strict(value_type hash) {
@@ -286,7 +286,6 @@ class JSTD_DLL flat_map_cluster16
 public:
     typedef T                       ctrl_type;
     typedef typename T::value_type  value_type;
-    typedef typename T::hash_type   hash_type;
     typedef ctrl_type *             pointer;
     typedef const ctrl_type *       const_pointer;
     typedef ctrl_type &             reference;
@@ -335,7 +334,13 @@ public:
         return ctrl->is_overflow();
     }
 
-    bool is_equals(std::size_t pos, hash_type hash) {
+    inline bool is_not_overflow(std::size_t pos) const {
+        assert(pos < kGroupWidth);
+        const ctrl_type * ctrl = &ctrls[pos];
+        return ctrl->is_not_overflow();
+    }
+
+    bool is_equals(std::size_t pos, value_type hash) {
         assert(pos < kGroupWidth);
         const ctrl_type * ctrl = &ctrls[pos];
         return ctrl->is_equals(hash);
@@ -353,7 +358,7 @@ public:
         ctrl->set_empty();
     }
 
-    inline void set_used(std::size_t pos, hash_type hash) {
+    inline void set_used(std::size_t pos, value_type hash) {
         assert(pos < kGroupWidth);
         ctrl_type * ctrl = &ctrls[pos];
         ctrl->set_used(hash);
@@ -365,7 +370,7 @@ public:
         ctrl->set_used64(hash);
     }
 
-    inline void set_used_strict(std::size_t pos, hash_type hash) {
+    inline void set_used_strict(std::size_t pos, value_type hash) {
         assert(pos < kGroupWidth);
         ctrl_type * ctrl = &ctrls[pos];
         ctrl->set_used_strict(hash);
@@ -424,7 +429,7 @@ public:
         return static_cast<std::uint32_t>(mask);
     }
 
-    inline std::uint32_t match_hash(hash_type hash) const {
+    inline std::uint32_t match_hash(value_type hash) const {
         // Latency = 6
         __m128i ctrl_bits  = _load_data();
         //__COMPILER_BARRIER();
