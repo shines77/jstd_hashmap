@@ -533,7 +533,11 @@ public:
     void rehash(size_type new_capacity) {
         size_type fit_to_now = this->shrink_to_fit_capacity(this->size());
         new_capacity = (std::max)(fit_to_now, new_capacity);
-        this->rehash_impl<true>(new_capacity);
+        if (likely(new_capacity != 0)) {
+            this->rehash_impl<true>(new_capacity);
+        } else {
+            this->reset<false>();
+        }
     }
 
     void shrink_to_fit(bool read_only = false) {
@@ -542,7 +546,11 @@ public:
             new_capacity = this->shrink_to_fit_capacity(this->slot_size());
         else
             new_capacity = this->slot_size();
-        this->rehash_impl<true>(new_capacity);
+        if (likely(new_capacity != 0)) {
+            this->rehash_impl<true>(new_capacity);
+        } else {
+            this->reset<false>();
+        }
     }
 
     ///
@@ -1466,7 +1474,7 @@ private:
     }
 
     template <bool AllowShrink>
-    JSTD_NO_INLINE
+    JSTD_FORCED_INLINE
     void rehash_impl(size_type new_capacity) {
         new_capacity = this->calc_capacity(new_capacity);
         assert(new_capacity > 0);
