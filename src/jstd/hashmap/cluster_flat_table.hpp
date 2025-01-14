@@ -131,10 +131,8 @@ public:
     using ctrl_type = cluster_meta_ctrl;
     using group_type = flat_map_cluster16<cluster_meta_ctrl>;
 
-    static constexpr std::uint8_t kHashMask     = ctrl_type::kHashMask;
-    static constexpr std::uint8_t kEmptySlot    = ctrl_type::kEmptySlot;
-    static constexpr std::uint8_t kOverflowMask = ctrl_type::kOverflowMask;
-    static constexpr std::uint8_t kEmptyHash    = ctrl_type::kEmptyHash;
+    static constexpr std::uint8_t kEmptySlot = ctrl_type::kEmptySlot;
+    static constexpr std::uint8_t kEmptyHash = ctrl_type::kEmptyHash;
 
     static constexpr size_type kGroupWidth = group_type::kGroupWidth;
 
@@ -1572,9 +1570,9 @@ private:
 
     template <typename KeyT>
     const slot_type * find_impl(const KeyT & key) const {
-        std::size_t hash_code = this->hash_for(key);
-        size_type slot_index = this->index_for_hash(hash_code);
-        std::uint8_t ctrl_hash = this->ctrl_for_hash(hash_code);
+        std::size_t key_hash = this->hash_for(key);
+        size_type slot_index = this->index_for_hash(key_hash);
+        std::uint8_t ctrl_hash = this->ctrl_for_hash(key_hash);
         size_type group_index = slot_index / kGroupWidth;
         size_type group_pos = slot_index % kGroupWidth;
         const group_type * group = this->group_at(group_index);
@@ -1589,18 +1587,17 @@ private:
             if (match_mask != 0) {
                 do {
                     std::uint32_t match_pos = BitUtils::bsf32(match_mask);
-                    match_mask = BitUtils::clearLowBit32(match_mask);
-
                     size_type slot_pos = slot_base + match_pos;
                     const slot_type * slot = this->slot_at(slot_pos);
                     if (likely(this->key_equal_(key, slot->value.first))) {
                         return slot;
                     }
+                    match_mask = BitUtils::clearLowBit32(match_mask);
                 } while (match_mask != 0);
             }
 
             // If it's not overflow, means it hasn't been found.
-            if (likely(!group->is_overflow(group_pos))) {
+            if (likely(group->is_not_overflow(group_pos))) {
                 return this->last_slot();
             }
 
@@ -1627,20 +1624,22 @@ private:
     }
 
     template <typename KeyT>
+    JSTD_FORCED_INLINE
     size_type find_index(const KeyT & key) {
         return const_cast<const this_type *>(this)->find_index<KeyT>(key);
     }
 
     template <typename KeyT>
+    JSTD_FORCED_INLINE
     size_type find_index(const KeyT & key) const {
-        std::size_t hash_code = this->hash_for(key);
-        size_type slot_pos = this->index_for_hash(hash_code);
-        std::uint8_t ctrl_hash = this->ctrl_for_hash(hash_code);
+        std::size_t key_hash = this->hash_for(key);
+        size_type slot_pos = this->index_for_hash(key_hash);
+        std::uint8_t ctrl_hash = this->ctrl_for_hash(key_hash);
         return this->find_index(key, slot_pos, ctrl_hash);
     }
 
     template <typename KeyT>
-    JSTD_NO_INLINE
+    JSTD_FORCED_INLINE
     size_type find_index(const KeyT & key, size_type slot_pos, std::uint8_t ctrl_hash) const {
         size_type group_index = slot_pos / kGroupWidth;
         size_type group_pos = slot_pos % kGroupWidth;
@@ -1656,18 +1655,17 @@ private:
             if (match_mask != 0) {
                 do {
                     std::uint32_t match_pos = BitUtils::bsf32(match_mask);
-                    match_mask = BitUtils::clearLowBit32(match_mask);
-
                     size_type slot_index = slot_base + match_pos;
                     const slot_type * slot = this->slot_at(slot_index);
                     if (likely(this->key_equal_(key, slot->value.first))) {
                         return slot_index;
                     }
+                    match_mask = BitUtils::clearLowBit32(match_mask);
                 } while (match_mask != 0);
             }
 
             // If it's not overflow, means it hasn't been found.
-            if (likely(!group->is_overflow(group_pos))) {
+            if (likely(group->is_not_overflow(group_pos))) {
                 return this->slot_capacity();
             }
 
@@ -1730,7 +1728,7 @@ private:
                 return slot_index;
             } else {
                 // If it's not overflow, set the overflow bit.
-                //if (likely(!group->is_overflow(group_pos))) {
+                //if (likely(group->is_not_overflow(group_pos))) {
                     group->set_overflow(group_pos);
                 //}
             }
@@ -1762,9 +1760,9 @@ private:
     JSTD_NO_INLINE
     std::pair<size_type, bool>
     find_and_insert(const KeyT & key) {
-        std::size_t hash_code = this->hash_for(key);
-        size_type slot_pos = this->index_for_hash(hash_code);
-        std::uint8_t ctrl_hash = this->ctrl_for_hash(hash_code);
+        std::size_t key_hash = this->hash_for(key);
+        size_type slot_pos = this->index_for_hash(key_hash);
+        std::uint8_t ctrl_hash = this->ctrl_for_hash(key_hash);
 
         size_type slot_index = this->find_index(key, slot_pos, ctrl_hash);
         if (slot_index != this->slot_capacity()) {
@@ -1775,9 +1773,9 @@ private:
             // The size of slot reach the slot threshold or hashmap is full.
             this->grow_if_necessary();
 
-            slot_pos = this->index_for_hash(hash_code);
+            slot_pos = this->index_for_hash(key_hash);
             // Ctrl hash will not change
-            // ctrl_hash = this->ctrl_for_hash(hash_code);
+            // ctrl_hash = this->ctrl_for_hash(key_hash);
         }
 
         slot_index = this->find_first_empty_to_insert(key, slot_pos, ctrl_hash);
@@ -1787,9 +1785,9 @@ private:
 
     JSTD_FORCED_INLINE
     size_type insert_unique_and_no_grow(const key_type & key) {
-        std::size_t hash_code = this->hash_for(key);
-        size_type slot_pos = this->index_for_hash(hash_code);
-        std::uint8_t ctrl_hash = this->ctrl_for_hash(hash_code);
+        std::size_t key_hash = this->hash_for(key);
+        size_type slot_pos = this->index_for_hash(key_hash);
+        std::uint8_t ctrl_hash = this->ctrl_for_hash(key_hash);
 
         size_type slot_index = this->find_first_empty_to_insert(key, slot_pos, ctrl_hash);
         return slot_index;
@@ -2085,9 +2083,9 @@ private:
 
     JSTD_FORCED_INLINE
     size_type find_and_erase(const key_type & key) {
-        std::size_t hash_code = this->hash_for(key);
-        size_type slot_pos = this->index_for_hash(hash_code);
-        std::uint8_t ctrl_hash = this->ctrl_for_hash(hash_code);
+        std::size_t key_hash = this->hash_for(key);
+        size_type slot_pos = this->index_for_hash(key_hash);
+        std::uint8_t ctrl_hash = this->ctrl_for_hash(key_hash);
 
         size_type slot_index = this->find_index(key, slot_pos, ctrl_hash);
         if (slot_index != this->slot_capacity()) {
