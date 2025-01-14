@@ -518,7 +518,7 @@ public:
             new_capacity = this->shrink_to_fit_capacity(new_capacity);
             this->rehash_impl<false>(new_capacity);
         } else {
-            this->reset<false>();
+            this->reset<true>();
         }
     }
 
@@ -536,20 +536,20 @@ public:
         if (likely(new_capacity != 0)) {
             this->rehash_impl<true>(new_capacity);
         } else {
-            this->reset<false>();
+            this->reset<true>();
         }
     }
 
     void shrink_to_fit(bool read_only = false) {
         size_type new_capacity;
         if (likely(!read_only))
-            new_capacity = this->shrink_to_fit_capacity(this->slot_size());
+            new_capacity = this->shrink_to_fit_capacity(this->size());
         else
-            new_capacity = this->slot_size();
+            new_capacity = this->size();
         if (likely(new_capacity != 0)) {
             this->rehash_impl<true>(new_capacity);
         } else {
-            this->reset<false>();
+            this->reset<true>();
         }
     }
 
