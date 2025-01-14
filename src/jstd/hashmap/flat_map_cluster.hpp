@@ -63,18 +63,17 @@ namespace jstd {
 class JSTD_DLL cluster_meta_ctrl
 {
 public:
-    static constexpr std::uint8_t kHashMask     = 0b01111111;
-    static constexpr std::uint8_t kEmptySlot    = 0b00000000 & kHashMask;
-    static constexpr std::uint8_t kOverflowMask = 0b10000000;
+    typedef std::uint8_t value_type;
 
-    static constexpr std::uint8_t kEmptyHash    = 0x11;
+    static constexpr value_type kHashMask       = 0b01111111;
+    static constexpr value_type kEmptySlot      = 0b00000000 & kHashMask;
+    static constexpr value_type kOverflowMask   = 0b10000000;
+
+    static constexpr value_type kEmptyHash      = 0x11;
     static constexpr std::uint32_t kEmptyHash32 = 0x11111111;
 
     static_assert(((kHashMask & kOverflowMask) == 0), "kHashMask & kOverflowMask must be 0");
     static_assert(((kHashMask | kOverflowMask) == 0b11111111), "kHashMask & kOverflowMask must be 0b11111111");
-
-    typedef std::uint8_t value_type;
-    typedef std::uint8_t hash_type;
 
     cluster_meta_ctrl(value_type value = kEmptySlot) : value(value) {}
     ~cluster_meta_ctrl() {}
@@ -195,16 +194,16 @@ public:
         return static_cast<std::uint8_t>(repeated_hash(hash));
     }
 
-    static inline value_type hash_bits(std::size_t hash) {
-        return static_cast<value_type>(hash & static_cast<std::size_t>(kHashMask));
+    static inline value_type hash_bits(value_type hash) {
+        return (hash & kHashMask);
     }
 
     static inline std::size_t hash_bits64(std::size_t hash) {
         return (hash & static_cast<std::size_t>(kHashMask));
     }
 
-    static inline value_type overflow_bits(std::size_t hash) {
-        return static_cast<value_type>(hash & static_cast<std::size_t>(kOverflowMask));
+    static inline value_type overflow_bits(value_type hash) {
+        return (hash & kOverflowMask);
     }
 
     inline bool is_empty() const {
@@ -222,7 +221,12 @@ public:
         return (overflow != 0);
     }
 
-    bool is_equals(hash_type hash) {
+    inline bool is_not_overflow() const {
+        value_type overflow = overflow_bits(this->value);
+        return (overflow == 0);
+    }
+
+    bool is_equals(value_type hash) {
         value_type hash8 = hash_bits(this->value);
         return (hash == hash8);
     }
@@ -248,7 +252,7 @@ public:
         this->value = kEmptySlot;
     }
 
-    inline void set_used(hash_type hash) {
+    inline void set_used(value_type hash) {
         assert(hash_bits(hash) != kEmptySlot);
         this->value = hash;
     }
@@ -258,7 +262,7 @@ public:
         this->value = hash_bits(hash);
     }
 
-    inline void set_used_strict(hash_type hash) {
+    inline void set_used_strict(value_type hash) {
         assert(hash_bits(hash) != kEmptySlot);
         this->value = hash_bits(hash);
     }
