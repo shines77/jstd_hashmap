@@ -249,22 +249,22 @@ public:
     }
 
     inline void set_empty() {
-        this->value |= kEmptySlot;
+        this->value = overflow_bits(this->value) | kEmptySlot;
     }
 
     inline void set_used(value_type hash) {
         assert(hash_bits(hash) != kEmptySlot);
-        this->value |= hash;
+        this->value = overflow_bits(this->value) | hash;
     }
 
     inline void set_used64(std::size_t hash) {
         assert(hash_bits(hash) != kEmptySlot);
-        this->value |= static_cast<value_type>(hash_bits64(hash));
+        this->value = overflow_bits(this->value) | static_cast<value_type>(hash_bits64(hash));
     }
 
     inline void set_used_strict(value_type hash) {
         assert(hash_bits(hash) != kEmptySlot);
-        this->value |= hash_bits(hash);
+        this->value = overflow_bits(this->value) | hash_bits(hash);
     }
 
     inline void set_overflow() {
