@@ -3446,12 +3446,24 @@ public:
         return this->hasher_;
     }
 
+    const hasher & hash_function_ref() const noexcept {
+        return this->hasher_;
+    }
+
     key_equal & key_eq_ref() noexcept {
+        return this->key_equal_;
+    }
+
+    const key_equal & key_eq_ref() const noexcept {
         return this->key_equal_;
     }
 
 #if ROBIN_USE_HASH_POLICY
     hash_policy_t & hash_policy_ref() noexcept {
+        return this->hash_policy_;
+    }
+
+    const hash_policy_t & hash_policy_ref() const noexcept {
         return this->hash_policy_;
     }
 #endif
@@ -3465,6 +3477,18 @@ public:
     }
 
     slot_allocator_type & get_slot_allocator_ref() noexcept {
+        return this->slot_allocator_;
+    }
+
+    const allocator_type & get_allocator_ref() const noexcept {
+        return this->allocator_;
+    }
+
+    const ctrl_allocator_type & get_ctrl_allocator_ref() const noexcept {
+        return this->ctrl_allocator_;
+    }
+
+    const slot_allocator_type & get_slot_allocator_ref() const noexcept {
         return this->slot_allocator_;
     }
 

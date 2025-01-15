@@ -617,7 +617,7 @@ _uint128_t uint128_mul(uint64_t multiplicand, uint64_t multiplier)
 // Near prime is 2654435761
 //
 static inline
-std::size_t fibonacci_hash32(std::size_t value)
+std::size_t fibonacci_hash32(std::size_t value) noexcept
 {
     // Old coeff is 2654435769ul
     std::size_t hash_code = static_cast<std::size_t>(
@@ -634,7 +634,7 @@ std::size_t fibonacci_hash32(std::size_t value)
 // Near prime is 11400714818402800987
 //
 static inline
-std::size_t fibonacci_hash64(std::size_t value)
+std::size_t fibonacci_hash64(std::size_t value) noexcept
 {
     // Old coeff is 11400714819323198485ull
     std::size_t hash_code = static_cast<std::size_t>(
@@ -653,21 +653,21 @@ std::size_t fibonacci_hash(std::size_t value)
 }
 
 static inline
-std::uint32_t mum_hash32(std::uint32_t multiplicand, std::uint32_t multiplier)
+std::uint32_t mum_hash32(std::uint32_t multiplicand, std::uint32_t multiplier) noexcept
 {
     std::uint64_t product = std::uint64_t(multiplicand) * multiplier;
     return (std::uint32_t)(std::uint32_t(product & 0x00000000FFFFFFFFull) ^ std::uint32_t(product >> 32));
 }
 
 static inline
-std::uint64_t mum_hash64(std::uint64_t multiplicand, std::uint64_t multiplier)
+std::uint64_t mum_hash64(std::uint64_t multiplicand, std::uint64_t multiplier) noexcept
 {
     _uint128_t product = uint128_mul(multiplicand, multiplier);
     return (product.low ^ product.high);
 }
 
 static inline
-std::size_t mum_hash(std::size_t value)
+std::size_t mum_hash(std::size_t value) noexcept
 {
 #if (JSTD_WORD_LEN == 64)
     static const std::uint64_t kMultiplier = 11400714818402800987ull;
@@ -679,7 +679,7 @@ std::size_t mum_hash(std::size_t value)
 }
 
 static inline
-std::size_t msvc_fnv_1a(const unsigned char * first, const std::size_t count)
+std::size_t msvc_fnv_1a(const unsigned char * first, const std::size_t count) noexcept
 {
 #if (JSTD_IS_X86_64 != 0) || (JSTD_IS_ARM64 != 0)
     static_assert(sizeof(size_t) == 8, "This code is for 64-bit size_t.");

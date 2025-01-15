@@ -328,12 +328,24 @@ public:
         return this->hasher_;
     }
 
+    const hasher & hash_function_ref() const noexcept {
+        return this->hasher_;
+    }
+
     key_equal & key_eq_ref() noexcept {
+        return this->key_equal_;
+    }
+
+    const key_equal & key_eq_ref() const noexcept {
         return this->key_equal_;
     }
 
 #if CLUSTER_USE_HASH_POLICY
     hash_policy_t & hash_policy_ref() noexcept {
+        return this->hash_policy_;
+    }
+
+    const hash_policy_t & hash_policy_ref() const noexcept {
         return this->hash_policy_;
     }
 #endif
@@ -347,6 +359,18 @@ public:
     }
 
     slot_allocator_type & get_slot_allocator_ref() noexcept {
+        return this->slot_allocator_;
+    }
+
+    const allocator_type & get_allocator_ref() const noexcept {
+        return this->allocator_;
+    }
+
+    const group_allocator_type & get_group_allocator_ref() const noexcept {
+        return this->group_allocator_;
+    }
+
+    const slot_allocator_type & get_slot_allocator_ref() const noexcept {
         return this->slot_allocator_;
     }
 
@@ -863,6 +887,7 @@ public:
     JSTD_FORCED_INLINE
     size_type find_first_used_index() const {
         if (this->size() != 0) {
+#if 0
             const group_type * group = this->groups();
             const group_type * last_group = this->last_group();
             size_type slot_base_index = 0;
@@ -875,6 +900,16 @@ public:
                 }
                 slot_base_index += kGroupWidth;
             }
+#else
+            const ctrl_type * ctrl = this->ctrls();
+            const ctrl_type * last_ctrl = this->last_ctrl();
+            while (ctrl < last_ctrl) {
+                if (ctrl->is_used()) {
+                    return this->index_of(ctrl);
+                }
+                ++ctrl;
+            }
+#endif
         }
         return this->slot_capacity();
     }
@@ -1151,7 +1186,14 @@ private:
         std::size_t ctrl_hash = this->ctrl_hasher(key_hash);
         std::uint8_t ctrl_hash8 = ctrl_type::hash_bits(static_cast<std::uint8_t>(ctrl_hash));
 #endif
+#if 1
+        if (likely(ctrl_hash8 != kEmptySlot))
+            return ctrl_hash8;
+        else
+            return kEmptyHash;
+#else
         return ((ctrl_hash8 != kEmptySlot) ? ctrl_hash8 : kEmptyHash);
+#endif
     }
 
     inline size_type index_of(iterator iter) const {
@@ -1627,7 +1669,7 @@ private:
                 do {
                     std::uint32_t match_pos = BitUtils::bsf32(match_mask);
                     const slot_type * slot = slot_base + match_pos;
-                    if (likely(this->key_equal_(key, slot->value.first))) {
+                    if (likely(this->key_eq_ref()(key, slot->value.first))) {
                         size_type slot_index = this->index_of(slot);
                         return slot_index;
                     }
@@ -1636,7 +1678,7 @@ private:
             }
 
             // If it's not overflow, means it hasn't been found.
-            if (likely(group->is_not_overflow(group_pos))) {
+            if (likely(group->is_not_overflow(ctrl_hash % kGroupWidth))) {
                 return this->slot_capacity();
             }
 
@@ -1699,8 +1741,8 @@ private:
                 return slot_index;
             } else {
                 // If it's not overflow, set the overflow bit.
-                //if (likely(group->is_not_overflow(group_pos))) {
-                    group->set_overflow(group_pos);
+                //if (likely(group->is_not_overflow(ctrl_hash % kGroupWidth))) {
+                    group->set_overflow(ctrl_hash % kGroupWidth);
                 //}
             }
 #if CLUSTER_DISPLAY_DEBUG_INFO
@@ -2031,8 +2073,8 @@ private:
     }
 
     JSTD_FORCED_INLINE
-    bool ctrl_is_last_bit(size_type slot_index) {
-        group_type * group = this->groups() + slot_index / kGroupWidth;
+    bool ctrl_is_last_bit(size_type slot_index) const noexcept {
+        const group_type * group = this->groups() + slot_index / kGroupWidth;
         size_type ctrl_pos = slot_index % kGroupWidth;
         std::uint32_t used_mask = group->match_used();
         std::uint32_t last_bit_pos = BitUtils::bsr32(used_mask);
@@ -2040,13 +2082,18 @@ private:
     }
 
     JSTD_FORCED_INLINE
+    bool ctrl_maybe_caused_overflow(size_type slot_index) const noexcept {
+        const group_type * group = this->groups() + slot_index / kGroupWidth;
+        const ctrl_type * ctrl = this->ctrl_at(slot_index);
+        return group->is_overflow(ctrl->get_value() % kGroupWidth);
+    }
+
+    JSTD_FORCED_INLINE
     void erase_index(size_type slot_index) {
         assert(slot_index >= 0 && slot_index < this->slot_capacity());
-        bool is_last_bit = this->ctrl_is_last_bit(slot_index);
-        if (likely(!is_last_bit)) {
-            assert(this->slot_threshold_ > 0);
-            this->slot_threshold_--;
-        }
+        bool maybe_overflow = this->ctrl_maybe_caused_overflow(slot_index);
+        assert(this->slot_threshold_ > 0);
+        this->slot_threshold_ -= maybe_overflow;
         assert(this->slot_size_ > 0);
         this->slot_size_--;
         this->destroy_slot_data(slot_index);
