@@ -258,7 +258,7 @@ public:
     }
 
     inline void set_used64(std::size_t hash) {
-        assert(hash_bits(hash) != kEmptySlot);
+        assert(static_cast<value_type>(hash_bits64(hash)) != kEmptySlot);
         this->value = overflow_bits(this->value) | static_cast<value_type>(hash_bits64(hash));
     }
 

@@ -269,7 +269,7 @@ public:
     explicit cluster_flat_table(size_type capacity, hasher const & hash = hasher(),
                                 key_equal const & pred = key_equal(),
                                 allocator_type const & allocator = allocator_type())
-        : groups_(nullptr), slots_(nullptr), slot_size_(0),
+        : groups_(default_empty_groups()), slots_(nullptr), slot_size_(0),
           slot_mask_(calc_slot_mask_round(capacity)),
           slot_threshold_(calc_slot_threshold_round(capacity)),
 #if CLUSTER_USE_INDEX_SHIFT
@@ -814,7 +814,7 @@ public:
     }
 
     inline const group_type * group_at(size_type group_index) const noexcept {
-        assert(group_index <= this->slot_capacity());
+        assert(group_index <= this->group_capacity());
         return (this->groups() + std::ptrdiff_t(group_index));
     }
 
@@ -964,7 +964,7 @@ private:
     }
 
     inline constexpr size_type calc_index_shift(size_type new_capacity) const noexcept {
-        return (kWordLength - (new_capacity <= 2) ? 1 : BitUtils::bsr(new_capacity));
+        return (kWordLength - ((new_capacity <= 2) ? 1 : BitUtils::bsr(new_capacity)));
     }
 
     static inline constexpr size_type calc_slot_threshold(size_type mlf, size_type slot_capacity) {
@@ -978,7 +978,7 @@ private:
 
     inline constexpr size_type calc_index_shift_round(size_type new_capacity) const noexcept {
         new_capacity = this_type::round_up_pow2(new_capacity);
-        return calc_index_shift(new_capacity);
+        return this->calc_index_shift(new_capacity);
     }
 
     inline constexpr size_type calc_slot_mask_round(size_type new_capacity) const noexcept {
