@@ -91,7 +91,7 @@ void Prefetch_Write_T1(const void * addr);
 void Prefetch_Write_T2(const void * addr);
 void Prefetch_Write_Nta(const void * addr);
 
-#if __has_builtin(__builtin_prefetch) || defined(__GNUC__)
+#if __has_builtin(__builtin_prefetch) || defined(__GNUC__) || defined(__clang__)
 
 #define JSTD_HAVE_CPU_PREFETCH  1
 

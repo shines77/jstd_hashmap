@@ -561,13 +561,13 @@ public:
     /// Lookup
     ///
     size_type count(const key_type & key) const {
-        const slot_type * slot = this->find_impl(key);
-        return (slot != this->last_slot()) ? 1 : 0;
+        size_type slot_index = this->find_index(key);
+        return (slot_index != this->slot_capacity()) ? 1 : 0;
     }
 
     bool contains(const key_type & key) const {
-        const slot_type * slot = this->find_impl(key);
-        return (slot != this->last_slot());
+        size_type slot_index = this->find_index(key);
+        return (slot_index != this->slot_capacity());
     }
 
     ///
@@ -1179,7 +1179,7 @@ private:
         assert(ctrl >= this->ctrls());
         size_type index;
         if (!kIsIndirectKV)
-            index = (size_type)(ctrl - this->ctrls());
+            index = static_cast<size_type>(ctrl - this->ctrls());
         else
             index = ctrl->get_index();
         assert(is_positive(index));
@@ -1187,31 +1187,19 @@ private:
     }
 
     inline size_type index_of(const ctrl_type * ctrl) const {
-        return this->index_of(reinterpret_cast<ctrl_type *>(ctrl));
+        return this->index_of(const_cast<ctrl_type *>(ctrl));
     }
 
     inline size_type index_of(slot_type * slot) const {
         assert(slot != nullptr);
         assert(slot >= this->slots());
-        size_type index = (size_type)(slot - this->slots());
+        size_type index = static_cast<size_type>(slot - this->slots());
         assert(is_positive(index));
         return index;
     }
 
     inline size_type index_of(const slot_type * slot) const {
-        return this->index_of(reinterpret_cast<slot_type *>(slot));
-    }
-
-    inline size_type index_of_ctrl(ctrl_type * ctrl) const {
-        assert(ctrl != nullptr);
-        assert(ctrl >= this->ctrls());
-        size_type ctrl_index = (size_type)(ctrl - this->ctrls());
-        assert(is_positive(ctrl_index));
-        return ctrl_index;
-    }
-
-    inline size_type index_of_ctrl(const ctrl_type * ctrl) const {
-        return this->index_of_ctrl(reinterpret_cast<ctrl_type *>(ctrl));
+        return this->index_of(const_cast<slot_type *>(slot));
     }
 
     template <typename U>
@@ -1222,12 +1210,6 @@ private:
     template <typename U>
     const char * PtrOffset(U * ptr, std::ptrdiff_t offset) const {
         return const_cast<const char *>(reinterpret_cast<char *>(ptr) + offset);
-    }
-
-    static void placement_new_slot(slot_type * slot) {
-        // The construction of union doesn't do anything at runtime but it allows us
-        // to access its members without violating aliasing rules.
-        new (slot) slot_type;
     }
 
     JSTD_FORCED_INLINE
@@ -1612,69 +1594,6 @@ private:
     }
 
     template <typename KeyT>
-    slot_type * find_impl(const KeyT & key) {
-        return const_cast<slot_type *>(
-            const_cast<const this_type *>(this)->find_impl(key)
-        );
-    }
-
-    template <typename KeyT>
-    JSTD_FORCED_INLINE
-    const slot_type * find_impl(const KeyT & key) const {
-        std::size_t key_hash = this->hash_for(key);
-        size_type slot_index = this->index_for_hash(key_hash);
-        std::uint8_t ctrl_hash = this->ctrl_for_hash(key_hash);
-        size_type group_index = slot_index / kGroupWidth;
-        size_type group_pos = slot_index % kGroupWidth;
-        const group_type * group = this->group_at(group_index);
-        const group_type * first_group = group;
-        const group_type * last_group = this->last_group();
-
-        size_type slot_base = group_index * kGroupWidth;
-        size_type skip_groups = 0;
-
-        for (;;) {
-            std::uint32_t match_mask = group->match_hash(ctrl_hash);
-            if (match_mask != 0) {
-                do {
-                    std::uint32_t match_pos = BitUtils::bsf32(match_mask);
-                    size_type slot_pos = slot_base + match_pos;
-                    const slot_type * slot = this->slot_at(slot_pos);
-                    if (likely(this->key_equal_(key, slot->value.first))) {
-                        return slot;
-                    }
-                    match_mask = BitUtils::clearLowBit32(match_mask);
-                } while (match_mask != 0);
-            }
-
-            // If it's not overflow, means it hasn't been found.
-            if (likely(group->is_not_overflow(group_pos))) {
-                return this->last_slot();
-            }
-
-            slot_base += kGroupWidth;
-            group++;
-            if (unlikely(group >= last_group)) {
-                group = this->groups();
-                slot_base = 0;
-            }
-#if 0
-            if (unlikely(group == first_group)) {
-                return this->last_slot();
-            }
-#endif
-#if CLUSTER_DISPLAY_DEBUG_INFO
-            skip_groups++;
-            if (unlikely(skip_groups > kSkipGroupsLimit)) {
-                std::cout << "find_impl(): key = " << key <<
-                             ", skip_groups = " << skip_groups <<
-                             ", load_factor = " << this->load_factor() << std::endl;
-            }
-#endif
-        }
-    }
-
-    template <typename KeyT>
     JSTD_FORCED_INLINE
     size_type find_index(const KeyT & key) {
         return const_cast<const this_type *>(this)->find_index<KeyT>(key);
@@ -1698,17 +1617,18 @@ private:
         const group_type * first_group = group;
         const group_type * last_group = this->last_group();
 
-        size_type slot_base = group_index * kGroupWidth;
+        const slot_type * slot_base = this->slots() + group_index * kGroupWidth;
         size_type skip_groups = 0;
 
         for (;;) {
             std::uint32_t match_mask = group->match_hash(ctrl_hash);
             if (match_mask != 0) {
+                Prefetch_Read_T0((const void *)slot_base);
                 do {
                     std::uint32_t match_pos = BitUtils::bsf32(match_mask);
-                    size_type slot_index = slot_base + match_pos;
-                    const slot_type * slot = this->slot_at(slot_index);
+                    const slot_type * slot = slot_base + match_pos;
                     if (likely(this->key_equal_(key, slot->value.first))) {
+                        size_type slot_index = this->index_of(slot);
                         return slot_index;
                     }
                     match_mask = BitUtils::clearLowBit32(match_mask);
@@ -1820,7 +1740,7 @@ private:
             return { slot_index, kIsExists };
         }
 
-        if (this->need_grow()) {
+        if (unlikely(this->need_grow())) {
             // The size of slot reach the slot threshold or hashmap is full.
             this->grow_if_necessary();
 
