@@ -391,12 +391,17 @@ public:
         __m128i empty_bits;
         if (kEmptySlot == 0b00000000)
             empty_bits = _mm_setzero_si128();
-        else if (kEmptySlot == 0b11111111)
+        else if (kEmptySlot == 0b11111111 || kEmptySlot == 0b01111111)
             empty_bits = _mm_setones_si128();
         else
             empty_bits = _mm_set1_epi8(kEmptySlot);
 
-        __m128i match_mask = _mm_cmpeq_epi8(_mm_and_si128(ctrl_bits, mask_bits), empty_bits);
+        __m128i match_mask;;
+        if (kEmptySlot != 0b01111111)
+            match_mask = _mm_cmpeq_epi8(_mm_and_si128(ctrl_bits, mask_bits), empty_bits);
+        else
+            match_mask = _mm_cmpeq_epi8(_mm_and_si128(ctrl_bits, mask_bits),
+                                        _mm_and_si128(empty_bits, mask_bits));
         int mask = _mm_movemask_epi8(match_mask);
         return static_cast<std::uint32_t>(mask);
     }
@@ -417,13 +422,19 @@ public:
             empty_bits = _mm_setones_si128();
             match_mask = _mm_cmplt_epi8(_mm_and_si128(ctrl_bits, mask_bits), empty_bits);
         }
+        else if (kEmptySlot == 0b01111111) {
+            empty_bits = _mm_setones_si128();
+            match_mask = _mm_cmplt_epi8(_mm_and_si128(ctrl_bits, mask_bits),
+                                        _mm_and_si128(empty_bits, mask_bits));
+        }
         else {
             empty_bits = _mm_set1_epi8(kEmptySlot);
             match_mask = _mm_cmpeq_epi8(_mm_and_si128(ctrl_bits, mask_bits), empty_bits);
         }
 
         int mask = _mm_movemask_epi8(match_mask);
-        if (kEmptySlot != 0b00000000 && kEmptySlot != 0b11111111) {
+        if (kEmptySlot != 0b00000000 && kEmptySlot != 0b11111111 &&
+            kEmptySlot != 0b01111111) {
             mask = ~mask & 0xFFFF;
         }
         return static_cast<std::uint32_t>(mask);
@@ -432,12 +443,13 @@ public:
     inline std::uint32_t match_hash(value_type hash) const {
         // Latency = 6
         __m128i ctrl_bits  = _load_data();
+        int hash32 = ctrl_type::repeated_hash8(hash);
         //__COMPILER_BARRIER();
         __m128i mask_bits  = _mm_set1_epi8(kHashMask);
         //__COMPILER_BARRIER();
 #if 1
         // Use lookup table
-        __m128i hash_bits  = _mm_set1_epi32(ctrl_type::repeated_hash8(hash));
+        __m128i hash_bits  = _mm_set1_epi32(hash32);
 #else
         __m128i hash_bits  = _mm_set1_epi8(hash);
 #endif

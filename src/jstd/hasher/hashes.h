@@ -1677,11 +1677,13 @@ class fibonacci_hash_policy
 public:
     typedef std::size_t size_type;
 
+    static constexpr size_type kWordLength = sizeof(std::size_t) * CHAR_BIT;
+
 private:
     std::uint8_t shift_;
 
 public:
-    fibonacci_hash_policy() noexcept : shift_(std::uint8_t(63)) {
+    fibonacci_hash_policy() noexcept : shift_(std::uint8_t(kWordLength - 1)) {
     }
 
     fibonacci_hash_policy(const fibonacci_hash_policy & src) noexcept
@@ -1717,9 +1719,9 @@ public:
 #if 1
         // Fast to get log2_int, if the new_size is power of 2.
         // Use bsf(n) has the same effect.
-        return std::uint8_t(64u - BitUtils::bsr(new_capacity));
+        return std::uint8_t(kWordLength - BitUtils::bsr(new_capacity));
 #else
-        return std::uint8_t(64u - pow2::log2_int<size_type, size_type(2)>(new_capacity));
+        return std::uint8_t(kWordLength - pow2::log2_int<size_type, size_type(2)>(new_capacity));
 #endif
     }
 
@@ -1728,7 +1730,7 @@ public:
     }
 
     void reset() noexcept {
-        this->shift_ = std::uint8_t(63);
+        this->shift_ = std::uint8_t(kWordLength - 1);
     }
 };
 
@@ -1738,11 +1740,13 @@ class mum_hash_policy
 public:
     typedef std::size_t size_type;
 
+    static constexpr size_type kWordLength = sizeof(std::size_t) * CHAR_BIT;
+
 private:
     std::uint8_t shift_;
 
 public:
-    mum_hash_policy() noexcept : shift_(std::uint8_t(63)) {
+    mum_hash_policy() noexcept : shift_(std::uint8_t(kWordLength - 1)) {
     }
 
     mum_hash_policy(const mum_hash_policy & src) noexcept
@@ -1778,9 +1782,9 @@ public:
 #if 1
         // Fast to get log2_int, if the new_size is power of 2.
         // Use bsf(n) has the same effect.
-        return std::uint8_t(64u - BitUtils::bsr(new_capacity));
+        return std::uint8_t(kWordLength - BitUtils::bsr(new_capacity));
 #else
-        return std::uint8_t(64u - pow2::log2_int<size_type, size_type(2)>(new_capacity));
+        return std::uint8_t(kWordLength - pow2::log2_int<size_type, size_type(2)>(new_capacity));
 #endif
     }
 
@@ -1789,7 +1793,7 @@ public:
     }
 
     void reset() noexcept {
-        this->shift_ = std::uint8_t(63);
+        this->shift_ = std::uint8_t(kWordLength - 1);
     }
 };
 

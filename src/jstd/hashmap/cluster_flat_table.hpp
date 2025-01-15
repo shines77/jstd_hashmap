@@ -56,7 +56,7 @@
 
 #include <cstdint>
 #include <memory>           // For std::allocator<T>
-#include <limits>           // For std::numeric_limits<T>
+#include <limits>           // For std::numeric_limits<T>, CHAR_BIT
 #include <initializer_list>
 #include <type_traits>
 #include <algorithm>        // For std::max()
@@ -88,6 +88,7 @@
 #define CLUSTER_USE_SWAP_TRAITS     1
 
 #define CLUSTER_USE_GROUP_SCAN      1
+#define CLUSTER_USE_INDEX_SHIFT     1
 
 #ifdef _DEBUG
 #define CLUSTER_DISPLAY_DEBUG_INFO  0
@@ -167,6 +168,7 @@ public:
             (jstd::is_plain_type<key_type>::value &&
              jstd::is_plain_type<mapped_type>::value));
 
+    static constexpr size_type kWordLength = sizeof(std::size_t) * CHAR_BIT;
     static constexpr size_type kSizeTypeLength = sizeof(std::size_t);
 
     static constexpr bool kIsSmallKeyType   = (sizeof(key_type)    <= kSizeTypeLength * 2);
@@ -208,6 +210,9 @@ public:
     // kMinCapacity must be >= 2
     static constexpr size_type kMinCapacity = 2;
 
+    /* When capacity is small, we allow 100% usage. */
+    static constexpr size_type kSmallCapacity = kGroupWidth * 4;
+
     static constexpr float kMinLoadFactorF = 0.5f;
     static constexpr float kMaxLoadFactorF = 0.875f;
     static constexpr float kDefaultLoadFactorF = 0.875f;
@@ -219,13 +224,11 @@ public:
     static constexpr size_type kSkipGroupsLimit = 5;
 
     using group_allocator_type = typename std::allocator_traits<allocator_type>::template rebind_alloc<group_type>;
-    using ctrl_allocator_type = typename std::allocator_traits<allocator_type>::template rebind_alloc<ctrl_type>;
     using slot_allocator_type = typename std::allocator_traits<allocator_type>::template rebind_alloc<slot_type>;
 
     using AllocTraits = std::allocator_traits<allocator_type>;
 
     using GroupAllocTraits = typename std::allocator_traits<allocator_type>::template rebind_traits<group_type>;
-    using CtrlAllocTraits = typename std::allocator_traits<allocator_type>::template rebind_traits<ctrl_type>;
     using SlotAllocTraits = typename std::allocator_traits<allocator_type>::template rebind_traits<slot_type>;
 
     using hash_policy_t = typename hash_policy_selector<Hash>::type;
@@ -236,6 +239,9 @@ private:
     size_type       slot_size_;
     size_type       slot_mask_;     // slot_capacity = slot_mask + 1
     size_type       slot_threshold_;
+#if CLUSTER_USE_INDEX_SHIFT
+    size_type       index_shift_;
+#endif
 
     size_type       mlf_;
 
@@ -252,7 +258,6 @@ private:
 
     allocator_type          allocator_;
     group_allocator_type    group_allocator_;
-    ctrl_allocator_type     ctrl_allocator_;
     slot_allocator_type     slot_allocator_;
 
     static constexpr bool kIsExists = false;
@@ -264,13 +269,20 @@ public:
     explicit cluster_flat_table(size_type capacity, hasher const & hash = hasher(),
                                 key_equal const & pred = key_equal(),
                                 allocator_type const & allocator = allocator_type())
-        : groups_(nullptr), slots_(nullptr), slot_size_(0), slot_mask_(static_cast<size_type>(capacity - 1)),
-          slot_threshold_(calc_slot_threshold(kDefaultMaxLoadFactor, capacity)), mlf_(kDefaultMaxLoadFactor)
+        : groups_(nullptr), slots_(nullptr), slot_size_(0),
+          slot_mask_(calc_slot_mask_round(capacity)),
+          slot_threshold_(calc_slot_threshold_round(capacity)),
+#if CLUSTER_USE_INDEX_SHIFT
+          index_shift_(calc_index_shift_round(capacity)),
+#endif
+          mlf_(kDefaultMaxLoadFactor)
 #if CLUSTER_USE_SEPARATE_SLOTS
           , groups_alloc_(nullptr)
 #endif
     {
-        this->create_slots<true>(capacity);
+        if (capacity != 0) {
+            this->create_slots<true>(capacity);
+        }
     }
 
     cluster_flat_table(cluster_flat_table const & other) {
@@ -304,12 +316,8 @@ public:
         return this->allocator_;
     }
 
-    group_allocator_type get_group_allocator_() noexcept {
+    group_allocator_type get_group_allocator() noexcept {
         return this->group_allocator_;
-    }
-
-    ctrl_allocator_type get_ctrl_allocator() const noexcept {
-        return this->ctrl_allocator_;
     }
 
     slot_allocator_type get_slot_allocator() const noexcept {
@@ -336,10 +344,6 @@ public:
 
     group_allocator_type & get_group_allocator_ref() noexcept {
         return this->group_allocator_;
-    }
-
-    ctrl_allocator_type & get_ctrl_allocator_ref() noexcept {
-        return this->ctrl_allocator_;
     }
 
     slot_allocator_type & get_slot_allocator_ref() noexcept {
@@ -927,7 +931,7 @@ public:
     }
 
 private:
-    static group_type * default_empty_groups() {
+    static inline group_type * default_empty_groups() {
         alignas(16) static const ctrl_type s_empty_ctrls[16] = {
             { kEmptySlot }, { kEmptySlot }, { kEmptySlot }, { kEmptySlot },
             { kEmptySlot }, { kEmptySlot }, { kEmptySlot }, { kEmptySlot },
@@ -938,8 +942,15 @@ private:
         return reinterpret_cast<group_type *>(const_cast<ctrl_type *>(&s_empty_ctrls[0]));
     }
 
-    static ctrl_type * default_empty_ctrls() {
+    static inline ctrl_type * default_empty_ctrls() {
         return reinterpret_cast<ctrl_type *>(this_type::default_empty_groups());
+    }
+
+    static inline constexpr size_type round_up_pow2(size_type capacity) noexcept {
+        if (!pow2::is_pow2(capacity)) {
+            capacity = pow2::round_up<size_type, 0>(capacity);
+        }
+        return capacity;
     }
 
     JSTD_FORCED_INLINE
@@ -952,27 +963,40 @@ private:
         return new_capacity;
     }
 
-    static size_type calc_slot_threshold(size_type mlf, size_type slot_capacity) {
-        static constexpr size_type kSmallCapacity = kGroupWidth * 2;
-
-        if (likely(slot_capacity > kSmallCapacity)) {
-            return (slot_capacity * mlf / kLoadFactorAmplify);
-        } else {
-            /* When capacity is small, we allow 100% usage. */
-            return slot_capacity;
-        }
+    inline constexpr size_type calc_index_shift(size_type new_capacity) const noexcept {
+        return (kWordLength - (new_capacity <= 2) ? 1 : BitUtils::bsr(new_capacity));
     }
 
-    size_type calc_slot_threshold(size_type slot_capacity) const {
+    static inline constexpr size_type calc_slot_threshold(size_type mlf, size_type slot_capacity) {
+        /* When capacity is small, we allow 100% usage. */
+        return (slot_capacity > kSmallCapacity) ? (slot_capacity * mlf / kLoadFactorAmplify) : slot_capacity;
+    }
+
+    inline size_type calc_slot_threshold(size_type slot_capacity) const noexcept {
         return this_type::calc_slot_threshold(this->mlf_, slot_capacity);
     }
 
-    inline size_type shrink_to_fit_capacity(size_type init_capacity) const {
+    inline constexpr size_type calc_index_shift_round(size_type new_capacity) const noexcept {
+        new_capacity = this_type::round_up_pow2(new_capacity);
+        return calc_index_shift(new_capacity);
+    }
+
+    inline constexpr size_type calc_slot_mask_round(size_type new_capacity) const noexcept {
+        new_capacity = this_type::round_up_pow2(new_capacity);
+        return static_cast<size_type>(new_capacity - 1);
+    }
+
+    inline constexpr size_type calc_slot_threshold_round(size_type new_capacity) const noexcept {
+        new_capacity = this_type::round_up_pow2(new_capacity);
+        return this_type::calc_slot_threshold(kDefaultMaxLoadFactor, new_capacity);
+    }
+
+    inline size_type shrink_to_fit_capacity(size_type init_capacity) const noexcept {
         size_type new_capacity = init_capacity * kLoadFactorAmplify / this->mlf_;
         return new_capacity;
     }
 
-    bool is_positive(size_type value) const {
+    inline bool is_positive(size_type value) const noexcept {
         return (static_cast<intptr_t>(value) >= 0);
     }
 
@@ -1058,27 +1082,21 @@ private:
         return (size_type)((std::uintptr_t)this->ctrls() >> 12);
     }
 
-    inline std::size_t hash_for(const key_type & key) const
+    JSTD_FORCED_INLINE
+    std::size_t hash_for(const key_type & key) const
         noexcept(noexcept(this->hasher_(key))) {
 #if CLUSTER_USE_HASH_POLICY
         std::size_t key_hash = static_cast<std::size_t>(this->hash_policy_.get_hash_code(key));
-#elif 0
+#else
+  #if defined(_MSC_VER) && !defined(__clang__)
         std::size_t key_hash;
-        if (std::is_integral<key_type>::value)
-            key_hash = hashes::msvc_fnv_1a((const unsigned char *)&key, sizeof(key_type));
+        if (std::is_integral<key_type>::value && jstd::is_default_std_hash<Hash, key_type>::value)
+            key_hash = static_cast<std::size_t>(jstd::SimpleHash<Hash>()(key));
         else
             key_hash = static_cast<std::size_t>(this->hasher_(key));
-#elif defined(__GNUC__) || (defined(__clang__) && !defined(_MSC_VER))
-        std::size_t key_hash;
-        if (false && std::is_integral<key_type>::value && jstd::is_default_std_hash<Hash, key_type>::value) {
-            key_hash = hashes::msvc_fnv_1a((const unsigned char *)&key, sizeof(key_type));
-        } else {
-            key_hash = static_cast<std::size_t>(this->hasher_(key));
-            if (!jstd::detail::hash_is_avalanching<Hash>::value)
-                key_hash = hashes::mum_mul_mix(key_hash);
-        }            
-#else
+  #else
         std::size_t key_hash = static_cast<std::size_t>(this->hasher_(key));
+  #endif
         if (!jstd::detail::hash_is_avalanching<Hash>::value)
             key_hash = hashes::mum_mul_mix(key_hash);
 #endif
@@ -1088,14 +1106,16 @@ private:
     //
     // Do the index hash on the basis of hash code for the index_for_hash().
     //
-    inline std::size_t index_hasher(std::size_t key_hash) const noexcept {
-        return key_hash;
+    JSTD_FORCED_INLINE
+    std::size_t index_hasher(std::size_t key_hash) const noexcept {
+        return (key_hash >> this->index_shift_);
     }
 
     //
     // Do the ctrl hash on the basis of hash code for the ctrl hash.
     //
-    inline std::size_t ctrl_hasher(std::size_t key_hash) const noexcept {
+    JSTD_FORCED_INLINE
+    std::size_t ctrl_hasher(std::size_t key_hash) const noexcept {
 #if CLUSTER_USE_HASH_POLICY
         return key_hash;
 #elif 0
@@ -1105,7 +1125,8 @@ private:
 #endif
     }
 
-    inline size_type index_for_hash(std::size_t key_hash) const noexcept {
+    JSTD_FORCED_INLINE
+    size_type index_for_hash(std::size_t key_hash) const noexcept {
 #if CLUSTER_USE_HASH_POLICY
         if (kUseIndexSalt) {
             key_hash ^= this->index_salt();
@@ -1113,22 +1134,27 @@ private:
         size_type index = this->hash_policy_.template index_for_hash<key_type>(key_hash, this->slot_mask());
         return index;
 #else
-        key_hash = this->index_hasher(key_hash);
+        std::size_t index_hash = this->index_hasher(key_hash);
         if (kUseIndexSalt) {
-            key_hash ^= this->index_salt();
+            index_hash ^= this->index_salt();
         }
-        size_type index = key_hash & this->slot_mask();
+        size_type index = (size_type)index_hash & this->slot_mask();
         return index;
 #endif
     }
 
-    inline std::uint8_t ctrl_for_hash(std::size_t key_hash) const noexcept {
+    JSTD_FORCED_INLINE
+    std::uint8_t ctrl_for_hash(std::size_t key_hash) const noexcept {
+#if CLUSTER_USE_INDEX_SHIFT
+        std::uint8_t ctrl_hash8 = ctrl_type::hash_bits(static_cast<std::uint8_t>(key_hash));
+#else
         std::size_t ctrl_hash = this->ctrl_hasher(key_hash);
         std::uint8_t ctrl_hash8 = ctrl_type::hash_bits(static_cast<std::uint8_t>(ctrl_hash));
+#endif
         return ((ctrl_hash8 != kEmptySlot) ? ctrl_hash8 : kEmptyHash);
     }
 
-    size_type index_of(iterator iter) const {
+    inline size_type index_of(iterator iter) const {
         if (!kIsIndirectKV) {
             return iter.index();
         } else {
@@ -1138,7 +1164,7 @@ private:
         }
     }
 
-    size_type index_of(const_iterator iter) const {
+    inline size_type index_of(const_iterator iter) const {
         if (!kIsIndirectKV) {
             return iter.index();
         } else {
@@ -1148,7 +1174,7 @@ private:
         }
     }
 
-    size_type index_of(ctrl_type * ctrl) const {
+    inline size_type index_of(ctrl_type * ctrl) const {
         assert(ctrl != nullptr);
         assert(ctrl >= this->ctrls());
         size_type index;
@@ -1160,11 +1186,11 @@ private:
         return index;
     }
 
-    size_type index_of(const ctrl_type * ctrl) const {
+    inline size_type index_of(const ctrl_type * ctrl) const {
         return this->index_of(reinterpret_cast<ctrl_type *>(ctrl));
     }
 
-    size_type index_of(slot_type * slot) const {
+    inline size_type index_of(slot_type * slot) const {
         assert(slot != nullptr);
         assert(slot >= this->slots());
         size_type index = (size_type)(slot - this->slots());
@@ -1172,11 +1198,11 @@ private:
         return index;
     }
 
-    size_type index_of(const slot_type * slot) const {
+    inline size_type index_of(const slot_type * slot) const {
         return this->index_of(reinterpret_cast<slot_type *>(slot));
     }
 
-    size_type index_of_ctrl(ctrl_type * ctrl) const {
+    inline size_type index_of_ctrl(ctrl_type * ctrl) const {
         assert(ctrl != nullptr);
         assert(ctrl >= this->ctrls());
         size_type ctrl_index = (size_type)(ctrl - this->ctrls());
@@ -1184,7 +1210,7 @@ private:
         return ctrl_index;
     }
 
-    size_type index_of_ctrl(const ctrl_type * ctrl) const {
+    inline size_type index_of_ctrl(const ctrl_type * ctrl) const {
         return this->index_of_ctrl(reinterpret_cast<ctrl_type *>(ctrl));
     }
 
@@ -1227,10 +1253,12 @@ private:
         }
     }
 
+    JSTD_FORCED_INLINE
     void destroy() {
         this->destroy_data();
     }
 
+    JSTD_FORCED_INLINE
     void destroy_data() {
         // Note!!: destroy_slots() need use this->ctrls(), so must destroy slots first.
         size_type group_capacity = this->group_capacity();
@@ -1238,6 +1266,7 @@ private:
         this->destroy_groups(group_capacity);
     }
 
+    JSTD_FORCED_INLINE
     void destroy_groups(size_type group_capacity) noexcept {
         if (this->groups_ != this_type::default_empty_groups()) {
             size_type total_group_alloc_count = this->TotalGroupAllocCount<kGroupAlignment>(group_capacity);
@@ -1249,6 +1278,7 @@ private:
         }
     }
 
+    JSTD_FORCED_INLINE
     void destroy_slots() {
         this->clear_slots();
 
@@ -1262,17 +1292,20 @@ private:
 #endif
             this->slots_ = nullptr;
             this->slot_size_ = 0;
-            this->slot_mask_ = 0;
+            this->slot_mask_ = size_type(-1);
             this->slot_threshold_ = 0;
+            this->index_shift_ = kWordLength - 1;
         }
     }
 
+    JSTD_FORCED_INLINE
     void clear_data() {
         // Note!!: clear_slots() need use this->ctrls(), so must clear slots first.
         this->clear_slots();
         this->clear_groups(this->groups(), this->group_capacity());
     }
 
+    JSTD_FORCED_INLINE
     void clear_groups(group_type * groups, size_type group_capacity) {
         this->init_groups(groups, group_capacity, std::is_trivially_default_constructible<group_type>{});
     }
@@ -1326,7 +1359,7 @@ private:
         this->rehash_impl<false>(new_capacity);
     }
 
-    bool is_valid_capacity(size_type capacity) const {
+    inline bool is_valid_capacity(size_type capacity) const {
         return ((capacity >= kMinCapacity) && pow2::is_pow2(capacity));
     }
 
@@ -1336,7 +1369,8 @@ private:
     // and return the beginning of groups.
     //
     template <size_type GroupAlignment>
-    inline group_type * AlignedGroups(const group_type * groups_alloc) {
+    JSTD_FORCED_INLINE
+    group_type * AlignedGroups(const group_type * groups_alloc) {
         static_assert((GroupAlignment > 0),
                       "jstd::cluster_flat_map::AlignedGroups<N>(): GroupAlignment must bigger than 0.");
         static_assert(((GroupAlignment & (GroupAlignment - 1)) == 0),
@@ -1355,7 +1389,8 @@ private:
     // and return the beginning of groups.
     //
     template <size_type GroupAlignment>
-    inline group_type * AlignedSlotsAndGroups(const slot_type * slots, size_type slot_capacity) {
+    JSTD_FORCED_INLINE
+    group_type * AlignedSlotsAndGroups(const slot_type * slots, size_type slot_capacity) {
         static_assert((GroupAlignment > 0),
                       "jstd::cluster_flat_map::AlignedSlotsAndGroups<N>(): GroupAlignment must bigger than 0.");
         static_assert(((GroupAlignment & (GroupAlignment - 1)) == 0),
@@ -1374,7 +1409,8 @@ private:
     // computes the total allocate count of the backing group array.
     //
     template <size_type GroupAlignment>
-    inline size_type TotalGroupAllocCount(size_type group_capacity) {
+    JSTD_FORCED_INLINE
+    size_type TotalGroupAllocCount(size_type group_capacity) {
         const size_type num_group_bytes = group_capacity * sizeof(group_type);
         const size_type total_bytes = num_group_bytes + GroupAlignment;
         const size_type total_alloc_count = (total_bytes + sizeof(group_type) - 1) / sizeof(group_type);
@@ -1386,7 +1422,8 @@ private:
     // computes the total allocate count of the backing slot array.
     //
     template <size_type GroupAlignment>
-    inline size_type TotalSlotAllocCount(size_type group_capacity, size_type slot_capacity) {
+    JSTD_FORCED_INLINE
+    size_type TotalSlotAllocCount(size_type group_capacity, size_type slot_capacity) {
         const size_type num_group_bytes = group_capacity * sizeof(group_type);
         const size_type num_slot_bytes = slot_capacity * sizeof(slot_type);
         const size_type total_bytes = num_slot_bytes + GroupAlignment + num_group_bytes;
@@ -1400,8 +1437,9 @@ private:
             this->groups_ = this_type::default_empty_groups();
             this->slots_ = nullptr;
             this->slot_size_ = 0;
-            this->slot_mask_ = 0;
+            this->slot_mask_ = size_type(-1);
             this->slot_threshold_ = 0;
+            this->index_shift_ = kWordLength - 1;
 #if CLUSTER_USE_SEPARATE_SLOTS
             this->groups_alloc_ = this_type::default_empty_groups();
 #endif
@@ -1415,6 +1453,7 @@ private:
     }
 
     template <bool isInitialize = false>
+    JSTD_FORCED_INLINE
     void create_slots(size_type init_capacity) {
         if (unlikely(init_capacity == 0)) {
             this->reset<false>();
@@ -1460,17 +1499,13 @@ private:
 
         this->groups_ = new_groups;
         this->slots_ = new_slots;
+        this->slot_size_ = 0;
+        this->slot_mask_ = new_capacity - 1;
+        this->slot_threshold_ = this->calc_slot_threshold(new_capacity);
+        this->index_shift_ = this->calc_index_shift(new_capacity);
 #if CLUSTER_USE_SEPARATE_SLOTS
         this->groups_alloc_ = new_groups_alloc;
 #endif
-
-        if (isInitialize) {
-            assert(this->slot_size_ == 0);
-        } else {
-            this->slot_size_ = 0;
-        }
-        this->slot_mask_ = new_capacity - 1;
-        this->slot_threshold_ = this->calc_slot_threshold(new_capacity);
     }
 
     template <bool AllowShrink>
@@ -1531,7 +1566,7 @@ private:
 #else
             if (old_slots != nullptr) {
                 size_type total_slot_alloc_count = this->TotalSlotAllocCount<kGroupAlignment>(
-                                                        old_group_capacity, old_slot_capacity);
+                                                         old_group_capacity, old_slot_capacity);
                 SlotAllocTraits::deallocate(this->slot_allocator_, old_slots, total_slot_alloc_count);
             }
 #endif
@@ -1584,6 +1619,7 @@ private:
     }
 
     template <typename KeyT>
+    JSTD_FORCED_INLINE
     const slot_type * find_impl(const KeyT & key) const {
         std::size_t key_hash = this->hash_for(key);
         size_type slot_index = this->index_for_hash(key_hash);
@@ -1772,7 +1808,7 @@ private:
     }
 
     template <typename KeyT>
-    JSTD_NO_INLINE
+    JSTD_FORCED_INLINE
     std::pair<size_type, bool>
     find_and_insert(const KeyT & key) {
         std::size_t key_hash = this->hash_for(key);
