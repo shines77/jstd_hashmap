@@ -1686,7 +1686,7 @@ private:
             group++;
             if (unlikely(group >= last_group)) {
                 group = this->groups();
-                slot_base = 0;
+                slot_base = this->slots();
             }
 #if 0
             if (unlikely(group == first_group)) {
