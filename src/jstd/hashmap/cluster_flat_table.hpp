@@ -96,6 +96,45 @@
 
 namespace jstd {
 
+/*
+ * quadratic probing:
+ *
+ *   eg. 0  0+1 1+2 3+4 7+5 12+6  ...
+ * index 0,  1,  3,  7,  12,  18, ...
+ *
+ */
+class cluster_quadratic_prober {
+public:
+    cluster_quadratic_prober(std::size_t index) : index_(index), step_(0) {}
+
+    inline std::size_t get() const noexcept {
+        return index_;
+    }
+
+    inline std::size_t steps() const noexcept {
+        return step_;
+    }
+
+    inline std::size_t length() const noexcept {
+        return (step_ + 1);
+    }
+
+    /*
+     * next_bucket() returns false when the whole array has been traversed, which ends
+     * probing (in practice, full-table probing will only happen with very small
+     * arrays).
+     */
+    inline bool next_bucket(std::size_t bucket_mask) noexcept {
+        step_ += 1;
+        index_ = (index_ + step_) & bucket_mask;
+        return (step_ <= bucket_mask);
+    }
+
+private:
+    std::size_t index_;
+    std::size_t step_;
+};
+
 template <typename TypePolicy, typename Hash,
           typename KeyEqual, typename Allocator>
 class JSTD_DLL cluster_flat_table
@@ -133,6 +172,7 @@ public:
 
     using ctrl_type = cluster_meta_ctrl;
     using group_type = flat_map_cluster16<cluster_meta_ctrl>;
+    using prober_type = cluster_quadratic_prober;
 
     static constexpr std::uint8_t kEmptySlot = ctrl_type::kEmptySlot;
     static constexpr std::uint8_t kEmptyHash = ctrl_type::kEmptyHash;
@@ -211,7 +251,8 @@ public:
     static constexpr size_type kMinCapacity = 2;
 
     /* When capacity is small, we allow 100% usage. */
-    static constexpr size_type kSmallCapacity = kGroupWidth * 4;
+    /* Due to the use of quadratic prober, a maximum of 2 can only be obtained here. */
+    static constexpr size_type kSmallCapacity = kGroupWidth * 2;
 
     static constexpr float kMinLoadFactorF = 0.5f;
     static constexpr float kMaxLoadFactorF = 0.875f;
@@ -237,8 +278,9 @@ private:
     group_type *    groups_;
     slot_type *     slots_;
     size_type       slot_size_;
-    size_type       slot_mask_;     // slot_capacity = slot_mask + 1
+    size_type       slot_mask_;         // slot_capacity = slot_mask + 1    
     size_type       slot_threshold_;
+    size_type       group_mask_;        // Use in class cluster_quadratic_prober
 #if CLUSTER_USE_INDEX_SHIFT
     size_type       index_shift_;
 #endif
@@ -272,6 +314,7 @@ public:
         : groups_(default_empty_groups()), slots_(nullptr), slot_size_(0),
           slot_mask_(calc_slot_mask_round(capacity)),
           slot_threshold_(calc_slot_threshold_round(capacity)),
+          group_mask_(calc_group_mask_round(capacity)),
 #if CLUSTER_USE_INDEX_SHIFT
           index_shift_(calc_index_shift_round(capacity)),
 #endif
@@ -410,20 +453,27 @@ public:
         return (std::numeric_limits<difference_type>::max)() / sizeof(value_type);
     }
 
-    size_type slot_size() const { return this->slot_size_; }
-    size_type slot_mask() const { return this->slot_mask_; }
-    size_type slot_capacity() const { return (this->slot_mask_ + 1); }
-    size_type slot_threshold() const { return this->slot_threshold_; }
+    size_type slot_size() const noexcept { return this->slot_size_; }
+    size_type slot_mask() const noexcept { return this->slot_mask_; }
+    size_type slot_capacity() const noexcept { return (this->slot_mask_ + 1); }
+    size_type slot_threshold() const noexcept { return this->slot_threshold_; }
 
-    size_type ctrl_capacity() const { return this->slot_capacity(); }
-    size_type max_ctrl_capacity() const { return (this->group_capacity() * kGroupWidth); }
+    size_type ctrl_capacity() const noexcept { return this->slot_capacity(); }
+    size_type max_ctrl_capacity() const noexcept { return (this->group_capacity() * kGroupWidth); }
 
-    size_type group_capacity() const {
+    size_type group_mask() const noexcept {
+        return this->group_mask_;
+    }
+    size_type group_capacity() const noexcept {
+#if 1
+        return (this->group_mask_ + 1);
+#else
         return ((this->slot_capacity() + (kGroupWidth - 1)) / kGroupWidth);
+#endif
     }
 
-    bool is_valid() const { return (this->groups() != nullptr); }
-    bool is_empty() const { return (this->size() == 0); }
+    bool is_valid() const noexcept { return (this->groups() != nullptr); }
+    bool is_empty() const noexcept { return (this->size() == 0); }
 
     ///
     /// Bucket interface
@@ -981,13 +1031,6 @@ private:
         return reinterpret_cast<ctrl_type *>(this_type::default_empty_groups());
     }
 
-    static inline constexpr size_type round_up_pow2(size_type capacity) noexcept {
-        if (!pow2::is_pow2(capacity)) {
-            capacity = pow2::round_up<size_type, 0>(capacity);
-        }
-        return capacity;
-    }
-
     JSTD_FORCED_INLINE
     size_type calc_capacity(size_type init_capacity) const noexcept {
         size_type new_capacity = (std::max)(init_capacity, kMinCapacity);
@@ -998,8 +1041,11 @@ private:
         return new_capacity;
     }
 
-    inline constexpr size_type calc_index_shift(size_type new_capacity) const noexcept {
-        return (kWordLength - ((new_capacity <= 2) ? 1 : BitUtils::bsr(new_capacity)));
+    static inline constexpr size_type round_up_pow2(size_type capacity) noexcept {
+        if (!pow2::is_pow2(capacity)) {
+            capacity = pow2::round_up<size_type, 0>(capacity);
+        }
+        return capacity;
     }
 
     static inline constexpr size_type calc_slot_threshold(size_type mlf, size_type slot_capacity) {
@@ -1007,23 +1053,39 @@ private:
         return (slot_capacity > kSmallCapacity) ? (slot_capacity * mlf / kLoadFactorAmplify) : slot_capacity;
     }
 
+    inline constexpr size_type calc_index_shift(size_type capacity) const noexcept {
+        return (kWordLength - ((capacity <= 2) ? 1 : BitUtils::bsr(capacity)));
+    }
+
     inline size_type calc_slot_threshold(size_type slot_capacity) const noexcept {
         return this_type::calc_slot_threshold(this->mlf_, slot_capacity);
     }
 
-    inline constexpr size_type calc_index_shift_round(size_type new_capacity) const noexcept {
-        new_capacity = this_type::round_up_pow2(new_capacity);
-        return this->calc_index_shift(new_capacity);
+    inline size_type calc_group_mask(size_type capacity) const noexcept {
+        assert(pow2::is_pow2(capacity));
+        size_type group_capacity = (capacity + (kGroupWidth - 1)) / kGroupWidth;
+        assert(pow2::is_pow2(group_capacity));
+        return static_cast<size_type>(group_capacity - 1);
     }
 
-    inline constexpr size_type calc_slot_mask_round(size_type new_capacity) const noexcept {
-        new_capacity = this_type::round_up_pow2(new_capacity);
-        return static_cast<size_type>(new_capacity - 1);
+    inline constexpr size_type calc_index_shift_round(size_type capacity) const noexcept {
+        capacity = this_type::round_up_pow2(capacity);
+        return this->calc_index_shift(capacity);
     }
 
-    inline constexpr size_type calc_slot_threshold_round(size_type new_capacity) const noexcept {
-        new_capacity = this_type::round_up_pow2(new_capacity);
-        return this_type::calc_slot_threshold(kDefaultMaxLoadFactor, new_capacity);
+    inline constexpr size_type calc_slot_mask_round(size_type capacity) const noexcept {
+        capacity = this_type::round_up_pow2(capacity);
+        return static_cast<size_type>(capacity - 1);
+    }
+
+    inline constexpr size_type calc_slot_threshold_round(size_type capacity) const noexcept {
+        capacity = this_type::round_up_pow2(capacity);
+        return this_type::calc_slot_threshold(kDefaultMaxLoadFactor, capacity);
+    }
+
+    inline constexpr size_type calc_group_mask_round(size_type capacity) const noexcept {
+        capacity = this_type::round_up_pow2(capacity);
+        return this_type::calc_group_mask(capacity);
     }
 
     inline size_type shrink_to_fit_capacity(size_type init_capacity) const noexcept {
@@ -1255,29 +1317,6 @@ private:
     }
 
     JSTD_FORCED_INLINE
-    void init_groups(group_type * groups, size_type group_capacity, std::true_type) {
-        /* memset faster/not slower than manual, assumes all zeros is group_type's
-         * default layout.
-         * reinterpret_cast: GCC may complain about group_type not being trivially
-         * copy-assignable when we're relying on trivial copy constructibility.
-         */
-
-        std::memset(reinterpret_cast<unsigned char *>(groups),
-                    kEmptySlot, sizeof(group_type) * group_capacity);
-    }
-
-    JSTD_FORCED_INLINE
-    void init_groups(group_type * groups, size_type group_capacity, std::false_type) {
-        if (groups != this_type::default_empty_groups()) {
-            group_type * group = groups;
-            group_type * last_group = group + group_capacity;
-            for (; group < last_group; ++group) {
-                group->init();
-            }
-        }
-    }
-
-    JSTD_FORCED_INLINE
     void destroy() {
         this->destroy_data();
     }
@@ -1318,7 +1357,33 @@ private:
             this->slot_size_ = 0;
             this->slot_mask_ = size_type(-1);
             this->slot_threshold_ = 0;
+            this->group_mask_ = size_type(-1);
             this->index_shift_ = kWordLength - 1;
+        }
+    }
+
+    JSTD_FORCED_INLINE
+    void init_groups(group_type * groups, size_type group_capacity, std::true_type) {
+        /*
+         * memset faster/not slower than manual, assumes all zeros is group_type's
+         * default layout.
+         * reinterpret_cast: GCC may complain about group_type not being trivially
+         * copy-assignable when we're relying on trivial copy constructibility.
+         */
+        if (groups != this_type::default_empty_groups()) {
+            std::memset(reinterpret_cast<unsigned char *>(groups),
+                        kEmptySlot, sizeof(group_type) * group_capacity);
+        }
+    }
+
+    JSTD_FORCED_INLINE
+    void init_groups(group_type * groups, size_type group_capacity, std::false_type) {
+        if (groups != this_type::default_empty_groups()) {
+            group_type * group = groups;
+            group_type * last_group = group + group_capacity;
+            for (; group < last_group; ++group) {
+                group->init();
+            }
         }
     }
 
@@ -1373,11 +1438,13 @@ private:
         this->slot_size_ = 0;
     }
 
-    JSTD_FORCED_INLINE bool need_grow() const {
+    JSTD_FORCED_INLINE
+    bool need_grow() const {
         return (this->slot_size() >= this->slot_threshold());
     }
 
-    JSTD_FORCED_INLINE void grow_if_necessary() {
+    JSTD_FORCED_INLINE
+    void grow_if_necessary() {
         // The growth rate is 2 times
         size_type new_capacity = this->slot_capacity() * 2;
         this->rehash_impl<false>(new_capacity);
@@ -1464,6 +1531,7 @@ private:
             this->slot_size_ = 0;
             this->slot_mask_ = size_type(-1);
             this->slot_threshold_ = 0;
+            this->group_mask_ = size_type(-1);
             this->index_shift_ = kWordLength - 1;
 #if CLUSTER_USE_SEPARATE_SLOTS
             this->groups_alloc_ = this_type::default_empty_groups();
@@ -1527,6 +1595,7 @@ private:
         this->slot_size_ = 0;
         this->slot_mask_ = new_capacity - 1;
         this->slot_threshold_ = this->calc_slot_threshold(new_capacity);
+        this->group_mask_ = this->calc_group_mask(new_capacity);
         this->index_shift_ = this->calc_index_shift(new_capacity);
 #if CLUSTER_USE_SEPARATE_SLOTS
         this->groups_alloc_ = new_groups_alloc;
@@ -1656,17 +1725,17 @@ private:
     size_type find_index(const KeyT & key, size_type slot_pos, std::uint8_t ctrl_hash) const {
         size_type group_index = slot_pos / kGroupWidth;
         size_type group_pos = slot_pos % kGroupWidth;
-        const group_type * group = this->group_at(group_index);
-        const group_type * first_group = group;
-        const group_type * last_group = this->last_group();
+        prober_type prober(group_index);
 
-        const slot_type * slot_base = this->slots() + group_index * kGroupWidth;
-        size_type skip_groups = 0;
-
-        for (;;) {
+        do {
+            group_index = prober.get();
+            const group_type * group = this->group_at(group_index);
             std::uint32_t match_mask = group->match_hash(ctrl_hash);
             if (match_mask != 0) {
-                Prefetch_Read_T0((const void *)slot_base);
+                const slot_type * slot_base = this->slots() + group_index * kGroupWidth;
+                if (sizeof(value_type) <= 32) {
+                    Prefetch_Read_T0((const void *)slot_base);
+                }
                 do {
                     std::uint32_t match_pos = BitUtils::bsf32(match_mask);
                     const slot_type * slot = slot_base + match_pos;
@@ -1683,26 +1752,16 @@ private:
                 return this->slot_capacity();
             }
 
-            slot_base += kGroupWidth;
-            group++;
-            if (unlikely(group >= last_group)) {
-                group = this->groups();
-                slot_base = this->slots();
-            }
-#if 0
-            if (unlikely(group == first_group)) {
-                return this->slot_capacity();
-            }
-#endif
 #if CLUSTER_DISPLAY_DEBUG_INFO
-            skip_groups++;
-            if (unlikely(skip_groups > kSkipGroupsLimit)) {
+            if (unlikely(prober.steps() > kSkipGroupsLimit)) {
                 std::cout << "find_index(): key = " << key <<
-                             ", skip_groups = " << skip_groups <<
+                             ", skip_groups = " << prober.steps() <<
                              ", load_factor = " << this->load_factor() << std::endl;
             }
 #endif
-        }
+        } while (prober.next_bucket(this->group_mask()));
+
+        return this->slot_capacity();
     }
 
     void display_meta_datas(group_type * group) {
@@ -1723,21 +1782,17 @@ private:
     size_type find_first_empty_to_insert(const KeyT & key, size_type slot_pos, std::uint8_t ctrl_hash) {
         size_type group_index = slot_pos / kGroupWidth;
         size_type group_pos = slot_pos % kGroupWidth;
-        group_type * group = this->group_at(group_index);
-        group_type * first_group = group;
-        group_type * last_group = this->last_group();
+        prober_type prober(group_index);
 
-        group_type * prev_group = nullptr;
-        size_type skip_groups = 0;
-
-        for (;;) {
+        do {
+            group_index = prober.get();
+            group_type * group = this->group_at(group_index);
             std::uint32_t empty_mask = group->match_empty();
             if (empty_mask != 0) {
                 std::uint32_t empty_pos = BitUtils::bsf32(empty_mask);
                 assert(group->is_empty(empty_pos));
                 group->set_used(empty_pos, ctrl_hash);
-                size_type group_idx = group - this->groups();
-                size_type slot_base = group_idx * kGroupWidth;
+                size_type slot_base = group_index * kGroupWidth;
                 size_type slot_index = slot_base + empty_pos;
                 return slot_index;
             } else {
@@ -1747,27 +1802,16 @@ private:
                 //}
             }
 #if CLUSTER_DISPLAY_DEBUG_INFO
-            prev_group = group;
-#endif
-            group++;
-            if (unlikely(group >= last_group)) {
-                group = this->groups();
-            }
-#if 0
-            if (unlikely(group == first_group)) {
-                return this->slot_capacity();
-            }
-#endif
-#if CLUSTER_DISPLAY_DEBUG_INFO
-            skip_groups++;
-            if (unlikely(skip_groups > kSkipGroupsLimit)) {
+            if (unlikely(prober.steps() > kSkipGroupsLimit)) {
                 std::cout << "find_first_empty_to_insert(): key = " << key <<
-                             ", skip_groups = " << skip_groups <<
+                             ", skip_groups = " << prober.steps() <<
                              ", load_factor = " << this->load_factor() << std::endl;
-                display_meta_datas(prev_group);
+                display_meta_datas(group);
             }
 #endif
-        }
+        } while (prober.next_bucket(this->group_mask()));
+
+        return this->slot_capacity();
     }
 
     template <typename KeyT>
@@ -1792,9 +1836,22 @@ private:
             // ctrl_hash = this->ctrl_for_hash(key_hash);
         }
 
-        slot_index = this->find_first_empty_to_insert(key, slot_pos, ctrl_hash);
-        assert(slot_index < this->slot_capacity());
-        return { slot_index, kNeedInsert };
+#ifdef _DEBUG
+        if (*(std::uint32_t *)&key == 0x02CF)
+            slot_pos = slot_pos;
+#endif
+        slot_index = this->find_first_empty_to_insert(key, slot_pos, ctrl_hash);      
+        if (likely(slot_index != this->slot_capacity())) {
+            return { slot_index, kNeedInsert };
+        }
+        else {
+            printf("\nfind_and_insert(): overflow, size() = %d, load_factor = %0.3f\n",
+                    (int)this->size(), this->load_factor());
+            // The size of slot reach the slot threshold or hashmap is full.
+            this->grow_if_necessary();
+
+            return this->find_and_insert(key);
+        }
     }
 
     JSTD_FORCED_INLINE
