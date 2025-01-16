@@ -84,12 +84,12 @@
 #include "jstd/hashmap/flat_map_slot_storage.hpp"
 
 #define CLUSTER_USE_HASH_POLICY     0
-#define CLUSTER_USE_SEPARATE_SLOTS  1
+#define CLUSTER_USE_SEPARATE_SLOTS  0
 #define CLUSTER_USE_SWAP_TRAITS     1
 
 #define CLUSTER_USE_GROUP_SCAN      1
 #define CLUSTER_USE_INDEX_SHIFT     1
-#define CLUSTER_OVERFLOW_USE_POS    1
+#define CLUSTER_OVERFLOW_USE_POS    0
 
 #ifdef _DEBUG
 #define CLUSTER_DISPLAY_DEBUG_INFO  0
