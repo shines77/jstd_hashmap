@@ -89,6 +89,7 @@
 
 #define CLUSTER_USE_GROUP_SCAN      1
 #define CLUSTER_USE_INDEX_SHIFT     1
+#define CLUSTER_OVERFLOW_USE_POS    1
 
 #ifdef _DEBUG
 #define CLUSTER_DISPLAY_DEBUG_INFO  0
@@ -1771,9 +1772,15 @@ private:
             }
 
             // If it's not overflow, means it hasn't been found.
+#if CLUSTER_OVERFLOW_USE_POS
+            if (likely(group->is_not_overflow(group_pos))) {
+                return this->slot_capacity();
+            }
+#else
             if (likely(group->is_not_overflow(ctrl_hash % kGroupWidth))) {
                 return this->slot_capacity();
             }
+#endif
 
 #if CLUSTER_DISPLAY_DEBUG_INFO
             if (unlikely(prober.steps() > kSkipGroupsLimit)) {
@@ -1820,9 +1827,15 @@ private:
                 return slot_index;
             } else {
                 // If it's not overflow, set the overflow bit.
+#if CLUSTER_OVERFLOW_USE_POS
+                //if (likely(group->is_not_overflow(group_pos))) {
+                    group->set_overflow(group_pos);
+                //}
+#else
                 //if (likely(group->is_not_overflow(ctrl_hash % kGroupWidth))) {
                     group->set_overflow(ctrl_hash % kGroupWidth);
                 //}
+#endif
             }
 #if CLUSTER_DISPLAY_DEBUG_INFO
             if (unlikely(prober.steps() > kSkipGroupsLimit)) {
@@ -2163,8 +2176,13 @@ private:
     JSTD_FORCED_INLINE
     bool ctrl_maybe_caused_overflow(size_type slot_index) const noexcept {
         const group_type * group = this->groups() + slot_index / kGroupWidth;
+#if CLUSTER_OVERFLOW_USE_POS
+        size_type group_pos = slot_index % kGroupWidth;
+        return group->is_overflow(group_pos);
+#else
         const ctrl_type * ctrl = this->ctrl_at(slot_index);
         return group->is_overflow(ctrl->get_value() % kGroupWidth);
+#endif
     }
 
     JSTD_FORCED_INLINE
