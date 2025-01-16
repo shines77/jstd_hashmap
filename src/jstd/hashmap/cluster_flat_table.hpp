@@ -1443,7 +1443,7 @@ private:
         return (this->slot_size() >= this->slot_threshold());
     }
 
-    JSTD_FORCED_INLINE
+    JSTD_NO_INLINE
     void grow_if_necessary() {
         // The growth rate is 2 times
         size_type new_capacity = this->slot_capacity() * 2;
@@ -1790,9 +1790,9 @@ private:
             std::uint32_t empty_mask = group->match_empty();
             if (empty_mask != 0) {
                 std::uint32_t empty_pos = BitUtils::bsf32(empty_mask);
+                size_type slot_base = group_index * kGroupWidth;
                 assert(group->is_empty(empty_pos));
                 group->set_used(empty_pos, ctrl_hash);
-                size_type slot_base = group_index * kGroupWidth;
                 size_type slot_index = slot_base + empty_pos;
                 return slot_index;
             } else {
@@ -1835,12 +1835,8 @@ private:
             // ctrl_hash = this->ctrl_for_hash(key_hash);
         }
 
-#ifdef _DEBUG
-        if (*(std::uint32_t *)&key == 0x02CF)
-            slot_pos = slot_pos;
-#endif
         slot_index = this->find_first_empty_to_insert(key, slot_pos, ctrl_hash);
-        if (likely(slot_index != this->slot_capacity())) {
+        if (likely(true || (slot_index != this->slot_capacity()))) {
             return { slot_index, kNeedInsert };
         }
         else {
