@@ -466,7 +466,11 @@ public:
         return this->emplace_impl<true>(std::move(key), std::forward<MappedT>(value));
     }
 
-    template <typename KeyT, typename MappedT>
+    template <typename KeyT, typename MappedT, typename std::enable_if<
+              !jstd::is_same_ex<KeyT, key_type>::value &&
+               std::is_constructible<key_type, KeyT &&>::value &&
+              !std::is_convertible<KeyT, iterator>::value &&
+              !std::is_convertible<KeyT, const_iterator>::value>::type * = nullptr>
     std::pair<iterator, bool> insert_or_assign(KeyT && key, MappedT && value) {
         return this->emplace_impl<true>(std::move(key), std::forward<MappedT>(value));
     }
@@ -481,7 +485,11 @@ public:
         return this->emplace_impl<true>(std::move(key), std::forward<MappedT>(value))->first;
     }
 
-    template <typename KeyT, typename MappedT>
+    template <typename KeyT, typename MappedT, typename std::enable_if<
+              !jstd::is_same_ex<KeyT, key_type>::value &&
+               std::is_constructible<key_type, KeyT &&>::value &&
+              !std::is_convertible<KeyT, iterator>::value &&
+              !std::is_convertible<KeyT, const_iterator>::value>::type * = nullptr>
     iterator insert_or_assign(const_iterator hint, KeyT && key, MappedT && value) {
         return this->emplace_impl<true>(std::move(key), std::forward<MappedT>(value))->first;
     }
@@ -498,7 +506,7 @@ public:
     template <typename ... Args>
     JSTD_FORCED_INLINE
     iterator emplace_hint(const_iterator hint, Args && ... args) {
-        return table_.emplace(hint, std::forward<Args>(args)...);
+        return table_.emplace(std::forward<Args>(args)...).first;
     }
 
     ///

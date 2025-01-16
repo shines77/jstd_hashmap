@@ -1196,7 +1196,7 @@ private:
 #endif
     }
 
-    inline size_type index_of(iterator iter) const {
+    JSTD_FORCED_INLINE size_type index_of(iterator iter) const {
         if (!kIsIndirectKV) {
             return iter.index();
         } else {
@@ -1206,7 +1206,7 @@ private:
         }
     }
 
-    inline size_type index_of(const_iterator iter) const {
+    JSTD_FORCED_INLINE size_type index_of(const_iterator iter) const {
         if (!kIsIndirectKV) {
             return iter.index();
         } else {
@@ -1216,7 +1216,7 @@ private:
         }
     }
 
-    inline size_type index_of(ctrl_type * ctrl) const {
+    JSTD_FORCED_INLINE size_type index_of(ctrl_type * ctrl) const {
         assert(ctrl != nullptr);
         assert(ctrl >= this->ctrls());
         size_type index;
@@ -1228,11 +1228,11 @@ private:
         return index;
     }
 
-    inline size_type index_of(const ctrl_type * ctrl) const {
+    JSTD_FORCED_INLINE size_type index_of(const ctrl_type * ctrl) const {
         return this->index_of(const_cast<ctrl_type *>(ctrl));
     }
 
-    inline size_type index_of(slot_type * slot) const {
+    JSTD_FORCED_INLINE size_type index_of(slot_type * slot) const {
         assert(slot != nullptr);
         assert(slot >= this->slots());
         size_type index = static_cast<size_type>(slot - this->slots());
@@ -1240,17 +1240,17 @@ private:
         return index;
     }
 
-    inline size_type index_of(const slot_type * slot) const {
+    JSTD_FORCED_INLINE size_type index_of(const slot_type * slot) const {
         return this->index_of(const_cast<slot_type *>(slot));
     }
 
     template <typename U>
-    char * PtrOffset(U * ptr, std::ptrdiff_t offset) {
+    inline char * PtrOffset(U * ptr, std::ptrdiff_t offset) {
         return (reinterpret_cast<char *>(ptr) + offset);
     }
 
     template <typename U>
-    const char * PtrOffset(U * ptr, std::ptrdiff_t offset) const {
+    inline const char * PtrOffset(U * ptr, std::ptrdiff_t offset) const {
         return const_cast<const char *>(reinterpret_cast<char *>(ptr) + offset);
     }
 
@@ -1373,11 +1373,11 @@ private:
         this->slot_size_ = 0;
     }
 
-    inline bool need_grow() const {
+    JSTD_FORCED_INLINE bool need_grow() const {
         return (this->slot_size() >= this->slot_threshold());
     }
 
-    inline void grow_if_necessary() {
+    JSTD_FORCED_INLINE void grow_if_necessary() {
         // The growth rate is 2 times
         size_type new_capacity = this->slot_capacity() * 2;
         this->rehash_impl<false>(new_capacity);
@@ -1456,6 +1456,7 @@ private:
     }
 
     template <bool NeedDestory>
+    JSTD_FORCED_INLINE
     void reset() noexcept {
         if (!NeedDestory) {
             this->groups_ = this_type::default_empty_groups();
