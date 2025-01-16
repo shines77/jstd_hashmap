@@ -1816,8 +1816,7 @@ private:
 
     template <typename KeyT>
     JSTD_FORCED_INLINE
-    std::pair<size_type, bool>
-    find_and_insert(const KeyT & key) {
+    std::pair<size_type, bool> find_and_insert(const KeyT & key) {
         std::size_t key_hash = this->hash_for(key);
         size_type slot_pos = this->index_for_hash(key_hash);
         std::uint8_t ctrl_hash = this->ctrl_for_hash(key_hash);
@@ -1840,7 +1839,7 @@ private:
         if (*(std::uint32_t *)&key == 0x02CF)
             slot_pos = slot_pos;
 #endif
-        slot_index = this->find_first_empty_to_insert(key, slot_pos, ctrl_hash);      
+        slot_index = this->find_first_empty_to_insert(key, slot_pos, ctrl_hash);
         if (likely(slot_index != this->slot_capacity())) {
             return { slot_index, kNeedInsert };
         }
@@ -1850,7 +1849,10 @@ private:
             // The size of slot reach the slot threshold or hashmap is full.
             this->grow_if_necessary();
 
-            return this->find_and_insert(key);
+            slot_pos = this->index_for_hash(key_hash);
+            slot_index = this->find_first_empty_to_insert(key, slot_pos, ctrl_hash);
+            assert(slot_index < this->slot_capacity());
+            return { slot_index, kNeedInsert };
         }
     }
 
