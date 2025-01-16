@@ -679,6 +679,7 @@ public:
     ///
     /// Modifiers
     ///
+    JSTD_FORCED_INLINE
     void clear(bool need_destroy = false) noexcept {
         if (need_destroy) {
             this->create_slots<false>(kDefaultCapacity);
@@ -748,11 +749,13 @@ public:
                !jstd::is_same_ex<P, init_type >::value) &&
                (std::is_constructible<value_type, P &&>::value ||
                 std::is_constructible<init_type,  P &&>::value)>::type * = nullptr>
+    JSTD_FORCED_INLINE
     iterator insert(const_iterator hint, P && value) {
         return this->emplace_impl<false>(std::forward<P>(value)).first;
     }
 
     template <typename InputIter>
+    JSTD_FORCED_INLINE
     void insert(InputIter first, InputIter last) {
         for (; first != last; ++first) {
             this->emplace_impl<false>(*first);
@@ -767,31 +770,37 @@ public:
     /// insert_or_assign(key, value)
     ///
     template <typename MappedT>
+    JSTD_FORCED_INLINE
     std::pair<iterator, bool> insert_or_assign(const key_type & key, MappedT && value) {
         return this->emplace_impl<true>(key, std::forward<MappedT>(value));
     }
 
     template <typename MappedT>
+    JSTD_FORCED_INLINE
     std::pair<iterator, bool> insert_or_assign(key_type && key, MappedT && value) {
         return this->emplace_impl<true>(std::move(key), std::forward<MappedT>(value));
     }
 
     template <typename KeyT, typename MappedT>
+    JSTD_FORCED_INLINE
     std::pair<iterator, bool> insert_or_assign(KeyT && key, MappedT && value) {
         return this->emplace_impl<true>(std::move(key), std::forward<MappedT>(value));
     }
 
     template <typename MappedT>
+    JSTD_FORCED_INLINE
     iterator insert_or_assign(const_iterator hint, const key_type & key, MappedT && value) {
         return this->emplace_impl<true>(key, std::forward<MappedT>(value))->first;
     }
 
     template <typename MappedT>
+    JSTD_FORCED_INLINE
     iterator insert_or_assign(const_iterator hint, key_type && key, MappedT && value) {
         return this->emplace_impl<true>(std::move(key), std::forward<MappedT>(value))->first;
     }
 
     template <typename KeyT, typename MappedT>
+    JSTD_FORCED_INLINE
     iterator insert_or_assign(const_iterator hint, KeyT && key, MappedT && value) {
         return this->emplace_impl<true>(std::move(key), std::forward<MappedT>(value))->first;
     }
@@ -800,11 +809,13 @@ public:
     /// emplace(args...)
     ///
     template <typename ... Args>
+    JSTD_FORCED_INLINE
     std::pair<iterator, bool> emplace(Args && ... args) {
         return this->emplace_impl<false>(std::forward<Args>(args)...);
     }
 
     template <typename ... Args>
+    JSTD_FORCED_INLINE
     iterator emplace_hint(const_iterator hint, Args && ... args) {
         return this->emplace_impl<false>(std::forward<Args>(args)...).first;
     }
@@ -813,31 +824,37 @@ public:
     /// try_emplace(key, args...)
     ///
     template <typename ... Args>
+    JSTD_FORCED_INLINE
     std::pair<iterator, bool> try_emplace(const key_type & key, Args && ... args) {
         return this->try_emplace_impl(key, std::forward<Args>(args)...);
     }
 
     template <typename ... Args>
+    JSTD_FORCED_INLINE
     std::pair<iterator, bool> try_emplace(key_type && key, Args && ... args) {
         return this->try_emplace_impl(std::move(key), std::forward<Args>(args)...);
     }
 
     template <typename KeyT, typename ... Args>
+    JSTD_FORCED_INLINE
     std::pair<iterator, bool> try_emplace(KeyT && key, Args && ... args) {
         return this->try_emplace_impl(std::forward<KeyT>(key), std::forward<Args>(args)...);
     }
 
     template <typename ... Args>
+    JSTD_FORCED_INLINE
     std::pair<iterator, bool> try_emplace(const_iterator hint, const key_type & key, Args && ... args) {
         return this->try_emplace_impl(key, std::forward<Args>(args)...);
     }
 
     template <typename ... Args>
+    JSTD_FORCED_INLINE
     std::pair<iterator, bool> try_emplace(const_iterator hint, key_type && key, Args && ... args) {
         return this->try_emplace_impl(std::move(key), std::forward<Args>(args)...);
     }
 
     template <typename KeyT, typename ... Args>
+    JSTD_FORCED_INLINE
     std::pair<iterator, bool> try_emplace(const_iterator hint, KeyT && key, Args && ... args) {
         return this->try_emplace_impl(std::forward<KeyT>(key), std::forward<Args>(args)...);
     }
