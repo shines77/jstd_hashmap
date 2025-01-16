@@ -255,15 +255,16 @@ public:
     size_type capacity() const noexcept { return table_.capacity(); }
     size_type max_size() const noexcept { return table_.max_size(); }
 
-    size_type slot_size() const { return table_.slot_size(); }
-    size_type slot_mask() const { return table_.slot_mask(); }
-    size_type slot_capacity() const { return table_.slot_capacity(); }
-    size_type slot_threshold() const { return table_.slot_threshold(); }
+    size_type slot_size() const noexcept { return table_.slot_size(); }
+    size_type slot_mask() const noexcept { return table_.slot_mask(); }
+    size_type slot_capacity() const noexcept { return table_.slot_capacity(); }
+    size_type slot_threshold() const noexcept { return table_.slot_threshold(); }
 
-    size_type group_capacity() const { return table_.group_capacity(); }
+    size_type group_mask() const noexcept { return table_.group_mask(); }
+    size_type group_capacity() const noexcept { return table_.group_capacity(); }
 
-    bool is_valid() const { return table_.is_valid(); }
-    bool is_empty() const { return table_.is_empty(); }
+    bool is_valid() const noexcept { return table_.is_valid(); }
+    bool is_empty() const noexcept { return table_.is_empty(); }
 
     ///
     /// Bucket interface
@@ -359,13 +360,17 @@ public:
         return table_.find(key);
     }
 
-    template <typename KeyT>
+    template <typename KeyT, typename std::enable_if<
+              (!jstd::is_same_ex<KeyT, key_type>::value) &&
+                std::is_constructible<key_type, const KeyT &>::value>::type * = nullptr>
     JSTD_FORCED_INLINE
     iterator find(const KeyT & key) {
         return table_.find(key);
     }
 
-    template <typename KeyT>
+    template <typename KeyT, typename std::enable_if<
+              (!jstd::is_same_ex<KeyT, key_type>::value) &&
+                std::is_constructible<key_type, const KeyT &>::value>::type * = nullptr>
     JSTD_FORCED_INLINE
     const_iterator find(const KeyT & key) const {
         return table_.find(key);
@@ -374,6 +379,7 @@ public:
     ///
     /// Modifiers
     ///
+    JSTD_FORCED_INLINE
     void clear(bool need_destroy = false) noexcept {
         table_.clear(need_destroy);
     }
@@ -457,11 +463,13 @@ public:
     /// insert_or_assign(key, value)
     ///
     template <typename MappedT>
+    JSTD_FORCED_INLINE
     std::pair<iterator, bool> insert_or_assign(const key_type & key, MappedT && value) {
         return this->emplace_impl<true>(key, std::forward<MappedT>(value));
     }
 
     template <typename MappedT>
+    JSTD_FORCED_INLINE
     std::pair<iterator, bool> insert_or_assign(key_type && key, MappedT && value) {
         return this->emplace_impl<true>(std::move(key), std::forward<MappedT>(value));
     }
@@ -471,16 +479,19 @@ public:
                std::is_constructible<key_type, KeyT &&>::value &&
               !std::is_convertible<KeyT, iterator>::value &&
               !std::is_convertible<KeyT, const_iterator>::value>::type * = nullptr>
+    JSTD_FORCED_INLINE
     std::pair<iterator, bool> insert_or_assign(KeyT && key, MappedT && value) {
         return this->emplace_impl<true>(std::move(key), std::forward<MappedT>(value));
     }
 
     template <typename MappedT>
+    JSTD_FORCED_INLINE
     iterator insert_or_assign(const_iterator hint, const key_type & key, MappedT && value) {
         return this->emplace_impl<true>(key, std::forward<MappedT>(value))->first;
     }
 
     template <typename MappedT>
+    JSTD_FORCED_INLINE
     iterator insert_or_assign(const_iterator hint, key_type && key, MappedT && value) {
         return this->emplace_impl<true>(std::move(key), std::forward<MappedT>(value))->first;
     }
@@ -490,6 +501,7 @@ public:
                std::is_constructible<key_type, KeyT &&>::value &&
               !std::is_convertible<KeyT, iterator>::value &&
               !std::is_convertible<KeyT, const_iterator>::value>::type * = nullptr>
+    JSTD_FORCED_INLINE
     iterator insert_or_assign(const_iterator hint, KeyT && key, MappedT && value) {
         return this->emplace_impl<true>(std::move(key), std::forward<MappedT>(value))->first;
     }

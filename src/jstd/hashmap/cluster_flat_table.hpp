@@ -658,15 +658,20 @@ public:
         return this->iterator_at(slot_index);
     }
 
-    template <typename KeyT>
+    template <typename KeyT, typename std::enable_if<
+              (!jstd::is_same_ex<KeyT, key_type>::value) &&
+                std::is_constructible<key_type, const KeyT &>::value>::type * = nullptr>
     JSTD_FORCED_INLINE
     iterator find(const KeyT & key) {
         return const_cast<const this_type *>(this)->find(key);
     }
 
-    template <typename KeyT>
+    template <typename KeyT, typename std::enable_if<
+              (!jstd::is_same_ex<KeyT, key_type>::value) &&
+                std::is_constructible<key_type, const KeyT &>::value>::type * = nullptr>
     JSTD_FORCED_INLINE
-    const_iterator find(const KeyT & key) const {
+    const_iterator find(const KeyT & key_t) const {
+        key_type key(key_t);
         size_type slot_index = this->find_index(key);
         return this->iterator_at(slot_index);
     }
@@ -1371,6 +1376,7 @@ private:
          * copy-assignable when we're relying on trivial copy constructibility.
          */
         if (groups != this_type::default_empty_groups()) {
+            JSTD_ASSUME_ALIGNED(groups, kGroupAlignment);
             std::memset(reinterpret_cast<unsigned char *>(groups),
                         kEmptySlot, sizeof(group_type) * group_capacity);
         }
@@ -1737,7 +1743,7 @@ private:
                     Prefetch_Read_T0((const void *)slot_base);
                 }
                 do {
-                    std::uint32_t match_pos = BitUtils::bsf32(match_mask);
+                    size_type match_pos = static_cast<size_type>(BitUtils::bsf32(match_mask));
                     const slot_type * slot = slot_base + match_pos;
                     if (likely(this->key_eq_ref()(key, slot->value.first))) {
                         size_type slot_index = this->index_of(slot);
