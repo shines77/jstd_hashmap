@@ -84,7 +84,7 @@
 #include "jstd/hashmap/flat_map_slot_storage.hpp"
 
 #define CLUSTER_USE_HASH_POLICY     0
-#define CLUSTER_USE_SEPARATE_SLOTS  0
+#define CLUSTER_USE_SEPARATE_SLOTS  1
 #define CLUSTER_USE_SWAP_TRAITS     1
 
 #define CLUSTER_USE_GROUP_SCAN      1
