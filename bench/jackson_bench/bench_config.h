@@ -11,7 +11,11 @@
 //
 // Total benchmark data size (bytes) of key and value, for any key type and any value type.
 //
+#ifndef _DEBUG
 #define BENCHMARK_TOTAL_BYTES  (64 * 1024 * 1024)
+#else
+#define BENCHMARK_TOTAL_BYTES  (512 * 1024)
+#endif
 
 // The randomize test keys actual usage length.
 #define KEY_ACTUAL  1

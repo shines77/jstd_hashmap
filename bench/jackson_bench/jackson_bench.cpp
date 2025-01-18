@@ -28,6 +28,7 @@
 #include "bench_config.h"
 
 #include "jstd/test/StopWatch.h"
+#include "jstd/system/Console.h"
 
 //
 // Variable printed before the program closes to prevent compiler from optimizing out function calls during the
@@ -229,6 +230,30 @@ const char * benchmark_short_names[] = {
     "Iterate"
 };
 
+const char * get_benchmark_id(std::size_t benchmark_id)
+{
+    switch (benchmark_id) {
+        case id_find_existing:
+            return "id_find_existing";
+        case id_find_non_existing:
+            return "id_find_non_existing";
+        case id_insert_non_existing:
+            return "id_insert_non_existing";
+        case id_insert_existing:
+            return "id_insert_existing";
+        case id_replace_existing:
+            return "id_replace_existing";
+        case id_erase_existing:
+            return "id_erase_existing";
+        case id_erase_non_existing:
+            return "id_erase_non_existing";
+        case id_iteration:
+            return "id_iteration";
+        default:
+            return "Unknown benchmark id";
+    }
+}
+
 const char * get_benchmark_short_name(std::size_t benchmark_id)
 {
     std::size_t max_id = jstd_countof(benchmark_short_names);
@@ -238,12 +263,75 @@ const char * get_benchmark_short_name(std::size_t benchmark_id)
         return "Unknown benchmark id";
 }
 
+namespace detail {
+
+template <std::size_t N, std::size_t NextPow>
+struct Pow10_impl {
+    static constexpr const std::size_t value = 10 * Pow10_impl<N, NextPow - 1>::value;
+};
+
+template <std::size_t N>
+struct Pow10_impl<N, 0> {
+    static constexpr const std::size_t value = 1;
+};
+
+template <std::size_t N>
+struct Pow10 {
+    static constexpr const std::size_t value = Pow10_impl<N, N>::value;
+};
+
+template <std::size_t N>
+void format_with_zeros(std::string & str, std::size_t value)
+{
+    std::size_t out[N];
+    std::intptr_t digits = N - 1;
+    while (value != 0) {
+        std::size_t digit = value % 10;
+        out[digits--] = digit;
+        value /= 10;
+    }
+    std::intptr_t i = 0;
+    // Fill leading zeros
+    for (; i < digits; i++) {
+        str.push_back('0');
+    }
+    // Fill digits
+    for (; i < (std::intptr_t)N; i++) {
+        str.push_back('0' + static_cast<char>(out[i]));
+    }
+}
+
+template <std::size_t N>
+std::string format_integer(std::size_t value)
+{
+    static constexpr const std::size_t base_N = detail::Pow10<N>::value;
+
+    std::string str;
+    while (value != 0) {
+        std::size_t part = value % base_N;
+        value /= base_N;
+        std::string spart;
+        if (value != 0) {
+            spart = ",";
+            format_with_zeros<N>(spart, part);
+        } else {
+            spart = std::to_string(part);
+        }
+        str = spart + str;
+    }
+    return str;
+}
+
+} // namespace detail
+
 // Random number generator.
 std::default_random_engine random_number_generator(20250118U);
 
+//
 // Function for providing unique keys for a given blueprint in random order.
-// Besides the KEY_COUNT keys to be inserted, it also provides an extra KEY_COUNT / KEY_COUNT_MEASUREMENT_INTERVAL *
-// 1000 keys for testing failed look-ups.
+// Besides the [data_size] keys to be inserted, it also provides an extra [data_size] * 2
+// keys for testing failed look-ups.
+//
 template <typename BluePrint>
 void shuffled_unique_key(std::vector<typename BluePrint::key_type> & keys, std::size_t data_size)
 {
@@ -363,13 +451,14 @@ void run_benchmark(std::size_t run, std::vector<typename BluePrint::key_type> & 
 
     double elapsed_time = sw.getElapsedMillisec();
 
-    std::cout << std::endl;
+    //std::cout << std::endl;
 }
 
 template <template <typename> typename HashMap, typename BluePrint, std::size_t BenchmarkId>
 void run_benchmark_loop(std::vector<typename BluePrint::key_type> & keys)
 {
-    std::cout << "Benchmark Id: " << get_benchmark_short_name(BenchmarkId) << std::endl;
+    std::cout << "Benchmark Id: " << get_benchmark_id(BenchmarkId)
+              << ", Data size: " << detail::format_integer<3>(keys.size()) << std::endl;
     std::cout << std::endl;
     for (std::size_t run = 0; run < RUN_COUNT; ++run) {
         run_benchmark<HashMap, BluePrint, BenchmarkId>(run, keys);
@@ -541,4 +630,8 @@ int main(int argc, char * argv[])
 
     std::cout << "Optimization preventer: " << do_not_optimize << "\n";
     std::cout << "Done\n";
+
+#if defined(_MSC_VER) && defined(_DEBUG)
+    jstd::Console::ReadKey();
+#endif
 }
