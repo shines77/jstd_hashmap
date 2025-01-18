@@ -504,7 +504,7 @@ public:
         return ((float)this->mlf_ / kLoadFactorAmplify);
     }
 
-    void max_load_factor(float mlf) const {
+    void max_load_factor(float mlf) {
         // mlf: [0.2, 0.875]
         if (mlf < kMinLoadFactorF)
             mlf = kMinLoadFactorF;

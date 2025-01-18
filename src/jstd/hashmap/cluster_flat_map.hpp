@@ -289,7 +289,7 @@ public:
     float load_factor() const { return table_.load_factor(); }
     float max_load_factor() const { return table_.max_load_factor(); }
 
-    void max_load_factor(float mlf) const { table_.max_load_factor(mlf); }
+    void max_load_factor(float mlf) { table_.max_load_factor(mlf); }
 
     ///
     /// Hash policy

@@ -12,6 +12,7 @@ struct jstd_cluster_flat_map
 
     struct hash {
         using is_avalanching = void;
+        using result_type = std::size_t;
 
         std::size_t operator () (const key_type & key) const {
             return BluePrint::hash_key(key);
@@ -48,7 +49,8 @@ struct jstd_cluster_flat_map
 
     static void insert(table_type & table, const key_type & key)
     {
-        table[key] = value_type();
+        //table[key] = value_type();
+        table.emplace(key, value_type());
     }
 
     static void erase(table_type & table, const key_type & key)

@@ -83,9 +83,11 @@
 // #define BLUEPRINT_16
 
 // Hashmap slots.
+#ifndef _DEBUG
 #define HASHMAP_1       std_unordered_map
+#endif
 #define HASHMAP_2       jstd_robin_hash_map
-#define HASHMAP_3       jstd_cluster_flat_map
+//#define HASHMAP_3       jstd_cluster_flat_map
 // #define HASHMAP_4
 // #define HASHMAP_5
 // #define HASHMAP_6

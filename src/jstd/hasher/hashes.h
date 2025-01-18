@@ -1578,7 +1578,7 @@ struct is_excluded_type<basic_string_view<CharT, Traits>> {
 
 template <typename Hasher>
 struct SimpleHash {
-    typedef typename Hasher::argument_type  argument_type;
+    //typedef typename Hasher::argument_type  argument_type;
     typedef typename Hasher::result_type    result_type;
 
     template <typename Integer, typename std::enable_if<
@@ -1602,7 +1602,7 @@ struct SimpleHash {
 template <typename Hasher>
 struct FibonacciHash
 {
-    typedef typename Hasher::argument_type  argument_type;
+    //typedef typename Hasher::argument_type  argument_type;
     typedef typename Hasher::result_type    result_type;
 
     template <typename Integer, typename std::enable_if<
@@ -1628,7 +1628,7 @@ struct FibonacciHash
 template <typename Hasher>
 struct MumHash
 {
-    typedef typename Hasher::argument_type  argument_type;
+    //typedef typename Hasher::argument_type  argument_type;
     typedef typename Hasher::result_type    result_type;
 
     template <typename Integer, typename std::enable_if<

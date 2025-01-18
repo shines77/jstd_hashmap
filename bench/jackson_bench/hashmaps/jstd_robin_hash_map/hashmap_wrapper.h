@@ -12,6 +12,7 @@ struct jstd_robin_hash_map
 
     struct hash {
         using is_avalanching = void;
+        using result_type = std::size_t;
 
         std::size_t operator () (const key_type & key) const {
             return BluePrint::hash_key(key);

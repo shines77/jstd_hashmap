@@ -3129,6 +3129,7 @@ public:
         try {
             this->unique_insert(other.begin(), other.end());
         } catch (const std::bad_alloc & ex) {
+            JSTD_UNUSED(ex);
             this->destroy();
             throw std::bad_alloc();
         } catch (...) {
@@ -6365,7 +6366,7 @@ Insert_To_Slot:
             return { slot, false };
         } else {
             FindResult neednt_grow = this->insert_to_place<false>(ctrl, slot, dist_and_hash);
-            return { slot, neednt_grow };
+            return { slot, (neednt_grow == kNeedGrow) };
         }
     }
 
@@ -6398,7 +6399,7 @@ Insert_To_Slot:
 
         if (kIsLayoutCompatible) {
             SlotPolicyTraits::construct(&this->allocator_, new_slot,
-                                        std::move(*static_cast<mutable_value_type *>(&value)));
+                                        std::move(*reinterpret_cast<mutable_value_type *>(&value)));
         } else {
             SlotPolicyTraits::construct(&this->allocator_, new_slot, std::move(value));
         }

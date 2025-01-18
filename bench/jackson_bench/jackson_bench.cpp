@@ -291,6 +291,7 @@ void format_with_zeros(std::string & str, std::size_t value)
         value /= 10;
     }
     std::intptr_t i = 0;
+    digits++;
     // Fill leading zeros
     for (; i < digits; i++) {
         str.push_back('0');
@@ -368,100 +369,142 @@ void flush_cache()
     ::srand(static_cast<unsigned int>(r));
 }
 
-template <template <typename> typename HashMap, typename BluePrint>
-void benchmark_find_existing(std::vector<typename BluePrint::key_type> & keys)
+template <template <typename> typename HashMap, typename BluePrint, std::size_t kDataSize>
+void benchmark_find_existing(std::size_t run,
+                             std::vector<typename BluePrint::key_type> & keys,
+                             double & elapsed_time)
 {
-    //
+    elapsed_time = 0;
+    //printf("elapsed time = %0.3f ms\n", elapsed_time);
 }
 
-template <template <typename> typename HashMap, typename BluePrint>
-void benchmark_find_non_existing(std::vector<typename BluePrint::key_type> & keys)
+template <template <typename> typename HashMap, typename BluePrint, std::size_t kDataSize>
+void benchmark_find_non_existing(std::size_t run,
+                                 std::vector<typename BluePrint::key_type> & keys,
+                                 double & elapsed_time)
 {
-    //
+    elapsed_time = 0;
+    //printf("elapsed time = %0.3f ms\n", elapsed_time);
 }
 
-template <template <typename> typename HashMap, typename BluePrint>
-void benchmark_insert_non_existing(std::vector<typename BluePrint::key_type> & keys)
+template <template <typename> typename HashMap, typename BluePrint, std::size_t kDataSize>
+void benchmark_insert_non_existing(std::size_t run,
+                                   std::vector<typename BluePrint::key_type> & keys,
+                                   double & elapsed_time)
 {
-    //
-}
-
-template <template <typename> typename HashMap, typename BluePrint>
-void benchmark_insert_existing(std::vector<typename BluePrint::key_type> & keys)
-{
-    //
-}
-
-template <template <typename> typename HashMap, typename BluePrint>
-void benchmark_replace_existing(std::vector<typename BluePrint::key_type> & keys)
-{
-    //
-}
-
-template <template <typename> typename HashMap, typename BluePrint>
-void benchmark_erase_existing(std::vector<typename BluePrint::key_type> & keys)
-{
-    //
-}
-
-template <template <typename> typename HashMap, typename BluePrint>
-void benchmark_erase_non_existing(std::vector<typename BluePrint::key_type> & keys)
-{
-    //
-}
-
-template <template <typename> typename HashMap, typename BluePrint>
-void benchmark_iteration(std::vector<typename BluePrint::key_type> & keys)
-{
-    //
-}
-
-template <template <typename> typename HashMap, typename BluePrint, std::size_t BenchmarkId>
-void run_benchmark(std::size_t run, std::vector<typename BluePrint::key_type> & keys)
-{
-    std::cout << "Run " << (run + 1) << std::endl;
-    std::cout << HashMap<void>::name << ": " << BluePrint::name << std::endl;
+    std::size_t data_size = keys.size();
+    auto table = HashMap<BluePrint>::create_table();
+    std::this_thread::sleep_for(std::chrono::milliseconds(MILLISECOND_COOLDOWN_BETWEEN_BENCHMARKS));
 
     jtest::StopWatch sw;
 
     sw.start();
+    for (std::size_t i = 0; i < kDataSize; i++) {
+        HashMap<BluePrint>::insert(table, keys[i]);
+    }
+    sw.stop();
+
+    elapsed_time = sw.getElapsedMillisec();
+    printf("elapsed time = %0.3f ms\n", elapsed_time);
+
+    results<HashMap, BluePrint, id_insert_non_existing>(run, 0) =
+        static_cast<std::uint64_t>(sw.getElapsedMicrosec() * (1000.0 * 1000.0));
+    HashMap<BluePrint>::destroy_table(table);
+}
+
+template <template <typename> typename HashMap, typename BluePrint, std::size_t kDataSize>
+void benchmark_insert_existing(std::size_t run,
+                               std::vector<typename BluePrint::key_type> & keys,
+                               double & elapsed_time)
+{
+    elapsed_time = 0;
+    //printf("elapsed time = %0.3f ms\n", elapsed_time);
+}
+
+template <template <typename> typename HashMap, typename BluePrint, std::size_t kDataSize>
+void benchmark_replace_existing(std::size_t run,
+                                std::vector<typename BluePrint::key_type> & keys,
+                                double & elapsed_time)
+{
+    elapsed_time = 0;
+    //printf("elapsed time = %0.3f ms\n", elapsed_time);
+}
+
+template <template <typename> typename HashMap, typename BluePrint, std::size_t kDataSize>
+void benchmark_erase_existing(std::size_t run,
+                              std::vector<typename BluePrint::key_type> & keys,
+                              double & elapsed_time)
+{
+    elapsed_time = 0;
+    //printf("elapsed time = %0.3f ms\n", elapsed_time);
+}
+
+template <template <typename> typename HashMap, typename BluePrint, std::size_t kDataSize>
+void benchmark_erase_non_existing(std::size_t run,
+                                  std::vector<typename BluePrint::key_type> & keys,
+                                  double & elapsed_time)
+{
+    elapsed_time = 0;
+    //printf("elapsed time = %0.3f ms\n", elapsed_time);
+}
+
+template <template <typename> typename HashMap, typename BluePrint, std::size_t kDataSize>
+void benchmark_iteration(std::size_t run,
+                         std::vector<typename BluePrint::key_type> & keys,
+                         double & elapsed_time)
+{
+    elapsed_time = 0;
+    //printf("elapsed time = %0.3f ms\n", elapsed_time);
+}
+
+template <template <typename> typename HashMap, typename BluePrint,
+          std::size_t BenchmarkId, std::size_t kDataSize>
+void run_benchmark(std::size_t run, std::vector<typename BluePrint::key_type> & keys)
+{
+    std::cout << "Run " << (run + 1) << ", "; // << std::endl;
+
+    double elapsed_time;
+
     if (0) {
         // Do nothing !!
     } else if (BenchmarkId == id_find_existing) {
-        benchmark_find_existing<HashMap, BluePrint>(keys);
+        benchmark_find_existing<HashMap, BluePrint, kDataSize>(run, keys, elapsed_time);
     } else if (BenchmarkId == id_find_non_existing) {
-        benchmark_find_non_existing<HashMap, BluePrint>(keys);
+        benchmark_find_non_existing<HashMap, BluePrint, kDataSize>(run, keys, elapsed_time);
     } else if (BenchmarkId == id_insert_non_existing) {
-        benchmark_insert_non_existing<HashMap, BluePrint>(keys);
+        benchmark_insert_non_existing<HashMap, BluePrint, kDataSize>(run, keys, elapsed_time);
     } else if (BenchmarkId == id_insert_existing) {
-        benchmark_insert_existing<HashMap, BluePrint>(keys);
+        benchmark_insert_existing<HashMap, BluePrint, kDataSize>(run, keys, elapsed_time);
     } else if (BenchmarkId == id_replace_existing) {
-        benchmark_replace_existing<HashMap, BluePrint>(keys);
+        benchmark_replace_existing<HashMap, BluePrint, kDataSize>(run, keys, elapsed_time);
     } else if (BenchmarkId == id_erase_existing) {
-        benchmark_erase_existing<HashMap, BluePrint>(keys);
+        benchmark_erase_existing<HashMap, BluePrint, kDataSize>(run, keys, elapsed_time);
     } else if (BenchmarkId == id_erase_non_existing) {
-        benchmark_erase_non_existing<HashMap, BluePrint>(keys);
+        benchmark_erase_non_existing<HashMap, BluePrint, kDataSize>(run, keys, elapsed_time);
     } else if (BenchmarkId == id_iteration) {
-        benchmark_iteration<HashMap, BluePrint>(keys);
+        benchmark_iteration<HashMap, BluePrint, kDataSize>(run, keys, elapsed_time);
     } else {
         // Unknown benchmard id
         std::cout << "Unknown benchmark id: " << BenchmarkId << std::endl;
     }
-    sw.stop();
-
-    double elapsed_time = sw.getElapsedMillisec();
 
     //std::cout << std::endl;
 }
 
-template <template <typename> typename HashMap, typename BluePrint, std::size_t BenchmarkId>
+template <template <typename> typename HashMap, typename BluePrint,
+          std::size_t BenchmarkId, std::size_t kDataSize>
 void run_benchmark_loop(std::vector<typename BluePrint::key_type> & keys)
 {
+    using table_type = typename HashMap<BluePrint>::table_type;
+    using emlment_type = typename BluePrint::emlment_type;
+
     std::cout << "Benchmark Id: " << get_benchmark_id(BenchmarkId)
-              << ", Data size: " << detail::format_integer<3>(keys.size()) << std::endl;
+              << ", Data size: " << detail::format_integer<3>(kDataSize) << ", " << kDataSize
+              << ", Emlment size: " << sizeof(emlment_type) << "Bytes" << std::endl;
+    std::cout << HashMap<void>::name << ": " << BluePrint::name << std::endl;
     std::cout << std::endl;
     for (std::size_t run = 0; run < RUN_COUNT; ++run) {
-        run_benchmark<HashMap, BluePrint, BenchmarkId>(run, keys);
+        run_benchmark<HashMap, BluePrint, BenchmarkId, kDataSize>(run, keys);
     }
     std::cout << std::endl;
 }
@@ -472,41 +515,41 @@ void run_benchmarks()
     using key_type = typename BluePrint::key_type;
     using value_type = typename BluePrint::value_type;
 
-    static constexpr const std::size_t kTestDataSize = BluePrint::get_data_size();
+    static constexpr const std::size_t kDataSize = BluePrint::get_data_size();
 
     std::vector<key_type> unique_keys;
-    shuffled_unique_key<BluePrint>(unique_keys, kTestDataSize);
+    shuffled_unique_key<BluePrint>(unique_keys, kDataSize);
 
 #ifdef BENCHMARK_FIND_EXISTING
-    run_benchmark_loop<HashMap, BluePrint, id_find_existing>(unique_keys);
+    run_benchmark_loop<HashMap, BluePrint, id_find_existing, kDataSize>(unique_keys);
 #endif
 
 #ifdef BENCHMARK_FIND_NON_EXISTING
-    run_benchmark_loop<HashMap, BluePrint, id_find_non_existing>(unique_keys);
+    run_benchmark_loop<HashMap, BluePrint, id_find_non_existing, kDataSize>(unique_keys);
 #endif
 
 #ifdef BENCHMARK_INSERT_NON_EXISTING
-    run_benchmark_loop<HashMap, BluePrint, id_insert_non_existing>(unique_keys);
+    run_benchmark_loop<HashMap, BluePrint, id_insert_non_existing, kDataSize>(unique_keys);
 #endif
 
 #ifdef BENCHMARK_INSERT_EXISTING
-    run_benchmark_loop<HashMap, BluePrint, id_insert_existing>(unique_keys);
+    run_benchmark_loop<HashMap, BluePrint, id_insert_existing, kDataSize>(unique_keys);
 #endif
 
 #ifdef BENCHMARK_REPLACE_EXISTING
-    run_benchmark_loop<HashMap, BluePrint, id_replace_existing>(unique_keys);
+    run_benchmark_loop<HashMap, BluePrint, id_replace_existing, kDataSize>(unique_keys);
 #endif
 
 #ifdef BENCHMARK_ERASE_EXISTING
-    run_benchmark_loop<HashMap, BluePrint, id_erase_existing>(unique_keys);
+    run_benchmark_loop<HashMap, BluePrint, id_erase_existing, kDataSize>(unique_keys);
 #endif
 
 #ifdef BENCHMARK_ERASE_NON_EXISTING
-    run_benchmark_loop<HashMap, BluePrint, id_erase_non_existing>(unique_keys);
+    run_benchmark_loop<HashMap, BluePrint, id_erase_non_existing, kDataSize>(unique_keys);
 #endif
 
 #ifdef BENCHMARK_ITERATION
-    run_benchmark_loop<HashMap, BluePrint, id_iteration>(unique_keys);
+    run_benchmark_loop<HashMap, BluePrint, id_iteration, kDataSize>(unique_keys);
 #endif
 }
 
