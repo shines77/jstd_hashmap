@@ -90,7 +90,8 @@ struct std_unordered_map
 template <>
 struct std_unordered_map<void>
 {
-    static constexpr const char * label = "std::unordered_map";
+    static constexpr const char * name = "std::unordered_map";
+    static constexpr const char * label = "std";
     static constexpr const char * color = "rgb( 185, 143, 93 )";
     static constexpr bool tombstone_like_mechanism = false;
 };

@@ -90,7 +90,8 @@ struct jstd_robin_hash_map
 template <>
 struct jstd_robin_hash_map<void>
 {
-    static constexpr const char * label = "jstd::robin_hash_map";
+    static constexpr const char * name = "jstd::robin_hash_map";
+    static constexpr const char * label = "jstd::robin";
     static constexpr const char * color = "rgb( 81, 169, 240 )";
     static constexpr bool tombstone_like_mechanism = true;
 };

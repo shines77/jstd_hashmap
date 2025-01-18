@@ -2,6 +2,8 @@
 // Copyright (c) 2024 Jackson L. Allan.
 // Distributed under the MIT License (see the accompanying LICENSE file).
 
+#pragma once
+
 #include <memory.h>
 #include <cstdint>
 #include <cstddef>
@@ -15,9 +17,17 @@ struct cstring_uint64_fnv1a
 {
     using key_type = char *;
     using value_type = std::uint64_t;
+    using emlment_type = std::pair<const key_type, value_type>;
+
+    static constexpr const char * name = "cstring_uint64_fnv1a";
     static constexpr const char * label = "16-char c-string key, 64-bit value";
 
     static constexpr std::size_t string_length = 16;
+
+    static constexpr std::size_t get_data_size()
+    {
+        return (BENCHMARK_TOTAL_BYTES / (sizeof(emlment_type) + sizeof(key_type) * KEY_ACTUAL));
+    }
 
     // FNV-1a.
     static std::uint64_t hash_key(const key_type & key)
@@ -39,7 +49,7 @@ struct cstring_uint64_fnv1a
     // Fills the keys array with pointers to strings stored in one contiguous block of memory.
     // This approach makes initialization faster, but it does mean that operations involving the keys will benefit from
     // some artificial cache locality (compared to separately allocated strings).
-    static void fill_unique_keys(std::vector<key_type> &keys)
+    static void fill_unique_keys(std::vector<key_type> & keys)
     {
         static std::vector<char> backing_data;
 
