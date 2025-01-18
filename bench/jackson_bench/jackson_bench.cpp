@@ -392,7 +392,6 @@ void benchmark_insert_non_existing(std::size_t run,
                                    std::vector<typename BluePrint::key_type> & keys,
                                    double & elapsed_time)
 {
-    std::size_t data_size = keys.size();
     auto table = HashMap<BluePrint>::create_table();
     std::this_thread::sleep_for(std::chrono::milliseconds(MILLISECOND_COOLDOWN_BETWEEN_BENCHMARKS));
 
@@ -495,11 +494,10 @@ template <template <typename> typename HashMap, typename BluePrint,
           std::size_t BenchmarkId, std::size_t kDataSize>
 void run_benchmark_loop(std::vector<typename BluePrint::key_type> & keys)
 {
-    using table_type = typename HashMap<BluePrint>::table_type;
     using emlment_type = typename BluePrint::emlment_type;
 
     std::cout << "Benchmark Id: " << get_benchmark_id(BenchmarkId)
-              << ", Data size: " << detail::format_integer<3>(kDataSize) << ", " << kDataSize
+              << ", Data size: " << detail::format_integer<3>(kDataSize)
               << ", Emlment size: " << sizeof(emlment_type) << "Bytes" << std::endl;
     std::cout << HashMap<void>::name << ": " << BluePrint::name << std::endl;
     std::cout << std::endl;
@@ -513,7 +511,6 @@ template <template <typename> typename HashMap, typename BluePrint>
 void run_benchmarks()
 {
     using key_type = typename BluePrint::key_type;
-    using value_type = typename BluePrint::value_type;
 
     static constexpr const std::size_t kDataSize = BluePrint::get_data_size();
 
