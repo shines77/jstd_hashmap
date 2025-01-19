@@ -692,15 +692,17 @@ void run_benchmark_loop(std::vector<typename BluePrint::key_type> & keys)
 {
     using emlment_type = typename BluePrint::emlment_type;
 
+    std::cout << std::endl;
+    std::cout << HashMap<void>::name << ": " << BluePrint::name << std::endl;
     std::cout << "Benchmark Id: " << get_benchmark_id(BenchmarkId)
               << ", Data size: " << detail::format_integer<3>(kDataSize)
-              << ", Emlment size: " << sizeof(emlment_type) << " Bytes" << std::endl;
-    std::cout << HashMap<void>::name << ": " << BluePrint::name << std::endl;
+              << ", Emlment size: " << sizeof(emlment_type) << " Bytes" << std::endl;    
     std::cout << std::endl;
+
     for (std::size_t run = 0; run < RUN_COUNT; ++run) {
         run_benchmark<HashMap, BluePrint, BenchmarkId, kDataSize>(run, keys);
     }
-    std::cout << std::endl;
+
     std::cout << std::endl;
 }
 
