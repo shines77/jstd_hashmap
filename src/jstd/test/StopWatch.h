@@ -38,7 +38,7 @@
 #else
 #define __COMPILER_BARRIER()        __asm__ __volatile__ ("" : : : "memory")
 #endif
-#endif
+#endif // __COMPILER_BARRIER
 
 namespace jtest {
 
