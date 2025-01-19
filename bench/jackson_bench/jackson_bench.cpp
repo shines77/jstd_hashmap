@@ -396,8 +396,53 @@ void benchmark_find_existing(std::size_t run,
                              std::vector<typename BluePrint::key_type> & keys,
                              double & elapsed_time)
 {
+    flush_cache_and_sleep();
+
+    using table_type = typename HashMap<BluePrint>::table_type;
+    table_type table;
+
     elapsed_time = 0;
-    //printf("elapsed time = %0.3f ms\n", elapsed_time);
+
+    jtest::StopWatch sw;
+    std::size_t result_index = 0;
+    
+    std::size_t insert_begin = 0;
+    while (insert_begin < kDataSize) {
+        std::size_t insert_end = (std::min)(insert_begin + NUMS_INSERT_KEY, kDataSize);
+        for (std::size_t i = insert_begin; i < insert_end; i++) {
+            HashMap<BluePrint>::insert(table, keys[i]);
+        }
+
+        // To determine which keys to erase, we randomly chose a position in the sequence of keys already inserted and
+        // then erase the subsequent 1000 keys, wrapping around to the start of the sequence if necessary.
+        // This strategy has the potential drawback that keys are erased in the same order in which they were inserted.
+        std::size_t insert_begin2 = std::uniform_int_distribution<std::size_t>
+                                    (0, insert_end - NUMS_ERASE_KEY - 1)(random_number_generator);
+        std::size_t insert_end2 = insert_begin2 + NUMS_ERASE_KEY;
+
+        sw.start();
+        for (std::size_t i = insert_begin2; i < insert_end2; i++) {
+            auto iter = HashMap<BluePrint>::find(table, keys[i]);
+
+            // Accessing the first byte of the value prevents the above call from being optimized out and ensures that
+            // tables that can preform look-ups without accessing the values (because the keys are stored separately)
+            // actually incur the additional cache miss that they would incur during normal use.
+            do_not_optimize += *(unsigned char *)&HashMap<BluePrint>::get_value_from_iter(table, iter);
+        }
+        sw.stop();
+
+        double used_time = sw.getElapsedMillisec();
+        //printf("elapsed time = %0.3f ms\n", used_time);
+        elapsed_time += used_time;
+
+        results<HashMap, BluePrint, id_find_existing>(run, 0) =
+            static_cast<std::uint64_t>(sw.getElapsedMicrosec() * (1000.0 * 1000.0));
+
+        result_index++;
+        insert_begin = insert_end;
+    }
+
+    printf("Total elapsed time = %0.3f ms\n", elapsed_time);
 }
 
 template <template <typename> typename HashMap, typename BluePrint, std::size_t kDataSize>
@@ -439,8 +484,48 @@ void benchmark_insert_existing(std::size_t run,
                                std::vector<typename BluePrint::key_type> & keys,
                                double & elapsed_time)
 {
+    flush_cache_and_sleep();
+
+    using table_type = typename HashMap<BluePrint>::table_type;
+    table_type table;
+
     elapsed_time = 0;
-    //printf("elapsed time = %0.3f ms\n", elapsed_time);
+
+    jtest::StopWatch sw;
+    std::size_t result_index = 0;
+    
+    std::size_t insert_begin = 0;
+    while (insert_begin < kDataSize) {
+        std::size_t insert_end = (std::min)(insert_begin + NUMS_INSERT_KEY, kDataSize);
+        for (std::size_t i = insert_begin; i < insert_end; i++) {
+            HashMap<BluePrint>::insert(table, keys[i]);
+        }
+
+        // To determine which keys to erase, we randomly chose a position in the sequence of keys already inserted and
+        // then erase the subsequent 1000 keys, wrapping around to the start of the sequence if necessary.
+        // This strategy has the potential drawback that keys are erased in the same order in which they were inserted.
+        std::size_t insert_begin2 = std::uniform_int_distribution<std::size_t>
+                                    (0, insert_end - NUMS_ERASE_KEY - 1)(random_number_generator);
+        std::size_t insert_end2 = insert_begin2 + NUMS_ERASE_KEY;
+
+        sw.start();
+        for (std::size_t i = insert_begin2; i < insert_end2; i++) {
+            HashMap<BluePrint>::insert(table, keys[i]);
+        }
+        sw.stop();
+
+        double used_time = sw.getElapsedMillisec();
+        //printf("elapsed time = %0.3f ms\n", used_time);
+        elapsed_time += used_time;
+
+        results<HashMap, BluePrint, id_insert_existing>(run, 0) =
+            static_cast<std::uint64_t>(sw.getElapsedMicrosec() * (1000.0 * 1000.0));
+
+        result_index++;
+        insert_begin = insert_end;
+    }
+
+    printf("Total elapsed time = %0.3f ms\n", elapsed_time);
 }
 
 template <template <typename> typename HashMap, typename BluePrint, std::size_t kDataSize>
@@ -491,7 +576,7 @@ void benchmark_erase_existing(std::size_t run,
         //printf("elapsed time = %0.3f ms\n", used_time);
         elapsed_time += used_time;
 
-        results<HashMap, BluePrint, id_insert_non_existing>(run, 0) =
+        results<HashMap, BluePrint, id_erase_existing>(run, 0) =
             static_cast<std::uint64_t>(sw.getElapsedMicrosec() * (1000.0 * 1000.0));
 
         // Re-insert the erased keys.
@@ -514,8 +599,48 @@ void benchmark_erase_non_existing(std::size_t run,
                                   std::vector<typename BluePrint::key_type> & keys,
                                   double & elapsed_time)
 {
+    flush_cache_and_sleep();
+
+    using table_type = typename HashMap<BluePrint>::table_type;
+    table_type table;
+
     elapsed_time = 0;
-    //printf("elapsed time = %0.3f ms\n", elapsed_time);
+
+    jtest::StopWatch sw;
+    std::size_t result_index = 0;
+    
+    std::size_t insert_begin = 0;
+    while (insert_begin < kDataSize) {
+        std::size_t insert_end = (std::min)(insert_begin + NUMS_INSERT_KEY, kDataSize);
+        for (std::size_t i = insert_begin; i < insert_end; i++) {
+            HashMap<BluePrint>::insert(table, keys[i]);
+        }
+
+        // To determine which nonexisting keys to attempt to erase, we randomly chose a position in the sequence of
+        // nonexisting keys (which starts at KEY_COUNT) and then call erase for the subsequent 1000 keys, wrapping
+        // around to the start of the sequence if necessary.
+        std::size_t erase_begin = std::uniform_int_distribution<std::size_t>
+                                    (kDataSize, kDataSize + insert_end - NUMS_ERASE_KEY - 1)(random_number_generator);
+        std::size_t erase_end = erase_begin + NUMS_ERASE_KEY;
+
+        sw.start();
+        for (std::size_t i = erase_begin; i < erase_end; i++) {
+            HashMap<BluePrint>::erase(table, keys[i]);
+        }
+        sw.stop();
+
+        double used_time = sw.getElapsedMillisec();
+        //printf("elapsed time = %0.3f ms\n", used_time);
+        elapsed_time += used_time;
+
+        results<HashMap, BluePrint, id_erase_non_existing>(run, 0) =
+            static_cast<std::uint64_t>(sw.getElapsedMicrosec() * (1000.0 * 1000.0));
+
+        result_index++;
+        insert_begin = insert_end;
+    }
+
+    printf("Total elapsed time = %0.3f ms\n", elapsed_time);
 }
 
 template <template <typename> typename HashMap, typename BluePrint, std::size_t kDataSize>
@@ -558,7 +683,7 @@ void run_benchmark(std::size_t run, std::vector<typename BluePrint::key_type> & 
         std::cout << "Unknown benchmark id: " << BenchmarkId << std::endl;
     }
 
-    std::cout << std::endl;
+    //std::cout << std::endl;
 }
 
 template <template <typename> typename HashMap, typename BluePrint,
@@ -575,6 +700,7 @@ void run_benchmark_loop(std::vector<typename BluePrint::key_type> & keys)
     for (std::size_t run = 0; run < RUN_COUNT; ++run) {
         run_benchmark<HashMap, BluePrint, BenchmarkId, kDataSize>(run, keys);
     }
+    std::cout << std::endl;
     std::cout << std::endl;
 }
 
