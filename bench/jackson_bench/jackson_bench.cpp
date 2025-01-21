@@ -30,12 +30,18 @@
 #include "jstd/test/StopWatch.h"
 #include "jstd/system/Console.h"
 
+#include "BenchmarkResult.h"
+
+using namespace jtest;
+
 //
 // Variable printed before the program closes to prevent compiler from optimizing out function calls during the
 // benchmarks.
 // This approach proved to be more reliable than local volatile variables.
 //
 std::size_t do_not_optimize = 0;
+
+BenchmarkResults gBenchmarkResults;
 
 // Standard stringification macro, used to form the file paths of the blueprints and shims.
 #define STRINGIFY_(x)   #x
@@ -699,6 +705,14 @@ void run_benchmark_loop(std::vector<typename BluePrint::key_type> & keys)
               << ", Emlment size: " << sizeof(emlment_type) << " Bytes" << std::endl;    
     std::cout << std::endl;
 
+    BenchmarkBluePrint * blueprint = gBenchmarkResults.getBluePrint(BluePrint::name);
+    if (blueprint != nullptr) {
+        BenchmarkBluePrint * hashmap = blueprint->getHashMap(HashMap<void>::name);
+        if (hashmap != nullptr) {
+            hashmap->addCategory(BenchmarkId);
+        }
+    }
+
     for (std::size_t run = 0; run < RUN_COUNT; ++run) {
         run_benchmark<HashMap, BluePrint, BenchmarkId, kDataSize>(run, keys);
     }
@@ -712,6 +726,11 @@ void run_benchmarks()
     using key_type = typename BluePrint::key_type;
 
     static constexpr const std::size_t kDataSize = BluePrint::get_data_size();
+
+    BenchmarkBluePrint * blueprint = gBenchmarkResults.getBluePrint(BluePrint::name);
+    if (blueprint != nullptr) {
+        blueprint->addHashmap(HashMap<void>::name, HashMap<void>::label);
+    }
 
     std::vector<key_type> unique_keys;
     shuffled_unique_key<BluePrint>(unique_keys, kDataSize);
@@ -753,6 +772,8 @@ void run_benchmarks()
 template <typename BluePrint>
 void run_blueprint_benchmarks()
 {
+    gBenchmarkResults.addBluePrint(BluePrint::name, BluePrint::label);
+
 #ifdef HASHMAP_1
     run_benchmarks<HASHMAP_1, BluePrint>();
 #endif

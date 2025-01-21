@@ -16,32 +16,36 @@
 #include <cstddef>
 #include <string>
 #include <vector>
+#include <unordered_map>
 #include <memory>
 #include <utility>
 #include <type_traits>
 
 namespace jtest {
 
-class TableBase {
-private:
+class BenchmarkBase {
+public:
+    using size_type = std::size_t;
+
+protected:
     size_type   id_;
     std::string name_;
     std::string label_;
 
 public:
-    TableBase() : id_(size_type(-1)) {}
-    TableBase(const std::string & name, const std::string & label = "")
+    BenchmarkBase() : id_(size_type(-1)) {}
+    BenchmarkBase(const std::string & name, const std::string & label = "")
         : id_(size_type(-1)), name_(name), label_(label) {}
 
-    TableBase(const TableBase & src)
+    BenchmarkBase(const BenchmarkBase & src)
         : id_(src.id()),
           name_(src.name()), label_(src.label()) {}
 
-    TableBase(TableBase && src)
+    BenchmarkBase(BenchmarkBase && src)
         : id_(src.id()),
           name_(std::move(src.name())), label_(std::move(src.label())) {}
 
-    ~TableBase() {}
+    ~BenchmarkBase() {}
 
     size_type id() const {
         return this->id_;
@@ -80,7 +84,7 @@ public:
         this->label_ = label;
     }
 
-    void swap(TableBase & other) noexcept {
+    void swap(BenchmarkBase & other) noexcept {
         if (std::addressof(other) != this) {
             std::swap(this->id_,    other.id_);
             std::swap(this->name_,  other.name_);
@@ -89,10 +93,188 @@ public:
     }
 };
 
+namespace detail {
+
+template <bool IsPointer, typename ValueT, typename ElementT,
+          typename std::enable_if<IsPointer>::type * = nullptr,
+          typename ... Args>
+ValueT construct_if(Args && ... args)
+{
+    return new ElementT(std::forward<Args>(args)...);
+}
+
+template <bool IsPointer, typename ValueT, typename ElementT,
+          typename std::enable_if<!IsPointer>::type * = nullptr,
+          typename ... Args>
+ValueT construct_if(Args && ... args)
+{
+    return std::move(ElementT(std::forward<Args>(args)...));
+}
+
+template <bool IsPointer, typename VectorT,
+          typename std::enable_if<IsPointer>::type * = nullptr>
+void destroy_if(VectorT & vector)
+{
+    using value_type = typename VectorT::value_type;
+    for (std::size_t i = 0; i < vector.size(); i++) {
+        value_type element = vector[i];
+        if (element != nullptr) {
+            delete element;
+            vector[i] = nullptr;
+        }
+    }
+    vector.clear();
+}
+
+template <bool IsPointer, typename VectorT,
+          typename std::enable_if<!IsPointer>::type * = nullptr>
+void destroy_if(VectorT & vector)
+{
+    JSTD_UNUSED(vector);
+    /* Do nothing !! */
+}
+
+} // namespace detail
+
+template <typename Key, typename Value>
+class ArrayHashmap {
+public:
+    using size_type = std::size_t;
+
+    using key_type = Key;
+    using value_type = Value;
+    using element_type = typename std::remove_pointer<Value>::type;
+    using ident_type = size_type; 
+
+    using array_type = std::vector<value_type>;
+    using hashmap_type = std::unordered_map<key_type, ident_type>;
+
+    using iterator = typename hashmap_type::iterator;
+    using const_iterator = typename hashmap_type::const_iterator;
+
+    static constexpr const size_type npos = static_cast<size_type>(-1);
+    static constexpr const bool kValueIsPointer = std::is_pointer<value_type>::value; 
+
+protected:
+    array_type   array_;
+    hashmap_type hashmap_;
+
+    void destroy() {
+        detail::destroy_if(array_);
+    }
+
+public:
+    ArrayHashmap() = default;
+    ~ArrayHashmap() {
+        destroy();
+    }
+
+    size_type size() const { return array_.size(); }
+    size_type max_id() const {
+        return static<size_type>(array_.size() - 1);
+    }
+
+    value_type & get(size_type index) {
+        return array_[index];
+    }
+
+    const value_type & get(size_type index) const {
+        return array_[index];
+    }
+
+    void set(size_type index, const value_type & value) {
+        array_[index] = value;
+    }
+
+    void set(size_type index, value_type && value) {
+        array_[index] = std::move(value);
+    }
+
+    void clear() {
+        array_.clear();
+    }
+
+    void clearMap() {
+        hashmap_.clear();
+    }
+
+    size_type registerName(const key_type & key) {
+        auto iter = hashmap_.find(key);
+        if (iter != hashmap_.end()) {
+            ident_type id = iter->second;
+            return static_cast<size_type>(id);
+        } else {
+            ident_type id = static_cast<ident_type>(array_.size());
+
+            auto result = hashmap_.emplace(key, id);
+            if (result.second)
+                return id;
+            else
+                return npos;
+        }
+    }
+
+    bool isExists(const key_type & key) const {
+        auto iter = hashmap_.find(key);
+        return (iter != hashmap_.cend());
+    }
+
+    iterator find(const key_type & key) {
+        return hashmap_.find(key);
+    }
+
+    const_iterator find(const key_type & key) const {
+        return hashmap_.find(key);
+    }
+
+    std::pair<size_type, bool> append(const key_type & name, const key_type & label) {
+        auto iter = hashmap_.find(key);
+        if (iter != hashmap_.end()) {
+            ident_type id = iter->second;
+            return { static_cast<size_type>(id), true };
+        } else {
+            ident_type id = static_cast<ident_type>(array_.size());
+            value_type value = detail::construct_if<kValueIsPointer, value_type, element_type>(name, label);
+            if (kValueIsPointer)
+                array_.push_back(value);
+            else
+                array_.push_back(std::move(value));
+
+            auto result = hashmap_.emplace(key, id);
+            if (result.second)
+                return { id, false };
+            else
+                return { npos, false };
+        }
+    }
+
+    std::pair<size_type, bool> append(key_type && key, key_type && label) {
+        auto iter = hashmap_.find(key);
+        if (iter != hashmap_.end()) {
+            ident_type id = iter->second;
+            return { static_cast<size_type>(id), true };
+        } else {
+            ident_type id = static_cast<ident_type>(array_.size());
+            value_type value = detail::construct_if<kValueIsPointer, value_type, element_type>(
+                std::forward<key_type>(name), std::forward<key_type>(label));
+            if (kValueIsPointer)
+                array_.push_back(value);
+            else
+                array_.push_back(std::move(value));
+
+            auto result = hashmap_.emplace(key, id);
+            if (result.second)
+                return { id, false };
+            else
+                return { npos, false };
+        }
+    }
+};
+
 //
 // An individual benchmark result.
 //
-struct Result {
+struct BenchmarkResult {
     typedef std::size_t size_type;
 
     size_type   id;
@@ -103,14 +285,14 @@ struct Result {
     double      elasped_time[RUN_COUNT];
     size_type   checksum;
 
-    Result() noexcept : benchmark_id(size_type(-1)), average_time(0.0), checksum(0) {
+    BenchmarkResult() noexcept : benchmark_id(size_type(-1)), average_time(0.0), checksum(0) {
         for (size_type i = 0; i < RUN_COUNT; i++) {
             elasped_time[i] = 0.0;
         }
     }
 
-    Result(const std::string & hashmap_name, const std::string & blueprint_name,
-           size_type benchmark_id, double average_time, size_type checksum)
+    BenchmarkResult(const std::string & hashmap_name, const std::string & blueprint_name,
+                    size_type benchmark_id, double average_time, size_type checksum)
         : hashmap_name(hashmap_name), blueprint_name(blueprint_name),
           benchmark_id(benchmark_id),
           average_time(average_time), checksum(checksum) {
@@ -119,7 +301,7 @@ struct Result {
         }
     }
 
-    Result(const Result & src)
+    BenchmarkResult(const BenchmarkResult & src)
         : hashmap_name(src.hashmap_name), blueprint_name(src.blueprint_name),
           benchmark_id(src.benchmark_id),
           average_time(src.average_time), checksum(src.checksum) {
@@ -128,9 +310,9 @@ struct Result {
         }
     }
 
-    Result(Result && src)
-        : hashmap_name(std:move(src.hashmap_name)),
-          blueprint_name(std:move(src.blueprint_name)),
+    BenchmarkResult(BenchmarkResult && src)
+        : hashmap_name(std::move(src.hashmap_name)),
+          blueprint_name(std::move(src.blueprint_name)),
           benchmark_id(src.benchmark_id),
           average_time(src.average_time), checksum(src.checksum) {
         for (size_type i = 0; i < RUN_COUNT; i++) {
@@ -144,7 +326,7 @@ struct Result {
         }
     }
 
-    void swap(Result & other) noexcept {
+    void swap(BenchmarkResult & other) noexcept {
         if (std::addressof(other) != this) {
             std::swap(this->id,             other.id);
             std::swap(this->hashmap_name,   other.hashmap_name);
@@ -159,14 +341,16 @@ struct Result {
     }
 };
 
-class BenchmarkCategory : public TableBase {
+class BenchmarkCategory : public BenchmarkBase,
+                          public ArrayHashmap<std::size_t, BenchmarkResult> {
 public:
     typedef std::size_t size_type;
 
 private:
-    std::vector<Result> results_;
+    std::vector<BenchmarkResult> results_;
 
     void destroy() {
+        /*
         for (size_type i = 0; i < results_.size(); i++) {
             Result * result = results_[i];
             if (result != nullptr) {
@@ -175,13 +359,14 @@ private:
             }
         }
         results_.clear();
+        */
     }
 
 public:
-    BenchmarkCategory() : TableBase() {}
+    BenchmarkCategory() : BenchmarkBase(), ArrayHashmap() {}
 
     BenchmarkCategory(const std::string & name, const std::string & label)
-        : TableBase(name, label) {}
+        : BenchmarkBase(name, label), ArrayHashmap() {}
 
     ~BenchmarkCategory() {
         destroy();
@@ -189,11 +374,11 @@ public:
 
     size_type size() const { return results_.size(); }
 
-    Result & getResult(size_type index) {
+    BenchmarkResult & getResult(size_type index) {
         return results_[index];
     }
 
-    const Result & getResult(size_type index) const {
+    const BenchmarkResult & getResult(size_type index) const {
         return results_[index];
     }
 
@@ -204,50 +389,41 @@ public:
                    double elasped_time[RUN_COUNT],
                    size_type checksum) {
         this->id_ = benchmark_id;
-        Result result(hashmap_name, blueprint_name, benchmark_id, average_time, checksum);
+        BenchmarkResult result(hashmap_name, blueprint_name, benchmark_id, average_time, checksum);
         result.setElapsedTimes(elasped_time);
         results_.push_back(std::move(result));
     }
 };
 
-class BenchmarkBluePrint : public TableBase {
+class BenchmarkHashmap : public BenchmarkBase,
+                         public ArrayHashmap<std::string, BenchmarkCategory *> {
+    //
+}
+
+class BenchmarkBluePrint : public BenchmarkBase,
+                           public ArrayHashmap<std::string, BenchmarkHashmap *> {
 public:
     typedef std::size_t size_type;
 
-private:
-    std::vector<BenchmarkCategory> categorys_;
-
-    void destroy() {
-        for (size_type i = 0; i < categorys_.size(); i++) {
-            BenchmarkCategory * category = categorys_[i];
-            if (category != nullptr) {
-                delete category;
-                categorys_[i] = nullptr;
-            }
-        }
-        categorys_.clear();
-    }
-
-public:
-    BenchmarkBluePrint() : TableBase() {}
+    BenchmarkBluePrint() : BenchmarkBase(), ArrayHashmap() {}
 
     BenchmarkBluePrint(const std::string & name, const std::string & label)
-        : TableBase(name, label) {}
+        : BenchmarkBase(name, label), ArrayHashmap() {}
 
     ~BenchmarkBluePrint() {
         destroy();
     }
 
-    size_type size() const {
-        return categorys_.size();
+    BenchmarkCategory & getHashmap(size_type index) {
+        return get(index);
     }
 
-    Result & getCategory(size_type index) {
-        return categorys_[index];
+    const BenchmarkCategory & getHashmap(size_type index) const {
+        return get(index);
     }
 
-    const Result & getCategory(size_type index) const {
-        return categorys_[index];
+    BenchmarkHashmap * addHashmap(const std::string & name, const std::string & label) {
+        //
     }
 
     void addResult(size_type benchmark_id,
@@ -257,69 +433,65 @@ public:
                    double elasped_time[RUN_COUNT],
                    size_type checksum) {
         this->id_ = benchmark_id;
-        Result result(hashmap_name, blueprint_name, benchmark_id, average_time, checksum);
+        BenchmarkResult result(hashmap_name, blueprint_name, benchmark_id, average_time, checksum);
         result.setElapsedTimes(elasped_time);
-        results_.push_back(std::move(result));
+        categorys_.push_back(std::move(result));
     }
 };
 
-class BenchmarkResults : public TableBase {
+class BenchmarkResults : public BenchmarkBase,
+                         public ArrayHashmap<std::string, BenchmarkBluePrint *> {
 public:
     typedef std::size_t size_type;
 
 private:
-    std::vector<BenchmarkBluePrint *> blueprints_;
-
+    /*
     void destroy() {
-        for (size_type i = 0; i < blueprints_.size(); i++) {
-            BenchmarkBluePrint * blueprint = blueprints_[i];
+        for (size_type i = 0; i < size(); i++) {
+            BenchmarkBluePrint * blueprint = get(i);
             if (blueprint != nullptr) {
                 delete blueprint;
-                blueprints_[i] = nullptr;
+                set(i, nullptr);
             }
         }
-        blueprints_.clear();
+        clear();
     }
+    //*/
 
 public:
-    BenchmarkResults() : TableBase() {}
+    BenchmarkResults() : BenchmarkBase(), ArrayHashmap() {}
 
     ~BenchmarkResults() {
         destroy();
     }
 
-    size_type size() const {
-        return blueprints_.size();
-    }
-
     BenchmarkBluePrint * getBluePrint(size_type index) {
-        if (index < blueprints_.size())
-            return blueprints_[index];
+        if (index < size())
+            return get(index);
         else
             return nullptr;
     }
 
     size_type addBluePrint(const std::string & name, const std::string & label) {
         BenchmarkBluePrint * blueprint = new BenchmarkBluePrint(name, label);
-        blueprints_.push_back(blueprint);
-        return (blueprints_.size() - 1);
+        auto result = append(name, blueprint);
+        return ((!result.second) ? result.first : npos);
     }
 
-    bool addResult(size_type catId, const std::string & name,
-                   double elaspedTime1, size_type checksum1,
-                   double elaspedTime2, size_type checksum2) {
-        BenchmarkBluePrint * blueprint = getBluePrint(catId);
+    bool addResult(size_type blueprintId, const std::string & name,
+                   double elaspedTime, size_type checksum) {
+        BenchmarkBluePrint * blueprint = getBluePrint(blueprintId);
         if (blueprint != nullptr) {
-            blueprint->addResult(catId, name, elaspedTime1, checksum1, elaspedTime2, checksum2);
+            blueprint->addResult(blueprintId, name, elaspedTime, checksum);
             return true;
         }
         return false;
     }
 
-    bool addBlankLine(size_type catId) {
-        BenchmarkBluePrint * blueprint = getBluePrint(catId);
+    bool addBlankLine(size_type blueprintId) {
+        BenchmarkBluePrint * blueprint = getBluePrint(blueprintId);
         if (blueprint != nullptr) {
-            blueprint->addResult(catId, "_blank", 0.0, 0, 0.0, 0);
+            blueprint->addResult(blueprintId, "_blank", 0.0, 0, 0.0, 0);
             return true;
         }
         return false;
@@ -372,19 +544,19 @@ public:
                     printf(" %-52s"          "    time          checksum    time\n", category->name().c_str());
                 printf("\n");
 
-                size_type result_count = blueprint->size();
-                for (size_type i = 0; i < result_count; i++) {
+                size_type bench_count = blueprint->size();
+                for (size_type bench_id = 0; bench_id < bench_count; bench_id++) {
                     const BenchmarkCategory & category = blueprint->getCategory(i);
                     double ratio;
-                    if (result.elaspedTime2 != 0.0)
-                        ratio = result.elaspedTime1 / result.elaspedTime2;
+                    if (result.elasped_time[0] != 0.0)
+                        ratio = result.average_time / result.elasped_time[0];
                     else
                         ratio = 0.0;
                     if (result.name != "_blank") {
                         printf(" %-38s | %11" PRIuPTR " %11s | %11" PRIuPTR " %11s |   %0.2f\n",
                                result.name.c_str(),
-                               result.checksum1, formatMsTime(result.elaspedTime1).c_str(),
-                               result.checksum2, formatMsTime(result.elaspedTime2).c_str(),
+                               result.checksum, formatMsTime(result.average_time).c_str(),
+                               result.checksum, formatMsTime(result.average_time).c_str(),
                                ratio);
                     }
                     else {
