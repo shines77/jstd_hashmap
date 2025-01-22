@@ -135,6 +135,87 @@ void destroy_if(VectorT & vector)
     /* Do nothing !! */
 }
 
+template <std::size_t N, std::size_t NextPow>
+struct Pow10_impl {
+    static constexpr const std::size_t value = 10 * Pow10_impl<N, NextPow - 1>::value;
+};
+
+template <std::size_t N>
+struct Pow10_impl<N, 0> {
+    static constexpr const std::size_t value = 1;
+};
+
+template <std::size_t N>
+struct Pow10 {
+    static constexpr const std::size_t value = Pow10_impl<N, N>::value;
+};
+
+template <std::size_t N>
+void format_with_zeros(std::string & str, std::size_t value)
+{
+    std::size_t out[N];
+    std::intptr_t digits = N - 1;
+    while (value != 0) {
+        std::size_t digit = value % 10;
+        out[digits--] = digit;
+        value /= 10;
+    }
+    std::intptr_t i = 0;
+    digits++;
+    // Fill leading zeros
+    for (; i < digits; i++) {
+        str.push_back('0');
+    }
+    // Fill digits
+    for (; i < (std::intptr_t)N; i++) {
+        str.push_back('0' + static_cast<char>(out[i]));
+    }
+}
+
+template <std::size_t N>
+std::string format_integer(std::size_t value)
+{
+    static constexpr const std::size_t base_N = detail::Pow10<N>::value;
+
+    std::string str;
+    while (value != 0) {
+        std::size_t part = value % base_N;
+        value /= base_N;
+        std::string spart;
+        if (value != 0) {
+            spart = ",";
+            format_with_zeros<N>(spart, part);
+        } else {
+            spart = std::to_string(part);
+        }
+        str = spart + str;
+    }
+    return str;
+}
+
+std::string formatMsTime(double fMillisec)
+{
+    char time_buf[256];
+
+    if (fMillisec >= 1000.0 * 60.0 * 30.0) {
+        snprintf(time_buf, sizeof(time_buf), "%7.2f Min", fMillisec / (60.0 * 1000.0));
+    }
+    else if (fMillisec >= 1000.0 * 10.0) {
+        snprintf(time_buf, sizeof(time_buf), "%7.2f Sec", fMillisec / 1000.0);
+    }
+    else if (fMillisec >= 1.0 * 1.0) {
+        snprintf(time_buf, sizeof(time_buf), "%7.2f ms ", fMillisec);
+    }
+    else if (fMillisec >= 0.001 * 10.0) {
+        snprintf(time_buf, sizeof(time_buf), "%7.2f us ", fMillisec * 1000.0);
+    }
+    else {
+        snprintf(time_buf, sizeof(time_buf), "%7.2f ns ", fMillisec * 1000000.0);
+    }
+
+    return std::string(time_buf);
+}
+
 } // namespace detail
 
 template <typename Key, typename Value, bool ValueIsPointer = std::is_pointer<Value>::value>
@@ -696,13 +777,36 @@ class BenchmarkBluePrint : public BenchmarkBase,
 public:
     typedef std::size_t size_type;
 
-    BenchmarkBluePrint() : BenchmarkBase(), ArrayHashmap() {}
+private:
+    size_type data_size_;
+    size_type element_size_;
+
+public:
+    BenchmarkBluePrint() : BenchmarkBase(), ArrayHashmap(),
+        data_size_(0), element_size_(0) {}
 
     BenchmarkBluePrint(const std::string & name, const std::string & label)
-        : BenchmarkBase(name, label), ArrayHashmap() {}
+        : BenchmarkBase(name, label), ArrayHashmap(),
+          data_size_(0), element_size_(0) {}
 
     ~BenchmarkBluePrint() {
         destroy();
+    }
+
+    size_type getDataSize() const {
+        return data_size_;
+    }
+
+    size_type getElementSize() const {
+        return element_size_;
+    }
+
+    void setDataSize(size_type data_size) {
+        data_size_ = data_size;
+    }
+
+    void setElementSize(size_type element_size) {
+        element_size_ = element_size;
     }
 
     BenchmarkHashmap * getHashmap(size_type index) {
@@ -792,106 +896,70 @@ public:
         return blueprint;
     }
 
+    template <typename BluePrint>
     BenchmarkBluePrint * addBluePrint(const std::string & name, const std::string & label) {
         auto result = append(name, label);
         if (result.first != npos) {
-            return get(result.first);
+            typedef typename BluePrint::element_type element_type;
+            auto blueprint = get(result.first);
+            blueprint->setDataSize(BluePrint::get_data_size());
+            blueprint->setElementSize(sizeof(element_type));
+            return blueprint;
         } else {
             return nullptr;
         }
     }
 
+    template <typename BluePrint>
     BenchmarkBluePrint * addBlankLine() {
-        return addBluePrint("_blank", "_blank");
+        return addBluePrint<BluePrint>("_blank", "_blank");
     }
 
-    std::string formatMsTime(double fMillisec) const {
-        char time_buf[256];
-
-        if (fMillisec >= 1000.0 * 60.0 * 30.0) {
-            snprintf(time_buf, sizeof(time_buf), "%7.2f Min", fMillisec / (60.0 * 1000.0));
-        }
-        else if (fMillisec >= 1000.0 * 10.0) {
-            snprintf(time_buf, sizeof(time_buf), "%7.2f Sec", fMillisec / 1000.0);
-        }
-        else if (fMillisec >= 1.0 * 1.0) {
-            snprintf(time_buf, sizeof(time_buf), "%7.2f ms ", fMillisec);
-        }
-        else if (fMillisec >= 0.001 * 10.0) {
-            snprintf(time_buf, sizeof(time_buf), "%7.2f us ", fMillisec * 1000.0);
-        }
-        else {
-            snprintf(time_buf, sizeof(time_buf), "%7.2f ns ", fMillisec * 1000000.0);
-        }
-
-        return std::string(time_buf);
-    }
-
-    /*******************************************************************************************************
-       Test                                          std::unordered_map         jstd::Dictionary     Ratio
-      ------------------------------------------------------------------------------------------------------
-       hash_map<std::string, std::string>          checksum     time         checksum    time
-
-       hash_map<K, V>/find                    | 98765432109   100.00 ms | 98765432109   30.00 ms |   3.33
-       hash_map<K, V>/insert                  | 98765432109   100.00 ms | 98765432109   30.00 ms |   3.33
-       hash_map<K, V>/emplace                 | 98765432109   100.00 ms | 98765432109   30.00 ms |   3.33
-       hash_map<K, V>/erase                   | 98765432109   100.00 ms | 98765432109   30.00 ms |   3.33
-      ------------------------------------------------------------------------------------------------------
+    /**************************************************************************************************************************************
+       BluePrint: uint32_uint32_murmur          Data size: 123,456,789        Element size: 16 bytes
+      -------------------------------------------------------------------------------------------------------------------------------------
+       Hashmap                    | find.exist |  find.non  | insert.non |insert.exist|   replace  | erase.exist|  erase.non |  iteration |
+      ----------------------------+------------+------------+------------+------------+------------+------------+------------+------------+
+       std::unordered_map         | 1234.00 ms | 1234.00 ms | 1234.00 ms | 1234.00 ms | 1234.00 ms | 1234.00 ms | 1234.00 ms | 1234.00 ms |
+       jstd::robin_hash_map       | 1234.00 ms | 1234.00 ms | 1234.00 ms | 1234.00 ms | 1234.00 ms | 1234.00 ms | 1234.00 ms | 1234.00 ms |
+       jstd::cluster_flat_map     | 1234.00 ms | 1234.00 ms | 1234.00 ms | 1234.00 ms | 1234.00 ms | 1234.00 ms | 1234.00 ms | 1234.00 ms |
+      -------------------------------------------------------------------------------------------------------------------------------------
     *******************************************************************************************************/
-    void printResults(const std::string & filename, double totalElapsedTime = 0.0) const {
+    void printResults() const {
         for (size_type blueprintId = 0; blueprintId < size(); blueprintId++) {
             const BenchmarkBluePrint * blueprint = getBluePrint(blueprintId);
             if (blueprint != nullptr) {
-                printf(" Test                                    %23s   %23s      Ratio\n",
-                       this->name_.c_str(), this->label_.c_str());
-                printf("--------------------------------------------------------------------------------------------------------\n");
+                std::size_t dataSize = blueprint->getDataSize();
+                size_type elementSize = blueprint->getElementSize();
                 printf("\n");
-                if (blueprint->name().size() <= 40)
-                    printf(" %-40s    checksum    time          checksum    time\n", blueprint->name().c_str());
-                else
-                    printf(" %-52s"          "    time          checksum    time\n", blueprint->name().c_str());
+                printf(" BluePrint: %25s     Data size: %11s    Element size: %" PRIuPTR " bytes\n",
+                       this->name_.c_str(), detail::format_integer<3>(dataSize).c_str(), elementSize);
                 printf("\n");
+                printf("-------------------------------------------------------------------------------------------------------------------------------------\n");
+                printf(" Hashmap                    | find.exist |  find.non  | insert.non |insert.exist|   replace  | erase.exist|  erase.non |  iteration |\n");
+                printf("----------------------------+------------+------------+------------+------------+------------+------------+------------+------------+\n");
 
                 size_type hashmap_count = blueprint->size();
                 for (size_type hashmap_id = 0; hashmap_id < hashmap_count; hashmap_id++) {
                     const BenchmarkHashmap * hashmap = blueprint->getHashmap(hashmap_id);
+                    printf(" %26s |", hashmap->name().c_str());
                     size_type category_count = hashmap->size();
                     for (size_type category_id = 0; category_id < category_count; category_id++) {
                         const BenchmarkCategory * category = hashmap->getCategory(category_id);
                         size_type rusult_count = category->size();
                         for (size_type rusult_id = 0; rusult_id < rusult_count; rusult_id++) {
                             const BenchmarkResult * result = category->getResult(category_id);
-                            double ratio;
-                            if (result->elasped_times[0] != 0.0)
-                                ratio = result->average_time / result->elasped_times[0];
-                            else
-                                ratio = 0.0;
-                            if (result->name != "_blank") {
-                                printf(" %-38s | %11" PRIuPTR " %11s | %11" PRIuPTR " %11s |   %0.2f\n",
-                                       result->name.c_str(),
-                                       result->checksum, formatMsTime(result->average_time).c_str(),
-                                       result->checksum, formatMsTime(result->average_time).c_str(),
-                                       ratio);
-                            }
-                            else {
-                                printf("\n");
-                            }
+                            printf(" %11s|", detail::formatMsTime(result->average_time).c_str());
                         }
                     }
+                    printf("\n");
                 }
 
-                if (blueprintId < (size() - 1))
-                    printf("\n\n");
+                printf("-------------------------------------------------------------------------------------------------------------------------------------\n");
+                printf("\n");
             }
         }
 
-        printf("\n");
-        printf("--------------------------------------------------------------------------------------------------------\n");
-        printf("\n");
-        if (filename.size() == 0 || filename.c_str() == nullptr || filename == "")
-            printf("Dict filename: %-52s  Total elapsed time: %0.2f ms\n", "header_fields[]", totalElapsedTime);
-        else
-            printf("Dict filename: %-52s  Total elapsed time: %0.2f ms\n", filename.c_str(), totalElapsedTime);
         printf("\n");
     }
 };

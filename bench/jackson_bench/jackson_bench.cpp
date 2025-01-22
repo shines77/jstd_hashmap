@@ -278,62 +278,10 @@ const char * get_benchmark_label(std::size_t benchmark_id)
 
 namespace detail {
 
-template <std::size_t N, std::size_t NextPow>
-struct Pow10_impl {
-    static constexpr const std::size_t value = 10 * Pow10_impl<N, NextPow - 1>::value;
-};
-
-template <std::size_t N>
-struct Pow10_impl<N, 0> {
-    static constexpr const std::size_t value = 1;
-};
-
-template <std::size_t N>
-struct Pow10 {
-    static constexpr const std::size_t value = Pow10_impl<N, N>::value;
-};
-
-template <std::size_t N>
-void format_with_zeros(std::string & str, std::size_t value)
+constexpr std::size_t round_div(std::size_t dividend, std::size_t divisor)
 {
-    std::size_t out[N];
-    std::intptr_t digits = N - 1;
-    while (value != 0) {
-        std::size_t digit = value % 10;
-        out[digits--] = digit;
-        value /= 10;
-    }
-    std::intptr_t i = 0;
-    digits++;
-    // Fill leading zeros
-    for (; i < digits; i++) {
-        str.push_back('0');
-    }
-    // Fill digits
-    for (; i < (std::intptr_t)N; i++) {
-        str.push_back('0' + static_cast<char>(out[i]));
-    }
-}
-
-template <std::size_t N>
-std::string format_integer(std::size_t value)
-{
-    static constexpr const std::size_t base_N = detail::Pow10<N>::value;
-
-    std::string str;
-    while (value != 0) {
-        std::size_t part = value % base_N;
-        value /= base_N;
-        std::string spart;
-        if (value != 0) {
-            spart = ",";
-            format_with_zeros<N>(spart, part);
-        } else {
-            spart = std::to_string(part);
-        }
-        str = spart + str;
-    }
-    return str;
+    // detail::round_div(): The divisor cannot be 0.
+    return ((dividend + divisor - 1) / divisor);
 }
 
 } // namespace detail
@@ -356,14 +304,61 @@ void shuffled_unique_key(std::vector<typename BluePrint::key_type> & keys, std::
 }
 
 //
+// Remove the minimum and maximum time, and then take the average of the other values.
+//
+double calc_average_time(double elapsed_times[RUN_COUNT])
+{
+    std::size_t minIndex = 0, maxIndex = 0;
+    double minTime = elapsed_times[0];
+    double maxTime = elapsed_times[0];
+    for (std::size_t i = 1; i < RUN_COUNT; i++) {
+        double elapsed_time = elapsed_times[i];
+        if (elapsed_time < minTime) {
+            minTime = elapsed_time;
+            minIndex = i;
+        }
+        if (elapsed_time > maxTime) {
+            maxTime = elapsed_time;
+            maxIndex = i;
+        }
+    }
+
+    std::size_t total_count;
+    if (minIndex != maxIndex) {
+        elapsed_times[minIndex] = 0.0;
+        elapsed_times[maxIndex] = 0.0;
+        total_count = RUN_COUNT - 2;
+    } else {
+        elapsed_times[minIndex] = 0.0;
+        total_count = RUN_COUNT - 1;
+    }
+
+    double totol_time = 0.0;
+    for (std::size_t i = 0; i < RUN_COUNT; i++) {
+        totol_time += elapsed_times[i];
+    }
+
+    if (total_count != 0)
+        return (totol_time / total_count);
+    else
+        return ((minTime + maxTime) / 2.0);
+}
+
+//
 // Function for recording and accessing a single result, i.e. one measurement for a particular table, blueprint, and
 // benchmark during a particular run.
 //
 template <template<typename> typename HashMap, typename BluePrint, benchmark_ids benchmark_id>
-std::uint64_t & results(std::size_t run_index, std::size_t result_index)
+double & results(std::size_t run_index, std::size_t result_index)
 {
-    static auto results = std::vector<std::uint64_t>(RUN_COUNT * (KEY_COUNT / KEY_COUNT_MEASUREMENT_INTERVAL));
-    return results[run_index * (KEY_COUNT / KEY_COUNT_MEASUREMENT_INTERVAL) + result_index];
+    static constexpr const std::size_t kDataSize = BluePrint::get_data_size();
+    static constexpr const std::size_t kMeasurementInterval = KEY_COUNT_MEASUREMENT_INTERVAL;
+    static constexpr const std::size_t kLoopTimes = detail::round_div(kDataSize, kMeasurementInterval) + 1;
+
+    static auto results = std::vector<double>(RUN_COUNT * kLoopTimes);
+    assert(run_index < RUN_COUNT);
+    assert(result_index < kLoopTimes);
+    return results[run_index * kLoopTimes + result_index];
 }
 
 //
@@ -437,8 +432,7 @@ void benchmark_find_existing(std::size_t run,
         //printf("elapsed time = %0.3f ms\n", used_time);
         elapsed_time += used_time;
 
-        results<HashMap, BluePrint, id_find_existing>(run, 0) =
-            static_cast<std::uint64_t>(sw.getElapsedMicrosec() * (1000.0 * 1000.0));
+        results<HashMap, BluePrint, id_find_existing>(run, result_index) = used_time;
 
         result_index++;
         insert_begin = insert_end;
@@ -477,8 +471,7 @@ void benchmark_insert_non_existing(std::size_t run,
     elapsed_time = sw.getElapsedMillisec();
     printf("elapsed time = %0.3f ms\n", elapsed_time);
 
-    results<HashMap, BluePrint, id_insert_non_existing>(run, 0) =
-        static_cast<std::uint64_t>(sw.getElapsedMicrosec() * (1000.0 * 1000.0));
+    results<HashMap, BluePrint, id_insert_non_existing>(run, 0) = elapsed_time;
 }
 
 template <template <typename> typename HashMap, typename BluePrint, std::size_t kDataSize>
@@ -518,8 +511,7 @@ void benchmark_insert_existing(std::size_t run,
         //printf("elapsed time = %0.3f ms\n", used_time);
         elapsed_time += used_time;
 
-        results<HashMap, BluePrint, id_insert_existing>(run, 0) =
-            static_cast<std::uint64_t>(sw.getElapsedMicrosec() * (1000.0 * 1000.0));
+        results<HashMap, BluePrint, id_insert_existing>(run, result_index) = used_time;
 
         result_index++;
         insert_begin = insert_end;
@@ -574,8 +566,7 @@ void benchmark_erase_existing(std::size_t run,
         //printf("elapsed time = %0.3f ms\n", used_time);
         elapsed_time += used_time;
 
-        results<HashMap, BluePrint, id_erase_existing>(run, 0) =
-            static_cast<std::uint64_t>(sw.getElapsedMicrosec() * (1000.0 * 1000.0));
+        results<HashMap, BluePrint, id_erase_existing>(run, result_index) = used_time;
 
         // Re-insert the erased keys.
         // This has the drawback that if tombstones are being used, those tombstones created by the above erasures will
@@ -629,8 +620,7 @@ void benchmark_erase_non_existing(std::size_t run,
         //printf("elapsed time = %0.3f ms\n", used_time);
         elapsed_time += used_time;
 
-        results<HashMap, BluePrint, id_erase_non_existing>(run, 0) =
-            static_cast<std::uint64_t>(sw.getElapsedMicrosec() * (1000.0 * 1000.0));
+        results<HashMap, BluePrint, id_erase_non_existing>(run, result_index) = used_time;
 
         result_index++;
         insert_begin = insert_end;
@@ -646,47 +636,6 @@ void benchmark_iteration(std::size_t run,
 {
     elapsed_time = 0;
     //printf("elapsed time = %0.3f ms\n", elapsed_time);
-}
-
-//
-// Remove the minimum and maximum time, and then take the average of the other values.
-//
-double calc_average_time(double elapsed_times[RUN_COUNT])
-{
-    std::size_t minIndex = 0, maxIndex = 0;
-    double minTime = elapsed_times[0];
-    double maxTime = elapsed_times[0];
-    for (std::size_t i = 1; i < RUN_COUNT; i++) {
-        double elapsed_time = elapsed_times[i];
-        if (elapsed_time < minTime) {
-            minTime = elapsed_time;
-            minIndex = i;
-        }
-        if (elapsed_time > maxTime) {
-            maxTime = elapsed_time;
-            maxIndex = i;
-        }
-    }
-
-    std::size_t total_count;
-    if (minIndex != maxIndex) {
-        elapsed_times[minIndex] = 0.0;
-        elapsed_times[maxIndex] = 0.0;
-        total_count = RUN_COUNT - 2;
-    } else {
-        elapsed_times[minIndex] = 0.0;
-        total_count = RUN_COUNT - 1;
-    }
-
-    double totol_time = 0.0;
-    for (std::size_t i = 0; i < RUN_COUNT; i++) {
-        totol_time += elapsed_times[i];
-    }
-
-    if (total_count != 0)
-        return (totol_time / total_count);
-    else
-        return ((minTime + maxTime) / 2.0);
 }
 
 template <template <typename> typename HashMap, typename BluePrint,
@@ -728,13 +677,15 @@ template <template <typename> typename HashMap, typename BluePrint,
           std::size_t BenchmarkId, std::size_t kDataSize>
 void run_benchmark_loop(std::vector<typename BluePrint::key_type> & keys)
 {
-    using emlment_type = typename BluePrint::emlment_type;
+    using element_type = typename BluePrint::element_type;
 
     std::cout << std::endl;
-    std::cout << HashMap<void>::name << ": " << BluePrint::name << std::endl;
-    std::cout << "Benchmark Id: " << get_benchmark_id(BenchmarkId)
-              << ", Data size: " << detail::format_integer<3>(kDataSize)
-              << ", Emlment size: " << sizeof(emlment_type) << " Bytes" << std::endl;    
+    std::cout << "BluePrint: " << BluePrint::name << ", "
+              << "Data size: " << jtest::detail::format_integer<3>(kDataSize) << ", "
+              << "Element size: " << sizeof(element_type) << " Bytes" << std::endl;  
+    std::cout << HashMap<void>::name << ", "
+              << "Benchmark Id: " << get_benchmark_id(BenchmarkId)
+              << std::endl;
     std::cout << std::endl;
 
     jtest::BenchmarkCategory * category = nullptr;
@@ -765,7 +716,7 @@ void run_benchmark_loop(std::vector<typename BluePrint::key_type> & keys)
         assert(result != nullptr);
     }
 
-    std::cout << std::endl;
+    //std::cout << std::endl;
 }
 
 template <template <typename> typename HashMap, typename BluePrint>
@@ -820,7 +771,7 @@ void run_benchmarks()
 template <typename BluePrint>
 void run_blueprint_benchmarks()
 {
-    gBenchmarkResults.addBluePrint(BluePrint::name, BluePrint::label);
+    gBenchmarkResults.addBluePrint<BluePrint>(BluePrint::name, BluePrint::label);
 
 #ifdef HASHMAP_1
     run_benchmarks<HASHMAP_1, BluePrint>();
@@ -930,14 +881,15 @@ int main(int argc, char * argv[])
     run_blueprint_benchmarks<BLUEPRINT_16>();
 #endif
 
-    std::cout << "Outputting results\n";
+    std::cout << "Outputting results" << std::endl << std::endl;
+
+    gBenchmarkResults.printResults();
 
     //html_out(time_str);
-
     //csv_out(time_str);
 
-    std::cout << "Optimization preventer: " << do_not_optimize << "\n";
-    std::cout << "Done\n";
+    std::cout << "Optimization preventer: " << do_not_optimize << std::endl;
+    std::cout << "Done" << std::endl;
 
 #if defined(_MSC_VER) && defined(_DEBUG)
     jstd::Console::ReadKey();

@@ -28,13 +28,13 @@
 
 // The frequency at which to measure and record times.
 // This must be a factor of KEY_COUNT.
-#define KEY_COUNT_MEASUREMENT_INTERVAL  500
+#define KEY_COUNT_MEASUREMENT_INTERVAL  2000
 
 // The number of erase key.
-#define NUMS_ERASE_KEY      1000
+#define NUMS_ERASE_KEY      (KEY_COUNT_MEASUREMENT_INTERVAL / 2)
 
 // The number of insert key when test erase().
-#define NUMS_INSERT_KEY     (NUMS_ERASE_KEY * 2)
+#define NUMS_INSERT_KEY     KEY_COUNT_MEASUREMENT_INTERVAL
 
 // The number of times to repeat the benchmarks.
 #define RUN_COUNT   7
