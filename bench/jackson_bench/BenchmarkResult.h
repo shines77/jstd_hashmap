@@ -206,7 +206,7 @@ public:
     }
 
     size_type registerKey(const key_type & key) {
-        auto iter = hashmap_.find(name);
+        auto iter = hashmap_.find(key);
         if (iter != hashmap_.end()) {
             ident_type id = iter->second;
             return static_cast<size_type>(id);
