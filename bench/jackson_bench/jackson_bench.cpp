@@ -32,8 +32,6 @@
 
 #include "BenchmarkResult.h"
 
-using namespace jtest;
-
 //
 // Variable printed before the program closes to prevent compiler from optimizing out function calls during the
 // benchmarks.
@@ -41,7 +39,7 @@ using namespace jtest;
 //
 std::size_t do_not_optimize = 0;
 
-BenchmarkResults gBenchmarkResults;
+jtest::BenchmarkResults gBenchmarkResults;
 
 // Standard stringification macro, used to form the file paths of the blueprints and shims.
 #define STRINGIFY_(x)   #x
@@ -212,20 +210,8 @@ enum benchmark_ids {
     id_iteration
 };
 
-// Benchmark names used in the graphs.
-const char * benchmark_names[] = {
-    "Total time to look up 1,000 existing keys with N keys in the table",
-    "Total time to look up 1,000 non-existing keys with N keys in the table",
-    "Total time to insert N non-existing keys",
-    "Total time to insert N existing keys",    
-    "Total time to replace 1,000 existing keys with N keys in the table",
-    "Total time to erase 1,000 existing keys with N keys in the table",
-    "Total time to erase 1,000 non-existing keys with N keys in the table",
-    "Total time to iterate over 5,000 keys with N keys in the table"
-};
-
 // Benchmark names used in the heatmap.
-const char * benchmark_short_names[] = {
+const char * benchmark_names[] = {
     "Look up existing",
     "Look up non-existing",
     "Insert non-existing",
@@ -234,6 +220,18 @@ const char * benchmark_short_names[] = {
     "Erase existing",
     "Erase non-existing",
     "Iterate"
+};
+
+// Benchmark names used in the graphs.
+const char * benchmark_labels[] = {
+    "Total time to look up 1,000 existing keys with N keys in the table",
+    "Total time to look up 1,000 non-existing keys with N keys in the table",
+    "Total time to insert N non-existing keys",
+    "Total time to insert N existing keys",    
+    "Total time to replace 1,000 existing keys with N keys in the table",
+    "Total time to erase 1,000 existing keys with N keys in the table",
+    "Total time to erase 1,000 non-existing keys with N keys in the table",
+    "Total time to iterate over 5,000 keys with N keys in the table"
 };
 
 const char * get_benchmark_id(std::size_t benchmark_id)
@@ -269,13 +267,13 @@ const char * get_benchmark_name(std::size_t benchmark_id)
         return "Unknown benchmark name";
 }
 
-const char * get_benchmark_short_name(std::size_t benchmark_id)
+const char * get_benchmark_label(std::size_t benchmark_id)
 {
-    std::size_t max_id = jstd_countof(benchmark_short_names);
+    std::size_t max_id = jstd_countof(benchmark_labels);
     if (benchmark_id < max_id)
-        return benchmark_short_names[benchmark_id];
+        return benchmark_labels[benchmark_id];
     else
-        return "Unknown benchmark short name";
+        return "Unknown benchmark label";
 }
 
 namespace detail {
@@ -705,11 +703,12 @@ void run_benchmark_loop(std::vector<typename BluePrint::key_type> & keys)
               << ", Emlment size: " << sizeof(emlment_type) << " Bytes" << std::endl;    
     std::cout << std::endl;
 
-    BenchmarkBluePrint * blueprint = gBenchmarkResults.getBluePrint(BluePrint::name);
+    jtest::BenchmarkBluePrint * blueprint = gBenchmarkResults.getBluePrint(BluePrint::name);
     if (blueprint != nullptr) {
-        BenchmarkBluePrint * hashmap = blueprint->getHashMap(HashMap<void>::name);
+        jtest::BenchmarkHashmap * hashmap = blueprint->getHashmap(HashMap<void>::name);
         if (hashmap != nullptr) {
-            hashmap->addCategory(BenchmarkId);
+            hashmap->addCategory(BenchmarkId, get_benchmark_name(BenchmarkId),
+                                              get_benchmark_label(BenchmarkId));
         }
     }
 
@@ -727,7 +726,7 @@ void run_benchmarks()
 
     static constexpr const std::size_t kDataSize = BluePrint::get_data_size();
 
-    BenchmarkBluePrint * blueprint = gBenchmarkResults.getBluePrint(BluePrint::name);
+    jtest::BenchmarkBluePrint * blueprint = gBenchmarkResults.getBluePrint(BluePrint::name);
     if (blueprint != nullptr) {
         blueprint->addHashmap(HashMap<void>::name, HashMap<void>::label);
     }
