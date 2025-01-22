@@ -880,8 +880,9 @@ int main(int argc, char * argv[])
 #ifdef BLUEPRINT_16
     run_blueprint_benchmarks<BLUEPRINT_16>();
 #endif
-
-    std::cout << "Outputting results." << std::endl << std::endl;
+    std::cout << std::endl;
+    std::cout << "Time: " << ss.str() << std::endl;
+    std::cout << "Outputting results." << std::endl;
 
     gBenchmarkResults.printResults();
 

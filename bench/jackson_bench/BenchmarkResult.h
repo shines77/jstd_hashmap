@@ -932,8 +932,8 @@ public:
                 std::size_t dataSize = blueprint->getDataSize();
                 size_type elementSize = blueprint->getElementSize();
                 printf("\n");
-                printf(" BluePrint: %25s     Data size: %11s    Element size: %" PRIuPTR " bytes\n",
-                       this->name_.c_str(), detail::format_integer<3>(dataSize).c_str(), elementSize);
+                printf(" BluePrint: %-25s     Data size: %-11s    Element size: %" PRIuPTR " bytes\n",
+                       blueprint->name().c_str(), detail::format_integer<3>(dataSize).c_str(), elementSize);
                 printf("\n");
                 printf("-------------------------------------------------------------------------------------------------------------------------------------\n");
                 printf(" Hashmap                    | find.exist |  find.non  | insert.non |insert.exist|   replace  | erase.exist|  erase.non |  iteration |\n");
@@ -942,7 +942,7 @@ public:
                 size_type hashmap_count = blueprint->size();
                 for (size_type hashmap_id = 0; hashmap_id < hashmap_count; hashmap_id++) {
                     const BenchmarkHashmap * hashmap = blueprint->getHashmap(hashmap_id);
-                    printf(" %26s |", hashmap->name().c_str());
+                    printf(" %-26s |", hashmap->name().c_str());
                     size_type category_count = hashmap->size();
                     for (size_type category_id = 0; category_id < category_count; category_id++) {
                         const BenchmarkCategory * category = hashmap->getCategory(category_id);
@@ -956,7 +956,6 @@ public:
                 }
 
                 printf("-------------------------------------------------------------------------------------------------------------------------------------\n");
-                printf("\n");
             }
         }
 
