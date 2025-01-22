@@ -55,10 +55,18 @@
 // and L3 CPU caches.
 // This mechanism is intended to ensure that each map starts the benchmarks under approximately the same
 // condition with regard to whether the keys are cached.
+#ifndef _DEBUG
 #define APPROXIMATE_CACHE_SIZE  (24 * 1024 * 1024)
+#else
+#define APPROXIMATE_CACHE_SIZE  (4 * 1024 * 1024)
+#endif
 
 // The amount of time to sleep between benchmarks, Unit: ms.
+#ifndef _DEBUG
 #define MILLISECOND_COOLDOWN_BETWEEN_BENCHMARKS     1000
+#else
+#define MILLISECOND_COOLDOWN_BETWEEN_BENCHMARKS     200
+#endif
 
 // The specific benchmarks to run (comment them out to disable them).
 #define BENCHMARK_FIND_EXISTING

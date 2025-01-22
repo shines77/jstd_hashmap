@@ -390,7 +390,7 @@ void flush_cache_and_sleep()
     // effects of one benchmark from potentially influencing latter benchmarks.
     //
     flush_cache();
-    std::cout << "flush_cache(), sleep_for(" << MILLISECOND_COOLDOWN_BETWEEN_BENCHMARKS << "ms)";
+    std::cout << "flush_cache(), sleep(" << MILLISECOND_COOLDOWN_BETWEEN_BENCHMARKS << "ms)";
     std::this_thread::sleep_for(std::chrono::milliseconds(MILLISECOND_COOLDOWN_BETWEEN_BENCHMARKS));
     std::cout << "..., ";
 }
@@ -404,8 +404,6 @@ void benchmark_find_existing(std::size_t run,
 
     using table_type = typename HashMap<BluePrint>::table_type;
     table_type table;
-
-    elapsed_time = 0;
 
     jtest::StopWatch sw;
     std::size_t result_index = 0;
@@ -493,8 +491,6 @@ void benchmark_insert_existing(std::size_t run,
     using table_type = typename HashMap<BluePrint>::table_type;
     table_type table;
 
-    elapsed_time = 0;
-
     jtest::StopWatch sw;
     std::size_t result_index = 0;
     
@@ -551,8 +547,6 @@ void benchmark_erase_existing(std::size_t run,
     using table_type = typename HashMap<BluePrint>::table_type;
     table_type table;
 
-    elapsed_time = 0;
-
     jtest::StopWatch sw;
     std::size_t result_index = 0;
     
@@ -608,8 +602,6 @@ void benchmark_erase_non_existing(std::size_t run,
     using table_type = typename HashMap<BluePrint>::table_type;
     table_type table;
 
-    elapsed_time = 0;
-
     jtest::StopWatch sw;
     std::size_t result_index = 0;
     
@@ -656,13 +648,55 @@ void benchmark_iteration(std::size_t run,
     //printf("elapsed time = %0.3f ms\n", elapsed_time);
 }
 
+//
+// Remove the minimum and maximum time, and then take the average of the other values.
+//
+double calc_average_time(double elapsed_times[RUN_COUNT])
+{
+    std::size_t minIndex = 0, maxIndex = 0;
+    double minTime = elapsed_times[0];
+    double maxTime = elapsed_times[0];
+    for (std::size_t i = 1; i < RUN_COUNT; i++) {
+        double elapsed_time = elapsed_times[i];
+        if (elapsed_time < minTime) {
+            minTime = elapsed_time;
+            minIndex = i;
+        }
+        if (elapsed_time > maxTime) {
+            maxTime = elapsed_time;
+            maxIndex = i;
+        }
+    }
+
+    std::size_t total_count;
+    if (minIndex != maxIndex) {
+        elapsed_times[minIndex] = 0.0;
+        elapsed_times[maxIndex] = 0.0;
+        total_count = RUN_COUNT - 2;
+    } else {
+        elapsed_times[minIndex] = 0.0;
+        total_count = RUN_COUNT - 1;
+    }
+
+    double totol_time = 0.0;
+    for (std::size_t i = 0; i < RUN_COUNT; i++) {
+        totol_time += elapsed_times[i];
+    }
+
+    if (total_count != 0)
+        return (totol_time / total_count);
+    else
+        return ((minTime + maxTime) / 2.0);
+}
+
 template <template <typename> typename HashMap, typename BluePrint,
           std::size_t BenchmarkId, std::size_t kDataSize>
-void run_benchmark(std::size_t run, std::vector<typename BluePrint::key_type> & keys)
+void run_benchmark(std::size_t run, std::vector<typename BluePrint::key_type> & keys,
+                   double & elapsed_time)
 {
     std::cout << "Run " << (run + 1) << ", "; // << std::endl;
 
-    double elapsed_time = 0;
+    elapsed_time = 0.0;
 
     if (0) {
         // Do nothing !!
@@ -703,17 +737,32 @@ void run_benchmark_loop(std::vector<typename BluePrint::key_type> & keys)
               << ", Emlment size: " << sizeof(emlment_type) << " Bytes" << std::endl;    
     std::cout << std::endl;
 
+    jtest::BenchmarkCategory * category = nullptr;
+
     jtest::BenchmarkBluePrint * blueprint = gBenchmarkResults.getBluePrint(BluePrint::name);
     if (blueprint != nullptr) {
         jtest::BenchmarkHashmap * hashmap = blueprint->getHashmap(HashMap<void>::name);
         if (hashmap != nullptr) {
-            hashmap->addCategory(BenchmarkId, get_benchmark_name(BenchmarkId),
-                                              get_benchmark_label(BenchmarkId));
+            category = hashmap->addCategory(BenchmarkId, get_benchmark_name(BenchmarkId),
+                                                         get_benchmark_label(BenchmarkId));
         }
     }
 
-    for (std::size_t run = 0; run < RUN_COUNT; ++run) {
-        run_benchmark<HashMap, BluePrint, BenchmarkId, kDataSize>(run, keys);
+    double elapsed_time = 0.0;
+    double elapsed_times[RUN_COUNT] = { 0.0 };
+
+    for (std::size_t run = 0; run < RUN_COUNT; run++) {
+        run_benchmark<HashMap, BluePrint, BenchmarkId, kDataSize>(run, keys, elapsed_time);
+        elapsed_times[run] = elapsed_time;
+    }
+
+    double average_time = calc_average_time(elapsed_times);
+    printf("Average time = %0.3f ms\n", average_time);
+
+    if (category != nullptr) {
+        jtest::BenchmarkResult * result = category->addResult(HashMap<void>::name, BluePrint::name, BenchmarkId,
+                                                              average_time, elapsed_times, 0);
+        assert(result != nullptr);
     }
 
     std::cout << std::endl;

@@ -177,22 +177,22 @@ public:
         return static<size_type>(array_.size() - 1);
     }
 
-    value_type & get(size_type index) {
+    element_type & get(size_type index) {
         assert(index< array_.size());
         return array_[index];
     }
 
-    const value_type & get(size_type index) const {
+    const element_type & get(size_type index) const {
         assert(index< array_.size());
         return array_[index];
     }
 
-    void set(size_type index, const value_type & value) {
+    void set(size_type index, const element_type & value) {
         assert(index< array_.size());
         array_[index] = value;
     }
 
-    void set(size_type index, value_type && value) {
+    void set(size_type index, element_type && value) {
         assert(index< array_.size());
         array_[index] = std::move(value);
     }
@@ -336,12 +336,12 @@ public:
         return static<size_type>(array_.size() - 1);
     }
 
-    value_type get(size_type index) {
+    element_type * get(size_type index) {
         assert(index< array_.size());
         return array_[index];
     }
 
-    const value_type get(size_type index) const {
+    const element_type * get(size_type index) const {
         assert(index< array_.size());
         return array_[index];
     }
@@ -364,7 +364,7 @@ public:
         hashmap_.clear();
     }
 
-    size_type registerName(const key_type & key) {
+    size_type registerKey(const key_type & key) {
         auto iter = hashmap_.find(key);
         if (iter != hashmap_.end()) {
             ident_type id = iter->second;
@@ -414,10 +414,7 @@ public:
         } else {
             ident_type id = static_cast<ident_type>(array_.size());
             value_type value = detail::construct_if<kValueIsPointer, value_type, element_type>(name, label);
-            if (kValueIsPointer)
-                array_.push_back(value);
-            else
-                array_.push_back(std::move(value));
+            array_.push_back(value);
 
             auto result = hashmap_.emplace(name, id);
             if (result.second)
@@ -436,10 +433,24 @@ public:
             ident_type id = static_cast<ident_type>(array_.size());
             value_type value = detail::construct_if<kValueIsPointer, value_type, element_type>(
                 std::forward<key_type>(name), std::forward<key_type>(label));
-            if (kValueIsPointer)
-                array_.push_back(value);
+            array_.push_back(value);
+
+            auto result = hashmap_.emplace(name, id);
+            if (result.second)
+                return { id, false };
             else
-                array_.push_back(std::move(value));
+                return { npos, false };
+        }
+    }
+
+    std::pair<size_type, bool> append(const key_type & name, element_type * element) {
+        auto iter = hashmap_.find(name);
+        if (iter != hashmap_.end()) {
+            ident_type id = iter->second;
+            return { static_cast<size_type>(id), true };
+        } else {
+            ident_type id = static_cast<ident_type>(array_.size());
+            array_.push_back(reinterpret_cast<value_type>(element));
 
             auto result = hashmap_.emplace(name, id);
             if (result.second)
@@ -462,12 +473,12 @@ struct BenchmarkResult {
     std::string blueprint_name;
     size_type   benchmark_id;
     double      average_time;
-    double      elasped_time[RUN_COUNT];
+    double      elasped_times[RUN_COUNT];
     size_type   checksum;
 
     BenchmarkResult() noexcept : benchmark_id(size_type(-1)), average_time(0.0), checksum(0) {
         for (size_type i = 0; i < RUN_COUNT; i++) {
-            elasped_time[i] = 0.0;
+            elasped_times[i] = 0.0;
         }
     }
 
@@ -480,7 +491,7 @@ struct BenchmarkResult {
           benchmark_id(benchmark_id),
           average_time(average_time), checksum(checksum) {
         for (size_type i = 0; i < RUN_COUNT; i++) {
-            elasped_time[i] = 0.0;
+            elasped_times[i] = 0.0;
         }
     }
 
@@ -490,7 +501,7 @@ struct BenchmarkResult {
           benchmark_id(src.benchmark_id),
           average_time(src.average_time), checksum(src.checksum) {
         for (size_type i = 0; i < RUN_COUNT; i++) {
-            elasped_time[i] = src.elasped_time[i];
+            elasped_times[i] = src.elasped_times[i];
         }
     }
 
@@ -501,13 +512,13 @@ struct BenchmarkResult {
           benchmark_id(src.benchmark_id),
           average_time(src.average_time), checksum(src.checksum) {
         for (size_type i = 0; i < RUN_COUNT; i++) {
-            elasped_time[i] = src.elasped_time[i];
+            elasped_times[i] = src.elasped_times[i];
         }
     }
 
-    void setElapsedTimes(double elasped_time[RUN_COUNT]) {
+    void setElapsedTimes(double elasped_times[RUN_COUNT]) {
         for (size_type i = 0; i < RUN_COUNT; i++) {
-            this->elasped_time[i] = elasped_time[i];
+            this->elasped_times[i] = elasped_times[i];
         }
     }
 
@@ -521,7 +532,7 @@ struct BenchmarkResult {
             std::swap(this->average_time,   other.average_time);
             std::swap(this->checksum,       other.checksum);
             for (size_type i = 0; i < RUN_COUNT; i++) {
-                std::swap(this->elasped_time[i], other.elasped_time[i]);
+                std::swap(this->elasped_times[i], other.elasped_times[i]);
             }
         }
     }
@@ -594,17 +605,23 @@ public:
         return const_cast<BenchmarkCategory *>(this)->getResultById((benchmark_id));
     }
 
-    void addResult(size_type benchmark_id,
-                   const std::string & name,
-                   const std::string & label,
-                   const std::string & hashmap_name,
-                   const std::string & blueprint_name,
-                   double average_time,
-                   double elasped_time[RUN_COUNT],
-                   size_type checksum) {
-        this->id_ = benchmark_id;
-        BenchmarkResult result(name, hashmap_name, blueprint_name, benchmark_id, average_time, checksum);
-        result.setElapsedTimes(elasped_time);
+    BenchmarkResult * addResult(const std::string & hashmap_name,
+                                const std::string & blueprint_name,
+                                size_type benchmark_id,
+                                double average_time,
+                                double elasped_times[RUN_COUNT],
+                                size_type checksum) {
+        BenchmarkResult * result = new BenchmarkResult("", hashmap_name, blueprint_name,
+                                                       benchmark_id, average_time, checksum);
+        result->setElapsedTimes(elasped_times);
+        auto info = append(benchmark_id, result);
+        if (info.first != npos) {
+            auto _result = get(info.first);
+            return _result;
+        } else {
+            delete result;
+            return nullptr;
+        }
     }
 };
 
@@ -719,19 +736,6 @@ public:
         } else {
             return nullptr;
         }
-    }
-
-    void addResult(size_type benchmark_id,
-                   const std::string & name,
-                   const std::string & hashmap_name,
-                   const std::string & blueprint_name,
-                   double average_time,
-                   double elasped_time[RUN_COUNT],
-                   size_type checksum) {
-        this->id_ = benchmark_id;
-        BenchmarkResult result(name, hashmap_name, blueprint_name, benchmark_id, average_time, checksum);
-        result.setElapsedTimes(elasped_time);
-        //categorys_.push_back(std::move(result));
     }
 };
 
@@ -858,8 +862,8 @@ public:
                         for (size_type rusult_id = 0; rusult_id < rusult_count; rusult_id++) {
                             const BenchmarkResult * result = category->getResult(category_id);
                             double ratio;
-                            if (result->elasped_time[0] != 0.0)
-                                ratio = result->average_time / result->elasped_time[0];
+                            if (result->elasped_times[0] != 0.0)
+                                ratio = result->average_time / result->elasped_times[0];
                             else
                                 ratio = 0.0;
                             if (result->name != "_blank") {
