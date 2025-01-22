@@ -137,7 +137,7 @@ void destroy_if(VectorT & vector)
 
 } // namespace detail
 
-template <typename Key, typename Value, bool kValueIsPointer = std::is_pointer<Value>::value>
+template <typename Key, typename Value, bool ValueIsPointer = std::is_pointer<Value>::value>
 class ArrayHashmap {
 public:
     using size_type = std::size_t;
@@ -174,7 +174,7 @@ public:
 
     size_type size() const { return array_.size(); }
     size_type max_id() const {
-        return static<size_type>(array_.size() - 1);
+        return static_cast<size_type>(array_.size() - 1);
     }
 
     element_type & get(size_type index) {
@@ -205,7 +205,7 @@ public:
         hashmap_.clear();
     }
 
-    size_type registerName(const key_type & name) {
+    size_type registerKey(const key_type & key) {
         auto iter = hashmap_.find(name);
         if (iter != hashmap_.end()) {
             ident_type id = iter->second;
@@ -333,7 +333,7 @@ public:
 
     size_type size() const { return array_.size(); }
     size_type max_id() const {
-        return static<size_type>(array_.size() - 1);
+        return static_cast<size_type>(array_.size() - 1);
     }
 
     element_type * get(size_type index) {
