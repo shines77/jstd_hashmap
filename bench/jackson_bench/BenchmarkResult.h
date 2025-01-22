@@ -948,7 +948,7 @@ public:
                         const BenchmarkCategory * category = hashmap->getCategory(category_id);
                         size_type rusult_count = category->size();
                         for (size_type rusult_id = 0; rusult_id < rusult_count; rusult_id++) {
-                            const BenchmarkResult * result = category->getResult(category_id);
+                            const BenchmarkResult * result = category->getResult(rusult_id);
                             printf(" %11s|", detail::formatMsTime(result->average_time).c_str());
                         }
                     }

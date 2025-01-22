@@ -37,7 +37,11 @@
 #define NUMS_INSERT_KEY     KEY_COUNT_MEASUREMENT_INTERVAL
 
 // The number of times to repeat the benchmarks.
+#ifndef _DEBUG
 #define RUN_COUNT   7
+#else
+#define RUN_COUNT   3
+#endif
 
 // Each data point in the outputted graphs is the average of the measurements for that point across all runs,
 // excluding the lowest and highest measurements.

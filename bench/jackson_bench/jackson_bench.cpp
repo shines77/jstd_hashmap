@@ -881,7 +881,7 @@ int main(int argc, char * argv[])
     run_blueprint_benchmarks<BLUEPRINT_16>();
 #endif
 
-    std::cout << "Outputting results" << std::endl << std::endl;
+    std::cout << "Outputting results." << std::endl << std::endl;
 
     gBenchmarkResults.printResults();
 
@@ -889,7 +889,7 @@ int main(int argc, char * argv[])
     //csv_out(time_str);
 
     std::cout << "Optimization preventer: " << do_not_optimize << std::endl;
-    std::cout << "Done" << std::endl;
+    std::cout << "Done." << std::endl << std::endl;
 
 #if defined(_MSC_VER) && defined(_DEBUG)
     jstd::Console::ReadKey();
