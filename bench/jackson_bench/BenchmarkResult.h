@@ -935,10 +935,15 @@ public:
                 printf(" BluePrint: %-25s     Data size: %-11s    Element size: %" PRIuPTR " bytes\n",
                        blueprint->name().c_str(), detail::format_integer<3>(dataSize).c_str(), elementSize);
                 printf("\n");
+#ifdef BENCHMARK_REPLACE_EXISTING
                 printf("-------------------------------------------------------------------------------------------------------------------------------------\n");
                 printf(" Hashmap                    | find.exist |  find.non  | insert.non |insert.exist|   replace  | erase.exist|  erase.non |  iteration |\n");
                 printf("----------------------------+------------+------------+------------+------------+------------+------------+------------+------------+\n");
-
+#else
+                printf("------------------------------------------------------------------------------------------------------------------------\n");
+                printf(" Hashmap                    | find.exist |  find.non  | insert.non |insert.exist| erase.exist|  erase.non |  iteration |\n");
+                printf("----------------------------+------------+------------+------------+------------+------------+------------+------------+\n");
+#endif
                 size_type hashmap_count = blueprint->size();
                 for (size_type hashmap_id = 0; hashmap_id < hashmap_count; hashmap_id++) {
                     const BenchmarkHashmap * hashmap = blueprint->getHashmap(hashmap_id);
@@ -955,7 +960,11 @@ public:
                     printf("\n");
                 }
 
+#ifdef BENCHMARK_REPLACE_EXISTING
                 printf("-------------------------------------------------------------------------------------------------------------------------------------\n");
+#else
+                printf("------------------------------------------------------------------------------------------------------------------------\n");
+#endif
             }
         }
 
