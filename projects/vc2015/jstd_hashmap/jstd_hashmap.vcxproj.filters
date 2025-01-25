@@ -289,9 +289,6 @@
     <ClInclude Include="..\..\..\src\jstd\memory\memory_barrier.h">
       <Filter>src\memory</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\src\jstd\hashmap\flat_map_cluster.hpp">
-      <Filter>src\hashmap</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\..\src\jstd\hashmap\flat_map_iterator.hpp">
       <Filter>src\hashmap</Filter>
     </ClInclude>
@@ -304,12 +301,6 @@
     <ClInclude Include="..\..\..\src\jstd\hashmap\flat_map_type_policy.hpp">
       <Filter>src\hashmap</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\src\jstd\hashmap\cluster_flat_map.hpp">
-      <Filter>src\hashmap</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\src\jstd\hashmap\cluster_flat_table.hpp">
-      <Filter>src\hashmap</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\..\src\jstd\hashmap\detail\hashmap_traits.h">
       <Filter>src\hashmap\detail</Filter>
     </ClInclude>
@@ -318,6 +309,15 @@
     </ClInclude>
     <ClInclude Include="..\..\..\src\jstd\traits\integer_sequence.h">
       <Filter>src\traits</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\hashmap\group16_flat_map.hpp">
+      <Filter>src\hashmap</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\hashmap\group16_flat_table.hpp">
+      <Filter>src\hashmap</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\hashmap\flat_map_group16.hpp">
+      <Filter>src\hashmap</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

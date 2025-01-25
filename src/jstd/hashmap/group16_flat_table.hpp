@@ -4,8 +4,8 @@
 
   Copyright (c) 2024 XiongHui Guo (gz_shines at msn.com)
 
-  https://github.com/shines77/cluster_flat_map
-  https://gitee.com/shines77/cluster_flat_map
+  https://github.com/shines77/group16_flat_map
+  https://gitee.com/shines77/group16_flat_map
 
 *************************************************************************************
 
@@ -46,8 +46,8 @@
 
 ************************************************************************************/
 
-#ifndef JSTD_HASHMAP_CLUSTER_FLAT_TABLE_HPP
-#define JSTD_HASHMAP_CLUSTER_FLAT_TABLE_HPP
+#ifndef JSTD_HASHMAP_GROUP16_FLAT_TABLE_HPP
+#define JSTD_HASHMAP_GROUP16_FLAT_TABLE_HPP
 
 #pragma once
 
@@ -74,7 +74,7 @@
 #include "jstd/utility/utility.h"
 
 #include "jstd/hashmap/flat_map_iterator.hpp"
-#include "jstd/hashmap/flat_map_cluster.hpp"
+#include "jstd/hashmap/flat_map_group16.hpp"
 
 #include "jstd/hashmap/detail/hashmap_traits.h"
 
@@ -83,16 +83,16 @@
 #include "jstd/hashmap/slot_policy_traits.h"
 #include "jstd/hashmap/flat_map_slot_storage.hpp"
 
-#define CLUSTER_USE_HASH_POLICY     0
-#define CLUSTER_USE_SEPARATE_SLOTS  1
-#define CLUSTER_USE_SWAP_TRAITS     1
+#define GROUP16_USE_HASH_POLICY     0
+#define GROUP16_USE_SEPARATE_SLOTS  1
+#define GROUP16_USE_SWAP_TRAITS     1
 
-#define CLUSTER_USE_GROUP_SCAN      1
-#define CLUSTER_USE_INDEX_SHIFT     1
-#define CLUSTER_OVERFLOW_USE_POS    0
+#define GROUP16_USE_GROUP_SCAN      1
+#define GROUP16_USE_INDEX_SHIFT     1
+#define GROUP16_OVERFLOW_USE_POS    0
 
 #ifdef _DEBUG
-#define CLUSTER_DISPLAY_DEBUG_INFO  0
+#define GROUP16_DISPLAY_DEBUG_INFO  0
 #endif
 
 namespace jstd {
@@ -104,9 +104,9 @@ namespace jstd {
  * index 0,  1,  3,  7,  12,  18, ...
  *
  */
-class cluster_quadratic_prober {
+class group16_quadratic_prober {
 public:
-    cluster_quadratic_prober(std::size_t index) : index_(index), step_(0) {}
+    group16_quadratic_prober(std::size_t index) : index_(index), step_(0) {}
 
     inline std::size_t get() const noexcept {
         return index_;
@@ -138,7 +138,7 @@ private:
 
 template <typename TypePolicy, typename Hash,
           typename KeyEqual, typename Allocator>
-class JSTD_DLL cluster_flat_table
+class JSTD_DLL group16_flat_table
 {
 public:
     typedef TypePolicy                          type_policy;
@@ -161,7 +161,7 @@ public:
     typedef typename std::allocator_traits<allocator_type>::pointer         pointer;
     typedef typename std::allocator_traits<allocator_type>::const_pointer   const_pointer;
 
-    using this_type = cluster_flat_table<TypePolicy, Hash, KeyEqual, Allocator>;
+    using this_type = group16_flat_table<TypePolicy, Hash, KeyEqual, Allocator>;
 
     static constexpr bool kUseIndexSalt = false;
     static constexpr bool kEnableExchange = true;
@@ -171,9 +171,9 @@ public:
 
     static constexpr size_type npos = static_cast<size_type>(-1);
 
-    using ctrl_type = cluster_meta_ctrl;
-    using group_type = flat_map_cluster16<cluster_meta_ctrl>;
-    using prober_type = cluster_quadratic_prober;
+    using ctrl_type = group16_meta_ctrl;
+    using group_type = flat_map_group16<group16_meta_ctrl>;
+    using prober_type = group16_quadratic_prober;
 
     static constexpr std::uint8_t kEmptySlot = ctrl_type::kEmptySlot;
     static constexpr std::uint8_t kEmptyHash = ctrl_type::kEmptyHash;
@@ -281,18 +281,18 @@ private:
     size_type       slot_size_;
     size_type       slot_mask_;         // slot_capacity = slot_mask + 1    
     size_type       slot_threshold_;
-    size_type       group_mask_;        // Use in class cluster_quadratic_prober
-#if CLUSTER_USE_INDEX_SHIFT
+    size_type       group_mask_;        // Use in class group16_quadratic_prober
+#if GROUP16_USE_INDEX_SHIFT
     size_type       index_shift_;
 #endif
 
     size_type       mlf_;
 
-#if CLUSTER_USE_SEPARATE_SLOTS
+#if GROUP16_USE_SEPARATE_SLOTS
     group_type *    groups_alloc_;
 #endif
 
-#if CLUSTER_USE_HASH_POLICY
+#if GROUP16_USE_HASH_POLICY
     hash_policy_t           hash_policy_;
 #endif
 
@@ -307,20 +307,20 @@ private:
     static constexpr bool kNeedInsert = true;
 
 public:
-    cluster_flat_table() : cluster_flat_table(kDefaultCapacity) {}
+    group16_flat_table() : group16_flat_table(kDefaultCapacity) {}
 
-    explicit cluster_flat_table(size_type capacity, hasher const & hash = hasher(),
+    explicit group16_flat_table(size_type capacity, hasher const & hash = hasher(),
                                 key_equal const & pred = key_equal(),
                                 allocator_type const & allocator = allocator_type())
         : groups_(default_empty_groups()), slots_(nullptr), slot_size_(0),
           slot_mask_(calc_slot_mask_round(capacity)),
           slot_threshold_(calc_slot_threshold_round(capacity)),
           group_mask_(calc_group_mask_round(capacity)),
-#if CLUSTER_USE_INDEX_SHIFT
+#if GROUP16_USE_INDEX_SHIFT
           index_shift_(calc_index_shift_round(capacity)),
 #endif
           mlf_(kDefaultMaxLoadFactor)
-#if CLUSTER_USE_SEPARATE_SLOTS
+#if GROUP16_USE_SEPARATE_SLOTS
           , groups_alloc_(nullptr)
 #endif
     {
@@ -329,19 +329,19 @@ public:
         }
     }
 
-    cluster_flat_table(cluster_flat_table const & other) {
+    group16_flat_table(group16_flat_table const & other) {
     }
 
-    cluster_flat_table(cluster_flat_table const & other, allocator_type const & allocator) {
+    group16_flat_table(group16_flat_table const & other, allocator_type const & allocator) {
     }
 
-    cluster_flat_table(cluster_flat_table && other) {
+    group16_flat_table(group16_flat_table && other) {
     }
 
-    cluster_flat_table(cluster_flat_table && other, allocator_type const & allocator) {
+    group16_flat_table(group16_flat_table && other, allocator_type const & allocator) {
     }
 
-    ~cluster_flat_table() {
+    ~group16_flat_table() {
         this->destroy();
     }
 
@@ -384,7 +384,7 @@ public:
         return this->key_equal_;
     }
 
-#if CLUSTER_USE_HASH_POLICY
+#if GROUP16_USE_HASH_POLICY
     hash_policy_t & hash_policy_ref() noexcept {
         return this->hash_policy_;
     }
@@ -419,7 +419,7 @@ public:
     }
 
     static const char * name() noexcept {
-        return "jstd::cluster_flat_map";
+        return "jstd::group16_flat_map";
     }
 
     ///
@@ -528,7 +528,7 @@ public:
         return const_cast<const group_type *>(this->groups_);
     }
 
-#if CLUSTER_USE_SEPARATE_SLOTS
+#if GROUP16_USE_SEPARATE_SLOTS
     group_type * groups_alloc() { return this->groups_alloc_; }
     const group_type * groups_alloc() const {
         return const_cast<const group_type *>(this->groups_alloc_);
@@ -1205,7 +1205,7 @@ private:
     JSTD_FORCED_INLINE
     std::size_t hash_for(const key_type & key) const
         noexcept(noexcept(this->hasher_(key))) {
-#if CLUSTER_USE_HASH_POLICY
+#if GROUP16_USE_HASH_POLICY
         std::size_t key_hash = static_cast<std::size_t>(this->hash_policy_.get_hash_code(key));
 #else
   #if defined(_MSC_VER) && !defined(__clang__)
@@ -1236,7 +1236,7 @@ private:
     //
     JSTD_FORCED_INLINE
     std::size_t ctrl_hasher(std::size_t key_hash) const noexcept {
-#if CLUSTER_USE_HASH_POLICY
+#if GROUP16_USE_HASH_POLICY
         return key_hash;
 #elif 0
         return (size_type)hashes::mum_hash(key_hash);
@@ -1247,7 +1247,7 @@ private:
 
     JSTD_FORCED_INLINE
     size_type index_for_hash(std::size_t key_hash) const noexcept {
-#if CLUSTER_USE_HASH_POLICY
+#if GROUP16_USE_HASH_POLICY
         if (kUseIndexSalt) {
             key_hash ^= this->index_salt();
         }
@@ -1265,7 +1265,7 @@ private:
 
     JSTD_FORCED_INLINE
     std::uint8_t ctrl_for_hash(std::size_t key_hash) const noexcept {
-#if CLUSTER_USE_INDEX_SHIFT
+#if GROUP16_USE_INDEX_SHIFT
         std::uint8_t ctrl_hash8 = ctrl_type::hash_bits(static_cast<std::uint8_t>(key_hash));
 #else
         std::size_t ctrl_hash = this->ctrl_hasher(key_hash);
@@ -1356,7 +1356,7 @@ private:
     void destroy_groups(size_type group_capacity) noexcept {
         if (this->groups_ != this_type::default_empty_groups()) {
             size_type total_group_alloc_count = this->TotalGroupAllocCount<kGroupAlignment>(group_capacity);
-#if CLUSTER_USE_SEPARATE_SLOTS
+#if GROUP16_USE_SEPARATE_SLOTS
             GroupAllocTraits::deallocate(this->group_allocator_, this->groups_alloc_, total_group_alloc_count);
             this->groups_alloc_ = this_type::default_empty_groups();
 #endif
@@ -1369,7 +1369,7 @@ private:
         this->clear_slots();
 
         if (this->slots_ != nullptr) {
-#if CLUSTER_USE_SEPARATE_SLOTS
+#if GROUP16_USE_SEPARATE_SLOTS
             SlotAllocTraits::deallocate(this->slot_allocator_, this->slots_, this->slot_capacity());
 #else
             size_type total_slot_alloc_size = this->TotalSlotAllocCount<kGroupAlignment>(
@@ -1427,7 +1427,7 @@ private:
     void clear_slots() {
         if (!is_slot_trivial_destructor && (this->slots_ != nullptr)) {
             if (!kIsIndirectKV) {
-#if CLUSTER_USE_GROUP_SCAN
+#if GROUP16_USE_GROUP_SCAN
                 group_type * group = this->groups();
                 group_type * last_group = this->last_group();
                 slot_type * slot_base = this->slots();
@@ -1487,9 +1487,9 @@ private:
     JSTD_FORCED_INLINE
     group_type * AlignedGroups(const group_type * groups_alloc) {
         static_assert((GroupAlignment > 0),
-                      "jstd::cluster_flat_map::AlignedGroups<N>(): GroupAlignment must bigger than 0.");
+                      "jstd::group16_flat_map::AlignedGroups<N>(): GroupAlignment must bigger than 0.");
         static_assert(((GroupAlignment & (GroupAlignment - 1)) == 0),
-                      "jstd::cluster_flat_map::AlignedGroups<N>(): GroupAlignment must be power of 2.");
+                      "jstd::group16_flat_map::AlignedGroups<N>(): GroupAlignment must be power of 2.");
         size_type groups_start = reinterpret_cast<size_type>(groups_alloc);
         size_type groups_first = (groups_start + GroupAlignment - 1) & (~(GroupAlignment - 1));
         size_type groups_padding = static_cast<size_type>(groups_first - groups_start);
@@ -1507,9 +1507,9 @@ private:
     JSTD_FORCED_INLINE
     group_type * AlignedSlotsAndGroups(const slot_type * slots, size_type slot_capacity) {
         static_assert((GroupAlignment > 0),
-                      "jstd::cluster_flat_map::AlignedSlotsAndGroups<N>(): GroupAlignment must bigger than 0.");
+                      "jstd::group16_flat_map::AlignedSlotsAndGroups<N>(): GroupAlignment must bigger than 0.");
         static_assert(((GroupAlignment & (GroupAlignment - 1)) == 0),
-                      "jstd::cluster_flat_map::AlignedSlotsAndGroups<N>(): GroupAlignment must be power of 2.");
+                      "jstd::group16_flat_map::AlignedSlotsAndGroups<N>(): GroupAlignment must be power of 2.");
         const slot_type * last_slots = slots + slot_capacity;
         size_type last_slot = reinterpret_cast<size_type>(last_slots);
         size_type groups_first = (last_slot + GroupAlignment - 1) & (~(GroupAlignment - 1));
@@ -1557,14 +1557,14 @@ private:
             this->slot_threshold_ = 0;
             this->group_mask_ = size_type(-1);
             this->index_shift_ = kWordLength - 1;
-#if CLUSTER_USE_SEPARATE_SLOTS
+#if GROUP16_USE_SEPARATE_SLOTS
             this->groups_alloc_ = this_type::default_empty_groups();
 #endif
         } else {
             this->destroy_data();
         }
 
-#if CLUSTER_USE_HASH_POLICY
+#if GROUP16_USE_HASH_POLICY
         this->hash_policy_.reset();
 #endif
     }
@@ -1587,7 +1587,7 @@ private:
             new_capacity = init_capacity;
         }
 
-#if CLUSTER_USE_HASH_POLICY
+#if GROUP16_USE_HASH_POLICY
         auto hash_policy_setting = this->hash_policy_.calc_next_capacity(new_capacity);
         this->hash_policy_.commit(hash_policy_setting);
 #endif
@@ -1598,7 +1598,7 @@ private:
         size_type new_max_slot_size = new_capacity * this->mlf_ / kLoadFactorAmplify;
         size_type new_slot_capacity = (!kIsIndirectKV) ? new_capacity : new_max_slot_size;
 
-#if CLUSTER_USE_SEPARATE_SLOTS
+#if GROUP16_USE_SEPARATE_SLOTS
         size_type total_group_alloc_count = this->TotalGroupAllocCount<kGroupAlignment>(new_group_capacity);
         group_type * new_groups_alloc = GroupAllocTraits::allocate(this->group_allocator_, total_group_alloc_count);
         group_type * new_groups = this->AlignedGroups<kGroupAlignment>(new_groups_alloc);
@@ -1621,7 +1621,7 @@ private:
         this->slot_threshold_ = this->calc_slot_threshold(new_capacity);
         this->group_mask_ = this->calc_group_mask(new_capacity);
         this->index_shift_ = this->calc_index_shift(new_capacity);
-#if CLUSTER_USE_SEPARATE_SLOTS
+#if GROUP16_USE_SEPARATE_SLOTS
         this->groups_alloc_ = new_groups_alloc;
 #endif
     }
@@ -1672,7 +1672,7 @@ private:
 
             assert(this->slot_size() == old_slot_size);
 
-#if CLUSTER_USE_SEPARATE_SLOTS
+#if GROUP16_USE_SEPARATE_SLOTS
             if (old_groups != this_type::default_empty_groups()) {
                 assert(old_groups_alloc != nullptr);
                 size_type total_group_alloc_count = this->TotalGroupAllocCount<kGroupAlignment>(old_group_capacity);
@@ -1772,7 +1772,7 @@ private:
             }
 
             // If it's not overflow, means it hasn't been found.
-#if CLUSTER_OVERFLOW_USE_POS
+#if GROUP16_OVERFLOW_USE_POS
             if (likely(group->is_not_overflow(group_pos))) {
                 return this->slot_capacity();
             }
@@ -1782,7 +1782,7 @@ private:
             }
 #endif
 
-#if CLUSTER_DISPLAY_DEBUG_INFO
+#if GROUP16_DISPLAY_DEBUG_INFO
             if (unlikely(prober.steps() > kSkipGroupsLimit)) {
                 std::cout << "find_index(): key = " << key <<
                              ", skip_groups = " << prober.steps() <<
@@ -1827,7 +1827,7 @@ private:
                 return slot_index;
             } else {
                 // If it's not overflow, set the overflow bit.
-#if CLUSTER_OVERFLOW_USE_POS
+#if GROUP16_OVERFLOW_USE_POS
                 //if (likely(group->is_not_overflow(group_pos))) {
                     group->set_overflow(group_pos);
                 //}
@@ -1837,7 +1837,7 @@ private:
                 //}
 #endif
             }
-#if CLUSTER_DISPLAY_DEBUG_INFO
+#if GROUP16_DISPLAY_DEBUG_INFO
             if (unlikely(prober.steps() > kSkipGroupsLimit)) {
                 std::cout << "find_first_empty_to_insert(): key = " << key <<
                              ", skip_groups = " << prober.steps() <<
@@ -2176,7 +2176,7 @@ private:
     JSTD_FORCED_INLINE
     bool ctrl_maybe_caused_overflow(size_type slot_index) const noexcept {
         const group_type * group = this->groups() + slot_index / kGroupWidth;
-#if CLUSTER_OVERFLOW_USE_POS
+#if GROUP16_OVERFLOW_USE_POS
         size_type group_pos = slot_index % kGroupWidth;
         return group->is_overflow(group_pos);
 #else
@@ -2212,4 +2212,4 @@ private:
 
 } // namespace jstd
 
-#endif // JSTD_HASHMAP_CLUSTER_FLAT_TABLE_HPP
+#endif // JSTD_HASHMAP_GROUP16_FLAT_TABLE_HPP

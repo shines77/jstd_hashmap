@@ -162,7 +162,7 @@
     <ClInclude Include="..\..\..\bench\jackson_bench\blueprints\cstring_uint64_fnv1a\blueprint.h" />
     <ClInclude Include="..\..\..\bench\jackson_bench\blueprints\uint32_uint32_murmur\blueprint.h" />
     <ClInclude Include="..\..\..\bench\jackson_bench\blueprints\uint64_struct448_murmur\blueprint.h" />
-    <ClInclude Include="..\..\..\bench\jackson_bench\hashmaps\jstd_cluster_flat_map\hashmap_wrapper.h" />
+    <ClInclude Include="..\..\..\bench\jackson_bench\hashmaps\jstd_group16_flat_map\hashmap_wrapper.h" />
     <ClInclude Include="..\..\..\bench\jackson_bench\hashmaps\jstd_robin_hash_map\hashmap_wrapper.h" />
     <ClInclude Include="..\..\..\bench\jackson_bench\hashmaps\std_unordered_map\hashmap_wrapper.h" />
   </ItemGroup>

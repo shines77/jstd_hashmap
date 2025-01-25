@@ -4,8 +4,8 @@
 
   Copyright (c) 2024-2025 XiongHui Guo (gz_shines at msn.com)
 
-  https://github.com/shines77/cluster_flat_map
-  https://gitee.com/shines77/cluster_flat_map
+  https://github.com/shines77/group16_flat_map
+  https://gitee.com/shines77/group16_flat_map
 
 *************************************************************************************
 
@@ -46,8 +46,8 @@
 
 ************************************************************************************/
 
-#ifndef JSTD_HASHMAP_CLUSTER_FLAT_MAP_HPP
-#define JSTD_HASHMAP_CLUSTER_FLAT_MAP_HPP
+#ifndef JSTD_HASHMAP_GROUP16_FLAT_MAP_HPP
+#define JSTD_HASHMAP_GROUP16_FLAT_MAP_HPP
 
 #pragma once
 
@@ -64,20 +64,20 @@
 
 #include "jstd/hashmap/detail/hashmap_traits.h"
 #include "jstd/hashmap/flat_map_type_policy.hpp"
-#include "jstd/hashmap/cluster_flat_table.hpp"
+#include "jstd/hashmap/group16_flat_table.hpp"
 
 namespace jstd {
 
 template <typename TypePolicy, typename Hash,
           typename KeyEqual, typename Allocator>
-class cluster_flat_table;
+class group16_flat_table;
 
 template <typename Key, typename Value,
           typename Hash = std::hash< typename std::remove_const<Key>::type >,
           typename KeyEqual = std::equal_to< typename std::remove_const<Key>::type >,
           typename Allocator = std::allocator< std::pair<const typename std::remove_const<Key>::type,
                                                          typename std::remove_const<Value>::type> > >
-class JSTD_DLL cluster_flat_map
+class JSTD_DLL group16_flat_map
 {
 public:
     typedef flat_map_type_policy<Key, Value>    type_policy;
@@ -99,7 +99,7 @@ public:
     typedef typename std::allocator_traits<allocator_type>::pointer         pointer;
     typedef typename std::allocator_traits<allocator_type>::const_pointer   const_pointer;
 
-    typedef cluster_flat_table<type_policy, Hash, KeyEqual,
+    typedef group16_flat_table<type_policy, Hash, KeyEqual,
         typename std::allocator_traits<Allocator>::template rebind_alloc<value_type>>
                                                 table_type;
 
@@ -116,101 +116,101 @@ public:
     ///
     /// Constructors
     ///
-    cluster_flat_map() : cluster_flat_map(0) {}
+    group16_flat_map() : group16_flat_map(0) {}
 
-    explicit cluster_flat_map(size_type capacity, hasher const & hash = hasher(),
+    explicit group16_flat_map(size_type capacity, hasher const & hash = hasher(),
                               key_equal const & pred = key_equal(),
                               allocator_type const & allocator = allocator_type())
         : table_(capacity, hash, pred, allocator) {
     }
 
-    cluster_flat_map(size_type capacity, allocator_type const & allocator)
-        : cluster_flat_map(capacity, hasher(), key_equal(), allocator) {
+    group16_flat_map(size_type capacity, allocator_type const & allocator)
+        : group16_flat_map(capacity, hasher(), key_equal(), allocator) {
     }
 
-    cluster_flat_map(size_type capacity, hasher const & hash, allocator_type const & allocator)
-        : cluster_flat_map(capacity, hash, key_equal(), allocator) {
+    group16_flat_map(size_type capacity, hasher const & hash, allocator_type const & allocator)
+        : group16_flat_map(capacity, hash, key_equal(), allocator) {
     }
 
     template <typename InputIterator>
-    cluster_flat_map(InputIterator first, InputIterator last, allocator_type const & allocator)
-        : cluster_flat_map(first, last, size_type(0), hasher(), key_equal(), allocator) {
+    group16_flat_map(InputIterator first, InputIterator last, allocator_type const & allocator)
+        : group16_flat_map(first, last, size_type(0), hasher(), key_equal(), allocator) {
     }
 
-    explicit cluster_flat_map(allocator_type const & allocator)
-        : cluster_flat_map(0, allocator) {
+    explicit group16_flat_map(allocator_type const & allocator)
+        : group16_flat_map(0, allocator) {
     }
 
     template <typename Iterator>
-    cluster_flat_map(Iterator first, Iterator last, size_type capacity = 0,
+    group16_flat_map(Iterator first, Iterator last, size_type capacity = 0,
                      hasher const & hash = hasher(), key_equal const & pred = key_equal(),
                      allocator_type const & allocator = allocator_type())
-        : cluster_flat_map(capacity, hash, pred, allocator) {
+        : group16_flat_map(capacity, hash, pred, allocator) {
         this->insert(first, last);
     }
 
     template <typename Iterator>
-    cluster_flat_map(Iterator first, Iterator last, size_type capacity, allocator_type const & allocator)
-        : cluster_flat_map(first, last, size, hasher(), key_equal(), allocator) {
+    group16_flat_map(Iterator first, Iterator last, size_type capacity, allocator_type const & allocator)
+        : group16_flat_map(first, last, size, hasher(), key_equal(), allocator) {
     }
 
     template <typename Iterator>
-    cluster_flat_map(Iterator first, Iterator last, size_type capacity,
+    group16_flat_map(Iterator first, Iterator last, size_type capacity,
                      hasher const & hash, allocator_type const & allocator)
-        : cluster_flat_map(first, last, size, hash, key_equal(), allocator) {
+        : group16_flat_map(first, last, size, hash, key_equal(), allocator) {
     }
 
-    cluster_flat_map(cluster_flat_map const & other) : table_(other.table_) {
+    group16_flat_map(group16_flat_map const & other) : table_(other.table_) {
     }
 
-    cluster_flat_map(cluster_flat_map const & other, allocator_type const & allocator)
+    group16_flat_map(group16_flat_map const & other, allocator_type const & allocator)
         : table_(other.table_, allocator) {
     }
 
-    cluster_flat_map(cluster_flat_map && other)
+    group16_flat_map(group16_flat_map && other)
         noexcept(std::is_nothrow_move_constructible<table_type>::value)
         : table_(std::move(other.table_)) {
     }
 
-    cluster_flat_map(cluster_flat_map && other, allocator_type const & allocator)
+    group16_flat_map(group16_flat_map && other, allocator_type const & allocator)
         : table_(std::move(other.table_), allocator) {
     }
 
-    cluster_flat_map(std::initializer_list<value_type> ilist,
+    group16_flat_map(std::initializer_list<value_type> ilist,
                      size_type capacity = 0, hasher const & hash = hasher(),
                      key_equal const & pred = key_equal(),
                      allocator_type const & allocator = allocator_type())
-        : cluster_flat_map(ilist.begin(), ilist.end(), size, hash, pred, allocator) {
+        : group16_flat_map(ilist.begin(), ilist.end(), size, hash, pred, allocator) {
     }
 
-    cluster_flat_map(std::initializer_list<value_type> ilist, allocator_type const & allocator)
-        : cluster_flat_map(ilist, size_type(0), hasher(), key_equal(), allocator) {
+    group16_flat_map(std::initializer_list<value_type> ilist, allocator_type const & allocator)
+        : group16_flat_map(ilist, size_type(0), hasher(), key_equal(), allocator) {
     }
 
-    cluster_flat_map(std::initializer_list<value_type> init, size_type capacity,
+    group16_flat_map(std::initializer_list<value_type> init, size_type capacity,
                      allocator_type const & allocator)
-        : cluster_flat_map(init, size, hasher(), key_equal(), allocator) {
+        : group16_flat_map(init, size, hasher(), key_equal(), allocator) {
     }
 
-    cluster_flat_map(std::initializer_list<value_type> init, size_type capacity,
+    group16_flat_map(std::initializer_list<value_type> init, size_type capacity,
                      hasher const & hash, allocator_type const & allocator)
-        : cluster_flat_map(init, size, hash, key_equal(), allocator) {
+        : group16_flat_map(init, size, hash, key_equal(), allocator) {
     }
 
-    ~cluster_flat_map() = default;
+    ~group16_flat_map() = default;
 
-    cluster_flat_map & operator = (cluster_flat_map const & other) {
+    group16_flat_map & operator = (group16_flat_map const & other) {
         table_ = other.table_;
         return *this;
     }
 
-    cluster_flat_map & operator = (cluster_flat_map && other) noexcept(
+    group16_flat_map & operator = (group16_flat_map && other) noexcept(
         noexcept(std::declval<table_type &>() = std::declval<table_type &&>())) {
         table_ = std::move(other.table_);
         return *this;
     }
 
-    cluster_flat_map & operator = (std::initializer_list<value_type> il) {
+    group16_flat_map & operator = (std::initializer_list<value_type> il) {
         this->clear();
         this->insert(il.begin(), il.end());
         return *this;
@@ -643,4 +643,4 @@ public:
 
 } // namespace jstd
 
-#endif // JSTD_HASHMAP_CLUSTER_FLAT_MAP_HPP
+#endif // JSTD_HASHMAP_GROUP16_FLAT_MAP_HPP

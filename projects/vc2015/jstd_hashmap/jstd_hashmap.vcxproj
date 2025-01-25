@@ -45,12 +45,12 @@
     <ClInclude Include="..\..\..\src\jstd\hasher\hash_crc32.h" />
     <ClInclude Include="..\..\..\src\jstd\hasher\hash_helper.h" />
     <ClInclude Include="..\..\..\src\jstd\hasher\sha1.h" />
-    <ClInclude Include="..\..\..\src\jstd\hashmap\cluster_flat_map.hpp" />
-    <ClInclude Include="..\..\..\src\jstd\hashmap\cluster_flat_table.hpp" />
+    <ClInclude Include="..\..\..\src\jstd\hashmap\group16_flat_map.hpp" />
+    <ClInclude Include="..\..\..\src\jstd\hashmap\group16_flat_table.hpp" />
     <ClInclude Include="..\..\..\src\jstd\hashmap\detail\hashmap_traits.h" />
     <ClInclude Include="..\..\..\src\jstd\hashmap\flat16_hash_map.h" />
     <ClInclude Include="..\..\..\src\jstd\hashmap\flat32_hash_map.h" />
-    <ClInclude Include="..\..\..\src\jstd\hashmap\flat_map_cluster.hpp" />
+    <ClInclude Include="..\..\..\src\jstd\hashmap\flat_map_group16.hpp" />
     <ClInclude Include="..\..\..\src\jstd\hashmap\flat_map_iterator.hpp" />
     <ClInclude Include="..\..\..\src\jstd\hashmap\flat_map_slot_policy.hpp" />
     <ClInclude Include="..\..\..\src\jstd\hashmap\flat_map_slot_storage.hpp" />

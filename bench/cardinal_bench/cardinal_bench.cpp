@@ -84,11 +84,11 @@
 #ifndef _DEBUG
 #define USE_STD_UNORDERED_MAP           0
 #define USE_JSTD_ROBIN_HASH_MAP         1
-#define USE_JSTD_CLUSTER_FALT_MAP       1
+#define USE_JSTD_GROUP16_FALT_MAP       1
 #else
 #define USE_STD_UNORDERED_MAP           0
 #define USE_JSTD_ROBIN_HASH_MAP         1
-#define USE_JSTD_CLUSTER_FALT_MAP       1
+#define USE_JSTD_GROUP16_FALT_MAP       1
 #endif // _DEBUG
 
 #ifdef __SSE4_2__
@@ -119,8 +119,8 @@
 #if USE_JSTD_ROBIN_HASH_MAP
 #include <jstd/hashmap/robin_hash_map.h>
 #endif
-#if USE_JSTD_CLUSTER_FALT_MAP
-#include <jstd/hashmap/cluster_flat_map.hpp>
+#if USE_JSTD_GROUP16_FALT_MAP
+#include <jstd/hashmap/group16_flat_map.hpp>
 #endif
 #include <jstd/hashmap/hashmap_analyzer.h>
 #include <jstd/hasher/hashes.h>
@@ -453,9 +453,9 @@ void benchmark_insert_random_impl()
     run_insert_random<jstd::robin_hash_map<Key, Value>>
         ("jstd::robin_hash_map", keys, Cardinal);
 #endif
-#if USE_JSTD_CLUSTER_FALT_MAP
-    run_insert_random<jstd::cluster_flat_map<Key, Value>>
-        ("jstd::cluster_flat_map", keys, Cardinal);
+#if USE_JSTD_GROUP16_FALT_MAP
+    run_insert_random<jstd::group16_flat_map<Key, Value>>
+        ("jstd::group16_flat_map", keys, Cardinal);
 #endif
 }
 
@@ -510,7 +510,7 @@ void benchmark_MumHash_insert_random_impl()
     name1 = format_hashmap_name<Key, Value>("jstd::flat16_hash_map<%s, %s>");
     name2 = format_hashmap_name<Key, Value>("jstd::robin16_hash_map<%s, %s>");
     name3 = format_hashmap_name<Key, Value>("jstd::robin_hash_map<%s, %s>");
-    name4 = format_hashmap_name<Key, Value>("jstd::cluster_flat_map<%s, %s>");
+    name4 = format_hashmap_name<Key, Value>("jstd::group16_flat_map<%s, %s>");
 
     std::vector<Key> keys;
     generate_random_keys<Key, Cardinal>(keys, DataSize);
@@ -523,9 +523,9 @@ void benchmark_MumHash_insert_random_impl()
     run_insert_random<jstd::robin_hash_map<Key, Value, test::MumHash<Key>>>
         ("jstd::robin_hash_map", keys, Cardinal);
 #endif
-#if USE_JSTD_CLUSTER_FALT_MAP
-    run_insert_random<jstd::cluster_flat_map<Key, Value, test::MumHash<Key>>>
-        ("jstd::cluster_flat_map", keys, Cardinal);
+#if USE_JSTD_GROUP16_FALT_MAP
+    run_insert_random<jstd::group16_flat_map<Key, Value, test::MumHash<Key>>>
+        ("jstd::group16_flat_map", keys, Cardinal);
 #endif
 }
 
@@ -703,7 +703,7 @@ void test_hashmap()
     printf("jstd::is_layout_compatible_kv<Key, Value>::value = %d\n", (int)is_layout_compatible);
     printf("\n");
 
-    jstd::cluster_flat_map<std::string, std::string> string_hash_map;
+    jstd::group16_flat_map<std::string, std::string> string_hash_map;
 
     string_hash_map.insert(std::make_pair(std::string("abc"), std::string("123")));
 

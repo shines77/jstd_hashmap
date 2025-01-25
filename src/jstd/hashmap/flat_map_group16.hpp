@@ -4,8 +4,8 @@
 
   Copyright (c) 2024 XiongHui Guo (gz_shines at msn.com)
 
-  https://github.com/shines77/cluster_flat_map
-  https://gitee.com/shines77/cluster_flat_map
+  https://github.com/shines77/group16_flat_map
+  https://gitee.com/shines77/group16_flat_map
 
 *************************************************************************************
 
@@ -46,8 +46,8 @@
 
 ************************************************************************************/
 
-#ifndef JSTD_HASHMAP_FLAT_MAP_CLUSTER_HPP
-#define JSTD_HASHMAP_FLAT_MAP_CLUSTER_HPP
+#ifndef JSTD_HASHMAP_FLAT_MAP_GROUP16_HPP
+#define JSTD_HASHMAP_FLAT_MAP_GROUP16_HPP
 
 #pragma once
 
@@ -60,7 +60,7 @@
 
 namespace jstd {
 
-class JSTD_DLL cluster_meta_ctrl
+class JSTD_DLL group16_meta_ctrl
 {
 public:
     typedef std::uint8_t value_type;
@@ -75,8 +75,8 @@ public:
     static_assert(((kHashMask & kOverflowMask) == 0), "kHashMask & kOverflowMask must be 0");
     static_assert(((kHashMask | kOverflowMask) == 0b11111111), "kHashMask & kOverflowMask must be 0b11111111");
 
-    cluster_meta_ctrl(value_type value = kEmptySlot) : value(value) {}
-    ~cluster_meta_ctrl() {}
+    group16_meta_ctrl(value_type value = kEmptySlot) : value(value) {}
+    ~group16_meta_ctrl() {}
 
     static inline int repeated_hash8(std::uint8_t hash) {
         static constexpr std::uint32_t dword_hashs[] = {
@@ -281,7 +281,7 @@ private:
 };
 
 template <typename T>
-class JSTD_DLL flat_map_cluster16
+class JSTD_DLL flat_map_group16
 {
 public:
     typedef T                       ctrl_type;
@@ -464,4 +464,4 @@ private:
 
 } // namespace jstd
 
-#endif // JSTD_HASHMAP_FLAT_MAP_CLUSTER_HPP
+#endif // JSTD_HASHMAP_FLAT_MAP_GROUP16_HPP

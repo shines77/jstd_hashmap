@@ -81,7 +81,7 @@
 #define USE_JSTD_FLAT16_HASH_MAP        0
 #define USE_JSTD_ROBIN16_HASH_MAP       0
 #define USE_JSTD_ROBIN_HASH_MAP         1
-#define USE_JSTD_CLUSTER_FLAT_MAP       1
+#define USE_JSTD_GROUP16_FALT_MAP       1
 #define USE_SKA_FLAT_HASH_MAP           0
 #define USE_SKA_BYTELL_HASH_MAP         0
 #define USE_ABSL_FLAT_HASH_MAP          0
@@ -121,8 +121,8 @@
 #if USE_JSTD_ROBIN_HASH_MAP
 #include <jstd/hashmap/robin_hash_map.h>
 #endif
-#if USE_JSTD_CLUSTER_FLAT_MAP
-#include <jstd/hashmap/cluster_flat_map.hpp>
+#if USE_JSTD_GROUP16_FALT_MAP
+#include <jstd/hashmap/group16_flat_map.hpp>
 #endif
 #include <jstd/hashmap/hashmap_analyzer.h>
 #include <jstd/hasher/hashes.h>
@@ -1616,11 +1616,11 @@ void jstd_robin_hash_map_benchmark()
 #endif // USE_JSTD_ROBIN_HASH_MAP
 }
 
-void jstd_cluster_flat_map_benchmark()
+void jstd_group16_flat_map_benchmark()
 {
-#if USE_JSTD_CLUSTER_FLAT_MAP
+#if USE_JSTD_GROUP16_FALT_MAP
     jtest::BenchmarkResult test_result;
-    test_result.setName("std::unordered_map", "jstd::cluster_flat_map");
+    test_result.setName("std::unordered_map", "jstd::group16_flat_map");
 
     jtest::StopWatch sw;
     sw.start();
@@ -1657,7 +1657,7 @@ void jstd_cluster_flat_map_benchmark()
         copy_vector_and_reverse_item(reverse_data_ii, test_data_ii);
 
         std::unordered_map<int, int>        std_map_ii;
-        jstd::cluster_flat_map<int, int>    jstd_dict_ii;
+        jstd::group16_flat_map<int, int>    jstd_dict_ii;
 
         printf(" hash_map<int, int>\n\n");
 
@@ -1682,7 +1682,7 @@ void jstd_cluster_flat_map_benchmark()
         copy_vector_and_reverse_item(reverse_data_uu, test_data_uu);
 
         std::unordered_map<std::size_t, std::size_t>        std_map_uu;
-        jstd::cluster_flat_map<std::size_t, std::size_t>    jstd_dict_uu;
+        jstd::group16_flat_map<std::size_t, std::size_t>    jstd_dict_uu;
 
         printf(" hash_map<std::size_t, std::size_t>\n\n");
 
@@ -1730,7 +1730,7 @@ void jstd_cluster_flat_map_benchmark()
             }
 
             std::unordered_map<jstd::string_view, jstd::string_view>        std_map_svsv;
-            jstd::cluster_flat_map<jstd::string_view, jstd::string_view>    jstd_dict_svsv;
+            jstd::group16_flat_map<jstd::string_view, jstd::string_view>    jstd_dict_svsv;
 
             printf(" hash_map<jstd::string_view, jstd::string_view>\n\n");
 
@@ -1746,7 +1746,7 @@ void jstd_cluster_flat_map_benchmark()
 
     printf("\n");
     test_result.printResult(dict_filename, sw.getElapsedMillisec());
-#endif // USE_JSTD_CLUSTER_FLAT_MAP
+#endif // USE_JSTD_GROUP16_FALT_MAP
 }
 
 bool read_dict_words(const std::string & filename)
@@ -1845,10 +1845,10 @@ int main(int argc, char * argv[])
     }
 #endif
 
-#if USE_JSTD_CLUSTER_FLAT_MAP
+#if USE_JSTD_GROUP16_FALT_MAP
     if (1)
     {
-        jstd_cluster_flat_map_benchmark();
+        jstd_group16_flat_map_benchmark();
         jstd::Console::ReadKey();
     }
 #endif

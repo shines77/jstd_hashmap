@@ -26,7 +26,7 @@
     <Filter Include="src\hashmaps\jstd_robin_hash_map">
       <UniqueIdentifier>{608e22ff-fd63-49c5-9ba7-a137572d2f3b}</UniqueIdentifier>
     </Filter>
-    <Filter Include="src\hashmaps\jstd_cluster_flat_map">
+    <Filter Include="src\hashmaps\jstd_group16_flat_map">
       <UniqueIdentifier>{7004dcc9-9895-4447-8dea-a995bc9d5827}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
@@ -48,9 +48,6 @@
     <ClInclude Include="..\..\..\bench\jackson_bench\blueprints\uint64_struct448_murmur\blueprint.h">
       <Filter>src\blueprints\uint64_struct448_murmur</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\bench\jackson_bench\hashmaps\jstd_cluster_flat_map\hashmap_wrapper.h">
-      <Filter>src\hashmaps\jstd_cluster_flat_map</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\..\bench\jackson_bench\hashmaps\jstd_robin_hash_map\hashmap_wrapper.h">
       <Filter>src\hashmaps\jstd_robin_hash_map</Filter>
     </ClInclude>
@@ -59,6 +56,9 @@
     </ClInclude>
     <ClInclude Include="..\..\..\bench\jackson_bench\BenchmarkResult.h">
       <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\bench\jackson_bench\hashmaps\jstd_group16_flat_map\hashmap_wrapper.h">
+      <Filter>src\hashmaps\jstd_group16_flat_map</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
