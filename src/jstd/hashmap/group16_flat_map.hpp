@@ -85,10 +85,11 @@ public:
     typedef std::intptr_t                       ssize_type;
     typedef std::ptrdiff_t                      difference_type;
 
-    typedef Key                                 key_type;
-    typedef Value                               mapped_type;
+    typedef typename type_policy::key_type      key_type;
+    typedef typename type_policy::mapped_type   mapped_type;
     typedef typename type_policy::value_type    value_type;
     typedef typename type_policy::init_type     init_type;
+    typedef typename type_policy::element_type  element_type;
     typedef Hash                                hasher;
     typedef KeyEqual                            key_equal;
     typedef Allocator                           allocator_type;
