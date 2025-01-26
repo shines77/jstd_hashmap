@@ -322,7 +322,7 @@ public:
 #if GROUP16_USE_SEPARATE_SLOTS
           groups_alloc_(nullptr),
 #endif
-#if ROBIN_USE_HASH_POLICY
+#if GROUP16_USE_HASH_POLICY
           hash_policy_(),
 #endif
           hasher_(hash), key_equal_(pred),
@@ -349,7 +349,7 @@ public:
 #if GROUP16_USE_SEPARATE_SLOTS
         groups_alloc_(nullptr),
 #endif
-#if ROBIN_USE_HASH_POLICY
+#if GROUP16_USE_HASH_POLICY
         hash_policy_(),
 #endif
         hasher_(other.hash_function_ref()), key_equal_(other.key_eq_ref()),
@@ -380,7 +380,7 @@ public:
 #if GROUP16_USE_SEPARATE_SLOTS
         groups_alloc_(jstd::exchange(other.groups_alloc_, nullptr)),
 #endif
-#if ROBIN_USE_HASH_POLICY
+#if GROUP16_USE_HASH_POLICY
         hash_policy_(jstd::exchange(other.hash_policy_ref(), hash_policy_t())),
 #endif
         hasher_(std::move(other.hash_function_ref())),
@@ -403,7 +403,7 @@ public:
 #if GROUP16_USE_SEPARATE_SLOTS
         groups_alloc_(nullptr),
 #endif
-#if ROBIN_USE_HASH_POLICY
+#if GROUP16_USE_HASH_POLICY
         hash_policy_(),
 #endif
         hasher_(std::move(other.hash_function_ref())),
@@ -2585,6 +2585,7 @@ private:
         return (slot_index != this->slot_capacity()) ? 1 : 0;
     }
 
+    JSTD_FORCED_INLINE
     void swap_content(this_type & other) noexcept {
         using std::swap;
         swap(this->groups_, other.groups_);
@@ -2600,11 +2601,12 @@ private:
 #if GROUP16_USE_SEPARATE_SLOTS
         swap(this->groups_alloc_, other.groups_alloc_);
 #endif
-#if ROBIN_USE_HASH_POLICY
+#if GROUP16_USE_HASH_POLICY
         swap(this->hash_policy_, other.hash_policy_ref());
 #endif
     }
 
+    JSTD_FORCED_INLINE
     void swap_policy(this_type & other) noexcept {
         using std::swap;
         swap(this->hasher_, other.hash_function_ref());
@@ -2620,6 +2622,7 @@ private:
         }
     }
 
+    JSTD_FORCED_INLINE
     void swap_impl(this_type & other) noexcept {
         this->swap_content(other);
         this->swap_policy(other);
