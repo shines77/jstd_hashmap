@@ -3085,7 +3085,7 @@ public:
         allocator_(alloc),
         ctrl_allocator_(alloc), slot_allocator_(alloc) {
         // Prepare enough space to ensure that no expansion is required during the insertion process.
-        size_type input_size = distance(first, last);
+        size_type input_size = jstd::distance(first, last);
         size_type reserve_capacity = (init_capacity >= input_size) ? init_capacity : input_size;
         this->reserve_for_insert(reserve_capacity);
         this->insert(first, last);
@@ -3749,7 +3749,7 @@ public:
 
     iterator erase(const_iterator first, const_iterator last) {
         // TODO: There is a bug, which needs to be traversed from the last to the first.
-        if (likely(first->owner() == std::addressof(*this))) {
+        if (likely(first.owner() == this)) {
             for (; first != last; ++first) {
                 size_type ctrl_index = this->index_of(first);
                 this->erase_slot(ctrl_index);

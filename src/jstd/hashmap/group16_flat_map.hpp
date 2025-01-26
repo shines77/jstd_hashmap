@@ -621,11 +621,22 @@ public:
     }
 
     JSTD_FORCED_INLINE
-    iterator erase(const_iterator first, const_iterator last) {
-        for (; first != last; ++first) {
-            this->erase(first);
+    iterator erase(iterator first, iterator last) {
+        if (likely(first.hashmap() == this)) {
+            for (; first != last; ++first) {
+                this->erase(first);
+            }
+        } else {
+            for (; first != last; ++first) {
+                this->erase_slot(*first);
+            }
         }
         return { last };
+    }
+
+    JSTD_FORCED_INLINE
+    iterator erase(const_iterator first, const_iterator last) {
+        return this->erase(first, last);
     }
 
     template <typename InputIter, typename std::enable_if<

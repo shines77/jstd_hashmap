@@ -388,6 +388,24 @@ struct is_std_allocator : public std::false_type {};
 template <typename T>
 struct is_std_allocator<std::allocator<T>> : public std::true_type {};
 
+template <typename Allocator, typename Ptr, typename ... Args>
+struct alloc_has_construct
+{
+private:
+    template <typename Allocator2>
+    static decltype(
+        std::declval<Allocator2 &>().construct(
+            std::declval<Ptr>(), std::declval<Args &&>()...),
+        std::true_type{ }
+    ) check(int);
+
+    template <typename>
+    static std::false_type check(...);
+
+public:
+    static constexpr const bool value = decltype(check<Allocator>(0))::value;
+};
+
 //////////////////////////////////////////////////////////////////////////////////
 
 //

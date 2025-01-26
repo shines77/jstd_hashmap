@@ -312,27 +312,57 @@ public:
     explicit group16_flat_table(size_type capacity, hasher const & hash = hasher(),
                                 key_equal const & pred = key_equal(),
                                 allocator_type const & allocator = allocator_type())
-        : groups_(default_empty_groups()), slots_(nullptr), slot_size_(0),
-          slot_mask_(calc_slot_mask_round(capacity)),
-          slot_threshold_(calc_slot_threshold_round(capacity)),
-          group_mask_(calc_group_mask_round(capacity)),
+        : groups_(default_empty_groups()), slots_(nullptr),
+          slot_size_(0),
+          slot_mask_(size_type(-1)),
+          slot_threshold_(0),
+          group_mask_(size_type(-1)),
 #if GROUP16_USE_INDEX_SHIFT
-          index_shift_(calc_index_shift_round(capacity)),
+          index_shift_(kWordLength - 1),
 #endif
-          mlf_(kDefaultMaxLoadFactor)
+          mlf_(kDefaultMaxLoadFactor),
 #if GROUP16_USE_SEPARATE_SLOTS
-          , groups_alloc_(nullptr)
+          groups_alloc_(nullptr),
 #endif
+#if ROBIN_USE_HASH_POLICY
+          hash_policy_(),
+#endif
+          hasher_(hash), key_equal_(pred),
+          allocator_(allocator), group_allocator_(allocator), slot_allocator_(allocator)
     {
         if (capacity != 0) {
-            this->create_slots<true>(capacity);
+            this->reserve_for_insert(capacity);
         }
     }
 
-    group16_flat_table(group16_flat_table const & other) {
+    group16_flat_table(group16_flat_table const & other)
+        : group16_flat_table(other, std::allocator_traits<allocator_type>::
+                                    select_on_container_copy_construction(other.get_allocator_ref())) {
     }
 
-    group16_flat_table(group16_flat_table const & other, allocator_type const & allocator) {
+    group16_flat_table(group16_flat_table const & other, allocator_type const & allocator) :
+        groups_(default_empty_groups()), slots_(nullptr),
+        slot_size_(0), slot_mask_(size_type(-1)), slot_threshold_(0),
+        group_mask_(size_type(-1)),
+#if GROUP16_USE_INDEX_SHIFT
+        index_shift_(kWordLength - 1),
+#endif
+        mlf_(kDefaultMaxLoadFactor),
+#if GROUP16_USE_SEPARATE_SLOTS
+        groups_alloc_(nullptr),
+#endif
+#if ROBIN_USE_HASH_POLICY
+        hash_policy_(),
+#endif
+        hasher_(other.hash_function_ref()), key_equal_(other.key_eq_ref()),
+        allocator_(allocator), group_allocator_(allocator), slot_allocator_(allocator)
+    {
+        // Prepare enough space to ensure that no expansion is required during the insertion process.
+        size_type other_size = other.size();
+        if (other_size != 0) {
+            this->reserve_for_insert(other_size);
+            this->copy_slots_from(other);
+        }
     }
 
     group16_flat_table(group16_flat_table && other) {
@@ -592,6 +622,7 @@ public:
     // appropriate buckets considering that total number of buckets has changed.
     // Effectively calls rehash(std::ceil(new_capacity / max_load_factor())).
     //
+    JSTD_FORCED_INLINE
     void reserve(size_type new_capacity) {
         if (likely(new_capacity != 0)) {
             new_capacity = this->shrink_to_fit_capacity(new_capacity);
@@ -599,6 +630,16 @@ public:
         } else {
             this->reset<true>();
         }
+    }
+
+    JSTD_FORCED_INLINE
+    void reserve_for_insert(size_type init_capacity) {
+        assert(init_capacity > 0);
+        size_type new_capacity = this->shrink_to_fit_capacity(init_capacity);
+        new_capacity = this->calc_capacity(new_capacity);
+        assert(new_capacity > 0);
+        assert(new_capacity >= kMinCapacity);
+        this->create_slots<true>(new_capacity);
     }
 
     //
@@ -609,6 +650,7 @@ public:
     // i.e. puts the elements into appropriate buckets considering that
     // total number of buckets has changed.
     //
+    JSTD_FORCED_INLINE
     void rehash(size_type new_capacity) {
         size_type fit_to_now = this->shrink_to_fit_capacity(this->size());
         new_capacity = (std::max)(fit_to_now, new_capacity);
@@ -619,6 +661,7 @@ public:
         }
     }
 
+    JSTD_FORCED_INLINE
     void shrink_to_fit(bool read_only = false) {
         size_type new_capacity;
         if (likely(!read_only))
@@ -635,11 +678,13 @@ public:
     ///
     /// Lookup
     ///
+    JSTD_FORCED_INLINE
     size_type count(const key_type & key) const {
         size_type slot_index = this->find_index(key);
         return (slot_index != this->slot_capacity()) ? 1 : 0;
     }
 
+    JSTD_FORCED_INLINE
     bool contains(const key_type & key) const {
         size_type slot_index = this->find_index(key);
         return (slot_index != this->slot_capacity());
@@ -1463,6 +1508,124 @@ private:
     }
 
     JSTD_FORCED_INLINE
+    void copy_slots_from(group16_flat_table const & other) {
+        assert(this->empty());
+        assert(this != std::addressof(other));
+        assert(other.size() > 0);
+        if (this->slot_capacity() == other.slot_capacity()) {
+            this->fast_copy_slots_from(other);
+        } else {
+            try {
+                this->unique_insert_and_no_grow(other.begin(), other.end());
+            } catch (const std::bad_alloc & ex) {
+                JSTD_UNUSED(ex);
+                this->destroy();
+                throw std::bad_alloc();
+            } catch (...) {
+                this->destroy();
+                throw;
+            }
+        }
+    }
+
+    JSTD_FORCED_INLINE
+    void fast_copy_slots_from(group16_flat_table const & other) {
+        if (this->slots() != nullptr && other.slots() != nullptr) {
+            copy_slots_array_from(other);
+            copy_groups_array_from(other);
+        }
+    }
+
+    JSTD_FORCED_INLINE
+    void copy_slots_array_from(group16_flat_table const & other) {
+        this->copy_slots_array_from(
+            other,
+            std::integral_constant<bool, std::is_trivially_copy_constructible<element_type>::value &&
+                                        (jstd::is_std_allocator<Allocator>::value ||
+                                        !jstd::alloc_has_construct<Allocator, value_type *, const value_type &>::value)>{}
+        );
+    }
+
+    JSTD_FORCED_INLINE
+    void copy_elements_array_from(group16_flat_table const & other, std::true_type /* -> memcpy */) {
+        /*
+         * reinterpret_cast: GCC may complain about value_type not being trivially
+         * copy-assignable when we're relying on trivial copy constructibility.
+         */
+        std::memcpy(
+            reinterpret_cast<unsigned char *>(this->slots()),
+            reinterpret_cast<unsigned char *>(other.slots()),
+            other.slot_capacity() * sizeof(slot_type));
+    }
+
+    JSTD_FORCED_INLINE
+    void copy_elements_array_from(group16_flat_table const & other, std::false_type /* -> manual */) {
+        size_type num_constructed = 0;
+        const slot_type * other_slot = other.slots();
+        const slot_type * other_last_slot = other.last_slot();
+        const slot_type * slot = this->slots();
+
+        try {
+            while (other_slot < other_last_slot) {
+                SlotPolicyTraits::construct(&this->slot_allocator_, slot, other_slot);
+                ++num_constructed;
+                ++slot;
+                ++other_slot;
+            }
+        }
+        catch (const std::bad_alloc & ex) {
+            JSTD_UNUSED(ex);
+            if (num_constructed != 0) {
+                other_slot = other.slots();
+                slot = this->slots();
+                do {
+                    SlotPolicyTraits::destroy(&this->slot_allocator_, slot, other_slot);
+                    --num_constructed;
+                    ++slot;
+                    ++other_slot;
+                } while (num_constructed > 0);
+            }
+            throw std::bad_alloc();
+        } catch (...) {
+            if (num_constructed != 0) {
+                other_slot = other.slots();
+                slot = this->slots();
+                do {
+                    SlotPolicyTraits::destroy(&this->slot_allocator_, slot, other_slot);
+                    --num_constructed;
+                    ++slot;
+                    ++other_slot;
+                } while (num_constructed > 0);
+            }
+            throw;
+        }
+    }
+
+    JSTD_FORCED_INLINE
+    void copy_groups_array_from(group16_flat_table const & other) {
+        this->copy_groups_array_from(other, std::is_trivially_copy_assignable<group_type>{});
+    }
+
+    JSTD_FORCED_INLINE
+    void copy_groups_array_from(group16_flat_table const & other, std::true_type /* -> memcpy */) {
+        std::memcpy(
+            this->groups(), other.groups(),
+            other.group_capacity() * sizeof(group_type));
+    }
+
+    JSTD_FORCED_INLINE
+    void copy_groups_array_from(group16_flat_table const & other, std::false_type /* -> manual */) {
+        const group_type * other_group = other.groups();
+        const group_type * other_last_group = other.last_group();
+        const group_type * group = this->groups();
+        while (other_group < other_last_group) {
+            group[i] = other_group[i];
+            ++group;
+            ++other_group;
+        }
+    }
+
+    JSTD_FORCED_INLINE
     bool need_grow() const {
         return (this->slot_size() >= this->slot_threshold());
     }
@@ -1571,20 +1734,10 @@ private:
 
     template <bool isInitialize = false>
     JSTD_FORCED_INLINE
-    void create_slots(size_type init_capacity) {
-        if (unlikely(init_capacity == 0)) {
+    void create_slots(size_type new_capacity) {
+        if (unlikely((new_capacity == 0) && !isInitialize)) {
             this->reset<false>();
             return;
-        }
-
-        size_type new_capacity;
-        if (isInitialize) {
-            new_capacity = this->shrink_to_fit_capacity(init_capacity);
-            new_capacity = this->calc_capacity(new_capacity);
-            assert(new_capacity > 0);
-            assert(new_capacity >= kMinCapacity);
-        } else {
-            new_capacity = init_capacity;
         }
 
 #if GROUP16_USE_HASH_POLICY
@@ -1663,7 +1816,7 @@ private:
                         used_mask = BitUtils::clearLowBit32(used_mask);
                         slot_type * old_slot = slot_base + used_pos;
                         assert(old_slot < old_last_slot);
-                        this->insert_unique_and_no_grow(old_slot);
+                        this->unique_insert_and_no_grow(old_slot);
                         this->destroy_slot(old_slot);
                     }
                     slot_base += kGroupWidth;
@@ -1889,7 +2042,7 @@ private:
     }
 
     JSTD_FORCED_INLINE
-    size_type insert_unique_and_no_grow(const key_type & key) {
+    size_type unique_insert_and_no_grow(const key_type & key) {
         std::size_t key_hash = this->hash_for(key);
         size_type slot_pos = this->index_for_hash(key_hash);
         std::uint8_t ctrl_hash = this->ctrl_for_hash(key_hash);
@@ -1902,15 +2055,41 @@ private:
     /// Use in rehash_impl()
     ///
     JSTD_FORCED_INLINE
-    void insert_unique_and_no_grow(slot_type * old_slot) {
+    void unique_insert_and_no_grow(slot_type * old_slot) {
         assert(old_slot != nullptr);
-        size_type slot_index = this->insert_unique_and_no_grow(old_slot->value.first);
+        size_type slot_index = this->unique_insert_and_no_grow(old_slot->value.first);
         slot_type * new_slot = this->slot_at(slot_index);
         assert(new_slot != nullptr);
 
         SlotPolicyTraits::construct(&this->slot_allocator_, new_slot, old_slot);
         this->slot_size_++;
         assert(this->slot_size() <= this->slot_capacity());
+    }
+
+    ///
+    /// Use in unique_insert_and_no_grow(first, last)
+    ///
+    JSTD_FORCED_INLINE
+    void unique_insert_and_no_grow(const slot_type * old_slot) {
+        assert(old_slot != nullptr);
+        size_type slot_index = this->unique_insert_and_no_grow(old_slot->value.first);
+        const slot_type * new_slot = this->slot_at(slot_index);
+        assert(new_slot != nullptr);
+
+        SlotPolicyTraits::construct(&this->slot_allocator_, new_slot, old_slot);
+        this->slot_size_++;
+        assert(this->slot_size() <= this->slot_capacity());
+    }
+
+    JSTD_FORCED_INLINE
+    void unique_insert_and_no_grow(iterator first, iterator last) {
+        this_type * other = first.hashmap();
+        assert(other != nullptr);
+        assert(other != this);
+        for (; first != last; ++first) {
+            const slot_type * old_slot = first.slot();
+            this->unique_insert_and_no_grow(old_slot);
+        }
     }
 
     template <bool AlwaysUpdate, typename ValueT, typename std::enable_if<

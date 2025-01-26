@@ -89,69 +89,70 @@ public:
     using difference_type = typename HashMap::difference_type;
 
 private:
-    const hashmap_type * map_;
+    const hashmap_type * hashmap_;
     ssize_type           index_;
 
 public:
-    flat_map_iterator() noexcept : map_(nullptr), index_(0) {
-    }
-    flat_map_iterator(hashmap_type * map, size_type index) noexcept
-        : map_(const_cast<const hashmap_type *>(map)),
-          index_(static_cast<ssize_type>(index)) {
-    }
-    flat_map_iterator(const hashmap_type * map, size_type index) noexcept
-        : map_(map), index_(static_cast<ssize_type>(index)) {
+    flat_map_iterator() noexcept : hashmap_(nullptr), index_(0) {
     }
     flat_map_iterator(slot_type * slot) noexcept
-        : map_(nullptr), index_(0) {
+        : hashmap_(nullptr), index_(0) {
     }
     flat_map_iterator(const slot_type * slot) noexcept
-        : map_(nullptr), index_(0) {
+        : hashmap_(nullptr), index_(0) {
+    }
+    flat_map_iterator(hashmap_type * hashmap, size_type index) noexcept
+        : hashmap_(const_cast<const hashmap_type *>(hashmap)),
+          index_(static_cast<ssize_type>(index)) {
+    }
+    flat_map_iterator(const hashmap_type * hashmap, size_type index) noexcept
+        : hashmap_(hashmap), index_(static_cast<ssize_type>(index)) {
     }
     flat_map_iterator(const flat_map_iterator & src) noexcept
-        : map_(src.map()), index_(src.index()) {
+        : hashmap_(src.hashmap()), index_(src.index()) {
     }
     flat_map_iterator(const opp_flat_map_iterator & src) noexcept
-        : map_(src.map()), index_(src.index()) {
+        : hashmap_(src.hashmap()), index_(src.index()) {
     }
 
     flat_map_iterator & operator = (const flat_map_iterator & rhs) noexcept {
-        this->map_ = rhs.map();
+        this->hashmap_ = rhs.hashmap();
         this->index_ = rhs.index();
         return *this;
     }
 
     flat_map_iterator & operator = (const opp_flat_map_iterator & rhs) noexcept {
-        this->map_ = rhs.map();
+        this->hashmap_ = rhs.hashmap();
         this->index_ = rhs.index();
         return *this;
     }
 
     friend bool operator == (const flat_map_iterator & lhs, const flat_map_iterator & rhs) noexcept {
-        return (lhs.index() == rhs.index()) && (lhs.map() == rhs.map());
+        return (lhs.index() == rhs.index()) && (lhs.hashmap() == rhs.hashmap());
     }
 
     friend bool operator != (const flat_map_iterator & lhs, const flat_map_iterator & rhs) noexcept {
-        return (lhs.index() != rhs.index()) || (lhs.map() != rhs.map());
+        return (lhs.index() != rhs.index()) || (lhs.hashmap() != rhs.hashmap());
     }
 
     friend bool operator == (const flat_map_iterator & lhs, const opp_flat_map_iterator & rhs) noexcept {
-        return (lhs.index() == rhs.index()) && (lhs.map() == rhs.map());
+        return (lhs.index() == rhs.index()) && (lhs.hashmap() == rhs.hashmap());
     }
 
     friend bool operator != (const flat_map_iterator & lhs, const opp_flat_map_iterator & rhs) noexcept {
-        return (lhs.index() != rhs.index()) || (lhs.map() != rhs.map());
+        return (lhs.index() != rhs.index()) || (lhs.hashmap() != rhs.hashmap());
     }
 
+    JSTD_FORCED_INLINE
     flat_map_iterator & operator ++ () {
 #if ITERATOR_USE_GROUP_SCAN
-        ssize_type next_used_index = this->map_->skip_empty_slots(this->index_);
+        ssize_type next_used_index = this->hashmap_->skip_empty_slots(this->index_);
         this->index_ = next_used_index;
         return *this;
 #else
         ssize_type index = this->index_;
-        const ctrl_type * ctrl = this->map_->ctrl_at(index);
-        ssize_type max_index = static_cast<ssize_type>(this->map_->slot_capacity());
+        const ctrl_type * ctrl = this->hashmap_->ctrl_at(index);
+        ssize_type max_index = static_cast<ssize_type>(this->hashmap_->slot_capacity());
 
         while (index < max_index) {
             ++index;
@@ -165,15 +166,17 @@ public:
 #endif // ITERATOR_USE_GROUP_SCAN
     }
 
+    JSTD_FORCED_INLINE
     flat_map_iterator operator ++ (int) {
         flat_map_iterator copy(*this);
         ++*this;
         return copy;
     }
 
+    JSTD_FORCED_INLINE
     flat_map_iterator & operator -- () {
         ssize_type index = this->index_;
-        const ctrl_type * ctrl = this->map_->ctrl_at(index);
+        const ctrl_type * ctrl = this->hashmap_->ctrl_at(index);
 
         while (index > 0) {
             --index;
@@ -186,6 +189,7 @@ public:
         return *this;
     }
 
+    JSTD_FORCED_INLINE
     flat_map_iterator operator -- (int) {
         flat_map_iterator copy(*this);
         --*this;
@@ -216,12 +220,12 @@ public:
         return { this->map_, this->index_ };
     }
 #endif
-    hashmap_type * map() {
-        return this->map_;
+    hashmap_type * hashmap() {
+        return this->hashmap_;
     }
 
-    const hashmap_type * map() const {
-        return this->map_;
+    const hashmap_type * hashmap() const {
+        return this->hashmap_;
     }
 
     ssize_type index() const {
@@ -229,22 +233,22 @@ public:
     }
 
     ctrl_type * ctrl() {
-        const ctrl_type * _ctrl = this->map_->ctrl_at(this->index_);
+        const ctrl_type * _ctrl = this->hashmap_->ctrl_at(this->index_);
         return const_cast<slot_type *>(_ctrl);
     }
 
     const ctrl_type * ctrl() const {
-        const ctrl_type * _ctrl = this->map_->ctrl_at(this->index_);
+        const ctrl_type * _ctrl = this->hashmap_->ctrl_at(this->index_);
         return _ctrl;
     }
 
     slot_type * slot() {
-        const slot_type * _slot = this->map_->slot_at(this->index_);
+        const slot_type * _slot = this->hashmap_->slot_at(this->index_);
         return const_cast<slot_type *>(_slot);
     }
 
     const slot_type * slot() const {
-        const slot_type * _slot = this->map_->slot_at(this->index_);
+        const slot_type * _slot = this->hashmap_->slot_at(this->index_);
         return _slot;
     }
 };
@@ -287,11 +291,11 @@ public:
     flat_map_iterator(const slot_type * slot) noexcept
         : slot_(slot) {
     }
-    flat_map_iterator(hashmap_type * map, size_type index) noexcept
-        : slot_(map->slot_at(index)) {
+    flat_map_iterator(hashmap_type * hashmap, size_type index) noexcept
+        : slot_(hashmap->slot_at(index)) {
     }
-    flat_map_iterator(const hashmap_type * map, size_type index) noexcept
-        : slot_(map->slot_at(index)) {
+    flat_map_iterator(const hashmap_type * hashmap, size_type index) noexcept
+        : slot_(hashmap->slot_at(index)) {
     }
     flat_map_iterator(const flat_map_iterator & src) noexcept
         : slot_(src.slot()) {
@@ -362,6 +366,14 @@ public:
 
     const_pointer operator -> () const {
         return std::addressof(const_cast<slot_type *>(this->slot_)->value);
+    }
+
+    hashmap_type * hashmap() {
+        return nullptr;
+    }
+
+    const hashmap_type * hashmap() const {
+        return nullptr;
     }
 
     size_type index() const {
