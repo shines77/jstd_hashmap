@@ -3127,7 +3127,7 @@ public:
         allocator_(alloc),
         ctrl_allocator_(alloc), slot_allocator_(alloc) {
         // Prepare enough space to ensure that no expansion is required during the insertion process.
-        size_type other_size = other.slot_size();
+        size_type other_size = other.size();
         this->reserve_for_insert(other_size);
         try {
             this->unique_insert(other.begin(), other.end());
@@ -3178,14 +3178,14 @@ public:
         hasher_(std::move(other.hash_function_ref())),
         key_equal_(std::move(other.key_eq_ref())),
         allocator_(alloc),
-        ctrl_allocator_(std::move(other.get_ctrl_allocator_ref())),
-        slot_allocator_(std::move(other.get_slot_allocator_ref())) {
+        ctrl_allocator_(alloc),
+        slot_allocator_(alloc) {
         if (this->get_allocator_ref() == other.get_allocator_ref()) {
-            // Swap content and policy
-            this->swap_impl(other);
+            // Swap content only
+            this->swap_content(other);
         } else {
             // Prepare enough space to ensure that no expansion is required during the insertion process.
-            size_type other_size = other.slot_size();
+            size_type other_size = other.size();
             this->reserve_for_insert(other_size);
 
             // Note: this will copy elements of dense_set and unordered_set instead of

@@ -406,14 +406,15 @@ public:
 #if ROBIN_USE_HASH_POLICY
         hash_policy_(),
 #endif
-        hasher_(hasher()), key_equal_(key_equal()),
+        hasher_(std::move(other.hash_function_ref())),
+        key_equal_(std::move(other.key_eq_ref())),
         allocator_(allocator), group_allocator_(allocator), slot_allocator_(allocator) {
         if (this->get_allocator_ref() == other.get_allocator_ref()) {
-            // Swap content and policy
-            this->swap_impl(other);
+            // Swap content only
+            this->swap_content(other);
         } else {
             // Prepare enough space to ensure that no expansion is required during the insertion process.
-            size_type other_size = other.slot_size();
+            size_type other_size = other.size();
             if (other_size > 0) {
                 this->reserve_for_insert(other_size);
                 // Here we will move elements of [other] hashmap to this hashmap.
