@@ -3157,11 +3157,11 @@ public:
 #if ROBIN_USE_HASH_POLICY
         hash_policy_(jstd::exchange(other.hash_policy_ref(), hash_policy_t())),
 #endif
-        hasher_(other.hash_function_ref()),
-        key_equal_(other.key_eq_ref()),
-        allocator_(other.get_allocator_ref()),
-        ctrl_allocator_(other.get_ctrl_allocator_ref()),
-        slot_allocator_(other.get_slot_allocator_ref()) {
+        hasher_(std::move(other.hash_function_ref())),
+        key_equal_(std::move(other.key_eq_ref())),
+        allocator_(std::move(other.get_allocator_ref())),
+        ctrl_allocator_(std::move(other.get_ctrl_allocator_ref())),
+        slot_allocator_(std::move(other.get_slot_allocator_ref())) {
         // Swap content only
         // this->swap_content(other);
     }
@@ -3175,14 +3175,14 @@ public:
 #if ROBIN_USE_HASH_POLICY
         hash_policy_(jstd::exchange(other.hash_policy_ref(), hash_policy_t())),
 #endif
-        hasher_(other.hash_function_ref()),
-        key_equal_(other.key_eq_ref()),
+        hasher_(std::move(other.hash_function_ref())),
+        key_equal_(std::move(other.key_eq_ref())),
         allocator_(alloc),
-        ctrl_allocator_(other.get_ctrl_allocator_ref()),
-        slot_allocator_(other.get_slot_allocator_ref()) {
-        if (alloc == other.get_allocator_ref()) {
-            // Swap content only
-            this->swap_content(other);
+        ctrl_allocator_(std::move(other.get_ctrl_allocator_ref())),
+        slot_allocator_(std::move(other.get_slot_allocator_ref())) {
+        if (this->get_allocator_ref() == other.get_allocator_ref()) {
+            // Swap content and policy
+            this->swap_impl(other);
         } else {
             // Prepare enough space to ensure that no expansion is required during the insertion process.
             size_type other_size = other.slot_size();

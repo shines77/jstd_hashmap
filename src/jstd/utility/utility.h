@@ -127,7 +127,7 @@ using std::exchange;
 template <typename T, typename U = T>
 inline
 #if jstd_cplusplus >= 2020L
-constexpr // since C++20
+constexpr // since C++ 20
 #endif
 T exchange(T & target, U && new_value) noexcept(
            std::is_nothrow_move_constructible<T>::value &&

@@ -110,6 +110,8 @@ public:
     typedef typename table_type::iterator       iterator;
     typedef typename table_type::const_iterator const_iterator;
 
+    using this_type = group16_flat_map<Key, Value, Hash, KeyEqual, Allocator>;
+
 private:
     table_type table_;
 
@@ -651,8 +653,79 @@ public:
         }
         return num_deleted;
     }
+
+    JSTD_FORCED_INLINE
+    void swap(this_type & other) {
+        table_.swap(other.table_);
+    }
+
+    JSTD_FORCED_INLINE
+    friend void swap(this_type & lhs, this_type & rhs)
+        noexcept(noexcept(lhs.swap(rhs))) {
+        lhs.swap(rhs);
+    }
 };
 
+/**
+ * Specializes the @c std::swap algorithm for @c robin_hash_map. Calls @c lhs.swap(rhs).
+ *
+ * @param lhs the map on the left side to swap
+ * @param lhs the map on the right side to swap
+ */
+
+template <typename Key, typename Value, typename Hash, typename KeyEqual, typename Alloc>
+inline
+void swap(group16_flat_map<Key, Value, Hash, KeyEqual, Alloc> & lhs,
+          group16_flat_map<Key, Value, Hash, KeyEqual, Alloc> & rhs)
+          noexcept(noexcept(lhs.swap(rhs)))
+{
+    lhs.swap(rhs);
+}
+
 } // namespace jstd
+
+///////////////////////////////////////////////////////////
+// std extensions: std::erase_if()
+///////////////////////////////////////////////////////////
+
+namespace std {
+
+/**
+ * Specializes the @c std::swap algorithm for @c robin_hash_map. Calls @c lhs.swap(rhs).
+ *
+ * @param lhs the map on the left side to swap
+ * @param lhs the map on the right side to swap
+ */
+
+template <typename Key, typename Value, typename Hash, typename KeyEqual, typename Alloc>
+inline
+void swap(jstd::group16_flat_map<Key, Value, Hash, KeyEqual, Alloc> & lhs,
+          jstd::group16_flat_map<Key, Value, Hash, KeyEqual, Alloc> & rhs)
+          noexcept(noexcept(lhs.swap(rhs)))
+{
+    lhs.swap(rhs);
+}
+
+template <typename Key, typename Value, typename Hash, typename KeyEqual, typename Alloc, typename Pred>
+typename jstd::group16_flat_map<Key, Value, Hash, KeyEqual, Alloc>::size_type
+inline
+erase_if(jstd::group16_flat_map<Key, Value, Hash, KeyEqual, Alloc> & hash_map, Pred pred)
+{
+    auto old_size = hash_map.size();
+
+    auto first = hash_map.begin();
+    auto last = hash_map.end();
+    auto iter = last;
+    while (iter != first) {
+        --iter;
+        if (pred(*iter)) {
+            hash_map.erase(iter);
+        }
+    }
+
+    return (old_size - hash_map.size());
+}
+
+} // namespace std
 
 #endif // JSTD_HASHMAP_GROUP16_FLAT_MAP_HPP
