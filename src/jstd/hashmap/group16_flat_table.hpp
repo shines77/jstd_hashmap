@@ -404,7 +404,7 @@ public:
         groups_alloc_(nullptr),
 #endif
 #if GROUP16_USE_HASH_POLICY
-        hash_policy_(),
+        hash_policy_(std::move(other.hash_policy_ref())),
 #endif
         hasher_(std::move(other.hash_function_ref())),
         key_equal_(std::move(other.key_eq_ref())),
@@ -420,6 +420,8 @@ public:
                 // Here we will move elements of [other] hashmap to this hashmap.
                 this->move_slots_from(other);
             }
+            // Reset other hashmap content
+            other.reset<false>();
         }
     }
 
@@ -2601,14 +2603,14 @@ private:
 #if GROUP16_USE_SEPARATE_SLOTS
         swap(this->groups_alloc_, other.groups_alloc_);
 #endif
-#if GROUP16_USE_HASH_POLICY
-        swap(this->hash_policy_, other.hash_policy_ref());
-#endif
     }
 
     JSTD_FORCED_INLINE
     void swap_policy(this_type & other) noexcept {
         using std::swap;
+#if GROUP16_USE_HASH_POLICY
+        swap(this->hash_policy_, other.hash_policy_ref());
+#endif
         swap(this->hasher_, other.hash_function_ref());
         swap(this->key_equal_, other.key_eq_ref());
         if (std::allocator_traits<allocator_type>::propagate_on_container_swap::value) {
