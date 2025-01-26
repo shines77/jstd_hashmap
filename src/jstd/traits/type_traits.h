@@ -294,6 +294,84 @@ struct is_relocatable<std::pair<T, U>>
 template <typename T>
 struct is_relocatable<const T> : is_relocatable<T> {};
 
+//
+// jstd::is_trivially_relocatable<T>
+//
+// Detects whether a type is known to be "trivially relocatable" -- meaning it
+// can be relocated from one place to another as if by memcpy/memmove.
+// This implies that its object representation doesn't depend on its address,
+// and also none of its special member functions do anything strange.
+//
+// This trait is conservative. If it's true then the type is definitely
+// trivially relocatable, but if it's false then the type may or may not be. For
+// example, std::vector<int> is trivially relocatable on every known STL
+// implementation, but absl::is_trivially_relocatable<std::vector<int>> remains
+// false.
+//
+// Example:
+//
+// if constexpr (absl::is_trivially_relocatable<T>::value) {
+//   memcpy(new_location, old_location, sizeof(T));
+// } else {
+//   new(new_location) T(std::move(*old_location));
+//   old_location->~T();
+// }
+//
+// Upstream documentation:
+//
+// https://clang.llvm.org/docs/LanguageExtensions.html#:~:text=__is_trivially_relocatable
+
+// If the compiler offers a builtin that tells us the answer, we can use that.
+// This covers all of the cases in the fallback below, plus types that opt in
+// using e.g. [[clang::trivial_abi]].
+//
+// Clang on Windows has the builtin, but it falsely claims types with a
+// user-provided destructor are trivial (http://b/275003464). So we opt out
+// there.
+//
+// TODO(b/275003464): remove the opt-out once the bug is fixed.
+//
+// Starting with Xcode 15, the Apple compiler will falsely say a type
+// with a user-provided move constructor is trivially relocatable
+// (b/324278148). We will opt out without a version check, due to
+// the fluidity of Apple versions.
+//
+// TODO(b/324278148): If all versions we use have the bug fixed, then
+// remove the condition.
+//
+// Clang on all platforms fails to detect that a type with a user-provided
+// move-assignment operator is not trivially relocatable so we also check for
+// is_trivially_move_assignable for Clang.
+//
+// TODO(b/325479096): Remove the Clang is_trivially_move_assignable version once
+// Clang's behavior is fixed.
+//
+// According to https://github.com/abseil/abseil-cpp/issues/1479, this does not
+// work with NVCC either.
+//
+#if __has_builtin(__is_trivially_relocatable) && \
+    (defined(__cpp_impl_trivially_relocatable) ||    \
+     (!defined(__clang__) && !defined(__APPLE__) && !defined(__NVCC__)))
+template <class T>
+struct is_trivially_relocatable : std::integral_constant<bool, __is_trivially_relocatable(T)> {};
+#elif __has_builtin(__is_trivially_relocatable) && defined(__clang__) && \
+    !(defined(_WIN32) || defined(_WIN64)) && !defined(__APPLE__) &&      \
+    !defined(__NVCC__)
+template <class T>
+struct is_trivially_relocatable
+    : std::integral_constant<bool, std::is_trivially_copyable<T>::value ||
+                                   (__is_trivially_relocatable(T) &&
+                                    std::is_trivially_move_assignable<T>::value)> {};
+#else
+//
+// Otherwise we use a fallback that detects only those types we can feasibly
+// detect. Any type that is trivially copyable is by definition trivially
+// relocatable.
+//
+template <class T>
+struct is_trivially_relocatable : std::is_trivially_copyable<T> {};
+#endif // __is_trivially_relocatable(T)
+
 template <typename Caller, typename Function, typename = void>
 struct is_call_possible : public std::false_type {};
 

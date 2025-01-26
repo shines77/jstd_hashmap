@@ -99,7 +99,7 @@ public:
         // Still check for kMutableKeys so that we can avoid calling std::launder
         // unless necessary because it can interfere with optimizations.
         return (kIsLayoutCompatible ? slot->mutable_key :
-                *jstd::launder(const_cast<Key *>(std::addressof(slot->value.first))));
+                *jstd::launder(const_cast<key_type *>(std::addressof(slot->value.first))));
     }
 #else  // !(defined(__cpp_lib_launder) && (__cpp_lib_launder >= 201606))
     static const key_type & mutable_key(slot_type * slot) {
@@ -192,7 +192,23 @@ public:
 
     template <typename Allocator>
     static void transfer(Allocator * alloc, slot_type * new_slot, slot_type * old_slot) {
+        static constexpr const bool kIsRelocatable = jstd::is_trivially_relocatable<value_type>::value;
         this_type::emplace(new_slot);
+#if defined(__cpp_lib_launder) && (__cpp_lib_launder >= 201606)
+        if (kIsRelocatable) {
+            // TODO(b/247130232,b/251814870): remove casts after fixing warnings.
+            if (kIsLayoutCompatible) {
+                std::memcpy(static_cast<void *>(std::launder(&new_slot->mutable_value)),
+                            static_cast<const void *>(&old_slot->mutable_value),
+                            sizeof(value_type));
+            } else {
+                std::memcpy(static_cast<void *>(std::launder(&new_slot->value)),
+                            static_cast<const void *>(&old_slot->value),
+                            sizeof(value_type));
+            }
+            return;
+        }
+#endif // __cpp_lib_launder
         if (kIsLayoutCompatible) {
             std::allocator_traits<Allocator>::construct(*alloc, &new_slot->mutable_value,
                                                         std::move(old_slot->mutable_value));

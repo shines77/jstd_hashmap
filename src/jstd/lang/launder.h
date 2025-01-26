@@ -46,7 +46,7 @@ T * launder(T * p) noexcept
 #if __has_builtin(__builtin_launder) || (__GNUC__ >= 7)
     // The builtin has no unwanted side-effects.
     return __builtin_launder(p);
-#elif defined(_MSC_VER)
+#elif defined(_MSC_VER) && !defined(__clang__)
     // MSVC does not currently have optimizations around const members of structs.
     // _ReadWriteBarrier() will prevent compiler reordering memory accesses.
     _ReadWriteBarrier();
