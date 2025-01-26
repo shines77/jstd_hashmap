@@ -44,14 +44,18 @@ public:
     // The actual object stored in the hash table.
     using slot_type = typename SlotPolicy::slot_type;
 
+    // The default value type store in the slot.
+    using value_type = typename SlotPolicy::value_type;
+
     // The argument type for insertions into the hash table. This is different
     // from value_type for increased performance. See std::initializer_list<T> constructor
     // and insert() member functions for more details.
     using init_type = typename SlotPolicy::init_type;
 
+    using element_type = typename SlotPolicy::element_type;
+
     using reference = decltype(SlotPolicy::element(std::declval<slot_type *>()));
     using pointer = typename std::remove_reference<reference>::type *;
-    using value_type = typename std::remove_reference<reference>::type;
 
 private:
     struct ReturnKey {

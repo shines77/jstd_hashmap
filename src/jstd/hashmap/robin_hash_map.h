@@ -108,12 +108,14 @@ namespace jstd {
 
 template <typename Key, typename Value, typename SlotType>
 struct JSTD_DLL robin_hash_map_slot_policy {
-    using slot_policy = map_slot_policy<Key, Value, SlotType>;
+    using slot_policy = map_slot_policy<SlotType>;
 
     using slot_type   = typename slot_policy::slot_type;
     using key_type    = typename slot_policy::key_type;
     using mapped_type = typename slot_policy::mapped_type;
+    using value_type  = typename slot_policy::init_type;
     using init_type   = typename slot_policy::init_type;
+    using element_type = typename slot_policy::element_type;
 
     template <typename Allocator, typename ... Args>
     static void construct(Allocator * alloc, slot_type * slot, Args &&... args) {
@@ -163,11 +165,11 @@ struct JSTD_DLL robin_hash_map_slot_policy {
         return slot->value;
     }
 
-    static Value & value(std::pair<const key_type, mapped_type> * kv) {
+    static mapped_type & value(std::pair<const key_type, mapped_type> * kv) {
         return kv->second;
     }
 
-    static const Value & value(const std::pair<const key_type, mapped_type> * kv) {
+    static const mapped_type & value(const std::pair<const key_type, mapped_type> * kv) {
         return kv->second;
     }
 };
@@ -205,18 +207,18 @@ public:
         using value_type = std::pair<const key_type, mapped_type>;
         using mutable_value_type = std::pair<key_type, mapped_type>;
         using init_type = std::pair<key_type, mapped_type>;
+        using element_type = value_type;
 
         //
         // If std::pair<const K, V> and std::pair<K, V> are layout-compatible,
         // we can accept one or the other via slot_type. We are also free to
         // access the key via slot_type::key in this case.
         //
-        static constexpr bool kIsMutableKey =
-                std::is_same<value_type, mutable_value_type>::value ||
-                jstd::is_layout_compatible_pair<value_type, mutable_value_type>::value;
+        static constexpr bool kIsLayoutCompatible =
+            jstd::is_layout_compatible_pair<value_type, mutable_value_type>::value;
 
-        using actual_value_type = typename std::conditional<kIsMutableKey,
-                                           mutable_value_type, value_type>::type;
+        using actual_value_type = typename std::conditional<kIsLayoutCompatible,
+                                                            mutable_value_type, value_type>::type;
 
         value_type          value;
         mutable_value_type  mutable_value;
@@ -237,8 +239,9 @@ public:
     typedef typename slot_type::mutable_value_type  mutable_value_type;
     typedef typename slot_type::actual_value_type   actual_value_type;
     typedef typename slot_type::init_type           init_type;
+    typedef typename slot_type::element_type        element_type;
 
-    static constexpr bool kIsLayoutCompatible = slot_type::kIsMutableKey;
+    static constexpr bool kIsLayoutCompatible = slot_type::kIsLayoutCompatible;
 
     typedef robin_hash_map_slot_policy<Key, Value, slot_type>
                                                     slot_policy_t;

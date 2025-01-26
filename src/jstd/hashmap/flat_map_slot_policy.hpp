@@ -28,19 +28,21 @@
 
 namespace jstd {
 
-template <typename Key, typename Value, typename SlotType>
+template <typename SlotType>
 class JSTD_DLL flat_map_slot_policy
 {
 public:
-    using slot_policy = map_slot_policy<Key, Value, SlotType>;
+    using slot_policy = map_slot_policy<SlotType>;
     using slot_type = typename slot_policy::slot_type;
-    using key_type = typename slot_policy::key_type;
-    using mapped_type = typename slot_policy::mapped_type;
-    using value_type = typename slot_policy::value_type;
-    using mutable_value_type = typename slot_policy::mutable_value_type;
-    using init_type = typename slot_policy::init_type;
 
-    using this_type = flat_map_slot_policy<Key, Value, SlotType>;
+    using key_type = typename slot_type::key_type;
+    using mapped_type = typename slot_type::mapped_type;
+    using value_type = typename slot_type::value_type;
+    using mutable_value_type = typename slot_type::mutable_value_type;
+    using init_type = typename slot_type::init_type;
+    using element_type = typename slot_type::element_type;
+
+    using this_type = flat_map_slot_policy<SlotType>;
 
     template <typename Allocator, typename ... Args>
     static void construct(Allocator * alloc, slot_type * slot, Args &&... args) {
@@ -87,9 +89,8 @@ public:
     }
 
     template <typename First, typename ... Args>
-    static decltype(jstd::DecomposePair2(
-        std::declval<First>(), std::declval<Args>()...))
-        apply(First && f, Args &&... args) {
+    static decltype(jstd::DecomposePair2(std::declval<First>(), std::declval<Args>()...))
+    apply(First && f, Args &&... args) {
         return jstd::DecomposePair2(std::forward<First>(f), std::forward<Args>(args)...);
     }
 
@@ -97,11 +98,11 @@ public:
         return slot->value;
     }
 
-    static Value & value(std::pair<const key_type, mapped_type> * kv) {
+    static mapped_type & value(std::pair<const key_type, mapped_type> * kv) {
         return kv->second;
     }
 
-    static const Value & value(const std::pair<const key_type, mapped_type> * kv) {
+    static const mapped_type & value(const std::pair<const key_type, mapped_type> * kv) {
         return kv->second;
     }
 };

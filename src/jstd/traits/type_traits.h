@@ -21,6 +21,7 @@
 
 #include "jstd/basic/stddef.h"
 #include "jstd/traits/has_member.h"
+#include "jstd/traits/integer_sequence.h"
 
 namespace jstd {
 
@@ -846,7 +847,7 @@ public:
 //////////////////////////////////////////////////////////////////////////////////
 
 // Define integer sequence template
-template <int...>
+template <int ...>
 struct index_sequence {};
 
 // Recursive generation of integer sequences
@@ -854,7 +855,7 @@ template <int N, int... Is>
 struct make_index_sequence : make_index_sequence<N - 1, N - 1, Is...> {};
 
 // Recursive termination condition
-template <int... Is>
+template <int ... Is>
 struct make_index_sequence<0, Is...> {
     using type = index_sequence<Is...>;
 };
@@ -869,7 +870,7 @@ using make_index_sequence_t = typename make_index_sequence<N>::type;
 // Constructs T into uninitialized storage pointed by `ptr` using the args
 // specified in the tuple.
 //
-template <class Alloc, class T, class Tuple, size_t ... I>
+template <class Alloc, class T, class Tuple, std::size_t ... I>
 void ConstructFromTupleImpl(Alloc * alloc, T * ptr, Tuple && t,
                             jstd::index_sequence<I...>) {
     std::allocator_traits<Alloc>::construct(*alloc, ptr, std::get<I>(std::forward<Tuple>(t))...);
@@ -878,21 +879,21 @@ void ConstructFromTupleImpl(Alloc * alloc, T * ptr, Tuple && t,
 template <class T, class First>
 struct WithConstructedImplF {
     template <class ... Args>
-    decltype(std::declval<First>()(std::declval<T>())) operator()(
-        Args && ... args) const {
+    decltype(std::declval<First>()(std::declval<T>()))
+    operator () (Args && ... args) const {
         return std::forward<First>(f)(T(std::forward<Args>(args)...));
     }
     First && f;
 };
 
-template <class T, class Tuple, size_t... Is, class First>
-decltype(std::declval<First>()(std::declval<T>())) WithConstructedImpl(
-    Tuple && t, jstd::index_sequence<Is...>, First&& f) {
-    return WithConstructedImplF<T, First>{std::forward<First>(f)}(
+template <class T, class Tuple, std::size_t ... Is, class First>
+decltype(std::declval<First>()(std::declval<T>()))
+WithConstructedImpl(Tuple && t, jstd::index_sequence<Is...>, First && f) {
+    return WithConstructedImplF<T, First>{ std::forward<First>(f) }(
         std::get<Is>(std::forward<Tuple>(t))...);
 }
 
-template <class T, size_t ... Is>
+template <class T, std::size_t ... Is>
 auto TupleRefImpl(T && t, jstd::index_sequence<Is...>)
 -> decltype(std::forward_as_tuple(std::get<Is>(std::forward<T>(t))...)) {
     return std::forward_as_tuple(std::get<Is>(std::forward<T>(t))...);
@@ -906,15 +907,14 @@ template <class T>
 auto TupleRef(T && t) -> decltype(
     TupleRefImpl(std::forward<T>(t),
                  jstd::make_index_sequence<std::tuple_size<typename std::decay<T>::type>::value>())) {
-    return TupleRefImpl(
-        std::forward<T>(t),
-        jstd::make_index_sequence<std::tuple_size<typename std::decay<T>::type>::value>());
+    return TupleRefImpl(std::forward<T>(t),
+                        jstd::make_index_sequence<std::tuple_size<typename std::decay<T>::type>::value>());
 }
 
 template <class First, class K, class V>
 decltype(std::declval<First>()(std::declval<const K &>(), std::piecewise_construct,
                                std::declval<std::tuple<K>>(), std::declval<V>()))
-    DecomposePairImpl(First && first, std::pair<std::tuple<K>, V> pair) {
+DecomposePairImpl(First && first, std::pair<std::tuple<K>, V> pair) {
     const auto & key = std::get<0>(pair.first);
     return std::forward<First>(first)(key, std::piecewise_construct,
                                       std::move(pair.first),
@@ -1006,6 +1006,26 @@ DecomposeValue(First && f, Arg && arg) {
     const auto & key = arg;
     return std::forward<First>(f)(key, std::forward<Arg>(arg));
 }
+
+template <class ContainerKey, class Hash, class EqualTo>
+struct RequireUsableKey {
+    template <class PassedKey, class ... Args>
+    std::pair<decltype(std::declval<const Hash &>()(std::declval<const PassedKey &>())),
+              decltype(std::declval<const EqualTo &>()(std::declval<const ContainerKey &>(),
+                                                       std::declval<const PassedKey &>()))> *
+    operator () (const PassedKey &, const Args & ...) const;
+};
+
+template <class E, class Policy, class Hash, class EqualTo, class... Ts>
+struct IsDecomposable : std::false_type {};
+
+template <class Policy, class Hash, class EqualTo, class ... Ts>
+struct IsDecomposable<jstd::void_t<decltype(
+            Policy::apply(RequireUsableKey<typename Policy::key_type, Hash, EqualTo>(),
+                          std::declval<Ts>()...))>,
+            Policy, Hash, EqualTo, Ts...> : std::true_type
+{
+};
 
 //////////////////////////////////////////////////////////////////////////////////
 

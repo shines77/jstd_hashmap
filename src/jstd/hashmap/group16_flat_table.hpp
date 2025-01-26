@@ -232,7 +232,7 @@ public:
     static constexpr bool kNeedStoreHash = true;
 
     using slot_type = map_slot_type<key_type, mapped_type>;
-    using slot_policy_t = flat_map_slot_policy<key_type, mapped_type, slot_type>;
+    using slot_policy_t = flat_map_slot_policy<slot_type>;
     using SlotPolicyTraits = slot_policy_traits<slot_policy_t>;
 
     //using slot_type = flat_map_slot_storage<type_policy, kIsIndirectKey, kIsIndirectValue>;
@@ -1564,7 +1564,7 @@ private:
         size_type num_constructed = 0;
         const slot_type * other_slot = other.slots();
         const slot_type * other_last_slot = other.last_slot();
-        const slot_type * slot = this->slots();
+        slot_type * slot = this->slots();
 
         try {
             while (other_slot < other_last_slot) {
@@ -1618,7 +1618,7 @@ private:
     void copy_groups_array_from(group16_flat_table const & other, std::false_type /* -> manual */) {
         const group_type * other_group = other.groups();
         const group_type * other_last_group = other.last_group();
-        const group_type * group = this->groups();
+        group_type * group = this->groups();
         while (other_group < other_last_group) {
             *group = *other_group;
             ++group;
@@ -2074,7 +2074,7 @@ private:
     void unique_insert_and_no_grow(const slot_type * old_slot) {
         assert(old_slot != nullptr);
         size_type slot_index = this->unique_insert_and_no_grow(old_slot->value.first);
-        const slot_type * new_slot = this->slot_at(slot_index);
+        slot_type * new_slot = this->slot_at(slot_index);
         assert(new_slot != nullptr);
 
         SlotPolicyTraits::construct(&this->slot_allocator_, new_slot, old_slot);

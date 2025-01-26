@@ -18,7 +18,7 @@ using is_map = std::integral_constant<bool, !std::is_same<typename Container::ke
 
 template <typename Container, typename K>
 using is_emplace_kv_able = std::integral_constant<bool,
-    is_map<Container>::value &&
+    jstd::detail::is_map<Container>::value &&
     (jstd::is_similar<K, typename Container::key_type>::value ||
      jstd::is_complete_and_move_constructible<typename Container::key_type>::value)>;
 
