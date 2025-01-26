@@ -1620,7 +1620,7 @@ private:
         const group_type * other_last_group = other.last_group();
         const group_type * group = this->groups();
         while (other_group < other_last_group) {
-            group[i] = other_group[i];
+            *group = *other_group;
             ++group;
             ++other_group;
         }
