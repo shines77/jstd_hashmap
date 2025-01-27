@@ -68,22 +68,23 @@ public:
     using iterator_category = std::forward_iterator_tag;
 
     using value_type = T;
-    using pointer = T *;
-    using const_pointer = const T *;
-    using reference = T &;
-    using const_reference = const T &;
-    using hashmap_type = HashMap;
-    using ctrl_type = typename HashMap::ctrl_type;
-    using slot_type = typename HashMap::slot_type;
+    using raw_value_type = typename std::remove_const<T>::type;
+    using pointer = raw_value_type *;
+    using const_pointer = const raw_value_type *;
+    using reference = raw_value_type &;
+    using const_reference = const raw_value_type &;
 
-    using mutable_value_type = typename std::remove_const<value_type>::type;
-    using const_value_type = typename std::add_const<mutable_value_type>::type;
+    using mutable_value_type = raw_value_type;
+    using const_value_type = typename std::add_const<raw_value_type>::type;
 
     using opp_value_type = typename std::conditional<std::is_const<value_type>::value,
                                                      mutable_value_type,
                                                      const_value_type>::type;
     using opp_flat_map_iterator = flat_map_iterator<HashMap, opp_value_type, IsIndirectKV>;
 
+    using hashmap_type = HashMap;
+    using ctrl_type = typename HashMap::ctrl_type;
+    using slot_type = typename HashMap::slot_type;
     using size_type = typename HashMap::size_type;
     using ssize_type = typename HashMap::ssize_type;
     using difference_type = typename HashMap::difference_type;
@@ -259,15 +260,13 @@ public:
     using iterator_category = std::forward_iterator_tag;
 
     using value_type = T;
-    using pointer = T *;
-    using const_pointer = const T *;
-    using reference = T &;
-    using const_reference = const T &;
-    using hashmap_type = HashMap;
-    using ctrl_type = typename HashMap::ctrl_type;
-    using slot_type = typename HashMap::slot_type;
+    using raw_value_type = typename std::remove_const<T>::type;
+    using pointer = raw_value_type *;
+    using const_pointer = const raw_value_type *;
+    using reference = raw_value_type &;
+    using const_reference = const raw_value_type &;
 
-    using mutable_value_type = typename std::remove_const<value_type>::type;
+    using mutable_value_type = raw_value_type;
     using const_value_type = typename std::add_const<mutable_value_type>::type;
 
     using opp_value_type = typename std::conditional<std::is_const<value_type>::value,
@@ -275,6 +274,9 @@ public:
                                                      const_value_type>::type;
     using opp_flat_map_iterator = flat_map_iterator<HashMap, opp_value_type, true>;
 
+    using hashmap_type = HashMap;
+    using ctrl_type = typename HashMap::ctrl_type;
+    using slot_type = typename HashMap::slot_type;
     using size_type = typename HashMap::size_type;
     using ssize_type = typename HashMap::ssize_type;
     using difference_type = typename HashMap::difference_type;
@@ -378,6 +380,14 @@ public:
 
     size_type index() const {
         return 0;
+    }
+
+    ctrl_type * ctrl() {
+        return nullptr;
+    }
+
+    const ctrl_type * ctrl() const {
+        return nullptr;
     }
 
     slot_type * slot() {
