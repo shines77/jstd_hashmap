@@ -429,6 +429,25 @@ public:
         this->destroy();
     }
 
+    group16_flat_table & operator = (const group16_flat_table & other) {
+        group16_flat_table tmp(other,
+                           AllocTraits::propagate_on_container_copy_assignment::value
+                           ? other.get_allocator_ref()
+                           : this->get_allocator_ref());
+        this->swap_impl(tmp);
+        return *this;
+    }
+
+    group16_flat_table & operator = (group16_flat_table && other) noexcept(
+        AllocTraits::is_always_equal::value &&
+        std::is_nothrow_move_assignable<hasher>::value &&
+        std::is_nothrow_move_assignable<key_equal>::value) {
+        // TODO: We should only use the operations from the noexcept clause
+        // to make sure we actually adhere to other contract.
+        return this->move_assign(std::move(other),
+                     typename AllocTraits::propagate_on_container_move_assignment());
+    }
+
     ///
     /// Observers
     ///
@@ -2585,6 +2604,25 @@ private:
             this->erase_index(slot_index);
         }
         return (slot_index != this->slot_capacity()) ? 1 : 0;
+    }
+
+    // TODO: Optimize this assuming *this and other don't overlap.
+    JSTD_FORCED_INLINE
+    this_type & move_assign(this_type && other, std::true_type) {
+        if (std::addressof(other) != this) {
+            this_type tmp(std::move(other));
+            this->swap_impl(tmp);
+        }
+        return *this;
+    }
+
+    JSTD_FORCED_INLINE
+    this_type & move_assign(this_type && other, std::false_type) {
+        if (std::addressof(other) != this) {
+            this_type tmp(std::move(other), this->get_allocator_ref());
+            this->swap_impl(tmp);
+        }
+        return *this;
     }
 
     JSTD_FORCED_INLINE
