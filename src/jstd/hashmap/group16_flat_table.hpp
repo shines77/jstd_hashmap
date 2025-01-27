@@ -1763,7 +1763,7 @@ private:
 
     JSTD_FORCED_INLINE
     void move_groups_array_from(group16_flat_table & other, std::false_type /* -> manual */) {
-        const group_type * other_group = other.groups();
+        group_type * other_group = other.groups();
         group_type * group = this->groups();
         size_type index = 0;
         size_type group_capacity = other.group_capacity();
