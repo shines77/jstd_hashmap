@@ -345,7 +345,7 @@ public:
 #if GROUP16_USE_INDEX_SHIFT
         index_shift_(kWordLength - 1),
 #endif
-        mlf_(kDefaultMaxLoadFactor),
+        mlf_(other.mlf_),
 #if GROUP16_USE_SEPARATE_SLOTS
         groups_alloc_(nullptr),
 #endif
@@ -1640,12 +1640,12 @@ private:
     JSTD_FORCED_INLINE
     void copy_groups_array_from(group16_flat_table const & other, std::false_type /* -> manual */) {
         const group_type * other_group = other.groups();
-        const group_type * other_last_group = other.last_group();
         group_type * group = this->groups();
-        while (other_group < other_last_group) {
-            *group = *other_group;
-            ++group;
-            ++other_group;
+        size_type index = 0;
+        size_type group_capacity = other.group_capacity();
+        while (index < group_capacity) {
+            group[index] = other_group[index];
+            ++index;
         }
     }
 
@@ -1673,42 +1673,42 @@ private:
 
     JSTD_FORCED_INLINE
     void copy_slots_array_from(group16_flat_table const & other, std::false_type /* -> manual */) {
-        size_type num_constructed = 0;
+        const ctrl_type * ctrl = this->ctrls();
+        const ctrl_type * last_ctrl = this->last_ctrl();
         const slot_type * other_slot = other.slots();
-        const slot_type * other_last_slot = other.last_slot();
         slot_type * slot = this->slots();
+        size_type index = 0;
 
         try {
-            while (other_slot < other_last_slot) {
-                SlotPolicyTraits::construct(&this->slot_allocator_, slot, other_slot);
-                ++num_constructed;
-                ++slot;
-                ++other_slot;
+            while (ctrl < last_ctrl) {
+                if (ctrl->is_used()) {
+                    SlotPolicyTraits::construct(&this->slot_allocator_, &slot[index], &other_slot[index]);
+                }
+                ++index;
+                ++ctrl;
             }
         }
         catch (const std::bad_alloc & ex) {
             JSTD_UNUSED(ex);
-            if (num_constructed != 0) {
-                other_slot = other.slots();
-                slot = this->slots();
+            if (index != 0) {
                 do {
-                    SlotPolicyTraits::destroy(&this->slot_allocator_, slot, other_slot);
-                    --num_constructed;
-                    ++slot;
-                    ++other_slot;
-                } while (num_constructed > 0);
+                    if (ctrl->is_used()) {
+                        SlotPolicyTraits::destroy(&this->slot_allocator_, &slot[index], &other_slot[index]);
+                    }
+                    --ctrl;
+                    --index;
+                } while (index >= 0);
             }
             throw std::bad_alloc();
         } catch (...) {
-            if (num_constructed != 0) {
-                other_slot = other.slots();
-                slot = this->slots();
+            if (index != 0) {
                 do {
-                    SlotPolicyTraits::destroy(&this->slot_allocator_, slot, other_slot);
-                    --num_constructed;
-                    ++slot;
-                    ++other_slot;
-                } while (num_constructed > 0);
+                    if (ctrl->is_used()) {
+                        SlotPolicyTraits::destroy(&this->slot_allocator_, &slot[index], &other_slot[index]);
+                    }
+                    --ctrl;
+                    --index;
+                } while (index >= 0);
             }
             throw;
         }
@@ -1763,15 +1763,15 @@ private:
 
     JSTD_FORCED_INLINE
     void move_groups_array_from(group16_flat_table & other, std::false_type /* -> manual */) {
-        group_type * other_group = other.groups();
-        group_type * other_last_group = other.last_group();
+        const group_type * other_group = other.groups();
         group_type * group = this->groups();
-        while (other_group < other_last_group) {
-            *group = *other_group;
+        size_type index = 0;
+        size_type group_capacity = other.group_capacity();
+        while (index < group_capacity) {
+            group[index] = other_group[index];
             // Reset one other group
-            other_group->init();
-            ++group;
-            ++other_group;
+            other_group[index].init();
+            ++index;
         }
     }
 
@@ -1802,42 +1802,42 @@ private:
 
     JSTD_FORCED_INLINE
     void move_slots_array_from(group16_flat_table & other, std::false_type /* -> manual */) {
-        size_type num_constructed = 0;
+        const ctrl_type * ctrl = this->ctrls();
+        const ctrl_type * last_ctrl = this->last_ctrl();
         slot_type * other_slot = other.slots();
-        slot_type * other_last_slot = other.last_slot();
         slot_type * slot = this->slots();
+        size_type index = 0;
 
         try {
-            while (other_slot < other_last_slot) {
-                SlotPolicyTraits::construct(&this->slot_allocator_, slot, other_slot);
-                ++num_constructed;
-                ++slot;
-                ++other_slot;
+            while (ctrl < last_ctrl) {
+                if (ctrl->is_used()) {
+                    SlotPolicyTraits::construct(&this->slot_allocator_, &slot[index], &other_slot[index]);
+                }
+                ++index;
+                ++ctrl;
             }
         }
         catch (const std::bad_alloc & ex) {
             JSTD_UNUSED(ex);
-            if (num_constructed != 0) {
-                other_slot = other.slots();
-                slot = this->slots();
+            if (index != 0) {
                 do {
-                    SlotPolicyTraits::destroy(&this->slot_allocator_, slot, other_slot);
-                    --num_constructed;
-                    ++slot;
-                    ++other_slot;
-                } while (num_constructed > 0);
+                    if (ctrl->is_used()) {
+                        SlotPolicyTraits::destroy(&this->slot_allocator_, &slot[index], &other_slot[index]);
+                    }
+                    --ctrl;
+                    --index;
+                } while (index >= 0);
             }
             throw std::bad_alloc();
         } catch (...) {
-            if (num_constructed != 0) {
-                other_slot = other.slots();
-                slot = this->slots();
+            if (index != 0) {
                 do {
-                    SlotPolicyTraits::destroy(&this->slot_allocator_, slot, other_slot);
-                    --num_constructed;
-                    ++slot;
-                    ++other_slot;
-                } while (num_constructed > 0);
+                    if (ctrl->is_used()) {
+                        SlotPolicyTraits::destroy(&this->slot_allocator_, &slot[index], &other_slot[index]);
+                    }
+                    --ctrl;
+                    --index;
+                } while (index >= 0);
             }
             throw;
         }
