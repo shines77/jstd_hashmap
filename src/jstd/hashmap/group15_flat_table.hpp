@@ -137,9 +137,11 @@ public:
     using group_type = flat_map_group15<group15_meta_ctrl>;
     using prober_type = group_quadratic_prober;
 
-    static constexpr std::uint8_t kEmptySlot = ctrl_type::kEmptySlot;
-    static constexpr std::uint8_t kEmptyHash = ctrl_type::kEmptyHash;
+    static constexpr const std::uint8_t kEmptySlot    = ctrl_type::kEmptySlot;
+    static constexpr const std::uint8_t kSentinelSlot = ctrl_type::kSentinelSlot;
+    static constexpr const std::uint8_t kEmptyHash    = ctrl_type::kEmptyHash;
 
+    static constexpr const size_type kGroupSize  = group_type::kGroupSize;
     static constexpr const size_type kGroupWidth = group_type::kGroupWidth;
 
     static constexpr bool kIsPlainKey    = jstd::is_plain_type<key_type>::value;
@@ -195,8 +197,6 @@ public:
     using slot_type = map_slot_type<key_type, mapped_type>;
     using slot_policy_t = flat_map_slot_policy<slot_type>;
     using SlotPolicyTraits = slot_policy_traits<slot_policy_t>;
-
-    //using slot_type = flat_map_slot_storage<type_policy, kIsIndirectKey, kIsIndirectValue>;
 
     static constexpr size_type kCacheLineSize = 64;
     static constexpr size_type kGroupAlignment = compile_time::is_pow2<alignof(group_type)>::value ?
@@ -483,7 +483,7 @@ public:
     }
 
     static const char * name() noexcept {
-        return "jstd::group16_flat_map";
+        return "jstd::group15_flat_map";
     }
 
     ///
@@ -1136,7 +1136,7 @@ private:
             { kEmptySlot }, { kEmptySlot }, { kEmptySlot }, { kEmptySlot },
             { kEmptySlot }, { kEmptySlot }, { kEmptySlot }, { kEmptySlot },
             { kEmptySlot }, { kEmptySlot }, { kEmptySlot }, { kEmptySlot },
-            { kEmptySlot }, { kEmptySlot }, { kEmptySlot }, { kEmptySlot }
+            { kEmptySlot }, { kEmptySlot }, { kSentinelSlot }, { 0 }
         };
 
         return reinterpret_cast<group_type *>(const_cast<ctrl_type *>(&s_empty_ctrls[0]));
@@ -1829,9 +1829,9 @@ private:
     JSTD_FORCED_INLINE
     group_type * AlignedGroups(const group_type * groups_alloc) {
         static_assert((GroupAlignment > 0),
-                      "jstd::group16_flat_map::AlignedGroups<N>(): GroupAlignment must bigger than 0.");
+                      "jstd::group15_flat_map::AlignedGroups<N>(): GroupAlignment must bigger than 0.");
         static_assert(((GroupAlignment & (GroupAlignment - 1)) == 0),
-                      "jstd::group16_flat_map::AlignedGroups<N>(): GroupAlignment must be power of 2.");
+                      "jstd::group15_flat_map::AlignedGroups<N>(): GroupAlignment must be power of 2.");
         size_type groups_start = reinterpret_cast<size_type>(groups_alloc);
         size_type groups_first = (groups_start + GroupAlignment - 1) & (~(GroupAlignment - 1));
         size_type groups_padding = static_cast<size_type>(groups_first - groups_start);
@@ -1849,9 +1849,9 @@ private:
     JSTD_FORCED_INLINE
     group_type * AlignedSlotsAndGroups(const slot_type * slots, size_type slot_capacity) {
         static_assert((GroupAlignment > 0),
-                      "jstd::group16_flat_map::AlignedSlotsAndGroups<N>(): GroupAlignment must bigger than 0.");
+                      "jstd::group15_flat_map::AlignedSlotsAndGroups<N>(): GroupAlignment must bigger than 0.");
         static_assert(((GroupAlignment & (GroupAlignment - 1)) == 0),
-                      "jstd::group16_flat_map::AlignedSlotsAndGroups<N>(): GroupAlignment must be power of 2.");
+                      "jstd::group15_flat_map::AlignedSlotsAndGroups<N>(): GroupAlignment must be power of 2.");
         const slot_type * last_slots = slots + slot_capacity;
         size_type last_slot = reinterpret_cast<size_type>(last_slots);
         size_type groups_first = (last_slot + GroupAlignment - 1) & (~(GroupAlignment - 1));
