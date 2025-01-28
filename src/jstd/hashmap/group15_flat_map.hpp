@@ -46,8 +46,8 @@
 
 ************************************************************************************/
 
-#ifndef JSTD_HASHMAP_GROUP16_FLAT_MAP_HPP
-#define JSTD_HASHMAP_GROUP16_FLAT_MAP_HPP
+#ifndef JSTD_HASHMAP_GROUP15_FLAT_MAP_HPP
+#define JSTD_HASHMAP_GROUP15_FLAT_MAP_HPP
 
 #pragma once
 
@@ -64,20 +64,20 @@
 
 #include "jstd/hashmap/detail/hashmap_traits.h"
 #include "jstd/hashmap/flat_map_type_policy.hpp"
-#include "jstd/hashmap/group16_flat_table.hpp"
+#include "jstd/hashmap/group15_flat_table.hpp"
 
 namespace jstd {
 
 template <typename TypePolicy, typename Hash,
           typename KeyEqual, typename Allocator>
-class group16_flat_table;
+class group15_flat_table;
 
 template <typename Key, typename Value,
           typename Hash = std::hash< typename std::remove_const<Key>::type >,
           typename KeyEqual = std::equal_to< typename std::remove_const<Key>::type >,
           typename Allocator = std::allocator< std::pair<const typename std::remove_const<Key>::type,
                                                          typename std::remove_const<Value>::type> > >
-class JSTD_DLL group16_flat_map
+class JSTD_DLL group15_flat_map
 {
 public:
     typedef flat_map_type_policy<Key, Value>    type_policy;
@@ -100,7 +100,7 @@ public:
     typedef typename std::allocator_traits<allocator_type>::pointer         pointer;
     typedef typename std::allocator_traits<allocator_type>::const_pointer   const_pointer;
 
-    typedef group16_flat_table<type_policy, Hash, KeyEqual,
+    typedef group15_flat_table<type_policy, Hash, KeyEqual,
         typename std::allocator_traits<Allocator>::template rebind_alloc<value_type>>
                                                 table_type;
 
@@ -110,7 +110,7 @@ public:
     typedef typename table_type::iterator       iterator;
     typedef typename table_type::const_iterator const_iterator;
 
-    using this_type = group16_flat_map<Key, Value, Hash, KeyEqual, Allocator>;
+    using this_type = group15_flat_map<Key, Value, Hash, KeyEqual, Allocator>;
 
 private:
     table_type table_;
@@ -119,101 +119,101 @@ public:
     ///
     /// Constructors
     ///
-    group16_flat_map() : group16_flat_map(0) {}
+    group15_flat_map() : group15_flat_map(0) {}
 
-    explicit group16_flat_map(size_type capacity, hasher const & hash = hasher(),
+    explicit group15_flat_map(size_type capacity, hasher const & hash = hasher(),
                               key_equal const & pred = key_equal(),
                               allocator_type const & allocator = allocator_type())
         : table_(capacity, hash, pred, allocator) {
     }
 
-    group16_flat_map(size_type capacity, allocator_type const & allocator)
-        : group16_flat_map(capacity, hasher(), key_equal(), allocator) {
+    group15_flat_map(size_type capacity, allocator_type const & allocator)
+        : group15_flat_map(capacity, hasher(), key_equal(), allocator) {
     }
 
-    group16_flat_map(size_type capacity, hasher const & hash, allocator_type const & allocator)
-        : group16_flat_map(capacity, hash, key_equal(), allocator) {
+    group15_flat_map(size_type capacity, hasher const & hash, allocator_type const & allocator)
+        : group15_flat_map(capacity, hash, key_equal(), allocator) {
     }
 
     template <typename InputIterator>
-    group16_flat_map(InputIterator first, InputIterator last, allocator_type const & allocator)
-        : group16_flat_map(first, last, size_type(0), hasher(), key_equal(), allocator) {
+    group15_flat_map(InputIterator first, InputIterator last, allocator_type const & allocator)
+        : group15_flat_map(first, last, size_type(0), hasher(), key_equal(), allocator) {
     }
 
-    explicit group16_flat_map(allocator_type const & allocator)
-        : group16_flat_map(0, allocator) {
+    explicit group15_flat_map(allocator_type const & allocator)
+        : group15_flat_map(0, allocator) {
     }
 
     template <typename Iterator>
-    group16_flat_map(Iterator first, Iterator last, size_type capacity = 0,
+    group15_flat_map(Iterator first, Iterator last, size_type capacity = 0,
                      hasher const & hash = hasher(), key_equal const & pred = key_equal(),
                      allocator_type const & allocator = allocator_type())
-        : group16_flat_map(capacity, hash, pred, allocator) {
+        : group15_flat_map(capacity, hash, pred, allocator) {
         this->insert(first, last);
     }
 
     template <typename Iterator>
-    group16_flat_map(Iterator first, Iterator last, size_type capacity, allocator_type const & allocator)
-        : group16_flat_map(first, last, size, hasher(), key_equal(), allocator) {
+    group15_flat_map(Iterator first, Iterator last, size_type capacity, allocator_type const & allocator)
+        : group15_flat_map(first, last, size, hasher(), key_equal(), allocator) {
     }
 
     template <typename Iterator>
-    group16_flat_map(Iterator first, Iterator last, size_type capacity,
+    group15_flat_map(Iterator first, Iterator last, size_type capacity,
                      hasher const & hash, allocator_type const & allocator)
-        : group16_flat_map(first, last, size, hash, key_equal(), allocator) {
+        : group15_flat_map(first, last, size, hash, key_equal(), allocator) {
     }
 
-    group16_flat_map(group16_flat_map const & other) : table_(other.table_) {
+    group15_flat_map(group15_flat_map const & other) : table_(other.table_) {
     }
 
-    group16_flat_map(group16_flat_map const & other, allocator_type const & allocator)
+    group15_flat_map(group15_flat_map const & other, allocator_type const & allocator)
         : table_(other.table_, allocator) {
     }
 
-    group16_flat_map(group16_flat_map && other)
+    group15_flat_map(group15_flat_map && other)
         noexcept(std::is_nothrow_move_constructible<table_type>::value)
         : table_(std::move(other.table_)) {
     }
 
-    group16_flat_map(group16_flat_map && other, allocator_type const & allocator)
+    group15_flat_map(group15_flat_map && other, allocator_type const & allocator)
         : table_(std::move(other.table_), allocator) {
     }
 
-    group16_flat_map(std::initializer_list<value_type> ilist,
+    group15_flat_map(std::initializer_list<value_type> ilist,
                      size_type capacity = 0, hasher const & hash = hasher(),
                      key_equal const & pred = key_equal(),
                      allocator_type const & allocator = allocator_type())
-        : group16_flat_map(ilist.begin(), ilist.end(), size, hash, pred, allocator) {
+        : group15_flat_map(ilist.begin(), ilist.end(), size, hash, pred, allocator) {
     }
 
-    group16_flat_map(std::initializer_list<value_type> ilist, allocator_type const & allocator)
-        : group16_flat_map(ilist, size_type(0), hasher(), key_equal(), allocator) {
+    group15_flat_map(std::initializer_list<value_type> ilist, allocator_type const & allocator)
+        : group15_flat_map(ilist, size_type(0), hasher(), key_equal(), allocator) {
     }
 
-    group16_flat_map(std::initializer_list<value_type> init, size_type capacity,
+    group15_flat_map(std::initializer_list<value_type> init, size_type capacity,
                      allocator_type const & allocator)
-        : group16_flat_map(init, size, hasher(), key_equal(), allocator) {
+        : group15_flat_map(init, size, hasher(), key_equal(), allocator) {
     }
 
-    group16_flat_map(std::initializer_list<value_type> init, size_type capacity,
+    group15_flat_map(std::initializer_list<value_type> init, size_type capacity,
                      hasher const & hash, allocator_type const & allocator)
-        : group16_flat_map(init, size, hash, key_equal(), allocator) {
+        : group15_flat_map(init, size, hash, key_equal(), allocator) {
     }
 
-    ~group16_flat_map() = default;
+    ~group15_flat_map() = default;
 
-    group16_flat_map & operator = (group16_flat_map const & other) {
+    group15_flat_map & operator = (group15_flat_map const & other) {
         table_ = other.table_;
         return *this;
     }
 
-    group16_flat_map & operator = (group16_flat_map && other) noexcept(
+    group15_flat_map & operator = (group15_flat_map && other) noexcept(
         noexcept(std::declval<table_type &>() = std::declval<table_type &&>())) {
         table_ = std::move(other.table_);
         return *this;
     }
 
-    group16_flat_map & operator = (std::initializer_list<value_type> il) {
+    group15_flat_map & operator = (std::initializer_list<value_type> il) {
         this->clear();
         this->insert(il.begin(), il.end());
         return *this;
@@ -675,8 +675,8 @@ public:
 
 template <typename Key, typename Value, typename Hash, typename KeyEqual, typename Alloc>
 inline
-void swap(group16_flat_map<Key, Value, Hash, KeyEqual, Alloc> & lhs,
-          group16_flat_map<Key, Value, Hash, KeyEqual, Alloc> & rhs)
+void swap(group15_flat_map<Key, Value, Hash, KeyEqual, Alloc> & lhs,
+          group15_flat_map<Key, Value, Hash, KeyEqual, Alloc> & rhs)
           noexcept(noexcept(lhs.swap(rhs)))
 {
     lhs.swap(rhs);
@@ -699,17 +699,17 @@ namespace std {
 
 template <typename Key, typename Value, typename Hash, typename KeyEqual, typename Alloc>
 inline
-void swap(jstd::group16_flat_map<Key, Value, Hash, KeyEqual, Alloc> & lhs,
-          jstd::group16_flat_map<Key, Value, Hash, KeyEqual, Alloc> & rhs)
+void swap(jstd::group15_flat_map<Key, Value, Hash, KeyEqual, Alloc> & lhs,
+          jstd::group15_flat_map<Key, Value, Hash, KeyEqual, Alloc> & rhs)
           noexcept(noexcept(lhs.swap(rhs)))
 {
     lhs.swap(rhs);
 }
 
 template <typename Key, typename Value, typename Hash, typename KeyEqual, typename Alloc, typename Pred>
-typename jstd::group16_flat_map<Key, Value, Hash, KeyEqual, Alloc>::size_type
+typename jstd::group15_flat_map<Key, Value, Hash, KeyEqual, Alloc>::size_type
 inline
-erase_if(jstd::group16_flat_map<Key, Value, Hash, KeyEqual, Alloc> & hash_map, Pred pred)
+erase_if(jstd::group15_flat_map<Key, Value, Hash, KeyEqual, Alloc> & hash_map, Pred pred)
 {
     auto old_size = hash_map.size();
 
@@ -728,4 +728,4 @@ erase_if(jstd::group16_flat_map<Key, Value, Hash, KeyEqual, Alloc> & hash_map, P
 
 } // namespace std
 
-#endif // JSTD_HASHMAP_GROUP16_FLAT_MAP_HPP
+#endif // JSTD_HASHMAP_GROUP15_FLAT_MAP_HPP

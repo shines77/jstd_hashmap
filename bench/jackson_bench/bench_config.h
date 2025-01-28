@@ -106,7 +106,7 @@
 #endif
 #define HASHMAP_2       jstd_robin_hash_map
 #define HASHMAP_3       jstd_group16_flat_map
-// #define HASHMAP_4
+#define HASHMAP_4       jstd_group15_flat_map
 // #define HASHMAP_5
 // #define HASHMAP_6
 // #define HASHMAP_7
@@ -115,5 +115,9 @@
 // #define HASHMAP_10
 // #define HASHMAP_11
 // #define HASHMAP_12
+// #define HASHMAP_13
+// #define HASHMAP_14
+// #define HASHMAP_15
+// #define HASHMAP_16
 
 #endif // JSTD_BENCH_JACKSON_BENCH_CONFIG_H

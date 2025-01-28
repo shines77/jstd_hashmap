@@ -29,6 +29,9 @@
     <Filter Include="src\hashmaps\jstd_group16_flat_map">
       <UniqueIdentifier>{7004dcc9-9895-4447-8dea-a995bc9d5827}</UniqueIdentifier>
     </Filter>
+    <Filter Include="src\hashmaps\jstd_group15_flat_map">
+      <UniqueIdentifier>{9b2e496c-67a6-4463-ad46-c7073c674bec}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\bench\jackson_bench\jackson_bench.cpp">
@@ -59,6 +62,9 @@
     </ClInclude>
     <ClInclude Include="..\..\..\bench\jackson_bench\hashmaps\jstd_group16_flat_map\hashmap_wrapper.h">
       <Filter>src\hashmaps\jstd_group16_flat_map</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\bench\jackson_bench\hashmaps\jstd_group15_flat_map\hashmap_wrapper.h">
+      <Filter>src\hashmaps\jstd_group15_flat_map</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

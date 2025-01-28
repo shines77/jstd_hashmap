@@ -1,11 +1,11 @@
-// /jackson_bench/hashmaps/jstd_group16_flat_map/hashmap_wrapper.h
+// /jackson_bench/hashmaps/jstd_group15_flat_map/hashmap_wrapper.h
 // Copyright (c) 2024 Jackson L. Allan.
 // Distributed under the MIT License (see the accompanying LICENSE file).
 
-#include "jstd/hashmap/group16_flat_map.hpp"
+#include "jstd/hashmap/group15_flat_map.hpp"
 
 template <typename BluePrint>
-struct jstd_group16_flat_map
+struct jstd_group15_flat_map
 {
     using key_type = typename BluePrint::key_type;
     using value_type = typename BluePrint::value_type;
@@ -26,7 +26,7 @@ struct jstd_group16_flat_map
         }
     };
 
-    using table_type = jstd::group16_flat_map<
+    using table_type = jstd::group15_flat_map<
         key_type,
         value_type,
         hash,
@@ -91,10 +91,10 @@ struct jstd_group16_flat_map
 };
 
 template <>
-struct jstd_group16_flat_map<void>
+struct jstd_group15_flat_map<void>
 {
-    static constexpr const char * name = "jstd::group16_flat_map";
-    static constexpr const char * label = "jstd::group16";
+    static constexpr const char * name = "jstd::group15_flat_map";
+    static constexpr const char * label = "jstd::group15";
     static constexpr const char * color = "rgb( 81, 169, 240 )";
     static constexpr bool tombstone_like_mechanism = true;
 };

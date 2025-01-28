@@ -46,8 +46,8 @@
 
 ************************************************************************************/
 
-#ifndef JSTD_HASHMAP_FLAT_MAP_GROUP16_HPP
-#define JSTD_HASHMAP_FLAT_MAP_GROUP16_HPP
+#ifndef JSTD_HASHMAP_FLAT_MAP_GROUP15_HPP
+#define JSTD_HASHMAP_FLAT_MAP_GROUP15_HPP
 
 #pragma once
 
@@ -60,26 +60,26 @@
 
 namespace jstd {
 
-class JSTD_DLL group16_meta_ctrl
+class JSTD_DLL group15_meta_ctrl
 {
 public:
-    typedef std::uint8_t value_type;
+    using value_type = std::uint8_t;
 
-    static constexpr const value_type kHashMask       = 0b01111111;
-    static constexpr const value_type kEmptySlot      = 0b00000000 & kHashMask;
-    static constexpr const value_type kOverflowMask   = 0b10000000;
+    static constexpr const value_type kHashMask       = 0b11111111;
+    static constexpr const value_type kEmptySlot      = 0b00000000;
+    static constexpr const value_type kSentinelSlot   = 0b00000001;
 
     static constexpr const value_type kEmptyHash      = 0x08;
-    static constexpr const std::uint32_t kEmptyHash32 = 0x08080808U;
+    static constexpr const value_type kSentinelHash   = 0x09;
+    static constexpr const std::uint32_t kEmptyHash32    = 0x08080808;
+    static constexpr const std::uint32_t kSentinelHash32 = 0x09090909;
 
-    static_assert(((kHashMask & kOverflowMask) == 0), "kHashMask & kOverflowMask must be 0");
-    static_assert(((kHashMask | kOverflowMask) == 0b11111111), "kHashMask & kOverflowMask must be 0b11111111");
-
-    group16_meta_ctrl(value_type value = kEmptySlot) : value_(value) {}
+    group15_meta_ctrl(value_type value = kEmptySlot) : value_(value) {}
 
     static inline int repeated_hash8(std::uint8_t hash) {
-        static constexpr std::uint32_t dword_hashs[] = {
-           kEmptyHash32, 0x01010101u, 0x02020202u, 0x03030303u,
+        static constexpr const std::uint32_t dword_hashs[] = {
+            // [0, 127]
+           kEmptyHash32, kSentinelHash32, 0x02020202u, 0x03030303u,
             0x04040404u, 0x05050505u, 0x06060606u, 0x07070707u,
             0x08080808u, 0x09090909u, 0x0A0A0A0Au, 0x0B0B0B0Bu,
             0x0C0C0C0Cu, 0x0D0D0D0Du, 0x0E0E0E0Eu, 0x0F0F0F0Fu,
@@ -111,42 +111,8 @@ public:
             0x74747474u, 0x75757575u, 0x76767676u, 0x77777777u,
             0x78787878u, 0x79797979u, 0x7A7A7A7Au, 0x7B7B7B7Bu,
             0x7C7C7C7Cu, 0x7D7D7D7Du, 0x7E7E7E7Eu, 0x7F7F7F7Fu,
-#if 1
-            // This is a mirror of 0 ~ 127
-           kEmptyHash32, 0x01010101u, 0x02020202u, 0x03030303u,
-            0x04040404u, 0x05050505u, 0x06060606u, 0x07070707u,
-            0x08080808u, 0x09090909u, 0x0A0A0A0Au, 0x0B0B0B0Bu,
-            0x0C0C0C0Cu, 0x0D0D0D0Du, 0x0E0E0E0Eu, 0x0F0F0F0Fu,
-            0x10101010u, 0x11111111u, 0x12121212u, 0x13131313u,
-            0x14141414u, 0x15151515u, 0x16161616u, 0x17171717u,
-            0x18181818u, 0x19191919u, 0x1A1A1A1Au, 0x1B1B1B1Bu,
-            0x1C1C1C1Cu, 0x1D1D1D1Du, 0x1E1E1E1Eu, 0x1F1F1F1Fu,
-            0x20202020u, 0x21212121u, 0x22222222u, 0x23232323u,
-            0x24242424u, 0x25252525u, 0x26262626u, 0x27272727u,
-            0x28282828u, 0x29292929u, 0x2A2A2A2Au, 0x2B2B2B2Bu,
-            0x2C2C2C2Cu, 0x2D2D2D2Du, 0x2E2E2E2Eu, 0x2F2F2F2Fu,
-            0x30303030u, 0x31313131u, 0x32323232u, 0x33333333u,
-            0x34343434u, 0x35353535u, 0x36363636u, 0x37373737u,
-            0x38383838u, 0x39393939u, 0x3A3A3A3Au, 0x3B3B3B3Bu,
-            0x3C3C3C3Cu, 0x3D3D3D3Du, 0x3E3E3E3Eu, 0x3F3F3F3Fu,
-            0x40404040u, 0x41414141u, 0x42424242u, 0x43434343u,
-            0x44444444u, 0x45454545u, 0x46464646u, 0x47474747u,
-            0x48484848u, 0x49494949u, 0x4A4A4A4Au, 0x4B4B4B4Bu,
-            0x4C4C4C4Cu, 0x4D4D4D4Du, 0x4E4E4E4Eu, 0x4F4F4F4Fu,
-            0x50505050u, 0x51515151u, 0x52525252u, 0x53535353u,
-            0x54545454u, 0x55555555u, 0x56565656u, 0x57575757u,
-            0x58585858u, 0x59595959u, 0x5A5A5A5Au, 0x5B5B5B5Bu,
-            0x5C5C5C5Cu, 0x5D5D5D5Du, 0x5E5E5E5Eu, 0x5F5F5F5Fu,
-            0x60606060u, 0x61616161u, 0x62626262u, 0x63636363u,
-            0x64646464u, 0x65656565u, 0x66666666u, 0x67676767u,
-            0x68686868u, 0x69696969u, 0x6A6A6A6Au, 0x6B6B6B6Bu,
-            0x6C6C6C6Cu, 0x6D6D6D6Du, 0x6E6E6E6Eu, 0x6F6F6F6Fu,
-            0x70707070u, 0x71717171u, 0x72727272u, 0x73737373u,
-            0x74747474u, 0x75757575u, 0x76767676u, 0x77777777u,
-            0x78787878u, 0x79797979u, 0x7A7A7A7Au, 0x7B7B7B7Bu,
-            0x7C7C7C7Cu, 0x7D7D7D7Du, 0x7E7E7E7Eu, 0x7F7F7F7Fu,
-#else
-            // Actually, it wasn't used from here on
+
+            // [128, 255]
             0x80808080u, 0x81818181u, 0x82828282u, 0x83838383u,
             0x84848484u, 0x85858585u, 0x86868686u, 0x87878787u,
             0x88888888u, 0x89898989u, 0x8A8A8A8Au, 0x8B8B8B8Bu,
@@ -179,7 +145,6 @@ public:
             0xF4F4F4F4u, 0xF5F5F5F5u, 0xF6F6F6F6u, 0xF7F7F7F7u,
             0xF8F8F8F8u, 0xF9F9F9F9u, 0xFAFAFAFAu, 0xFBFBFBFBu,
             0xFCFCFCFCu, 0xFDFDFDFDu, 0xFEFEFEFEu, 0xFFFFFFFFu,
-#endif
         };
 
         return (int)dword_hashs[hash];
@@ -193,39 +158,27 @@ public:
         return static_cast<std::uint8_t>(repeated_hash(hash));
     }
 
-    static inline value_type hash_bits(value_type hash) {
-        return (hash & kHashMask);
-    }
-
     static inline std::size_t hash_bits64(std::size_t hash) {
         return (hash & static_cast<std::size_t>(kHashMask));
     }
 
-    static inline value_type overflow_bits(value_type hash) {
-        return (hash & kOverflowMask);
-    }
-
     inline bool is_empty() const {
-        value_type hash = hash_bits(this->value_);
+        value_type hash = this->value_;
         return (hash == kEmptySlot);
     }
 
+    inline bool is_sentine() const {
+        value_type hash = this->value_;
+        return (hash == kSentinelSlot);
+    }
+
     inline bool is_used() const {
-        value_type hash = hash_bits(this->value_);
-        return (hash != kEmptySlot);
-    }
-
-    inline bool is_overflow() const {
-        value_type overflow = overflow_bits(this->value_);
-        return (overflow != 0);
-    }
-
-    inline bool is_not_overflow() const {
-        return !this->is_overflow();
+        value_type hash = this->value_;
+        return (hash > kSentinelSlot);
     }
 
     bool is_equals(value_type hash) const {
-        value_type hash8 = hash_bits(this->value_);
+        value_type hash8 = this->value_;
         return (hash == hash8);
     }
 
@@ -235,7 +188,7 @@ public:
     }
 
     inline value_type get_hash() const {
-        return hash_bits(this->value_);
+        return this->value_;
     }
 
     inline value_type value() const {
@@ -247,29 +200,22 @@ public:
     }
 
     inline void set_empty() {
-        this->value_ = overflow_bits(this->value_) | kEmptySlot;
+        this->value_ = kEmptySlot;
+    }
+
+    inline void set_sentinel() {
+        this->value_ = kSentinelSlot;
     }
 
     inline void set_used(value_type hash) {
-        assert(overflow_bits(hash) == 0);
-        assert(hash_bits(hash) != kEmptySlot);
-        this->value_ = overflow_bits(this->value_) | hash;
+        assert(hash > kSentinelSlot);
+        this->value_ = hash;
     }
 
     inline void set_used64(std::size_t hash) {
         value_type hash8 = static_cast<value_type>(hash_bits64(hash));
-        assert(hash8 != kEmptySlot);
-        this->value_ = overflow_bits(this->value_) | hash8;
-    }
-
-    inline void set_used_strict(value_type hash) {
-        assert(hash_bits(hash) != kEmptySlot);
-        this->value_ = overflow_bits(this->value_) | hash_bits(hash);
-    }
-
-    inline void set_overflow() {
-        assert(hash_bits(this->value_) != kEmptySlot);
-        this->value_ |= kOverflowMask;
+        assert(hash8 > kSentinelSlot);
+        this->value_ = hash8;
     }
 
     inline void set_value(value_type value) {
@@ -281,7 +227,7 @@ private:
 };
 
 template <typename T>
-class JSTD_DLL flat_map_group16
+class JSTD_DLL flat_map_group15
 {
 public:
     typedef T                       ctrl_type;
@@ -293,9 +239,9 @@ public:
 
     static constexpr const std::uint8_t kHashMask     = ctrl_type::kHashMask;
     static constexpr const std::uint8_t kEmptySlot    = ctrl_type::kEmptySlot;
-    static constexpr const std::uint8_t kOverflowMask = ctrl_type::kOverflowMask;
+    static constexpr const std::uint8_t kSentinelSlot = ctrl_type::kSentinelSlot;
 
-    static constexpr const std::size_t kGroupWidth = 16;
+    static constexpr const std::size_t kGroupWidth = 15;
     static constexpr const bool kIsRegularLayout = true;
 
     void init() {
@@ -331,14 +277,13 @@ public:
 
     inline bool is_overflow(std::size_t pos) const {
         assert(pos < kGroupWidth);
-        const ctrl_type * ctrl = &ctrls[pos];
-        return ctrl->is_overflow();
+        const ctrl_type * ctrl = &ctrls[kGroupWidth];
+        pos >>= 1;
+        return ((ctrl->value() & static_cast<value_type>(std::size_t(1) << pos)) != 0);
     }
 
     inline bool is_not_overflow(std::size_t pos) const {
-        assert(pos < kGroupWidth);
-        const ctrl_type * ctrl = &ctrls[pos];
-        return ctrl->is_not_overflow();
+        return !this->is_overflow(pos);
     }
 
     bool is_equals(std::size_t pos, value_type hash) {
@@ -371,81 +316,60 @@ public:
         ctrl->set_used64(hash);
     }
 
-    inline void set_used_strict(std::size_t pos, value_type hash) {
-        assert(pos < kGroupWidth);
-        ctrl_type * ctrl = &ctrls[pos];
-        ctrl->set_used_strict(hash);
-    }
-
     inline void set_overflow(std::size_t pos) {
-        ctrl_type * ctrl = &ctrls[pos];
-        ctrl->set_overflow();
+        assert(pos < kGroupWidth);
+        ctrl_type * ctrl = &ctrls[kGroupWidth];
+        pos >>= 1;
+        value_type value = (ctrl->value() & static_cast<value_type>(std::size_t(1) << pos));
+        ctrl->set_value(value);
     }
 
     inline std::uint32_t match_empty() const {
         // Latency = 6
         __m128i ctrl_bits = _load_data();
         //__COMPILER_BARRIER();
-        __m128i mask_bits = _mm_set1_epi8(kHashMask);
-        //__COMPILER_BARRIER();
 
         __m128i empty_bits;
         if (kEmptySlot == 0b00000000)
             empty_bits = _mm_setzero_si128();
-        else if (kEmptySlot == 0b11111111 || kEmptySlot == 0b01111111)
+        else if (kEmptySlot == 0b11111111)
             empty_bits = _mm_setones_si128();
         else
             empty_bits = _mm_set1_epi8(kEmptySlot);
 
-        __m128i match_mask;;
-        if (kEmptySlot != 0b01111111)
-            match_mask = _mm_cmpeq_epi8(_mm_and_si128(ctrl_bits, mask_bits), empty_bits);
-        else
-            match_mask = _mm_cmpeq_epi8(_mm_and_si128(ctrl_bits, mask_bits),
-                                        _mm_and_si128(empty_bits, mask_bits));
+        __m128i match_mask = _mm_cmpeq_epi8(ctrl_bits, empty_bits);
         int mask = _mm_movemask_epi8(match_mask);
-        return static_cast<std::uint32_t>(mask);
+        return static_cast<std::uint32_t>(mask & 0x7FFFU);
     }
 
     inline std::uint32_t match_used() const {
         // Latency = 6
         __m128i ctrl_bits = _load_data();
         //__COMPILER_BARRIER();
-        __m128i mask_bits = _mm_set1_epi8(kHashMask);
-        //__COMPILER_BARRIER();
 
         __m128i empty_bits, match_mask;
         if (kEmptySlot == 0b00000000) {
             empty_bits = _mm_setzero_si128();
-            match_mask = _mm_cmpgt_epi8(_mm_and_si128(ctrl_bits, mask_bits), empty_bits);
+            match_mask = _mm_cmpgt_epi8(ctrl_bits, empty_bits);
         }
         else if (kEmptySlot == 0b11111111) {
             empty_bits = _mm_setones_si128();
-            match_mask = _mm_cmplt_epi8(_mm_and_si128(ctrl_bits, mask_bits), empty_bits);
-        }
-        else if (kEmptySlot == 0b01111111) {
-            empty_bits = _mm_setones_si128();
-            match_mask = _mm_cmplt_epi8(_mm_and_si128(ctrl_bits, mask_bits),
-                                        _mm_and_si128(empty_bits, mask_bits));
+            match_mask = _mm_cmplt_epi8(ctrl_bits, empty_bits);
         }
         else {
             empty_bits = _mm_set1_epi8(kEmptySlot);
-            match_mask = _mm_cmpeq_epi8(_mm_and_si128(ctrl_bits, mask_bits), empty_bits);
+            match_mask = _mm_cmpeq_epi8(ctrl_bits, empty_bits);
         }
 
         int mask = _mm_movemask_epi8(match_mask);
-        if (kEmptySlot != 0b00000000 && kEmptySlot != 0b11111111 &&
-            kEmptySlot != 0b01111111) {
-            mask = (~mask) & 0xFFFFU;
-        }
-        return static_cast<std::uint32_t>(mask);
+        if (kEmptySlot != 0b00000000 && kEmptySlot != 0b11111111)
+            mask = ~mask;
+        return static_cast<std::uint32_t>(mask & 0x7FFFU);
     }
 
     inline std::uint32_t match_hash(value_type hash) const {
         // Latency = 6
         __m128i ctrl_bits  = _load_data();
-        //__COMPILER_BARRIER();
-        __m128i mask_bits  = _mm_set1_epi8(kHashMask);
         //__COMPILER_BARRIER();
 #if 1
         // Use lookup table
@@ -454,9 +378,9 @@ public:
 #else
         __m128i hash_bits = _mm_set1_epi8(hash);
 #endif
-        __m128i match_mask = _mm_cmpeq_epi8(_mm_and_si128(ctrl_bits, mask_bits), hash_bits);
+        __m128i match_mask = _mm_cmpeq_epi8(ctrl_bits, hash_bits);
         int mask = _mm_movemask_epi8(match_mask);
-        return static_cast<std::uint32_t>(mask);
+        return static_cast<std::uint32_t>(mask & 0x7FFFU);
     }
 
 private:
@@ -465,4 +389,4 @@ private:
 
 } // namespace jstd
 
-#endif // JSTD_HASHMAP_FLAT_MAP_GROUP16_HPP
+#endif // JSTD_HASHMAP_FLAT_MAP_GROUP15_HPP

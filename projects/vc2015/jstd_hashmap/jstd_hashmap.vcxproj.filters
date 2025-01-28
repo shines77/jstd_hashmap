@@ -319,6 +319,18 @@
     <ClInclude Include="..\..\..\src\jstd\hashmap\flat_map_group16.hpp">
       <Filter>src\hashmap</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\hashmap\group15_flat_map.hpp">
+      <Filter>src\hashmap</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\hashmap\group15_flat_table.hpp">
+      <Filter>src\hashmap</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\hashmap\flat_map_group15.hpp">
+      <Filter>src\hashmap</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\hashmap\group_quadratic_prober.hpp">
+      <Filter>src\hashmap</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\src\jstd\dll_main.cpp">
