@@ -1489,6 +1489,13 @@ private:
             JSTD_ASSUME_ALIGNED(groups, kGroupAlignment);
             std::memset(reinterpret_cast<unsigned char *>(groups),
                         kEmptySlot, sizeof(group_type) * group_capacity);
+            if (kEmptySlot != 0) {
+                group_type * group = groups;
+                group_type * last_group = groups + group_capacity;
+                for (; group < last_group; ++group) {
+                    group->clear_overflow();
+                }
+            }
         }
     }
 
@@ -1496,7 +1503,7 @@ private:
     void init_groups(group_type * groups, size_type group_capacity, std::false_type) {
         if (groups != this_type::default_empty_groups()) {
             group_type * group = groups;
-            group_type * last_group = group + group_capacity;
+            group_type * last_group = groups + group_capacity;
             for (; group < last_group; ++group) {
                 group->init();
             }

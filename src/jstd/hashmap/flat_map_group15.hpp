@@ -253,12 +253,12 @@ public:
         else if (kEmptySlot == 0b11111111) {
             __m128i ones = _mm_setones_si128();
             _mm_store_si128(reinterpret_cast<__m128i *>(ctrls), ones);
-            ctrls[kGroupSize] = 0;
+            clear_overflow();
         }
         else {
             __m128i empty_bits = _mm_set1_epi8(kEmptySlot);
             _mm_store_si128(reinterpret_cast<__m128i *>(ctrls), empty_bits);
-            ctrls[kGroupSize] = 0;
+            clear_overflow();
         }
     }
 
@@ -329,6 +329,11 @@ public:
         std::size_t pos = hash % std::size_t(CHAR_BIT);
         value_type value = (ctrl->value() | static_cast<value_type>(std::size_t(1) << pos));
         ctrl->set_value(value);
+    }
+
+    inline void clear_overflow() {
+        ctrl_type * ctrl = &ctrls[kGroupSize];
+        ctrl->set_value(0);
     }
 
     inline std::uint32_t match_empty() const {
