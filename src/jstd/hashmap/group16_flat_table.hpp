@@ -199,12 +199,14 @@ public:
     //using slot_type = flat_map_slot_storage<type_policy, kIsIndirectKey, kIsIndirectValue>;
 
     static constexpr size_type kCacheLineSize = 64;
-    static constexpr size_type kGroupAlignment = compile_time::is_pow2<alignof(group_type)>::value ?
-                                                 alignof(group_type) :
-                                                 compile_time::round_up_pow2<alignof(group_type)>::value;
-    static constexpr size_type kSlotAlignment = compile_time::is_pow2<alignof(slot_type)>::value ?
-                                                alignof(slot_type) :
-                                                compile_time::round_up_pow2<alignof(slot_type)>::value;
+    static constexpr size_type kGroupAlignment_ = compile_time::cmax<sizeof(group_type), alignof(group_type)>::value;
+    static constexpr size_type kGroupAlignment  = compile_time::is_pow2<kGroupAlignment_>::value ?
+                                                  kGroupAlignment_ :
+                                                  compile_time::round_up_pow2<kGroupAlignment_>::value;
+    static constexpr size_type kSlotAlignment_ = compile_time::cmax<sizeof(slot_type), alignof(slot_type)>::value;
+    static constexpr size_type kSlotAlignment  = compile_time::is_pow2<kSlotAlignment_>::value ?
+                                                 kSlotAlignment_ :
+                                                 compile_time::round_up_pow2<kSlotAlignment_>::value;
 
     using iterator       = flat_map_iterator<this_type, value_type, kIsIndirectKV>;
     using const_iterator = flat_map_iterator<this_type, const value_type, kIsIndirectKV>;
@@ -569,7 +571,7 @@ public:
     }
 
     void max_load_factor(float mlf) {
-        // mlf: [0.2, 0.875]
+        // mlf: [0.5, 0.875]
         if (mlf < kMinLoadFactorF)
             mlf = kMinLoadFactorF;
         if (mlf > kMaxLoadFactorF)
@@ -577,10 +579,10 @@ public:
         size_type mlf_int = static_cast<size_type>((float)kLoadFactorAmplify * mlf);
         this->mlf_ = mlf_int;
 
-        size_type new_slot_threshold = this->calc_slot_threshold(this->slot_size());
-        size_type new_slot_capacity = this->calc_capacity(new_slot_threshold);
-        if (new_slot_capacity > this->slot_capacity()) {
-            this->rehash(new_slot_capacity);
+        size_type new_slot_capacity = this->shrink_to_fit_capacity(this->slot_capacity());
+        size_type new_capacity = this->calc_capacity(new_slot_capacity);
+        if (new_capacity > this->slot_capacity()) {
+            this->rehash(new_capacity);
         }
     }
 
@@ -1015,8 +1017,8 @@ public:
 
     inline const group_type * group_by_slot_index(size_type slot_index) const noexcept {
         assert(slot_index <= this->slot_capacity());
-        size_type group_idx = slot_index / kGroupWidth;
-        return (this->groups() + std::ptrdiff_t(group_idx));
+        size_type group_index = slot_index / kGroupWidth;
+        return (this->groups() + std::ptrdiff_t(group_index));
     }
 
     inline slot_type * slot_at(size_type slot_index) noexcept {
@@ -1131,7 +1133,7 @@ public:
     }
 
 private:
-    static inline group_type * default_empty_groups() {
+    static inline group_type * default_empty_groups() noexcept {
         alignas(16) static const ctrl_type s_empty_ctrls[16] = {
             { kEmptySlot }, { kEmptySlot }, { kEmptySlot }, { kEmptySlot },
             { kEmptySlot }, { kEmptySlot }, { kEmptySlot }, { kEmptySlot },
@@ -1142,7 +1144,7 @@ private:
         return reinterpret_cast<group_type *>(const_cast<ctrl_type *>(&s_empty_ctrls[0]));
     }
 
-    static inline ctrl_type * default_empty_ctrls() {
+    static inline ctrl_type * default_empty_ctrls() noexcept {
         return reinterpret_cast<ctrl_type *>(this_type::default_empty_groups());
     }
 
@@ -1163,7 +1165,7 @@ private:
         return capacity;
     }
 
-    static inline constexpr size_type calc_slot_threshold(size_type mlf, size_type slot_capacity) {
+    static inline constexpr size_type calc_slot_threshold(size_type mlf, size_type slot_capacity) noexcept {
         /* When capacity is small, we allow 100% usage. */
         return (slot_capacity > kSmallCapacity) ? (slot_capacity * mlf / kLoadFactorAmplify) : slot_capacity;
     }
@@ -1834,9 +1836,10 @@ private:
                       "jstd::group16_flat_map::AlignedGroups<N>(): GroupAlignment must be power of 2.");
         size_type groups_start = reinterpret_cast<size_type>(groups_alloc);
         size_type groups_first = (groups_start + GroupAlignment - 1) & (~(GroupAlignment - 1));
+        assert(groups_first >= groups_start);
         size_type groups_padding = static_cast<size_type>(groups_first - groups_start);
-        group_type * groups = reinterpret_cast<group_type *>(
-                                    reinterpret_cast<char *>(groups_start) + groups_padding);
+        assert(groups_padding < GroupAlignment);
+        group_type * groups = reinterpret_cast<group_type *>(reinterpret_cast<char *>(groups_first));
         return groups;
     }
 
@@ -1855,9 +1858,10 @@ private:
         const slot_type * last_slots = slots + slot_capacity;
         size_type last_slot = reinterpret_cast<size_type>(last_slots);
         size_type groups_first = (last_slot + GroupAlignment - 1) & (~(GroupAlignment - 1));
+        assert(groups_first >= last_slot);
         size_type groups_padding = static_cast<size_type>(groups_first - last_slot);
-        group_type * groups = reinterpret_cast<group_type *>(
-                                    reinterpret_cast<char *>(last_slot) + groups_padding);
+        assert(groups_padding < GroupAlignment);
+        group_type * groups = reinterpret_cast<group_type *>(reinterpret_cast<char *>(groups_first));
         return groups;
     }
 
@@ -1989,13 +1993,13 @@ private:
                 slot_type * slot_base = old_slots;
 
                 for (; group < last_group; ++group) {
-                    uint32_t used_mask = group->match_used();
+                    std::uint32_t used_mask = group->match_used();
                     while (used_mask != 0) {
                         std::uint32_t used_pos = BitUtils::bsf32(used_mask);
                         used_mask = BitUtils::clearLowBit32(used_mask);
                         slot_type * old_slot = slot_base + used_pos;
                         assert(old_slot < old_last_slot);
-                        this->unique_insert_and_no_grow(old_slot);
+                        this->no_grow_unique_insert(old_slot);
                         this->destroy_slot(old_slot);
                     }
                     slot_base += kGroupWidth;
@@ -2095,7 +2099,7 @@ private:
                 do {
                     size_type match_pos = static_cast<size_type>(BitUtils::bsf32(match_mask));
                     const slot_type * slot = slot_base + match_pos;
-                    if (likely(this->key_eq_ref()(key, slot->value.first))) {
+                    if (likely(this->key_equal_(key, slot->value.first))) {
                         size_type slot_index = this->index_of(slot);
                         return slot_index;
                     }
@@ -2221,7 +2225,7 @@ private:
     }
 
     JSTD_FORCED_INLINE
-    size_type unique_insert_and_no_grow(const key_type & key) {
+    size_type no_grow_unique_insert(const key_type & key) {
         std::size_t key_hash = this->hash_for(key);
         size_type slot_pos = this->index_for_hash(key_hash);
         std::uint8_t ctrl_hash = this->ctrl_for_hash(key_hash);
@@ -2234,9 +2238,9 @@ private:
     /// Use in rehash_impl()
     ///
     JSTD_FORCED_INLINE
-    void unique_insert_and_no_grow(slot_type * old_slot) {
+    void no_grow_unique_insert(slot_type * old_slot) {
         assert(old_slot != nullptr);
-        size_type slot_index = this->unique_insert_and_no_grow(old_slot->value.first);
+        size_type slot_index = this->no_grow_unique_insert(old_slot->value.first);
         slot_type * new_slot = this->slot_at(slot_index);
         assert(new_slot != nullptr);
 
@@ -2249,9 +2253,9 @@ private:
     /// Use in unique_insert(first, last)
     ///
     JSTD_FORCED_INLINE
-    void unique_insert_and_no_grow(const slot_type * old_slot) {
+    void no_grow_unique_insert(const slot_type * old_slot) {
         assert(old_slot != nullptr);
-        size_type slot_index = this->unique_insert_and_no_grow(old_slot->value.first);
+        size_type slot_index = this->no_grow_unique_insert(old_slot->value.first);
         slot_type * new_slot = this->slot_at(slot_index);
         assert(new_slot != nullptr);
 
@@ -2267,7 +2271,7 @@ private:
         assert(other != this);
         for (; first != last; ++first) {
             const slot_type * old_slot = first.slot();
-            this->unique_insert_and_no_grow(old_slot);
+            this->no_grow_unique_insert(old_slot);
         }
     }
 

@@ -140,6 +140,7 @@ public:
     static constexpr const std::uint8_t kEmptySlot    = ctrl_type::kEmptySlot;
     static constexpr const std::uint8_t kSentinelSlot = ctrl_type::kSentinelSlot;
     static constexpr const std::uint8_t kEmptyHash    = ctrl_type::kEmptyHash;
+    static constexpr const std::uint8_t kSentinelHash = ctrl_type::kSentinelHash;
 
     static constexpr const size_type kGroupSize  = group_type::kGroupSize;
     static constexpr const size_type kGroupWidth = group_type::kGroupWidth;
@@ -199,12 +200,14 @@ public:
     using SlotPolicyTraits = slot_policy_traits<slot_policy_t>;
 
     static constexpr size_type kCacheLineSize = 64;
-    static constexpr size_type kGroupAlignment = compile_time::is_pow2<alignof(group_type)>::value ?
-                                                 alignof(group_type) :
-                                                 compile_time::round_up_pow2<alignof(group_type)>::value;
-    static constexpr size_type kSlotAlignment = compile_time::is_pow2<alignof(slot_type)>::value ?
-                                                alignof(slot_type) :
-                                                compile_time::round_up_pow2<alignof(slot_type)>::value;
+    static constexpr size_type kGroupAlignment_ = compile_time::cmax<sizeof(group_type), alignof(group_type)>::value;
+    static constexpr size_type kGroupAlignment  = compile_time::is_pow2<kGroupAlignment_>::value ?
+                                                  kGroupAlignment_ :
+                                                  compile_time::round_up_pow2<kGroupAlignment_>::value;
+    static constexpr size_type kSlotAlignment_ = compile_time::cmax<sizeof(slot_type), alignof(slot_type)>::value;
+    static constexpr size_type kSlotAlignment  = compile_time::is_pow2<kSlotAlignment_>::value ?
+                                                 kSlotAlignment_ :
+                                                 compile_time::round_up_pow2<kSlotAlignment_>::value;
 
     using iterator       = flat_map_iterator<this_type, value_type, kIsIndirectKV>;
     using const_iterator = flat_map_iterator<this_type, const value_type, kIsIndirectKV>;
@@ -520,21 +523,19 @@ public:
 
     size_type slot_size() const noexcept { return this->slot_size_; }
     size_type slot_mask() const noexcept { return this->slot_mask_; }
-    size_type slot_capacity() const noexcept { return (this->slot_mask_ + 1); }
+    size_type slot_capacity() const noexcept {
+        return calc_slot_capacity(this->group_capacity(), this->ctrl_capacity());
+    }
     size_type slot_threshold() const noexcept { return this->slot_threshold_; }
 
-    size_type ctrl_capacity() const noexcept { return this->slot_capacity(); }
+    size_type ctrl_capacity() const noexcept { return (this->slot_mask_ + 1); }
     size_type max_ctrl_capacity() const noexcept { return (this->group_capacity() * kGroupWidth); }
 
     size_type group_mask() const noexcept {
         return this->group_mask_;
     }
     size_type group_capacity() const noexcept {
-#if 1
         return (this->group_mask_ + 1);
-#else
-        return ((this->slot_capacity() + (kGroupWidth - 1)) / kGroupWidth);
-#endif
     }
 
     bool is_valid() const noexcept { return (this->groups() != nullptr); }
@@ -569,7 +570,7 @@ public:
     }
 
     void max_load_factor(float mlf) {
-        // mlf: [0.2, 0.875]
+        // mlf: [0.5, 0.875]
         if (mlf < kMinLoadFactorF)
             mlf = kMinLoadFactorF;
         if (mlf > kMaxLoadFactorF)
@@ -577,10 +578,10 @@ public:
         size_type mlf_int = static_cast<size_type>((float)kLoadFactorAmplify * mlf);
         this->mlf_ = mlf_int;
 
-        size_type new_slot_threshold = this->calc_slot_threshold(this->slot_size());
-        size_type new_slot_capacity = this->calc_capacity(new_slot_threshold);
-        if (new_slot_capacity > this->slot_capacity()) {
-            this->rehash(new_slot_capacity);
+        size_type new_capacity = this->shrink_to_fit_capacity(this->ctrl_capacity());
+        size_type new_ctrl_capacity = this->calc_capacity(new_capacity);
+        if (new_ctrl_capacity > this->ctrl_capacity()) {
+            this->rehash(new_ctrl_capacity);
         }
     }
 
@@ -989,12 +990,18 @@ public:
 
     inline ctrl_type * ctrl_at(size_type slot_index) noexcept {
         assert(slot_index <= this->slot_capacity());
-        return (this->ctrls() + std::ptrdiff_t(slot_index));
+        size_type group_index = slot_index / kGroupSize;
+        size_type group_pos = slot_pos % kGroupSize;
+        size_type ctrl_index = group_index * kGroupWidth + group_pos;
+        return (this->ctrls() + std::ptrdiff_t(ctrl_index));
     }
 
     inline const ctrl_type * ctrl_at(size_type slot_index) const noexcept {
         assert(slot_index <= this->slot_capacity());
-        return (this->ctrls() + std::ptrdiff_t(slot_index));
+        size_type group_index = slot_index / kGroupSize;
+        size_type group_pos = slot_pos % kGroupSize;
+        size_type ctrl_index = group_index * kGroupWidth + group_pos;
+        return (this->ctrls() + std::ptrdiff_t(ctrl_index));
     }
 
     inline group_type * group_at(size_type group_index) noexcept {
@@ -1007,16 +1014,28 @@ public:
         return (this->groups() + std::ptrdiff_t(group_index));
     }
 
+    inline group_type * group_by_ctrl_index(size_type ctrl_index) noexcept {
+        assert(ctrl_index <= this->ctrl_capacity());
+        size_type group_index = ctrl_index / kGroupWidth;
+        return (this->groups() + std::ptrdiff_t(group_index));
+    }
+
+    inline const group_type * group_by_ctrl_index(size_type ctrl_index) const noexcept {
+        assert(ctrl_index <= this->ctrl_capacity());
+        size_type group_index = ctrl_index / kGroupWidth;
+        return (this->groups() + std::ptrdiff_t(group_index));
+    }
+
     inline group_type * group_by_slot_index(size_type slot_index) noexcept {
         assert(slot_index <= this->slot_capacity());
-        size_type group_index = slot_index / kGroupWidth;
+        size_type group_index = slot_index / kGroupSize;
         return (this->groups() + std::ptrdiff_t(group_index));
     }
 
     inline const group_type * group_by_slot_index(size_type slot_index) const noexcept {
         assert(slot_index <= this->slot_capacity());
-        size_type group_idx = slot_index / kGroupWidth;
-        return (this->groups() + std::ptrdiff_t(group_idx));
+        size_type group_index = slot_index / kGroupSize;
+        return (this->groups() + std::ptrdiff_t(group_index));
     }
 
     inline slot_type * slot_at(size_type slot_index) noexcept {
@@ -1055,15 +1074,15 @@ public:
 #if 0
             const group_type * group = this->groups();
             const group_type * last_group = this->last_group();
-            size_type slot_base_index = 0;
+            size_type ctrl_base_index = 0;
             for (; group < last_group; ++group) {
                 std::uint32_t used_mask = group->match_used();
                 if (likely(used_mask != 0)) {
                     std::uint32_t used_pos = BitUtils::bsf32(used_mask);
-                    size_type slot_index = slot_base_index + used_pos;
-                    return slot_index;
+                    size_type ctrl_index = ctrl_base_index + used_pos;
+                    return ctrl_index;
                 }
-                slot_base_index += kGroupWidth;
+                ctrl_base_index += kGroupWidth;
             }
 #else
             const ctrl_type * ctrl = this->ctrls();
@@ -1076,62 +1095,62 @@ public:
             }
 #endif
         }
-        return this->slot_capacity();
+        return this->ctrl_capacity();
     }
 
     JSTD_FORCED_INLINE
-    size_type skip_empty_slots(size_type start_slot_index) const {
+    size_type skip_empty_slots(size_type start_ctrl_index) const {
         if (this->size() != 0) {
-            start_slot_index++;
-            if (unlikely(start_slot_index >= this->slot_capacity()))
-                return this->slot_capacity();
-            const group_type * group = this->group_by_slot_index(start_slot_index);
+            start_ctrl_index++;
+            if (unlikely(start_ctrl_index >= this->ctrl_capacity()))
+                return this->ctrl_capacity();
+            const group_type * group = this->group_by_ctrl_index(start_ctrl_index);
             const group_type * last_group = this->last_group();
-            size_type slot_pos = start_slot_index % kGroupWidth;
-            size_type slot_base_index = start_slot_index - slot_pos;
+            size_type ctrl_pos = start_ctrl_index % kGroupWidth;
+            size_type ctrl_base_index = start_ctrl_index - ctrl_pos;
             // Last 4 items use ctrl seek, maybe faster.
-            static const size_type kCtrlFasterSeekPos = 4;
-            if (likely(slot_pos < (kGroupWidth - kCtrlFasterSeekPos))) {
+            static const size_type kCtrlFasterSeekPos = 6;
+            if (unlikely(ctrl_pos > (kGroupWidth - kCtrlFasterSeekPos))) {
                 if (group < last_group) {
                     std::uint32_t used_mask = group->match_used();
                     // Filter out the bits in the leading position
                     // std::uint32_t non_excluded_mask = ~((std::uint32_t(1) << std::uint32_t(slot_pos)) - 1);
-                    std::uint32_t non_excluded_mask = (std::uint32_t(0xFFFFFFFFu) << std::uint32_t(slot_pos));
+                    std::uint32_t non_excluded_mask = (std::uint32_t(0xFFFFFFFFu) << std::uint32_t(ctrl_pos));
                     used_mask &= non_excluded_mask;
                     if (likely(used_mask != 0)) {
                         std::uint32_t used_pos = BitUtils::bsf32(used_mask);
-                        size_type slot_index = slot_base_index + used_pos;
+                        size_type slot_index = ctrl_base_index + used_pos;
                         return slot_index;
                     }
                 }
             } else {
-                size_type last_index = slot_base_index + kGroupWidth;
-                const ctrl_type * ctrl = this->ctrl_at(start_slot_index);
-                while (start_slot_index < last_index) {
+                size_type last_index = ctrl_base_index + kGroupWidth;
+                const ctrl_type * ctrl = this->ctrl_at(start_ctrl_index);
+                while (start_ctrl_index < last_index) {
                     if (ctrl->is_used()) {
-                        return start_slot_index;
+                        return start_ctrl_index;
                     }
                     ++ctrl;
-                    ++start_slot_index;
+                    ++start_ctrl_index;
                 }
             }
-            slot_base_index += kGroupWidth;
+            ctrl_base_index += kGroupWidth;
             group++;
             for (; group < last_group; ++group) {
                 std::uint32_t used_mask = group->match_used();
                 if (likely(used_mask != 0)) {
                     std::uint32_t used_pos = BitUtils::bsf32(used_mask);
-                    size_type slot_index = slot_base_index + used_pos;
-                    return slot_index;
+                    size_type ctrl_index = ctrl_base_index + used_pos;
+                    return ctrl_index;
                 }
-                slot_base_index += kGroupWidth;
+                ctrl_base_index += kGroupWidth;
             }
         }
-        return this->slot_capacity();
+        return this->ctrl_capacity();
     }
 
 private:
-    static inline group_type * default_empty_groups() {
+    static inline group_type * default_empty_groups() noexcept {
         alignas(16) static const ctrl_type s_empty_ctrls[16] = {
             { kEmptySlot }, { kEmptySlot }, { kEmptySlot }, { kEmptySlot },
             { kEmptySlot }, { kEmptySlot }, { kEmptySlot }, { kEmptySlot },
@@ -1142,7 +1161,7 @@ private:
         return reinterpret_cast<group_type *>(const_cast<ctrl_type *>(&s_empty_ctrls[0]));
     }
 
-    static inline ctrl_type * default_empty_ctrls() {
+    static inline ctrl_type * default_empty_ctrls() noexcept {
         return reinterpret_cast<ctrl_type *>(this_type::default_empty_groups());
     }
 
@@ -1163,7 +1182,11 @@ private:
         return capacity;
     }
 
-    static inline constexpr size_type calc_slot_threshold(size_type mlf, size_type slot_capacity) {
+    static inline constexpr size_type calc_slot_capacity(size_type group_capacity, size_type init_capacity) noexcept {
+        return (init_capacity >= kGroupWidth) ? (group_capacity * kGroupSize) : init_capacity;
+    }
+
+    static inline constexpr size_type calc_slot_threshold(size_type mlf, size_type slot_capacity) noexcept {
         /* When capacity is small, we allow 100% usage. */
         return (slot_capacity > kSmallCapacity) ? (slot_capacity * mlf / kLoadFactorAmplify) : slot_capacity;
     }
@@ -1363,14 +1386,12 @@ private:
         std::size_t ctrl_hash = this->ctrl_hasher(key_hash);
         std::uint8_t ctrl_hash8 = static_cast<std::uint8_t>(ctrl_hash);
 #endif
-#if 1
-        if (likely(ctrl_hash8 != kEmptySlot))
+        if (likely(ctrl_hash8 > kSentinelSlot))
             return ctrl_hash8;
-        else
+        else if (likely(ctrl_hash8 == kEmptySlot))
             return kEmptyHash;
-#else
-        return ((ctrl_hash8 != kEmptySlot) ? ctrl_hash8 : kEmptyHash);
-#endif
+        else
+            return kSentinelHash;
     }
 
     JSTD_FORCED_INLINE size_type index_of(iterator iter) const {
@@ -1538,13 +1559,17 @@ private:
                         slot_type * slot = slot_base + used_pos;
                         this->destroy_slot(slot);
                     }
-                    slot_base += kGroupWidth;
+                    slot_base += kGroupSize;
                 }
 #else
                 ctrl_type * ctrl = this->ctrls();
-                for (size_type slot_index = 0; slot_index < this->slot_capacity(); slot_index++) {
-                    if (ctrl->is_used()) {
-                        this->destroy_slot(slot_index);
+                size_type slot_index = 0;
+                for (size_type ctrl_index = 0; ctrl_index < this->ctrl_capacity(); ctrl_index++) {
+                    if (likely((ctrl_index % kGroupWidth) != kGroupSize) {
+                        if (ctrl->is_used()) {
+                            this->destroy_slot(slot_index);
+                        }
+                        slot_index++;
                     }
                     ctrl++;
                 }
@@ -1569,7 +1594,7 @@ private:
         assert(this->empty());
         assert(this != std::addressof(other));
         assert(other.size() > 0);
-        if (this->slot_capacity() == other.slot_capacity()) {
+        if (this->ctrl_capacity() == other.ctrl_capacity()) {
             this->fast_copy_slots_from(other);
         } else {
             try {
@@ -1690,7 +1715,7 @@ private:
         assert(this->empty());
         assert(this != std::addressof(other));
         assert(other.size() > 0);
-        if (this->slot_capacity() == other.slot_capacity()) {
+        if (this->ctrl_capacity() == other.ctrl_capacity()) {
             this->fast_move_slots_from(other);
         } else {
             try {
@@ -1841,9 +1866,10 @@ private:
                       "jstd::group15_flat_map::AlignedGroups<N>(): GroupAlignment must be power of 2.");
         size_type groups_start = reinterpret_cast<size_type>(groups_alloc);
         size_type groups_first = (groups_start + GroupAlignment - 1) & (~(GroupAlignment - 1));
+        assert(groups_first >= groups_start);
         size_type groups_padding = static_cast<size_type>(groups_first - groups_start);
-        group_type * groups = reinterpret_cast<group_type *>(
-                                    reinterpret_cast<char *>(groups_start) + groups_padding);
+        assert(groups_padding < GroupAlignment);
+        group_type * groups = reinterpret_cast<group_type *>(reinterpret_cast<char *>(groups_first));
         return groups;
     }
 
@@ -1862,9 +1888,10 @@ private:
         const slot_type * last_slots = slots + slot_capacity;
         size_type last_slot = reinterpret_cast<size_type>(last_slots);
         size_type groups_first = (last_slot + GroupAlignment - 1) & (~(GroupAlignment - 1));
+        assert(groups_first >= last_slot);
         size_type groups_padding = static_cast<size_type>(groups_first - last_slot);
-        group_type * groups = reinterpret_cast<group_type *>(
-                                    reinterpret_cast<char *>(last_slot) + groups_padding);
+        assert(groups_padding < GroupAlignment);
+        group_type * groups = reinterpret_cast<group_type *>(reinterpret_cast<char *>(groups_first));
         return groups;
     }
 
@@ -1921,6 +1948,7 @@ private:
     template <bool isInitialize = false>
     JSTD_FORCED_INLINE
     void create_slots(size_type new_capacity) {
+        assert(pow2::is_pow2(new_capacity));
         if (unlikely((new_capacity == 0) && !isInitialize)) {
             this->reset<false>();
             return;
@@ -1935,7 +1963,8 @@ private:
         assert(new_group_capacity > 0);
 
         size_type new_max_slot_size = new_capacity * this->mlf_ / kLoadFactorAmplify;
-        size_type new_slot_capacity = (!kIsIndirectKV) ? new_capacity : new_max_slot_size;
+        size_type new_slot_size = calc_slot_capacity(new_group_capacity, new_capacity);
+        size_type new_slot_capacity = (!kIsIndirectKV) ? new_slot_size : new_max_slot_size;
 
 #if GROUP15_USE_SEPARATE_SLOTS
         size_type total_group_alloc_count = this->TotalGroupAllocCount<kGroupAlignment>(new_group_capacity);
@@ -1957,7 +1986,7 @@ private:
         this->slots_ = new_slots;
         this->slot_size_ = 0;
         this->slot_mask_ = new_capacity - 1;
-        this->slot_threshold_ = this->calc_slot_threshold(new_capacity);
+        this->slot_threshold_ = this->calc_slot_threshold(new_slot_capacity);
         this->group_mask_ = this->calc_group_mask(new_capacity);
         this->index_shift_ = this->calc_index_shift(new_capacity);
 #if GROUP15_USE_SEPARATE_SLOTS
@@ -1996,16 +2025,16 @@ private:
                 slot_type * slot_base = old_slots;
 
                 for (; group < last_group; ++group) {
-                    uint32_t used_mask = group->match_used();
+                    std::uint32_t used_mask = group->match_used();
                     while (used_mask != 0) {
                         std::uint32_t used_pos = BitUtils::bsf32(used_mask);
                         used_mask = BitUtils::clearLowBit32(used_mask);
                         slot_type * old_slot = slot_base + used_pos;
                         assert(old_slot < old_last_slot);
-                        this->unique_insert_and_no_grow(old_slot);
+                        this->no_grow_unique_insert(old_slot);
                         this->destroy_slot(old_slot);
                     }
-                    slot_base += kGroupWidth;
+                    slot_base += kGroupSize;
                 }
             }
 
@@ -2095,14 +2124,14 @@ private:
             const group_type * group = this->group_at(group_index);
             std::uint32_t match_mask = group->match_hash(ctrl_hash);
             if (match_mask != 0) {
-                const slot_type * slot_base = this->slots() + group_index * kGroupWidth;
-                if (sizeof(value_type) <= 32) {
+                const slot_type * slot_base = this->slots() + group_index * kGroupSize;
+                if (sizeof(value_type) <= 16) {
                     Prefetch_Read_T0((const void *)slot_base);
                 }
                 do {
                     size_type match_pos = static_cast<size_type>(BitUtils::bsf32(match_mask));
                     const slot_type * slot = slot_base + match_pos;
-                    if (likely(this->key_eq_ref()(key, slot->value.first))) {
+                    if (likely(this->key_equal_(key, slot->value.first))) {
                         size_type slot_index = this->index_of(slot);
                         return slot_index;
                     }
@@ -2116,7 +2145,7 @@ private:
                 return this->slot_capacity();
             }
 #else
-            if (likely(group->is_not_overflow(ctrl_hash % kGroupWidth))) {
+            if (likely(group->is_not_overflow(ctrl_hash))) {
                 return this->slot_capacity();
             }
 #endif
@@ -2159,7 +2188,7 @@ private:
             std::uint32_t empty_mask = group->match_empty();
             if (empty_mask != 0) {
                 std::uint32_t empty_pos = BitUtils::bsf32(empty_mask);
-                size_type slot_base = group_index * kGroupWidth;
+                size_type slot_base = group_index * kGroupSize;
                 assert(group->is_empty(empty_pos));
                 group->set_used(empty_pos, ctrl_hash);
                 size_type slot_index = slot_base + empty_pos;
@@ -2167,13 +2196,9 @@ private:
             } else {
                 // If it's not overflow, set the overflow bit.
 #if GROUP15_OVERFLOW_USE_POS
-                //if (likely(group->is_not_overflow(group_pos))) {
-                    group->set_overflow(group_pos);
-                //}
+                group->set_overflow(group_pos);
 #else
-                //if (likely(group->is_not_overflow(ctrl_hash % kGroupWidth))) {
-                    group->set_overflow(ctrl_hash % kGroupWidth);
-                //}
+                group->set_overflow(ctrl_hash);
 #endif
             }
 #if GROUP15_DISPLAY_DEBUG_INFO
@@ -2228,7 +2253,7 @@ private:
     }
 
     JSTD_FORCED_INLINE
-    size_type unique_insert_and_no_grow(const key_type & key) {
+    size_type no_grow_unique_insert(const key_type & key) {
         std::size_t key_hash = this->hash_for(key);
         size_type slot_pos = this->index_for_hash(key_hash);
         std::uint8_t ctrl_hash = this->ctrl_for_hash(key_hash);
@@ -2241,9 +2266,9 @@ private:
     /// Use in rehash_impl()
     ///
     JSTD_FORCED_INLINE
-    void unique_insert_and_no_grow(slot_type * old_slot) {
+    void no_grow_unique_insert(slot_type * old_slot) {
         assert(old_slot != nullptr);
-        size_type slot_index = this->unique_insert_and_no_grow(old_slot->value.first);
+        size_type slot_index = this->no_grow_unique_insert(old_slot->value.first);
         slot_type * new_slot = this->slot_at(slot_index);
         assert(new_slot != nullptr);
 
@@ -2256,9 +2281,9 @@ private:
     /// Use in unique_insert(first, last)
     ///
     JSTD_FORCED_INLINE
-    void unique_insert_and_no_grow(const slot_type * old_slot) {
+    void no_grow_unique_insert(const slot_type * old_slot) {
         assert(old_slot != nullptr);
-        size_type slot_index = this->unique_insert_and_no_grow(old_slot->value.first);
+        size_type slot_index = this->no_grow_unique_insert(old_slot->value.first);
         slot_type * new_slot = this->slot_at(slot_index);
         assert(new_slot != nullptr);
 
@@ -2274,7 +2299,7 @@ private:
         assert(other != this);
         for (; first != last; ++first) {
             const slot_type * old_slot = first.slot();
-            this->unique_insert_and_no_grow(old_slot);
+            this->no_grow_unique_insert(old_slot);
         }
     }
 
@@ -2540,13 +2565,14 @@ private:
 
     JSTD_FORCED_INLINE
     bool ctrl_maybe_caused_overflow(size_type slot_index) const noexcept {
-        const group_type * group = this->groups() + slot_index / kGroupWidth;
+        const group_type * group = this->groups() + slot_index / kGroupSize;
+        size_type group_pos = slot_index % kGroupSize;
 #if GROUP15_OVERFLOW_USE_POS
-        size_type group_pos = slot_index % kGroupWidth;
         return group->is_overflow(group_pos);
 #else
         const ctrl_type * ctrl = this->ctrl_at(slot_index);
-        return group->is_overflow(ctrl->value() % kGroupWidth);
+        size_type ctrl_hash = group->value(group_pos);
+        return group->is_overflow(ctrl_hash);
 #endif
     }
 

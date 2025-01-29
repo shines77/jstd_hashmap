@@ -366,6 +366,28 @@ log2_int(SizeType N)
 namespace jstd {
 namespace compile_time {
 
+// cmin<a, b>
+template <typename T, T a, T b>
+struct cmin_impl {
+    static constexpr T value = (a <= b) ? a : b;
+};
+
+// cmax<a, b>
+template <typename T, T a, T b>
+struct cmax_impl {
+    static constexpr T value = (a >= b) ? a : b;
+};
+
+template <std::size_t a, std::size_t b>
+struct cmin {
+    static constexpr std::size_t value = cmin_impl<std::size_t, a, b>::value;
+};
+
+template <std::size_t a, std::size_t b>
+struct cmax {
+    static constexpr std::size_t value = cmax_impl<std::size_t, a, b>::value;
+};
+
 //
 // is_pow2 = (N && ((N & (N - 1)) == 0);
 // Here, N must be a unsigned number.
