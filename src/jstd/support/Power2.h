@@ -18,6 +18,7 @@
 #include <limits>           // For std::numeric_limits<T>::max()
 #include <type_traits>      // For std::make_unsigned<T>
 
+#include "jstd/basic/stddef.h"
 #include "jstd/support/BitUtils.h"
 
 //////////////////////////////////////////////////////////////////////////
@@ -387,6 +388,30 @@ template <std::size_t a, std::size_t b>
 struct cmax {
     static constexpr std::size_t value = cmax_impl<std::size_t, a, b>::value;
 };
+
+#if (jstd_cplusplus >= 2017L)
+
+template <typename T, T a, T b>
+constexpr T Min() {
+    return (a < b) ? a : b;
+}
+
+template <auto a, auto b>
+constexpr auto Min() {
+    return (a < b) ? a : b;
+}
+
+template <typename T, T a, T b>
+constexpr T Max() {
+    return (a > b) ? a : b;
+}
+
+template <auto a, auto b>
+constexpr auto Max() {
+    return (a > b) ? a : b;
+}
+
+#endif // (jstd_cplusplus >= 2017L)
 
 //
 // is_pow2 = (N && ((N & (N - 1)) == 0);

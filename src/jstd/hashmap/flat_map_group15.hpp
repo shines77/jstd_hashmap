@@ -162,6 +162,18 @@ public:
         return (hash & static_cast<std::size_t>(kHashMask));
     }
 
+    inline value_type value() const {
+        return this->value_;
+    }
+
+    inline value_type index() const {
+        return 0;
+    }
+
+    inline value_type get_hash() const {
+        return this->value_;
+    }
+
     inline bool is_empty() const {
         value_type hash = this->value_;
         return (hash == kEmptySlot);
@@ -185,18 +197,6 @@ public:
     bool is_equals64(std::size_t hash) const {
         std::size_t hash64 = static_cast<std::size_t>(this->value_);
         return (hash == hash64);
-    }
-
-    inline value_type get_hash() const {
-        return this->value_;
-    }
-
-    inline value_type value() const {
-        return this->value_;
-    }
-
-    inline value_type index() const {
-        return 0;
     }
 
     inline void set_empty() {
@@ -264,6 +264,11 @@ public:
 
     inline __m128i _load_data() const {
         return _mm_load_si128(reinterpret_cast<const __m128i *>(ctrls));
+    }
+
+    inline value_type value(std::size_t pos) const {
+        const ctrl_type * ctrl = &ctrls[pos];
+        return ctrl->value();
     }
 
     inline bool is_empty(std::size_t pos) const {

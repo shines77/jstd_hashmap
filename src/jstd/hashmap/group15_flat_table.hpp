@@ -73,7 +73,7 @@
 #include "jstd/hasher/hashes.h"
 #include "jstd/utility/utility.h"
 
-#include "jstd/hashmap/flat_map_iterator.hpp"
+#include "jstd/hashmap/flat_map_iterator15.hpp"
 #include "jstd/hashmap/flat_map_group15.hpp"
 #include "jstd/hashmap/group_quadratic_prober.hpp"
 
@@ -209,8 +209,8 @@ public:
                                                  kSlotAlignment_ :
                                                  compile_time::round_up_pow2<kSlotAlignment_>::value;
 
-    using iterator       = flat_map_iterator<this_type, value_type, kIsIndirectKV>;
-    using const_iterator = flat_map_iterator<this_type, const value_type, kIsIndirectKV>;
+    using iterator       = flat_map_iterator15<this_type, value_type, kIsIndirectKV>;
+    using const_iterator = flat_map_iterator15<this_type, const value_type, kIsIndirectKV>;
 
     static constexpr size_type kDefaultCapacity = 0;
     // kMinCapacity must be >= 2
@@ -991,7 +991,7 @@ public:
     inline ctrl_type * ctrl_at(size_type slot_index) noexcept {
         assert(slot_index <= this->slot_capacity());
         size_type group_index = slot_index / kGroupSize;
-        size_type group_pos = slot_pos % kGroupSize;
+        size_type group_pos = slot_index % kGroupSize;
         size_type ctrl_index = group_index * kGroupWidth + group_pos;
         return (this->ctrls() + std::ptrdiff_t(ctrl_index));
     }
@@ -999,7 +999,7 @@ public:
     inline const ctrl_type * ctrl_at(size_type slot_index) const noexcept {
         assert(slot_index <= this->slot_capacity());
         size_type group_index = slot_index / kGroupSize;
-        size_type group_pos = slot_pos % kGroupSize;
+        size_type group_pos = slot_index % kGroupSize;
         size_type ctrl_index = group_index * kGroupWidth + group_pos;
         return (this->ctrls() + std::ptrdiff_t(ctrl_index));
     }
