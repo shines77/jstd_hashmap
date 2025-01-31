@@ -154,13 +154,13 @@ public:
 
     template <typename Iterator>
     group16_flat_map(Iterator first, Iterator last, size_type capacity, allocator_type const & allocator)
-        : group16_flat_map(first, last, size, hasher(), key_equal(), allocator) {
+        : group16_flat_map(first, last, capacity, hasher(), key_equal(), allocator) {
     }
 
     template <typename Iterator>
     group16_flat_map(Iterator first, Iterator last, size_type capacity,
                      hasher const & hash, allocator_type const & allocator)
-        : group16_flat_map(first, last, size, hash, key_equal(), allocator) {
+        : group16_flat_map(first, last, capacity, hash, key_equal(), allocator) {
     }
 
     group16_flat_map(group16_flat_map const & other) : table_(other.table_) {
@@ -183,7 +183,7 @@ public:
                      size_type capacity = 0, hasher const & hash = hasher(),
                      key_equal const & pred = key_equal(),
                      allocator_type const & allocator = allocator_type())
-        : group16_flat_map(ilist.begin(), ilist.end(), size, hash, pred, allocator) {
+        : group16_flat_map(ilist.begin(), ilist.end(), capacity, hash, pred, allocator) {
     }
 
     group16_flat_map(std::initializer_list<value_type> ilist, allocator_type const & allocator)
@@ -192,12 +192,12 @@ public:
 
     group16_flat_map(std::initializer_list<value_type> init, size_type capacity,
                      allocator_type const & allocator)
-        : group16_flat_map(init, size, hasher(), key_equal(), allocator) {
+        : group16_flat_map(init, capacity, hasher(), key_equal(), allocator) {
     }
 
     group16_flat_map(std::initializer_list<value_type> init, size_type capacity,
                      hasher const & hash, allocator_type const & allocator)
-        : group16_flat_map(init, size, hash, key_equal(), allocator) {
+        : group16_flat_map(init, capacity, hash, key_equal(), allocator) {
     }
 
     ~group16_flat_map() = default;

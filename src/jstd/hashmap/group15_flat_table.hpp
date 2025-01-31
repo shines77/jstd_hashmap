@@ -1841,7 +1841,7 @@ private:
         return (this->slot_size() >= this->slot_threshold());
     }
 
-    JSTD_NO_INLINE
+    //JSTD_NO_INLINE
     void grow_if_necessary() {
         // The growth rate is 2 times
         size_type new_capacity = this->slot_capacity() * 2;
@@ -1995,7 +1995,7 @@ private:
     }
 
     template <bool AllowShrink>
-    JSTD_FORCED_INLINE
+    JSTD_NO_INLINE
     void rehash_impl(size_type new_capacity) {
         new_capacity = this->calc_capacity(new_capacity);
         assert(new_capacity > 0);

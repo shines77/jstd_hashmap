@@ -1811,7 +1811,7 @@ private:
         return (this->slot_size() >= this->slot_threshold());
     }
 
-    JSTD_NO_INLINE
+    //JSTD_NO_INLINE
     void grow_if_necessary() {
         // The growth rate is 2 times
         size_type new_capacity = this->slot_capacity() * 2;
@@ -1963,7 +1963,7 @@ private:
     }
 
     template <bool AllowShrink>
-    JSTD_FORCED_INLINE
+    JSTD_NO_INLINE
     void rehash_impl(size_type new_capacity) {
         new_capacity = this->calc_capacity(new_capacity);
         assert(new_capacity > 0);
@@ -2093,7 +2093,7 @@ private:
             std::uint32_t match_mask = group->match_hash(ctrl_hash);
             if (match_mask != 0) {
                 const slot_type * slot_base = this->slots() + group_index * kGroupWidth;
-                if (sizeof(value_type) <= 32) {
+                if (sizeof(value_type) <= 16) {
                     Prefetch_Read_T0((const void *)slot_base);
                 }
                 do {
