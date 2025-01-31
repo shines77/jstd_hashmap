@@ -116,31 +116,31 @@ public:
         : hashmap_(src.hashmap()), index_(src.index()) {
     }
 
-    flat_map_iterator & operator = (const flat_map_iterator & rhs) noexcept {
+    inline flat_map_iterator & operator = (const flat_map_iterator & rhs) noexcept {
         this->hashmap_ = rhs.hashmap();
         this->index_ = rhs.index();
         return *this;
     }
 
-    flat_map_iterator & operator = (const opp_flat_map_iterator & rhs) noexcept {
+    inline flat_map_iterator & operator = (const opp_flat_map_iterator & rhs) noexcept {
         this->hashmap_ = rhs.hashmap();
         this->index_ = rhs.index();
         return *this;
     }
 
-    friend bool operator == (const flat_map_iterator & lhs, const flat_map_iterator & rhs) noexcept {
+    friend inline bool operator == (const flat_map_iterator & lhs, const flat_map_iterator & rhs) noexcept {
         return (lhs.index() == rhs.index()) && (lhs.hashmap() == rhs.hashmap());
     }
 
-    friend bool operator != (const flat_map_iterator & lhs, const flat_map_iterator & rhs) noexcept {
+    friend inline bool operator != (const flat_map_iterator & lhs, const flat_map_iterator & rhs) noexcept {
         return (lhs.index() != rhs.index()) || (lhs.hashmap() != rhs.hashmap());
     }
 
-    friend bool operator == (const flat_map_iterator & lhs, const opp_flat_map_iterator & rhs) noexcept {
+    friend inline bool operator == (const flat_map_iterator & lhs, const opp_flat_map_iterator & rhs) noexcept {
         return (lhs.index() == rhs.index()) && (lhs.hashmap() == rhs.hashmap());
     }
 
-    friend bool operator != (const flat_map_iterator & lhs, const opp_flat_map_iterator & rhs) noexcept {
+    friend inline bool operator != (const flat_map_iterator & lhs, const opp_flat_map_iterator & rhs) noexcept {
         return (lhs.index() != rhs.index()) || (lhs.hashmap() != rhs.hashmap());
     }
 
@@ -197,58 +197,58 @@ public:
         return copy;
     }
 
-    reference operator * () {
+    inline reference operator * () {
         slot_type * _slot = this->slot();
         return _slot->value;
     }
 
-    const_reference operator * () const {
+    inline const_reference operator * () const {
         const slot_type * _slot = this->slot();
         return _slot->value;
     }
 
-    pointer operator -> () {
+    inline pointer operator -> () {
         slot_type * _slot = this->slot();
         return std::addressof(_slot->value);
     }
 
-    const_pointer operator -> () const {
+    inline const_pointer operator -> () const {
         const slot_type * _slot = this->slot();
         return std::addressof(_slot->value);
     }
 #if 0
     operator flat_map_iterator<HashMap, const mutable_value_type, IsIndirectKV>() const noexcept {
-        return { this->map_, this->index_ };
+        return { this->hashmap_, this->index_ };
     }
 #endif
-    hashmap_type * hashmap() {
+    inline hashmap_type * hashmap() noexcept {
         return this->hashmap_;
     }
 
-    const hashmap_type * hashmap() const {
+    inline const hashmap_type * hashmap() const noexcept {
         return this->hashmap_;
     }
 
-    ssize_type index() const {
+    inline ssize_type index() const noexcept {
         return this->index_;
     }
 
-    ctrl_type * ctrl() {
+    inline ctrl_type * ctrl() noexcept {
         const ctrl_type * _ctrl = this->hashmap_->ctrl_at(this->index_);
         return const_cast<slot_type *>(_ctrl);
     }
 
-    const ctrl_type * ctrl() const {
+    inline const ctrl_type * ctrl() const noexcept {
         const ctrl_type * _ctrl = this->hashmap_->ctrl_at(this->index_);
         return _ctrl;
     }
 
-    slot_type * slot() {
+    inline slot_type * slot() noexcept {
         const slot_type * _slot = this->hashmap_->slot_at(this->index_);
         return const_cast<slot_type *>(_slot);
     }
 
-    const slot_type * slot() const {
+    inline const slot_type * slot() const noexcept {
         const slot_type * _slot = this->hashmap_->slot_at(this->index_);
         return _slot;
     }
@@ -306,95 +306,95 @@ public:
         : slot_(src.slot()) {
     }
 
-    flat_map_iterator & operator = (const flat_map_iterator & rhs) noexcept {
+    inline flat_map_iterator & operator = (const flat_map_iterator & rhs) noexcept {
         this->slot_ = rhs.slot();
         return *this;
     }
 
-    flat_map_iterator & operator = (const opp_flat_map_iterator & rhs) noexcept {
+    inline flat_map_iterator & operator = (const opp_flat_map_iterator & rhs) noexcept {
         this->slot_ = rhs.slot();
         return *this;
     }
 
-    friend bool operator == (const flat_map_iterator & lhs, const flat_map_iterator & rhs) noexcept {
-        return (lhs.slot() == rhs.slot_);
-    }
-
-    friend bool operator != (const flat_map_iterator & lhs, const flat_map_iterator & rhs) noexcept {
-        return (lhs.slot() != rhs.slot_);
-    }
-
-    friend bool operator == (const flat_map_iterator & lhs, const opp_flat_map_iterator & rhs) noexcept {
+    friend inline bool operator == (const flat_map_iterator & lhs, const flat_map_iterator & rhs) noexcept {
         return (lhs.slot() == rhs.slot());
     }
 
-    friend bool operator != (const flat_map_iterator & lhs, const opp_flat_map_iterator & rhs) noexcept {
+    friend inline bool operator != (const flat_map_iterator & lhs, const flat_map_iterator & rhs) noexcept {
         return (lhs.slot() != rhs.slot());
     }
 
-    flat_map_iterator & operator ++ () {
+    friend inline bool operator == (const flat_map_iterator & lhs, const opp_flat_map_iterator & rhs) noexcept {
+        return (lhs.slot() == rhs.slot());
+    }
+
+    friend inline bool operator != (const flat_map_iterator & lhs, const opp_flat_map_iterator & rhs) noexcept {
+        return (lhs.slot() != rhs.slot());
+    }
+
+    inline flat_map_iterator & operator ++ () {
         ++(this->slot_);
         return *this;
     }
 
-    flat_map_iterator operator ++ (int) {
+    inline flat_map_iterator operator ++ (int) {
         flat_map_iterator copy(*this);
         ++*this;
         return copy;
     }
 
-    flat_map_iterator & operator -- () {
+    inline flat_map_iterator & operator -- () {
         --(this->slot_);
         return *this;
     }
 
-    flat_map_iterator operator -- (int) {
+    inline flat_map_iterator operator -- (int) {
         flat_map_iterator copy(*this);
         --*this;
         return copy;
     }
 
-    reference operator * () {
+    inline reference operator * () {
         return const_cast<slot_type *>(this->slot_)->value;
     }
 
-    const_reference operator * () const {
+    inline const_reference operator * () const {
         return const_cast<slot_type *>(this->slot_)->value;
     }
 
-    pointer operator -> () {
+    inline pointer operator -> () {
         return std::addressof(const_cast<slot_type *>(this->slot_)->value);
     }
 
-    const_pointer operator -> () const {
+    inline const_pointer operator -> () const {
         return std::addressof(const_cast<slot_type *>(this->slot_)->value);
     }
 
-    hashmap_type * hashmap() {
+    inline hashmap_type * hashmap() noexcept {
         return nullptr;
     }
 
-    const hashmap_type * hashmap() const {
+    inline const hashmap_type * hashmap() const noexcept {
         return nullptr;
     }
 
-    size_type index() const {
+    inline size_type index() const noexcept {
         return 0;
     }
 
-    ctrl_type * ctrl() {
+    inline ctrl_type * ctrl() noexcept {
         return nullptr;
     }
 
-    const ctrl_type * ctrl() const {
+    inline const ctrl_type * ctrl() const noexcept {
         return nullptr;
     }
 
-    slot_type * slot() {
+    inline slot_type * slot() noexcept {
         return const_cast<slot_type *>(this->slot_);
     }
 
-    const slot_type * slot() const {
+    inline const slot_type * slot() const noexcept {
         return this->slot_;
     }
 };

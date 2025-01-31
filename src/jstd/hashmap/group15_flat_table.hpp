@@ -212,6 +212,8 @@ public:
     using iterator       = flat_map_iterator15<this_type, value_type, kIsIndirectKV>;
     using const_iterator = flat_map_iterator15<this_type, const value_type, kIsIndirectKV>;
 
+    using locator_t = flat_map_locator15<this_type, kIsIndirectKV>;
+
     static constexpr size_type kDefaultCapacity = 0;
     // kMinCapacity must be >= 2
     static constexpr size_type kMinCapacity = 2;

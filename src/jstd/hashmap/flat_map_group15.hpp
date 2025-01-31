@@ -186,15 +186,15 @@ public:
 
     inline bool is_used() const {
         value_type hash = this->value_;
-        return (hash > kSentinelSlot);
+        return (hash != kEmptySlot);
     }
 
-    bool is_equals(value_type hash) const {
+    inline bool is_equals(value_type hash) const {
         value_type hash8 = this->value_;
         return (hash == hash8);
     }
 
-    bool is_equals64(std::size_t hash) const {
+    inline bool is_equals64(std::size_t hash) const {
         std::size_t hash64 = static_cast<std::size_t>(this->value_);
         return (hash == hash64);
     }
@@ -245,7 +245,7 @@ public:
     static constexpr const std::size_t kGroupSize = kGroupWidth - 1;
     static constexpr const bool kIsRegularLayout = true;
 
-    void init() {
+    inline void init() {
         if (kEmptySlot == 0b00000000) {
             __m128i zeros = _mm_setzero_si128();
             _mm_store_si128(reinterpret_cast<__m128i *>(ctrls), zeros);
@@ -277,6 +277,12 @@ public:
         return ctrl->is_empty();
     }
 
+    inline bool is_sentinel(std::size_t pos) const {
+        assert(pos < kGroupSize);
+        const ctrl_type * ctrl = &ctrls[pos];
+        return ctrl->is_sentinel();
+    }
+
     inline bool is_used(std::size_t pos) const {
         assert(pos < kGroupSize);
         const ctrl_type * ctrl = &ctrls[pos];
@@ -293,13 +299,13 @@ public:
         return !this->is_overflow(hash);
     }
 
-    bool is_equals(std::size_t pos, value_type hash) {
+    inline bool is_equals(std::size_t pos, value_type hash) {
         assert(pos < kGroupSize);
         const ctrl_type * ctrl = &ctrls[pos];
         return ctrl->is_equals(hash);
     }
 
-    bool is_equals64(std::size_t pos, std::size_t hash) {
+    inline bool is_equals64(std::size_t pos, std::size_t hash) {
         assert(pos < kGroupSize);
         const ctrl_type * ctrl = &ctrls[pos];
         return ctrl->is_equals64(hash);
