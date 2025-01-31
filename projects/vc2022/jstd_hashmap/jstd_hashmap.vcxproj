@@ -119,9 +119,6 @@
     <ClCompile Include="..\..\..\src\jstd\basic\assert.c" />
     <ClCompile Include="..\..\..\src\jstd\dll_main.cpp" />
   </ItemGroup>
-  <ItemGroup>
-    <None Include="cpp.hint" />
-  </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{C9282A5D-9424-4753-B9A4-9EFB2615A3F8}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
