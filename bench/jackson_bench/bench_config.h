@@ -106,7 +106,7 @@
 #endif
 #define HASHMAP_2       jstd_robin_hash_map
 #define HASHMAP_3       jstd_group16_flat_map
-#define HASHMAP_4       jstd_group15_flat_map
+// #define HASHMAP_4       jstd_group15_flat_map
 // #define HASHMAP_5
 // #define HASHMAP_6
 // #define HASHMAP_7
