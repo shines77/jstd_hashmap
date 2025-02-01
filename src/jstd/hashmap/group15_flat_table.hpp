@@ -1210,7 +1210,7 @@ private:
     }
 
     static inline size_type calc_group_mask(size_type capacity) noexcept {
-        size_type group_capacity = calc_group_capacity(capacity);
+        size_type group_capacity = this_type::calc_group_capacity(capacity);
         return static_cast<size_type>(group_capacity - 1);
     }
 
@@ -1228,7 +1228,7 @@ private:
 
     static inline constexpr size_type calc_index_shift_round(size_type capacity) noexcept {
         capacity = this_type::round_up_pow2(capacity);
-        return this->calc_index_shift(capacity);
+        return this_type::calc_index_shift(capacity);
     }
 
     static inline constexpr size_type calc_slot_mask_round(size_type capacity) noexcept {
