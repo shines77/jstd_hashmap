@@ -1170,7 +1170,7 @@ private:
         return (slot_capacity > kSmallCapacity) ? (slot_capacity * mlf / kLoadFactorAmplify) : slot_capacity;
     }
 
-    inline constexpr size_type calc_index_shift(size_type capacity) const noexcept {
+    static inline constexpr size_type calc_index_shift(size_type capacity) noexcept {
         return (kWordLength - ((capacity <= 2) ? 1 : BitUtils::bsr(capacity)));
     }
 
@@ -1178,29 +1178,29 @@ private:
         return this_type::calc_slot_threshold(this->mlf_, slot_capacity);
     }
 
-    inline size_type calc_group_mask(size_type capacity) const noexcept {
+    static inline size_type calc_group_mask(size_type capacity) noexcept {
         assert(pow2::is_pow2(capacity));
         size_type group_capacity = (capacity + (kGroupWidth - 1)) / kGroupWidth;
         assert(pow2::is_pow2(group_capacity));
         return static_cast<size_type>(group_capacity - 1);
     }
 
-    inline constexpr size_type calc_index_shift_round(size_type capacity) const noexcept {
+    static inline constexpr size_type calc_index_shift_round(size_type capacity) noexcept {
         capacity = this_type::round_up_pow2(capacity);
         return this->calc_index_shift(capacity);
     }
 
-    inline constexpr size_type calc_slot_mask_round(size_type capacity) const noexcept {
+    static inline constexpr size_type calc_slot_mask_round(size_type capacity) noexcept {
         capacity = this_type::round_up_pow2(capacity);
         return static_cast<size_type>(capacity - 1);
     }
 
-    inline constexpr size_type calc_slot_threshold_round(size_type capacity) const noexcept {
+    static inline constexpr size_type calc_slot_threshold_round(size_type capacity) noexcept {
         capacity = this_type::round_up_pow2(capacity);
         return this_type::calc_slot_threshold(kDefaultMaxLoadFactor, capacity);
     }
 
-    inline constexpr size_type calc_group_mask_round(size_type capacity) const noexcept {
+    static inline constexpr size_type calc_group_mask_round(size_type capacity) noexcept {
         capacity = this_type::round_up_pow2(capacity);
         return this_type::calc_group_mask(capacity);
     }
@@ -1210,7 +1210,7 @@ private:
         return new_capacity;
     }
 
-    inline bool is_positive(size_type value) const noexcept {
+    static inline bool is_positive(size_type value) noexcept {
         return (static_cast<intptr_t>(value) >= 0);
     }
 
@@ -1955,8 +1955,8 @@ private:
         this->slot_size_ = 0;
         this->slot_mask_ = new_capacity - 1;
         this->slot_threshold_ = this->calc_slot_threshold(new_capacity);
-        this->group_mask_ = this->calc_group_mask(new_capacity);
-        this->index_shift_ = this->calc_index_shift(new_capacity);
+        this->group_mask_ = this_type::calc_group_mask(new_capacity);
+        this->index_shift_ = this_type::calc_index_shift(new_capacity);
 #if GROUP16_USE_SEPARATE_SLOTS
         this->groups_alloc_ = new_groups_alloc;
 #endif

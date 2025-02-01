@@ -179,7 +179,7 @@ public:
         return (hash == kEmptySlot);
     }
 
-    inline bool is_sentine() const {
+    inline bool is_sentinel() const {
         value_type hash = this->value_;
         return (hash == kSentinelSlot);
     }

@@ -77,9 +77,20 @@ public:
     static constexpr const size_type kGroupWidth = group_type::kGroupWidth;
 
 public:
-    flat_map_locator15() noexcept : groups_(nullptr), pos_(0), slot_(nullptr) {}
-    flat_map_locator15(const group_type * group, size_type pos, const slot_type * slot)
-        : groups_(group), pos_(pos), slot_(slot) noexcept {}
+    flat_map_locator15() noexcept : group_(nullptr), pos_(0), slot_(nullptr) {}
+    flat_map_locator15(const group_type * group, size_type pos, const slot_type * slot) noexcept
+        : group_(group), pos_(pos), slot_(slot) {}
+    flat_map_locator15(const hashmap_type * hashmap, size_type index) noexcept
+        : flat_map_locator15() {
+        size_type group_index = index / kGroupWidth;
+        size_type group_pos = index % kGroupWidth;
+        assert(group_index != this->group_capacity());
+        assert(group_pos != kGroupSize);
+        this->group_ = hashmap->group_at(group_index);
+        this->pos_ = group_pos;
+        size_type slot_index = group_index * kGroupSize + group_pos;
+        this->slot_ = hashmap->slot_at(slot_index);
+    }
     flat_map_locator15(const flat_map_locator15 & locator) noexcept
         : group_(locator.group()), pos_(locator.pos()), slot_(locator.slot()) {}
 
