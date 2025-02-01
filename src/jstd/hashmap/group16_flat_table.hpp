@@ -1640,7 +1640,7 @@ private:
         const ctrl_type * last_ctrl = this->last_ctrl();
         const slot_type * other_slot = other.slots();
         slot_type * slot = this->slots();
-        size_type index = 0;
+        ssize_type index = 0;
 
         try {
             while (ctrl < last_ctrl) {
@@ -1769,7 +1769,7 @@ private:
         const ctrl_type * last_ctrl = this->last_ctrl();
         slot_type * other_slot = other.slots();
         slot_type * slot = this->slots();
-        size_type index = 0;
+        ssize_type index = 0;
 
         try {
             while (ctrl < last_ctrl) {

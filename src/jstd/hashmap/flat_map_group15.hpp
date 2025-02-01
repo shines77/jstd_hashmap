@@ -189,6 +189,11 @@ public:
         return (hash != kEmptySlot);
     }
 
+    inline bool is_valid() const {
+        value_type hash = this->value_;
+        return (hash > kSentinelSlot);
+    }
+
     inline bool is_equals(value_type hash) const {
         value_type hash8 = this->value_;
         return (hash == hash8);
@@ -287,6 +292,12 @@ public:
         assert(pos < kGroupSize);
         const ctrl_type * ctrl = &ctrls[pos];
         return ctrl->is_used();
+    }
+
+    inline bool is_valid(std::size_t pos) const {
+        assert(pos < kGroupSize);
+        const ctrl_type * ctrl = &ctrls[pos];
+        return ctrl->is_valid();
     }
 
     inline bool is_overflow(std::size_t hash) const {

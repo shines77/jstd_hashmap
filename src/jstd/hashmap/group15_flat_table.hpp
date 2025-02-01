@@ -1561,8 +1561,12 @@ private:
                     while (used_mask != 0) {
                         std::uint32_t used_pos = BitUtils::bsf32(used_mask);
                         used_mask = BitUtils::clearLowBit32(used_mask);
-                        slot_type * slot = slot_base + used_pos;
-                        this->destroy_slot(slot);
+                        if (likely(!group->is_sentinel(used_pos))) {
+                            slot_type * slot = slot_base + used_pos;
+                            this->destroy_slot(slot);
+                        } else {
+                            break;
+                        }
                     }
                     slot_base += kGroupSize;
                 }
@@ -1620,6 +1624,8 @@ private:
         if (this->slots() != nullptr && other.slots() != nullptr) {
             copy_groups_array_from(other);
             copy_slots_array_from(other);
+        } else {
+            assert(false);
         }
     }
 
@@ -1675,15 +1681,23 @@ private:
         const ctrl_type * last_ctrl = this->last_ctrl();
         const slot_type * other_slot = other.slots();
         slot_type * slot = this->slots();
-        size_type index = 0;
+        ssize_type index = 0;
 
         try {
             while (ctrl < last_ctrl) {
                 if (ctrl->is_used()) {
-                    SlotPolicyTraits::construct(&this->slot_allocator_, &slot[index], &other_slot[index]);
+                    if (likely(!ctrl->is_sentinel())) {
+                        SlotPolicyTraits::construct(&this->slot_allocator_, &slot[index], &other_slot[index]);
+                    } else {
+                        break;
+                    }
                 }
                 ++index;
-                ++ctrl;
+                if (likely((static_cast<size_type>(ctrl) % kGroupWidth) != (kGroupSize - 1))) {
+                    ++ctrl;
+                } else {
+                    ctrl += 2;
+                }
             }
         }
         catch (const std::bad_alloc & ex) {
@@ -1691,10 +1705,18 @@ private:
             if (index != 0) {
                 do {
                     if (ctrl->is_used()) {
-                        SlotPolicyTraits::destroy(&this->slot_allocator_, &slot[index], &other_slot[index]);
+                        if (likely(!ctrl->is_sentinel())) {
+                            SlotPolicyTraits::destroy(&this->slot_allocator_, &slot[index], &other_slot[index]);
+                        } else {
+                            break;
+                        }
                     }
-                    --ctrl;
                     --index;
+                    if (likely((static_cast<size_type>(ctrl) % kGroupWidth) != 0)) {
+                        --ctrl;
+                    } else {
+                        ctrl -= 2;
+                    }
                 } while (index >= 0);
             }
             throw std::bad_alloc();
@@ -1702,10 +1724,18 @@ private:
             if (index != 0) {
                 do {
                     if (ctrl->is_used()) {
-                        SlotPolicyTraits::destroy(&this->slot_allocator_, &slot[index], &other_slot[index]);
+                        if (likely(!ctrl->is_sentinel())) {
+                            SlotPolicyTraits::destroy(&this->slot_allocator_, &slot[index], &other_slot[index]);
+                        } else {
+                            break;
+                        }
                     }
-                    --ctrl;
                     --index;
+                    if (likely((static_cast<size_type>(ctrl) % kGroupWidth) != 0)) {
+                        --ctrl;
+                    } else {
+                        ctrl -= 2;
+                    }
                 } while (index >= 0);
             }
             throw;
@@ -1741,6 +1771,8 @@ private:
         if (this->slots() != nullptr && other.slots() != nullptr) {
             move_groups_array_from(other);
             move_slots_array_from(other);
+        } else {
+            assert(false);
         }
     }
 
@@ -1804,15 +1836,23 @@ private:
         const ctrl_type * last_ctrl = this->last_ctrl();
         slot_type * other_slot = other.slots();
         slot_type * slot = this->slots();
-        size_type index = 0;
+        ssize_type index = 0;
 
         try {
             while (ctrl < last_ctrl) {
                 if (ctrl->is_used()) {
-                    SlotPolicyTraits::construct(&this->slot_allocator_, &slot[index], &other_slot[index]);
+                    if (likely(!ctrl->is_sentinel())) {
+                        SlotPolicyTraits::construct(&this->slot_allocator_, &slot[index], &other_slot[index]);
+                    } else {
+                        break;
+                    }
                 }
                 ++index;
-                ++ctrl;
+                if (likely((static_cast<size_type>(ctrl) % kGroupWidth) != (kGroupSize - 1))) {
+                    ++ctrl;
+                } else {
+                    ctrl += 2;
+                }
             }
         }
         catch (const std::bad_alloc & ex) {
@@ -1820,10 +1860,18 @@ private:
             if (index != 0) {
                 do {
                     if (ctrl->is_used()) {
-                        SlotPolicyTraits::destroy(&this->slot_allocator_, &slot[index], &other_slot[index]);
+                        if (likely(!ctrl->is_sentinel())) {
+                            SlotPolicyTraits::destroy(&this->slot_allocator_, &slot[index], &other_slot[index]);
+                        } else {
+                            break;
+                        }
                     }
-                    --ctrl;
                     --index;
+                    if (likely((static_cast<size_type>(ctrl) % kGroupWidth) != 0)) {
+                        --ctrl;
+                    } else {
+                        ctrl -= 2;
+                    }
                 } while (index >= 0);
             }
             throw std::bad_alloc();
@@ -1831,10 +1879,18 @@ private:
             if (index != 0) {
                 do {
                     if (ctrl->is_used()) {
-                        SlotPolicyTraits::destroy(&this->slot_allocator_, &slot[index], &other_slot[index]);
+                        if (likely(!ctrl->is_sentinel())) {
+                            SlotPolicyTraits::destroy(&this->slot_allocator_, &slot[index], &other_slot[index]);
+                        } else {
+                            break;
+                        }
                     }
-                    --ctrl;
                     --index;
+                    if (likely((static_cast<size_type>(ctrl) % kGroupWidth) != 0)) {
+                        --ctrl;
+                    } else {
+                        ctrl -= 2;
+                    }
                 } while (index >= 0);
             }
             throw;
