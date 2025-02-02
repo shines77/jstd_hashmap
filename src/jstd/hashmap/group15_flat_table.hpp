@@ -390,13 +390,13 @@ public:
                 // Here we will move elements of [other] hashmap to this hashmap.
                 this->move_slots_from(other);
             }
-            // Reset other hashmap content
-            other.reset<false>();
+            // Destroy all data but needn't clear_slots().
+            other.destroy<false>();
         }
     }
 
     ~group15_flat_table() {
-        this->destroy();
+        this->destroy<true>();
     }
 
     group15_flat_table & operator = (const group15_flat_table & other) {
@@ -670,7 +670,7 @@ public:
             new_capacity = this->shrink_to_fit_capacity(new_capacity);
             this->rehash_impl<false>(new_capacity);
         } else {
-            this->reset<true>();
+            this->destroy<true>();
         }
     }
 
@@ -699,7 +699,7 @@ public:
         if (likely(new_capacity != 0)) {
             this->rehash_impl<true>(new_capacity);
         } else {
-            this->reset<true>();
+            this->destroy<true>();
         }
     }
 
@@ -713,7 +713,7 @@ public:
         if (likely(new_capacity != 0)) {
             this->rehash_impl<true>(new_capacity);
         } else {
-            this->reset<true>();
+            this->destroy<true>();
         }
     }
 
@@ -773,7 +773,7 @@ public:
             this->clear_data();
             assert(this->slot_size() == 0);
         } else {
-            this->destroy();
+            this->destroy<true>();
             assert(this->slot_size() == 0);
         }
     }
@@ -1461,34 +1461,40 @@ private:
         return const_cast<const char *>(reinterpret_cast<char *>(ptr) + offset);
     }
 
-    JSTD_FORCED_INLINE
+    template <bool NeedClearSlots>
+    JSTD_NO_INLINE
     void destroy() {
-        this->destroy_data();
+        this->destroy_data<NeedClearSlots>();
     }
 
+    template <bool NeedClearSlots>
     JSTD_FORCED_INLINE
     void destroy_data() {
         // Note!!: destroy_slots() need use this->ctrls(), so must destroy slots first.
         size_type group_capacity = this->group_capacity();
-        this->destroy_slots();
+        this->destroy_slots<NeedClearSlots>();
         this->destroy_groups(group_capacity);
     }
 
     JSTD_FORCED_INLINE
     void destroy_groups(size_type group_capacity) noexcept {
         if (this->groups_ != this_type::default_empty_groups()) {
+            // Reset groups state
+            this->groups_ = this_type::default_empty_groups();
             size_type total_group_alloc_count = this->TotalGroupAllocCount<kGroupAlignment>(group_capacity);
 #if GROUP15_USE_SEPARATE_SLOTS
             GroupAllocTraits::deallocate(this->group_allocator_, this->groups_alloc_, total_group_alloc_count);
-            this->groups_alloc_ = this_type::default_empty_groups();
+            this->groups_alloc_ = nullptr;
 #endif
-            this->groups_ = this_type::default_empty_groups();
         }
     }
 
+    template <bool NeedClearSlots>
     JSTD_FORCED_INLINE
     void destroy_slots() {
-        this->clear_slots();
+        if (NeedClearSlots) {
+            this->clear_slots();
+        }
 
         if (this->slots_ != nullptr) {
 #if GROUP15_USE_SEPARATE_SLOTS
@@ -1498,18 +1504,24 @@ private:
                                                     this->group_capacity(), this->slot_capacity());
             SlotAllocTraits::deallocate(this->slot_allocator_, this->slots_, total_slot_alloc_size);
 #endif
+            // Reset slots state
             this->slots_ = nullptr;
             this->slot_size_ = 0;
             this->slot_mask_ = size_type(-1);
             this->slot_threshold_ = 0;
             this->slot_capacity_ = 0;
             this->group_mask_ = size_type(-1);
+#if GROUP15_USE_INDEX_SHIFT
             this->index_shift_ = kWordLength - 1;
+#endif
+#if GROUP15_USE_HASH_POLICY
+            this->hash_policy_.reset();
+#endif
         }
     }
 
     JSTD_FORCED_INLINE
-    void init_groups(group_type * groups, size_type group_capacity, std::true_type) {
+    static void init_groups(group_type * groups, size_type group_capacity, std::true_type) {
         /*
          * memset faster/not slower than manual, assumes all zeros is group_type's
          * default layout.
@@ -1531,7 +1543,7 @@ private:
     }
 
     JSTD_FORCED_INLINE
-    void init_groups(group_type * groups, size_type group_capacity, std::false_type) {
+    static void init_groups(group_type * groups, size_type group_capacity, std::false_type) {
         if (groups != this_type::default_empty_groups()) {
             group_type * group = groups;
             group_type * last_group = groups + group_capacity;
@@ -1550,7 +1562,7 @@ private:
 
     JSTD_FORCED_INLINE
     void clear_groups(group_type * groups, size_type group_capacity) {
-        this->init_groups(groups, group_capacity, std::is_trivially_default_constructible<group_type>{});
+        this_type::init_groups(groups, group_capacity, std::is_trivially_default_constructible<group_type>{});
     }
 
     JSTD_FORCED_INLINE
@@ -1615,10 +1627,10 @@ private:
                 this->unique_insert(other.begin(), other.end());
             } catch (const std::bad_alloc & ex) {
                 JSTD_UNUSED(ex);
-                this->destroy();
+                this->destroy<true>();
                 throw std::bad_alloc();
             } catch (...) {
-                this->destroy();
+                this->destroy<true>();
                 throw;
             }
         }
@@ -1762,10 +1774,10 @@ private:
                 this->unique_insert(other.begin(), other.end());
             } catch (const std::bad_alloc & ex) {
                 JSTD_UNUSED(ex);
-                this->destroy();
+                this->destroy<true>();
                 throw std::bad_alloc();
             } catch (...) {
-                this->destroy();
+                this->destroy<true>();
                 throw;
             }
         }
@@ -1988,36 +2000,12 @@ private:
         return total_alloc_count;
     }
 
-    template <bool NeedDestory>
-    JSTD_FORCED_INLINE
-    void reset() noexcept {
-        if (!NeedDestory) {
-            this->groups_ = this_type::default_empty_groups();
-            this->slots_ = nullptr;
-            this->slot_size_ = 0;
-            this->slot_mask_ = size_type(-1);
-            this->slot_threshold_ = 0;
-            this->slot_capacity_ = 0;
-            this->group_mask_ = size_type(-1);
-            this->index_shift_ = kWordLength - 1;
-#if GROUP15_USE_SEPARATE_SLOTS
-            this->groups_alloc_ = this_type::default_empty_groups();
-#endif
-        } else {
-            this->destroy_data();
-        }
-
-#if GROUP15_USE_HASH_POLICY
-        this->hash_policy_.reset();
-#endif
-    }
-
     template <bool isInitialize = false>
     JSTD_FORCED_INLINE
     void create_slots(size_type new_capacity) {
         assert(pow2::is_pow2(new_capacity));
         if (unlikely((new_capacity == 0) && !isInitialize)) {
-            this->reset<false>();
+            this->destroy<true>();
             return;
         }
 
@@ -2057,7 +2045,9 @@ private:
         size_type group_capacity = this_type::calc_group_capacity(new_capacity);
         this->slot_capacity_ = this_type::calc_slot_capacity(group_capacity, new_capacity);
         this->group_mask_ = this_type::calc_group_mask(group_capacity, new_capacity);
+#if GROUP15_USE_INDEX_SHIFT
         this->index_shift_ = this_type::calc_index_shift(new_capacity);
+#endif
 #if GROUP15_USE_SEPARATE_SLOTS
         this->groups_alloc_ = new_groups_alloc;
 #endif
@@ -2164,7 +2154,7 @@ private:
     }
 
     JSTD_FORCED_INLINE
-    void destroy_slot_data(const locator_t & locator) {
+    void destroy_slot_data(locator_t & locator) {
         ctrl_type * ctrl = locator.ctrl();
         slot_type * slot = locator.slot();
         this->destroy_slot_data(ctrl, slot);
@@ -2172,13 +2162,13 @@ private:
 
     template <typename KeyT>
     JSTD_FORCED_INLINE
-    size_type find_impl(const KeyT & key) {
+    locator_t find_impl(const KeyT & key) {
         return const_cast<const this_type *>(this)->find_impl<KeyT>(key);
     }
 
     template <typename KeyT>
     JSTD_FORCED_INLINE
-    size_type find_impl(const KeyT & key) const {
+    locator_t find_impl(const KeyT & key) const {
         std::size_t key_hash = this->hash_for(key);
         size_type group_index = this->index_for_hash(key_hash);
         std::uint8_t ctrl_hash = this->ctrl_for_hash(key_hash);
@@ -2305,7 +2295,7 @@ private:
 
             group_index = this->index_for_hash(key_hash);
             locator = this->find_empty_to_insert(key, group_index, ctrl_hash);
-            assert(locator.slot() < this->slot_capacity());
+            assert(locator.slot() < this->last_slot());
             return { locator, kNeedInsert };
         }
     }
@@ -2627,7 +2617,7 @@ private:
     }
 
     JSTD_FORCED_INLINE
-    void erase_index(const locator_t & locator) {
+    void erase_index(locator_t & locator) {
         assert(locator.slot() >= this->slots() && locator.slot() < this->last_slot());
         bool maybe_overflow = this->ctrl_maybe_caused_overflow(locator);
         assert(this->slot_threshold_ > 0);
@@ -2643,7 +2633,7 @@ private:
         size_type group_index = this->index_for_hash(key_hash);
         std::uint8_t ctrl_hash = this->ctrl_for_hash(key_hash);
 
-        locator_t locator = this->find_index(key, group_index, ctrl_hash);
+        locator_t locator = this->find_impl(key, group_index, ctrl_hash);
         if (locator.slot() != nullptr) {
             this->erase_index(locator);
         }

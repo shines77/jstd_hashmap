@@ -109,6 +109,16 @@ public:
     inline slot_type * slot() noexcept { return const_cast<slot_type *>(this->slot_); }
     inline const slot_type * slot() const noexcept { return this->slot_; }
 
+    inline ctrl_type * ctrl() noexcept {
+        ctrl_type * _ctrl = reinterpret_cast<ctrl_type *>(this->group()) + this->pos();
+        return _ctrl;
+    }
+
+    inline const ctrl_type * ctrl() const noexcept {
+        const ctrl_type * _ctrl = reinterpret_cast<const ctrl_type *>(this->group()) + this->pos();
+        return _ctrl;
+    }
+
 protected:
     const group_type *  group_;
     size_type           pos_;
@@ -245,16 +255,6 @@ public:
     inline const_pointer operator -> () const {
         const slot_type * _slot = this->slot();
         return std::addressof(_slot->value);
-    }
-
-    inline ctrl_type * ctrl() noexcept {
-        ctrl_type * _ctrl = reinterpret_cast<ctrl_type *>(this->group()) + this->pos();
-        return _ctrl;
-    }
-
-    inline const ctrl_type * ctrl() const noexcept {
-        const ctrl_type * _ctrl = reinterpret_cast<const ctrl_type *>(this->group()) + this->pos();
-        return _ctrl;
     }
 
     inline ssize_type index(const hashmap_type * hashmap) const noexcept {
@@ -446,21 +446,16 @@ public:
         return std::addressof(const_cast<slot_type *>(this->slot_)->value);
     }
 
-    inline group_type * group() noexcept { return const_cast<group_type *>(this->group_); }
-    inline const group_type * group() const noexcept { return this->group_; }
+    inline group_type * group() noexcept { return nullptr; }
+    inline const group_type * group() const noexcept { return nullptr; }
 
-    inline size_type pos() const noexcept { return this->pos_; }
+    inline size_type pos() const noexcept { return 0; }
 
     inline slot_type * slot() noexcept { return const_cast<slot_type *>(this->slot_); }
     inline const slot_type * slot() const noexcept { return this->slot_; }
 
-    inline ctrl_type * ctrl() noexcept {
-        return nullptr;
-    }
-
-    inline const ctrl_type * ctrl() const noexcept {
-        return nullptr;
-    }
+    inline ctrl_type * ctrl() noexcept { return nullptr; }
+    inline const ctrl_type * ctrl() const noexcept { return nullptr; }
 
     inline ssize_type index(const hashmap_type * hashmap) const noexcept {
         assert(hashmap != nullptr);
