@@ -1239,7 +1239,7 @@ private:
     }
 
     static inline constexpr size_type calc_group_mask_round(size_type capacity) noexcept {
-        capacity = this_type::round_up_pow2(capacity)
+        capacity = this_type::round_up_pow2(capacity);
         return this_type::calc_group_mask(capacity);
     }
 
@@ -1709,7 +1709,7 @@ private:
                     }
                 }
                 ++index;
-                if (likely((static_cast<size_type>(ctrl) % kGroupWidth) != (kGroupSize - 1))) {
+                if (likely((reinterpret_cast<size_type>(ctrl) % kGroupWidth) != (kGroupSize - 1))) {
                     ++ctrl;
                 } else {
                     ctrl += 2;
@@ -1728,7 +1728,7 @@ private:
                         }
                     }
                     --index;
-                    if (likely((static_cast<size_type>(ctrl) % kGroupWidth) != 0)) {
+                    if (likely((reinterpret_cast<size_type>(ctrl) % kGroupWidth) != 0)) {
                         --ctrl;
                     } else {
                         ctrl -= 2;
@@ -1747,7 +1747,7 @@ private:
                         }
                     }
                     --index;
-                    if (likely((static_cast<size_type>(ctrl) % kGroupWidth) != 0)) {
+                    if (likely((reinterpret_cast<size_type>(ctrl) % kGroupWidth) != 0)) {
                         --ctrl;
                     } else {
                         ctrl -= 2;
@@ -1864,7 +1864,7 @@ private:
                     }
                 }
                 ++index;
-                if (likely((static_cast<size_type>(ctrl) % kGroupWidth) != (kGroupSize - 1))) {
+                if (likely((reinterpret_cast<size_type>(ctrl) % kGroupWidth) != (kGroupSize - 1))) {
                     ++ctrl;
                 } else {
                     ctrl += 2;
@@ -1883,7 +1883,7 @@ private:
                         }
                     }
                     --index;
-                    if (likely((static_cast<size_type>(ctrl) % kGroupWidth) != 0)) {
+                    if (likely((reinterpret_cast<size_type>(ctrl) % kGroupWidth) != 0)) {
                         --ctrl;
                     } else {
                         ctrl -= 2;
@@ -1902,7 +1902,7 @@ private:
                         }
                     }
                     --index;
-                    if (likely((static_cast<size_type>(ctrl) % kGroupWidth) != 0)) {
+                    if (likely((reinterpret_cast<size_type>(ctrl) % kGroupWidth) != 0)) {
                         --ctrl;
                     } else {
                         ctrl -= 2;
