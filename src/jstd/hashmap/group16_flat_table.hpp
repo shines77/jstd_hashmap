@@ -1330,49 +1330,48 @@ private:
     //
     JSTD_FORCED_INLINE
     std::size_t ctrl_hasher(std::size_t key_hash) const noexcept {
-#if GROUP16_USE_HASH_POLICY
+#if (GROUP16_USE_HASH_POLICY != 0) || (GROUP16_USE_INDEX_SHIFT != 0)
         return key_hash;
-#elif 0
-        return (size_type)hashes::mum_hash(key_hash);
 #elif 1
         return (size_type)hashes::fibonacci_hash(key_hash);
+#elif 0
+        return (size_type)hashes::mum_hash(key_hash);
 #endif
     }
 
     JSTD_FORCED_INLINE
     size_type index_for_hash(std::size_t key_hash) const noexcept {
-#if GROUP16_USE_HASH_POLICY
         if (kUseIndexSalt) {
             key_hash ^= this->index_salt();
         }
+#if GROUP16_USE_HASH_POLICY
         size_type index = this->hash_policy_.template index_for_hash<key_type>(key_hash, this->slot_mask());
-        return index;
+        return (index / kGroupWidth);
 #else
         std::size_t index_hash = this->index_hasher(key_hash);
-        if (kUseIndexSalt) {
-            index_hash ^= this->index_salt();
-        }
-        size_type index = (size_type)index_hash & this->slot_mask();
+        //size_type index = (size_type)index_hash & this->slot_mask();
+        size_type index = static_cast<size_type>(index_hash);
         return index;
 #endif
     }
 
     JSTD_FORCED_INLINE
     std::uint8_t ctrl_for_hash(std::size_t key_hash) const noexcept {
-#if GROUP16_USE_INDEX_SHIFT
-        std::uint8_t ctrl_hash8 = ctrl_type::hash_bits(static_cast<std::uint8_t>(key_hash));
-#else
         std::size_t ctrl_hash = this->ctrl_hasher(key_hash);
+#if GROUP16_USE_LOOK_UP_TABLE
+        std::uint8_t ctrl_hash8 = ctrl_type::reduced_hash(ctrl_hash);
+        return ctrl_hash8;
+#else
         std::uint8_t ctrl_hash8 = ctrl_type::hash_bits(static_cast<std::uint8_t>(ctrl_hash));
-#endif
-#if 1
+  #if 1
         if (likely(ctrl_hash8 != kEmptySlot))
             return ctrl_hash8;
         else
             return kEmptyHash;
-#else
+  #else
         return ((ctrl_hash8 != kEmptySlot) ? ctrl_hash8 : kEmptyHash);
-#endif
+  #endif
+#endif // GROUP16_USE_LOOK_UP_TABLE
     }
 
     JSTD_FORCED_INLINE size_type index_of(iterator iter) const {

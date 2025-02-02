@@ -559,7 +559,7 @@ public:
     }
 
     size_type bucket(const key_type & key) const {
-        size_type ctrl_index = this->find_index(key);
+        size_type ctrl_index = this->find_impl(key);
         return ctrl_index;
     }
 
@@ -723,13 +723,13 @@ public:
     ///
     JSTD_FORCED_INLINE
     size_type count(const key_type & key) const {
-        size_type slot_index = this->find_index(key);
+        size_type slot_index = this->find_impl(key);
         return (slot_index != this->slot_capacity()) ? 1 : 0;
     }
 
     JSTD_FORCED_INLINE
     bool contains(const key_type & key) const {
-        size_type slot_index = this->find_index(key);
+        size_type slot_index = this->find_impl(key);
         return (slot_index != this->slot_capacity());
     }
 
@@ -743,7 +743,7 @@ public:
 
     JSTD_FORCED_INLINE
     const_iterator find(const key_type & key) const {
-        size_type slot_index = this->find_index(key);
+        size_type slot_index = this->find_impl(key);
         return this->iterator_at(slot_index);
     }
 
@@ -761,7 +761,7 @@ public:
     JSTD_FORCED_INLINE
     const_iterator find(const KeyT & key_t) const {
         key_type key(key_t);
-        size_type slot_index = this->find_index(key);
+        size_type slot_index = this->find_impl(key);
         return this->iterator_at(slot_index);
     }
 
@@ -1359,47 +1359,46 @@ private:
     //
     JSTD_FORCED_INLINE
     std::size_t ctrl_hasher(std::size_t key_hash) const noexcept {
-#if GROUP15_USE_HASH_POLICY
+#if (GROUP15_USE_HASH_POLICY != 0) || (GROUP15_USE_INDEX_SHIFT != 0)
         return key_hash;
-#elif 0
-        return (size_type)hashes::mum_hash(key_hash);
 #elif 1
         return (size_type)hashes::fibonacci_hash(key_hash);
+#elif 0
+        return (size_type)hashes::mum_hash(key_hash);
 #endif
     }
 
     JSTD_FORCED_INLINE
     size_type index_for_hash(std::size_t key_hash) const noexcept {
-#if GROUP15_USE_HASH_POLICY
         if (kUseIndexSalt) {
             key_hash ^= this->index_salt();
         }
+#if GROUP15_USE_HASH_POLICY
         size_type index = this->hash_policy_.template index_for_hash<key_type>(key_hash, this->slot_mask());
-        return index;
+        return (index / kGroupWidth);
 #else
         std::size_t index_hash = this->index_hasher(key_hash);
-        if (kUseIndexSalt) {
-            index_hash ^= this->index_salt();
-        }
-        size_type index = (size_type)index_hash & this->slot_mask();
+        //size_type index = (size_type)index_hash & this->slot_mask();
+        size_type index = static_cast<size_type>(index_hash);
         return index;
 #endif
     }
 
     JSTD_FORCED_INLINE
     std::uint8_t ctrl_for_hash(std::size_t key_hash) const noexcept {
-#if GROUP15_USE_INDEX_SHIFT
-        std::uint8_t ctrl_hash8 = static_cast<std::uint8_t>(key_hash);
-#else
         std::size_t ctrl_hash = this->ctrl_hasher(key_hash);
+#if GROUP15_USE_LOOK_UP_TABLE
+        std::uint8_t ctrl_hash8 = ctrl_type::reduced_hash(ctrl_hash);
+        return ctrl_hash8;
+#else
         std::uint8_t ctrl_hash8 = static_cast<std::uint8_t>(ctrl_hash);
-#endif
         if (likely(ctrl_hash8 > kSentinelSlot))
             return ctrl_hash8;
         else if (likely(ctrl_hash8 == kEmptySlot))
             return kEmptyHash;
         else
             return kSentinelHash;
+#endif
     }
 
     JSTD_FORCED_INLINE size_type index_of(iterator iter) const {
@@ -2093,10 +2092,14 @@ private:
                     while (used_mask != 0) {
                         std::uint32_t used_pos = BitUtils::bsf32(used_mask);
                         used_mask = BitUtils::clearLowBit32(used_mask);
-                        slot_type * old_slot = slot_base + used_pos;
-                        assert(old_slot < old_last_slot);
-                        this->no_grow_unique_insert(old_slot);
-                        this->destroy_slot(old_slot);
+                        if (likely(!group->is_sentinel(used_pos))) {
+                            slot_type * old_slot = slot_base + used_pos;
+                            assert(old_slot < old_last_slot);
+                            this->no_grow_unique_insert(old_slot);
+                            this->destroy_slot(old_slot);
+                        } else {
+                            break;
+                        }
                     }
                     slot_base += kGroupSize;
                 }
@@ -2163,24 +2166,22 @@ private:
 
     template <typename KeyT>
     JSTD_FORCED_INLINE
-    size_type find_index(const KeyT & key) {
+    size_type find_impl(const KeyT & key) {
         return const_cast<const this_type *>(this)->find_index<KeyT>(key);
     }
 
     template <typename KeyT>
     JSTD_FORCED_INLINE
-    size_type find_index(const KeyT & key) const {
+    size_type find_impl(const KeyT & key) const {
         std::size_t key_hash = this->hash_for(key);
-        size_type slot_pos = this->index_for_hash(key_hash);
+        size_type group_index = this->index_for_hash(key_hash);
         std::uint8_t ctrl_hash = this->ctrl_for_hash(key_hash);
-        return this->find_index(key, slot_pos, ctrl_hash);
+        return this->find_impl(key, group_index, ctrl_hash);
     }
 
     template <typename KeyT>
     JSTD_FORCED_INLINE
-    size_type find_index(const KeyT & key, size_type slot_pos, std::uint8_t ctrl_hash) const {
-        size_type group_index = slot_pos / kGroupWidth;
-        size_type group_pos = slot_pos % kGroupWidth;
+    locator_t find_impl(const KeyT & key, size_type group_index, std::uint8_t ctrl_hash) const {
         prober_type prober(group_index);
 
         do {
@@ -2196,23 +2197,16 @@ private:
                     size_type match_pos = static_cast<size_type>(BitUtils::bsf32(match_mask));
                     const slot_type * slot = slot_base + match_pos;
                     if (likely(this->key_equal_(key, slot->value.first))) {
-                        size_type slot_index = this->index_of(slot);
-                        return slot_index;
+                        return { group, match_pos, slot };
                     }
                     match_mask = BitUtils::clearLowBit32(match_mask);
                 } while (match_mask != 0);
             }
 
             // If it's not overflow, means it hasn't been found.
-#if GROUP15_OVERFLOW_USE_POS
-            if (likely(group->is_not_overflow(group_pos))) {
-                return this->slot_capacity();
-            }
-#else
             if (likely(group->is_not_overflow(ctrl_hash))) {
-                return this->slot_capacity();
+                return {};
             }
-#endif
 
 #if GROUP15_DISPLAY_DEBUG_INFO
             if (unlikely(prober.steps() > kSkipGroupsLimit)) {
@@ -2223,7 +2217,7 @@ private:
 #endif
         } while (prober.next_bucket(this->group_mask()));
 
-        return this->slot_capacity();
+        return {};
     }
 
     void display_meta_datas(group_type * group) {

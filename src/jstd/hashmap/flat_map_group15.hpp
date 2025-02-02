@@ -58,6 +58,8 @@
 #include "jstd/support/BitVec.h"
 #include "jstd/memory/memory_barrier.h"
 
+#define GROUP15_USE_LOOK_UP_TABLE   1
+
 namespace jstd {
 
 class JSTD_DLL group15_meta_ctrl
@@ -405,7 +407,7 @@ public:
         // Latency = 6
         __m128i ctrl_bits  = _load_data();
         //__COMPILER_BARRIER();
-#if 1
+#if GROUP15_USE_LOOK_UP_TABLE
         // Use lookup table
         int hash32 = ctrl_type::repeated_hash8(hash);
         __m128i hash_bits = _mm_set1_epi32(hash32);

@@ -58,6 +58,8 @@
 #include "jstd/support/BitVec.h"
 #include "jstd/memory/memory_barrier.h"
 
+#define GROUP16_USE_LOOK_UP_TABLE   1
+
 namespace jstd {
 
 class JSTD_DLL group16_meta_ctrl
@@ -452,7 +454,7 @@ public:
         //__COMPILER_BARRIER();
         __m128i mask_bits  = _mm_set1_epi8(kHashMask);
         //__COMPILER_BARRIER();
-#if 1
+#if GROUP16_USE_LOOK_UP_TABLE
         // Use lookup table
         int hash32 = ctrl_type::repeated_hash8(hash);
         __m128i hash_bits = _mm_set1_epi32(hash32);
