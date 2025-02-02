@@ -1199,7 +1199,12 @@ private:
     }
 
     static inline constexpr size_type calc_index_shift(size_type capacity) noexcept {
+        assert(jstd::pow2::is_pow2(capacity));
+#if GROUP15_USE_INDEX_SHIFT
+        return (kWordLength - (((capacity / kGroupWidth) <= 2) ? 1 : BitUtils::bsr((capacity / kGroupWidth))));
+#else
         return (kWordLength - ((capacity <= 2) ? 1 : BitUtils::bsr(capacity)));
+#endif
     }
 
     inline size_type calc_slot_threshold(size_type slot_capacity) const noexcept {

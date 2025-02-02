@@ -89,7 +89,6 @@
 
 #define GROUP16_USE_GROUP_SCAN      1
 #define GROUP16_USE_INDEX_SHIFT     1
-#define GROUP16_OVERFLOW_USE_POS    0
 
 #ifdef _DEBUG
 #define GROUP16_DISPLAY_DEBUG_INFO  0
@@ -1169,7 +1168,12 @@ private:
     }
 
     static inline constexpr size_type calc_index_shift(size_type capacity) noexcept {
+        assert(jstd::pow2::is_pow2(capacity));
+#if GROUP16_USE_INDEX_SHIFT
+        return (kWordLength - (((capacity / kGroupWidth) <= 2) ? 1 : BitUtils::bsr((capacity / kGroupWidth))));
+#else
         return (kWordLength - ((capacity <= 2) ? 1 : BitUtils::bsr(capacity)));
+#endif
     }
 
     inline size_type calc_slot_threshold(size_type slot_capacity) const noexcept {
@@ -2069,16 +2073,14 @@ private:
     JSTD_FORCED_INLINE
     size_type find_index(const KeyT & key) const {
         std::size_t key_hash = this->hash_for(key);
-        size_type slot_pos = this->index_for_hash(key_hash);
+        size_type group_index = this->index_for_hash(key_hash);
         std::uint8_t ctrl_hash = this->ctrl_for_hash(key_hash);
-        return this->find_index(key, slot_pos, ctrl_hash);
+        return this->find_index(key, group_index, ctrl_hash);
     }
 
     template <typename KeyT>
     JSTD_FORCED_INLINE
-    size_type find_index(const KeyT & key, size_type slot_pos, std::uint8_t ctrl_hash) const {
-        size_type group_index = slot_pos / kGroupWidth;
-        size_type group_pos = slot_pos % kGroupWidth;
+    size_type find_index(const KeyT & key, size_type group_index, std::uint8_t ctrl_hash) const {
         prober_type prober(group_index);
 
         do {
@@ -2102,15 +2104,9 @@ private:
             }
 
             // If it's not overflow, means it hasn't been found.
-#if GROUP16_OVERFLOW_USE_POS
-            if (likely(group->is_not_overflow(group_pos))) {
-                return this->slot_capacity();
-            }
-#else
             if (likely(group->is_not_overflow(ctrl_hash % kGroupWidth))) {
                 return this->slot_capacity();
             }
-#endif
 
 #if GROUP16_DISPLAY_DEBUG_INFO
             if (unlikely(prober.steps() > kSkipGroupsLimit)) {
@@ -2139,9 +2135,7 @@ private:
 
     template <typename KeyT>
     JSTD_FORCED_INLINE
-    size_type find_empty_to_insert(const KeyT & key, size_type slot_pos, std::uint8_t ctrl_hash) {
-        size_type group_index = slot_pos / kGroupWidth;
-        size_type group_pos = slot_pos % kGroupWidth;
+    size_type find_empty_to_insert(const KeyT & key, size_type group_index, std::uint8_t ctrl_hash) {
         prober_type prober(group_index);
 
         do {
@@ -2157,15 +2151,7 @@ private:
                 return slot_index;
             } else {
                 // If it's not overflow, set the overflow bit.
-#if GROUP16_OVERFLOW_USE_POS
-                //if (likely(group->is_not_overflow(group_pos))) {
-                    group->set_overflow(group_pos);
-                //}
-#else
-                //if (likely(group->is_not_overflow(ctrl_hash % kGroupWidth))) {
-                    group->set_overflow(ctrl_hash % kGroupWidth);
-                //}
-#endif
+                group->set_overflow(ctrl_hash % kGroupWidth);
             }
 #if GROUP16_DISPLAY_DEBUG_INFO
             if (unlikely(prober.steps() > kSkipGroupsLimit)) {
@@ -2184,10 +2170,10 @@ private:
     JSTD_FORCED_INLINE
     std::pair<size_type, bool> find_or_insert(const KeyT & key) {
         std::size_t key_hash = this->hash_for(key);
-        size_type slot_pos = this->index_for_hash(key_hash);
+        size_type group_index = this->index_for_hash(key_hash);
         std::uint8_t ctrl_hash = this->ctrl_for_hash(key_hash);
 
-        size_type slot_index = this->find_index(key, slot_pos, ctrl_hash);
+        size_type slot_index = this->find_index(key, group_index, ctrl_hash);
         if (slot_index != this->slot_capacity()) {
             return { slot_index, kIsExists };
         }
@@ -2196,12 +2182,12 @@ private:
             // The size of slot reach the slot threshold or hashmap is full.
             this->grow_if_necessary();
 
-            slot_pos = this->index_for_hash(key_hash);
+            group_index = this->index_for_hash(key_hash);
             // Ctrl hash will not change
             // ctrl_hash = this->ctrl_for_hash(key_hash);
         }
 
-        slot_index = this->find_empty_to_insert(key, slot_pos, ctrl_hash);
+        slot_index = this->find_empty_to_insert(key, group_index, ctrl_hash);
         if (likely(true || (slot_index != this->slot_capacity()))) {
             return { slot_index, kNeedInsert };
         }
@@ -2211,8 +2197,8 @@ private:
             // The size of slot reach the slot threshold or hashmap is full.
             this->grow_if_necessary();
 
-            slot_pos = this->index_for_hash(key_hash);
-            slot_index = this->find_empty_to_insert(key, slot_pos, ctrl_hash);
+            group_index = this->index_for_hash(key_hash);
+            slot_index = this->find_empty_to_insert(key, group_index, ctrl_hash);
             assert(slot_index < this->slot_capacity());
             return { slot_index, kNeedInsert };
         }
@@ -2221,10 +2207,10 @@ private:
     JSTD_FORCED_INLINE
     size_type no_grow_unique_insert(const key_type & key) {
         std::size_t key_hash = this->hash_for(key);
-        size_type slot_pos = this->index_for_hash(key_hash);
+        size_type group_index = this->index_for_hash(key_hash);
         std::uint8_t ctrl_hash = this->ctrl_for_hash(key_hash);
 
-        size_type slot_index = this->find_empty_to_insert(key, slot_pos, ctrl_hash);
+        size_type slot_index = this->find_empty_to_insert(key, group_index, ctrl_hash);
         return slot_index;
     }
 
@@ -2532,13 +2518,8 @@ private:
     JSTD_FORCED_INLINE
     bool ctrl_maybe_caused_overflow(size_type slot_index) const noexcept {
         const group_type * group = this->groups() + slot_index / kGroupWidth;
-#if GROUP16_OVERFLOW_USE_POS
-        size_type group_pos = slot_index % kGroupWidth;
-        return group->is_overflow(group_pos);
-#else
         const ctrl_type * ctrl = this->ctrl_at(slot_index);
         return group->is_overflow(ctrl->value() % kGroupWidth);
-#endif
     }
 
     JSTD_FORCED_INLINE
@@ -2555,10 +2536,10 @@ private:
     JSTD_FORCED_INLINE
     size_type find_and_erase(const key_type & key) {
         std::size_t key_hash = this->hash_for(key);
-        size_type slot_pos = this->index_for_hash(key_hash);
+        size_type group_index = this->index_for_hash(key_hash);
         std::uint8_t ctrl_hash = this->ctrl_for_hash(key_hash);
 
-        size_type slot_index = this->find_index(key, slot_pos, ctrl_hash);
+        size_type slot_index = this->find_index(key, group_index, ctrl_hash);
         if (slot_index != this->slot_capacity()) {
             this->erase_index(slot_index);
         }
