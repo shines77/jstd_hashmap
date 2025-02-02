@@ -1133,11 +1133,18 @@ public:
 
 private:
     static inline group_type * default_empty_groups() noexcept {
-        alignas(16) static const ctrl_type s_empty_ctrls[16] = {
+        alignas(16) static const ctrl_type s_empty_ctrls[kGroupWidth * 2] = {
+            // Group 0
             { kEmptySlot }, { kEmptySlot }, { kEmptySlot }, { kEmptySlot },
             { kEmptySlot }, { kEmptySlot }, { kEmptySlot }, { kEmptySlot },
             { kEmptySlot }, { kEmptySlot }, { kEmptySlot }, { kEmptySlot },
-            { kEmptySlot }, { kEmptySlot }, { kEmptySlot }, { kEmptySlot }
+            { kEmptySlot }, { kEmptySlot }, { kEmptySlot }, { kEmptySlot },
+
+            // Group 1
+            { kEmptySlot }, { kEmptySlot }, { kEmptySlot }, { kEmptySlot },
+            { kEmptySlot }, { kEmptySlot }, { kEmptySlot }, { kEmptySlot },
+            { kEmptySlot }, { kEmptySlot }, { kEmptySlot }, { kEmptySlot },
+            { kEmptySlot }, { kEmptySlot }, { kEmptySlot }, { kEmptySlot },
         };
 
         return reinterpret_cast<group_type *>(const_cast<ctrl_type *>(&s_empty_ctrls[0]));
