@@ -383,13 +383,13 @@ public:
                 // Here we will move elements of [other] hashmap to this hashmap.
                 this->move_slots_from(other);
             }
-            // Reset other hashmap content
-            other.reset<false>();
+            // Destroy all data but needn't clear_slots().
+            other.destroy<false>();
         }
     }
 
     ~group16_flat_table() {
-        this->destroy();
+        this->destroy<true>();
     }
 
     group16_flat_table & operator = (const group16_flat_table & other) {
@@ -664,7 +664,7 @@ public:
             new_capacity = this->shrink_to_fit_capacity(new_capacity);
             this->rehash_impl<false>(new_capacity);
         } else {
-            this->reset<true>();
+            this->destroy<true>();
         }
     }
 
@@ -693,7 +693,7 @@ public:
         if (likely(new_capacity != 0)) {
             this->rehash_impl<true>(new_capacity);
         } else {
-            this->reset<true>();
+            this->destroy<true>();
         }
     }
 
@@ -707,7 +707,7 @@ public:
         if (likely(new_capacity != 0)) {
             this->rehash_impl<true>(new_capacity);
         } else {
-            this->reset<true>();
+            this->destroy<true>();
         }
     }
 
@@ -765,11 +765,10 @@ public:
     void clear(bool need_destroy = false) noexcept {
         if (!need_destroy) {
             this->clear_data();
-            assert(this->slot_size() == 0);
         } else {
-            this->destroy();
-            assert(this->slot_size() == 0);
+            this->destroy<true>();
         }
+        assert(this->slot_size() == 0);
     }
 
     ///
@@ -1439,34 +1438,40 @@ private:
         return const_cast<const char *>(reinterpret_cast<char *>(ptr) + offset);
     }
 
-    JSTD_FORCED_INLINE
+    template <bool NeedClearSlots>
+    JSTD_NO_INLINE
     void destroy() {
-        this->destroy_data();
+        this->destroy_data<NeedClearSlots>();
     }
 
+    template <bool NeedClearSlots>
     JSTD_FORCED_INLINE
     void destroy_data() {
         // Note!!: destroy_slots() need use this->ctrls(), so must destroy slots first.
         size_type group_capacity = this->group_capacity();
-        this->destroy_slots();
+        this->destroy_slots<NeedClearSlots>();
         this->destroy_groups(group_capacity);
     }
 
     JSTD_FORCED_INLINE
     void destroy_groups(size_type group_capacity) noexcept {
         if (this->groups_ != this_type::default_empty_groups()) {
+            // Reset groups state
+            this->groups_ = this_type::default_empty_groups();
             size_type total_group_alloc_count = this->TotalGroupAllocCount<kGroupAlignment>(group_capacity);
 #if GROUP16_USE_SEPARATE_SLOTS
             GroupAllocTraits::deallocate(this->group_allocator_, this->groups_alloc_, total_group_alloc_count);
-            this->groups_alloc_ = this_type::default_empty_groups();
-#endif
-            this->groups_ = this_type::default_empty_groups();
+            this->groups_alloc_ = nullptr;
+#endif            
         }
     }
 
+    template <bool NeedClearSlots>
     JSTD_FORCED_INLINE
     void destroy_slots() {
-        this->clear_slots();
+        if (NeedClearSlots) {
+            this->clear_slots();
+        }
 
         if (this->slots_ != nullptr) {
 #if GROUP16_USE_SEPARATE_SLOTS
@@ -1476,17 +1481,23 @@ private:
                                                     this->group_capacity(), this->slot_capacity());
             SlotAllocTraits::deallocate(this->slot_allocator_, this->slots_, total_slot_alloc_size);
 #endif
+            // Reset slots state
             this->slots_ = nullptr;
             this->slot_size_ = 0;
             this->slot_mask_ = size_type(-1);
             this->slot_threshold_ = 0;
             this->group_mask_ = size_type(-1);
+#if GROUP16_USE_INDEX_SHIFT
             this->index_shift_ = kWordLength - 1;
+#endif
+#if GROUP16_USE_HASH_POLICY
+            this->hash_policy_.reset();
+#endif
         }
     }
 
     JSTD_FORCED_INLINE
-    void init_groups(group_type * groups, size_type group_capacity, std::true_type) {
+    static void init_groups(group_type * groups, size_type group_capacity, std::true_type) {
         /*
          * memset faster/not slower than manual, assumes all zeros is group_type's
          * default layout.
@@ -1501,7 +1512,7 @@ private:
     }
 
     JSTD_FORCED_INLINE
-    void init_groups(group_type * groups, size_type group_capacity, std::false_type) {
+    static void init_groups(group_type * groups, size_type group_capacity, std::false_type) {
         if (groups != this_type::default_empty_groups()) {
             group_type * group = groups;
             group_type * last_group = group + group_capacity;
@@ -1520,7 +1531,7 @@ private:
 
     JSTD_FORCED_INLINE
     void clear_groups(group_type * groups, size_type group_capacity) {
-        this->init_groups(groups, group_capacity, std::is_trivially_default_constructible<group_type>{});
+        this_type::init_groups(groups, group_capacity, std::is_trivially_default_constructible<group_type>{});
     }
 
     JSTD_FORCED_INLINE
@@ -1577,10 +1588,10 @@ private:
                 this->unique_insert(other.begin(), other.end());
             } catch (const std::bad_alloc & ex) {
                 JSTD_UNUSED(ex);
-                this->destroy();
+                this->destroy<true>();
                 throw std::bad_alloc();
             } catch (...) {
-                this->destroy();
+                this->destroy<true>();
                 throw;
             }
         }
@@ -1698,10 +1709,10 @@ private:
                 this->unique_insert(other.begin(), other.end());
             } catch (const std::bad_alloc & ex) {
                 JSTD_UNUSED(ex);
-                this->destroy();
+                this->destroy<true>();
                 throw std::bad_alloc();
             } catch (...) {
-                this->destroy();
+                this->destroy<true>();
                 throw;
             }
         }
@@ -1898,74 +1909,51 @@ private:
         return total_alloc_count;
     }
 
-    template <bool NeedDestory>
-    JSTD_FORCED_INLINE
-    void reset() noexcept {
-        if (!NeedDestory) {
-            this->groups_ = this_type::default_empty_groups();
-            this->slots_ = nullptr;
-            this->slot_size_ = 0;
-            this->slot_mask_ = size_type(-1);
-            this->slot_threshold_ = 0;
-            this->group_mask_ = size_type(-1);
-            this->index_shift_ = kWordLength - 1;
-#if GROUP16_USE_SEPARATE_SLOTS
-            this->groups_alloc_ = this_type::default_empty_groups();
-#endif
-        } else {
-            this->destroy_data();
-        }
-
-#if GROUP16_USE_HASH_POLICY
-        this->hash_policy_.reset();
-#endif
-    }
-
     template <bool isInitialize = false>
     JSTD_FORCED_INLINE
     void create_slots(size_type new_capacity) {
-        if (unlikely((new_capacity == 0) && !isInitialize)) {
-            this->reset<false>();
-            return;
-        }
-
+        if (likely(isInitialize || (new_capacity != 0))) {
 #if GROUP16_USE_HASH_POLICY
-        auto hash_policy_setting = this->hash_policy_.calc_next_capacity(new_capacity);
-        this->hash_policy_.commit(hash_policy_setting);
+            auto hash_policy_setting = this->hash_policy_.calc_next_capacity(new_capacity);
+            this->hash_policy_.commit(hash_policy_setting);
 #endif
-        size_type new_ctrl_capacity = new_capacity;
-        size_type new_group_capacity = (new_ctrl_capacity + (kGroupWidth - 1)) / kGroupWidth;
-        assert(new_group_capacity > 0);
+            size_type new_ctrl_capacity = new_capacity;
+            size_type new_group_capacity = (new_ctrl_capacity + (kGroupWidth - 1)) / kGroupWidth;
+            assert(new_group_capacity > 0);
 
-        size_type new_max_slot_size = new_capacity * this->mlf_ / kLoadFactorAmplify;
-        size_type new_slot_capacity = (!kIsIndirectKV) ? new_capacity : new_max_slot_size;
+            size_type new_max_slot_size = new_capacity * this->mlf_ / kLoadFactorAmplify;
+            size_type new_slot_capacity = (!kIsIndirectKV) ? new_capacity : new_max_slot_size;
 
 #if GROUP16_USE_SEPARATE_SLOTS
-        size_type total_group_alloc_count = this->TotalGroupAllocCount<kGroupAlignment>(new_group_capacity);
-        group_type * new_groups_alloc = GroupAllocTraits::allocate(this->group_allocator_, total_group_alloc_count);
-        group_type * new_groups = this->AlignedGroups<kGroupAlignment>(new_groups_alloc);
+            size_type total_group_alloc_count = this->TotalGroupAllocCount<kGroupAlignment>(new_group_capacity);
+            group_type * new_groups_alloc = GroupAllocTraits::allocate(this->group_allocator_, total_group_alloc_count);
+            group_type * new_groups = this->AlignedGroups<kGroupAlignment>(new_groups_alloc);
 
-        slot_type * new_slots = SlotAllocTraits::allocate(this->slot_allocator_, new_slot_capacity);
+            slot_type * new_slots = SlotAllocTraits::allocate(this->slot_allocator_, new_slot_capacity);
 #else
-        size_type total_slot_alloc_count = this->TotalSlotAllocCount<kGroupAlignment>(new_group_capacity, new_slot_capacity);
+            size_type total_slot_alloc_count = this->TotalSlotAllocCount<kGroupAlignment>(new_group_capacity, new_slot_capacity);
 
-        slot_type * new_slots = SlotAllocTraits::allocate(this->slot_allocator_, total_slot_alloc_count);
-        group_type * new_groups = this->AlignedSlotsAndGroups<kGroupAlignment>(new_slots, new_slot_capacity);
+            slot_type * new_slots = SlotAllocTraits::allocate(this->slot_allocator_, total_slot_alloc_count);
+            group_type * new_groups = this->AlignedSlotsAndGroups<kGroupAlignment>(new_slots, new_slot_capacity);
 #endif
+            // Reset groups to default state
+            this->clear_groups(new_groups, new_group_capacity);
 
-        // Reset groups to default state
-        this->clear_groups(new_groups, new_group_capacity);
-
-        this->groups_ = new_groups;
-        this->slots_ = new_slots;
-        this->slot_size_ = 0;
-        this->slot_mask_ = new_capacity - 1;
-        this->slot_threshold_ = this->calc_slot_threshold(new_capacity);
-        this->group_mask_ = this_type::calc_group_mask(new_capacity);
-        this->index_shift_ = this_type::calc_index_shift(new_capacity);
+            this->groups_ = new_groups;
+            this->slots_ = new_slots;
+            this->slot_size_ = 0;
+            this->slot_mask_ = new_capacity - 1;
+            this->slot_threshold_ = this->calc_slot_threshold(new_capacity);
+            this->group_mask_ = this_type::calc_group_mask(new_capacity);
+#if GROUP16_USE_INDEX_SHIFT
+            this->index_shift_ = this_type::calc_index_shift(new_capacity);
+#endif
 #if GROUP16_USE_SEPARATE_SLOTS
-        this->groups_alloc_ = new_groups_alloc;
+            this->groups_alloc_ = new_groups_alloc;
 #endif
+        } else {
+            this->destroy<true>();
+        }
     }
 
     template <bool AllowShrink>

@@ -771,11 +771,10 @@ public:
     void clear(bool need_destroy = false) noexcept {
         if (!need_destroy) {
             this->clear_data();
-            assert(this->slot_size() == 0);
         } else {
             this->destroy<true>();
-            assert(this->slot_size() == 0);
         }
+        assert(this->slot_size() == 0);
     }
 
     ///
@@ -2004,53 +2003,52 @@ private:
     JSTD_FORCED_INLINE
     void create_slots(size_type new_capacity) {
         assert(pow2::is_pow2(new_capacity));
-        if (unlikely((new_capacity == 0) && !isInitialize)) {
-            this->destroy<true>();
-            return;
-        }
-
+        if (likely(isInitialize || (new_capacity != 0))) {
 #if GROUP15_USE_HASH_POLICY
-        auto hash_policy_setting = this->hash_policy_.calc_next_capacity(new_capacity);
-        this->hash_policy_.commit(hash_policy_setting);
+            auto hash_policy_setting = this->hash_policy_.calc_next_capacity(new_capacity);
+            this->hash_policy_.commit(hash_policy_setting);
 #endif
-        size_type new_ctrl_capacity = new_capacity;
-        size_type new_group_capacity = (new_ctrl_capacity + (kGroupWidth - 1)) / kGroupWidth;
-        assert(new_group_capacity > 0);
+            size_type new_ctrl_capacity = new_capacity;
+            size_type new_group_capacity = (new_ctrl_capacity + (kGroupWidth - 1)) / kGroupWidth;
+            assert(new_group_capacity > 0);
 
-        size_type new_max_slot_size = new_capacity * this->mlf_ / kLoadFactorAmplify;
-        size_type new_slot_size = calc_slot_capacity(new_group_capacity, new_capacity);
-        size_type new_slot_capacity = (!kIsIndirectKV) ? new_slot_size : new_max_slot_size;
+            size_type new_max_slot_size = new_capacity * this->mlf_ / kLoadFactorAmplify;
+            size_type new_slot_size = calc_slot_capacity(new_group_capacity, new_capacity);
+            size_type new_slot_capacity = (!kIsIndirectKV) ? new_slot_size : new_max_slot_size;
 
 #if GROUP15_USE_SEPARATE_SLOTS
-        size_type total_group_alloc_count = this->TotalGroupAllocCount<kGroupAlignment>(new_group_capacity);
-        group_type * new_groups_alloc = GroupAllocTraits::allocate(this->group_allocator_, total_group_alloc_count);
-        group_type * new_groups = this->AlignedGroups<kGroupAlignment>(new_groups_alloc);
+            size_type total_group_alloc_count = this->TotalGroupAllocCount<kGroupAlignment>(new_group_capacity);
+            group_type * new_groups_alloc = GroupAllocTraits::allocate(this->group_allocator_, total_group_alloc_count);
+            group_type * new_groups = this->AlignedGroups<kGroupAlignment>(new_groups_alloc);
 
-        slot_type * new_slots = SlotAllocTraits::allocate(this->slot_allocator_, new_slot_capacity);
+            slot_type * new_slots = SlotAllocTraits::allocate(this->slot_allocator_, new_slot_capacity);
 #else
-        size_type total_slot_alloc_count = this->TotalSlotAllocCount<kGroupAlignment>(new_group_capacity, new_slot_capacity);
+            size_type total_slot_alloc_count = this->TotalSlotAllocCount<kGroupAlignment>(new_group_capacity, new_slot_capacity);
 
-        slot_type * new_slots = SlotAllocTraits::allocate(this->slot_allocator_, total_slot_alloc_count);
-        group_type * new_groups = this->AlignedSlotsAndGroups<kGroupAlignment>(new_slots, new_slot_capacity);
+            slot_type * new_slots = SlotAllocTraits::allocate(this->slot_allocator_, total_slot_alloc_count);
+            group_type * new_groups = this->AlignedSlotsAndGroups<kGroupAlignment>(new_slots, new_slot_capacity);
 #endif
 
-        // Reset groups to default state
-        this->clear_groups(new_groups, new_group_capacity);
+            // Reset groups to default state
+            this->clear_groups(new_groups, new_group_capacity);
 
-        this->groups_ = new_groups;
-        this->slots_ = new_slots;
-        this->slot_size_ = 0;
-        this->slot_mask_ = new_capacity - 1;
-        this->slot_threshold_ = this->calc_slot_threshold(new_slot_capacity);
-        size_type group_capacity = this_type::calc_group_capacity(new_capacity);
-        this->slot_capacity_ = this_type::calc_slot_capacity(group_capacity, new_capacity);
-        this->group_mask_ = this_type::calc_group_mask(group_capacity, new_capacity);
+            this->groups_ = new_groups;
+            this->slots_ = new_slots;
+            this->slot_size_ = 0;
+            this->slot_mask_ = new_capacity - 1;
+            this->slot_threshold_ = this->calc_slot_threshold(new_slot_capacity);
+            size_type group_capacity = this_type::calc_group_capacity(new_capacity);
+            this->slot_capacity_ = this_type::calc_slot_capacity(group_capacity, new_capacity);
+            this->group_mask_ = this_type::calc_group_mask(group_capacity, new_capacity);
 #if GROUP15_USE_INDEX_SHIFT
-        this->index_shift_ = this_type::calc_index_shift(new_capacity);
+            this->index_shift_ = this_type::calc_index_shift(new_capacity);
 #endif
 #if GROUP15_USE_SEPARATE_SLOTS
-        this->groups_alloc_ = new_groups_alloc;
+            this->groups_alloc_ = new_groups_alloc;
 #endif
+        } else {
+            this->destroy<true>();
+        }
     }
 
     template <bool AllowShrink>
