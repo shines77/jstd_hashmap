@@ -281,7 +281,7 @@ public:
           slot_mask_(size_type(-1)),
           slot_threshold_(0),
           slot_capacity_(0),
-          group_mask_(size_type(-1)),
+          group_mask_(0),
 #if GROUP15_USE_INDEX_SHIFT
           index_shift_(kWordLength - 1),
 #endif
@@ -307,9 +307,11 @@ public:
 
     group15_flat_table(group15_flat_table const & other, allocator_type const & allocator) :
         groups_(default_empty_groups()), slots_(nullptr),
-        slot_size_(0), slot_mask_(size_type(-1)),
-        slot_threshold_(0), slot_capacity_(0),
-        group_mask_(size_type(-1)),
+        slot_size_(0),
+        slot_mask_(size_type(-1)),
+        slot_threshold_(0),
+        slot_capacity_(0),
+        group_mask_(0),
 #if GROUP15_USE_INDEX_SHIFT
         index_shift_(kWordLength - 1),
 #endif
@@ -341,7 +343,7 @@ public:
         slot_mask_(jstd::exchange(other.slot_mask_, size_type(-1))),
         slot_threshold_(jstd::exchange(other.slot_threshold_, 0)),
         slot_capacity_(jstd::exchange(other.slot_capacity_, 0)),
-        group_mask_(jstd::exchange(other.group_mask_, size_type(-1))),
+        group_mask_(jstd::exchange(other.group_mask_, 0)),
 #if GROUP15_USE_INDEX_SHIFT
         index_shift_(jstd::exchange(other.index_shift_, kWordLength - 1)),
 #endif
@@ -365,7 +367,7 @@ public:
         slot_mask_(size_type(-1)),
         slot_threshold_(0),
         slot_capacity_(0),
-        group_mask_(size_type(-1)),
+        group_mask_(0),
 #if GROUP15_USE_INDEX_SHIFT
         index_shift_(kWordLength - 1),
 #endif
@@ -1514,7 +1516,7 @@ private:
             this->slot_mask_ = size_type(-1);
             this->slot_threshold_ = 0;
             this->slot_capacity_ = 0;
-            this->group_mask_ = size_type(-1);
+            this->group_mask_ = 0;
 #if GROUP15_USE_INDEX_SHIFT
             this->index_shift_ = kWordLength - 1;
 #endif
@@ -2056,6 +2058,8 @@ private:
             this->slot_threshold_ = this->calc_slot_threshold(new_slot_capacity);
             size_type group_capacity = this_type::calc_group_capacity(new_capacity);
             this->slot_capacity_ = this_type::calc_slot_capacity(group_capacity, new_capacity);
+            assert(new_capacity > 0);
+            // Because (new_capacity != 0), so (group_mask_ != -1) too.
             this->group_mask_ = this_type::calc_group_mask(group_capacity, new_capacity);
 #if GROUP15_USE_INDEX_SHIFT
             this->index_shift_ = this_type::calc_index_shift(new_capacity);
