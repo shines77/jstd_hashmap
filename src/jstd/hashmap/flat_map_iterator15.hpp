@@ -177,10 +177,10 @@ public:
         : base_type(locator) {}
 
     flat_map_iterator15(const flat_map_iterator15 & src) noexcept
-        : flat_map_locator15(src.group(), src.pos(), src.slot()) {
+        : base_type(src.group(), src.pos(), src.slot()) {
     }
     flat_map_iterator15(const opp_flat_map_iterator & src) noexcept
-        : flat_map_locator15(src.group(), src.pos(), src.slot()) {
+        : base_type(src.group(), src.pos(), src.slot()) {
     }
 
     inline flat_map_iterator15 & operator = (const flat_map_iterator15 & rhs) noexcept {
