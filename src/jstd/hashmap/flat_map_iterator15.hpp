@@ -145,6 +145,8 @@ public:
                                                      const_value_type>::type;
     using opp_flat_map_iterator = flat_map_iterator15<HashMap, opp_value_type, IsIndirectKV>;
 
+    using base_type = flat_map_locator15<HashMap, IsIndirectKV>;
+
     using hashmap_type = HashMap;
     using ctrl_type = typename HashMap::ctrl_type;
     using group_type = typename HashMap::group_type;
@@ -161,18 +163,18 @@ private:
     //
 
 public:
-    flat_map_iterator15() noexcept : flat_map_locator15() {}
+    flat_map_iterator15() noexcept : base_type() {}
     flat_map_iterator15(slot_type * slot) noexcept
-        : flat_map_locator15(nullptr, 0, const_cast<const slot_type *>(slot)) {
+        : base_type(nullptr, 0, const_cast<const slot_type *>(slot)) {
     }
     flat_map_iterator15(const slot_type * slot) noexcept
-        : flat_map_locator15(nullptr, 0, slot) {
+        : base_type(nullptr, 0, slot) {
     }
     flat_map_iterator15(const group_type * group, size_type pos, const slot_type * slot) noexcept
-        : flat_map_locator15(group, pos, slot) {}
+        : base_type(group, pos, slot) {}
 
     flat_map_iterator15(const locator_t & locator) noexcept
-        : flat_map_locator15(locator) {}
+        : base_type(locator) {}
 
     flat_map_iterator15(const flat_map_iterator15 & src) noexcept
         : flat_map_locator15(src.group(), src.pos(), src.slot()) {
@@ -268,13 +270,13 @@ private:
             ++this->slot_;
             if (this->pos() == (kGroupSize - 1)) {
                 ++this->group_;
-                this->pos_ = 0;
+                //this->pos_ = 0;
                 break;
             }
             ++this->pos_;
-            if (group_->is_empty(this->pos_))
+            if (this->group_->is_empty(this->pos_))
                 continue;
-            if (unlikely(group_->is_sentinel(this->pos_)))
+            if (unlikely(this->group_->is_sentinel(this->pos_)))
                 this->slot_ = nullptr;
             return;
         }
@@ -292,7 +294,7 @@ private:
                 return;
             }
             ++this->group_;
-            this->pos_ = 0;
+            //this->pos_ = 0;
             this->slot_ += static_cast<difference_type>(kGroupSize);
         }
     }
@@ -302,13 +304,13 @@ private:
             --this->slot_;
             if (this->pos() == 0) {
                 --this->group_;
-                this->pos_ = kGroupSize - 1;
+                //this->pos_ = kGroupSize - 1;
                 break;
             }
             --this->pos_;
-            if (group_->is_empty(this->pos_))
+            if (this->group_->is_empty(this->pos_))
                 continue;
-            if (unlikely(group_->is_sentinel(this->pos_)))
+            if (unlikely(this->group_->is_sentinel(this->pos_)))
                 this->slot_ = nullptr;
             return;
         }
@@ -326,7 +328,7 @@ private:
                 return;
             }
             --this->group_;
-            this->pos_ = kGroupSize - 1;
+            //this->pos_ = kGroupSize - 1;
             this->slot_ += static_cast<difference_type>(kGroupSize);
         }
     }
