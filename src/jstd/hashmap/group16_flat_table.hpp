@@ -763,12 +763,11 @@ public:
     ///
     JSTD_FORCED_INLINE
     void clear(bool need_destroy = false) noexcept {
-        if (need_destroy) {
-            this->create_slots<false>(kDefaultCapacity);
-            assert(this->slot_size() == 0);
-            return;
-        } else {
+        if (!need_destroy) {
             this->clear_data();
+            assert(this->slot_size() == 0);
+        } else {
+            this->destroy();
             assert(this->slot_size() == 0);
         }
     }
@@ -1322,7 +1321,11 @@ private:
     //
     JSTD_FORCED_INLINE
     std::size_t index_hasher(std::size_t key_hash) const noexcept {
+#if GROUP16_USE_INDEX_SHIFT
         return (key_hash >> this->index_shift_);
+#else
+        return key_hash;
+#endif
     }
 
     //
@@ -1349,10 +1352,14 @@ private:
         return (index / kGroupWidth);
 #else
         std::size_t index_hash = this->index_hasher(key_hash);
-        //size_type index = (size_type)index_hash & this->slot_mask();
+  #if GROUP16_USE_INDEX_SHIFT
         size_type index = static_cast<size_type>(index_hash);
         return index;
-#endif
+  #else
+        size_type index = (size_type)index_hash & this->slot_mask();
+        return (index / kGroupWidth);
+  #endif // GROUP16_USE_INDEX_SHIFT
+#endif // GROUP16_USE_HASH_POLICY
     }
 
     JSTD_FORCED_INLINE
@@ -2144,7 +2151,7 @@ private:
 
     template <typename KeyT>
     JSTD_FORCED_INLINE
-    size_type find_first_empty_to_insert(const KeyT & key, size_type slot_pos, std::uint8_t ctrl_hash) {
+    size_type find_empty_to_insert(const KeyT & key, size_type slot_pos, std::uint8_t ctrl_hash) {
         size_type group_index = slot_pos / kGroupWidth;
         size_type group_pos = slot_pos % kGroupWidth;
         prober_type prober(group_index);
@@ -2174,7 +2181,7 @@ private:
             }
 #if GROUP16_DISPLAY_DEBUG_INFO
             if (unlikely(prober.steps() > kSkipGroupsLimit)) {
-                std::cout << "find_first_empty_to_insert(): key = " << key <<
+                std::cout << "find_empty_to_insert(): key = " << key <<
                              ", skip_groups = " << prober.steps() <<
                              ", load_factor = " << this->load_factor() << std::endl;
                 display_meta_datas(group);
@@ -2206,7 +2213,7 @@ private:
             // ctrl_hash = this->ctrl_for_hash(key_hash);
         }
 
-        slot_index = this->find_first_empty_to_insert(key, slot_pos, ctrl_hash);
+        slot_index = this->find_empty_to_insert(key, slot_pos, ctrl_hash);
         if (likely(true || (slot_index != this->slot_capacity()))) {
             return { slot_index, kNeedInsert };
         }
@@ -2217,7 +2224,7 @@ private:
             this->grow_if_necessary();
 
             slot_pos = this->index_for_hash(key_hash);
-            slot_index = this->find_first_empty_to_insert(key, slot_pos, ctrl_hash);
+            slot_index = this->find_empty_to_insert(key, slot_pos, ctrl_hash);
             assert(slot_index < this->slot_capacity());
             return { slot_index, kNeedInsert };
         }
@@ -2229,7 +2236,7 @@ private:
         size_type slot_pos = this->index_for_hash(key_hash);
         std::uint8_t ctrl_hash = this->ctrl_for_hash(key_hash);
 
-        size_type slot_index = this->find_first_empty_to_insert(key, slot_pos, ctrl_hash);
+        size_type slot_index = this->find_empty_to_insert(key, slot_pos, ctrl_hash);
         return slot_index;
     }
 
