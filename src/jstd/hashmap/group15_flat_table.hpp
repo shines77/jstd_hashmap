@@ -985,7 +985,7 @@ public:
     ///
     inline size_type next_index(size_type index) const noexcept {
         assert(index < this->slot_capacity());
-        return ((index + 1) & this->slot_mask_);
+        return ((index + 1) & this->slot_mask());
     }
 
     inline size_type next_index(size_type index, size_type slot_mask) const noexcept {
@@ -1596,7 +1596,7 @@ private:
                 size_type slot_index = 0;
                 for (size_type ctrl_index = 0; ctrl_index < this->ctrl_capacity(); ctrl_index++) {
                     if (likely((ctrl_index % kGroupWidth) != kGroupSize) {
-                        if (ctrl->is_used()) {
+                        if (ctrl->is_valid()) {
                             this->destroy_slot(slot_index);
                         }
                         slot_index++;
@@ -1919,18 +1919,18 @@ private:
     }
 
     JSTD_FORCED_INLINE
-    bool need_grow() const {
+    bool need_grow() const noexcept {
         return (this->slot_size() >= this->slot_threshold());
     }
 
     //JSTD_NO_INLINE
     void grow_if_necessary() {
         // The growth rate is 2 times
-        size_type new_capacity = this->slot_capacity() * 2;
+        size_type new_capacity = this->ctrl_capacity() * 2;
         this->rehash_impl<false>(new_capacity);
     }
 
-    inline bool is_valid_capacity(size_type capacity) const {
+    inline bool is_valid_capacity(size_type capacity) const noexcept {
         return ((capacity >= kMinCapacity) && pow2::is_pow2(capacity));
     }
 
@@ -1941,7 +1941,7 @@ private:
     //
     template <size_type GroupAlignment>
     JSTD_FORCED_INLINE
-    group_type * AlignedGroups(const group_type * groups_alloc) {
+    group_type * AlignedGroups(const group_type * groups_alloc) noexcept {
         static_assert((GroupAlignment > 0),
                       "jstd::group15_flat_map::AlignedGroups<N>(): GroupAlignment must bigger than 0.");
         static_assert(((GroupAlignment & (GroupAlignment - 1)) == 0),
@@ -1962,7 +1962,7 @@ private:
     //
     template <size_type GroupAlignment>
     JSTD_FORCED_INLINE
-    group_type * AlignedSlotsAndGroups(const slot_type * slots, size_type slot_capacity) {
+    group_type * AlignedSlotsAndGroups(const slot_type * slots, size_type slot_capacity) noexcept {
         static_assert((GroupAlignment > 0),
                       "jstd::group15_flat_map::AlignedSlotsAndGroups<N>(): GroupAlignment must bigger than 0.");
         static_assert(((GroupAlignment & (GroupAlignment - 1)) == 0),
@@ -1983,7 +1983,7 @@ private:
     //
     template <size_type GroupAlignment>
     JSTD_FORCED_INLINE
-    size_type TotalGroupAllocCount(size_type group_capacity) {
+    size_type TotalGroupAllocCount(size_type group_capacity) noexcept {
         const size_type num_group_bytes = group_capacity * sizeof(group_type);
         const size_type total_bytes = num_group_bytes + GroupAlignment;
         const size_type total_alloc_count = (total_bytes + sizeof(group_type) - 1) / sizeof(group_type);
@@ -1996,7 +1996,7 @@ private:
     //
     template <size_type GroupAlignment>
     JSTD_FORCED_INLINE
-    size_type TotalSlotAllocCount(size_type group_capacity, size_type slot_capacity) {
+    size_type TotalSlotAllocCount(size_type group_capacity, size_type slot_capacity) noexcept {
         const size_type num_group_bytes = group_capacity * sizeof(group_type);
         const size_type num_slot_bytes = slot_capacity * sizeof(slot_type);
         const size_type total_bytes = num_slot_bytes + GroupAlignment + num_group_bytes;
@@ -2004,11 +2004,20 @@ private:
         return total_alloc_count;
     }
 
-    template <bool isInitialize = false>
+    inline void set_sentinel_mark(group_type * groups, size_type group_capacity) noexcept {
+        assert(groups != nullptr);
+        assert(group_capacity > 0);
+        group_type * last_group = groups + group_capacity;
+        ctrl_type * ctrl = reinterpret_cast<ctrl_type *>(last_group) - 2;
+        assert(ctrl->is_empty());
+        ctrl->set_sentinel();
+    }
+
+    template <bool IsInitialize>
     JSTD_FORCED_INLINE
     void create_slots(size_type new_capacity) {
         assert(pow2::is_pow2(new_capacity));
-        if (likely(isInitialize || (new_capacity != 0))) {
+        if (likely(IsInitialize || (new_capacity != 0))) {
 #if GROUP15_USE_HASH_POLICY
             auto hash_policy_setting = this->hash_policy_.calc_next_capacity(new_capacity);
             this->hash_policy_.commit(hash_policy_setting);
@@ -2036,6 +2045,9 @@ private:
 
             // Reset groups to default state
             this->clear_groups(new_groups, new_group_capacity);
+
+            // Set sentinel mark
+            this->set_sentinel_mark(new_groups, new_group_capacity);
 
             this->groups_ = new_groups;
             this->slots_ = new_slots;
