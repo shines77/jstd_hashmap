@@ -214,8 +214,8 @@ public:
     using locator_t = flat_map_locator15<this_type, kIsIndirectKV>;
 
     static constexpr size_type kDefaultCapacity = 0;
-    // kMinCapacity must be >= 2
-    static constexpr size_type kMinCapacity = 2;
+    // kMinCapacity must be >= (kGroupWidth * 2)
+    static constexpr size_type kMinCapacity = kGroupWidth * 2;
 
     /* When capacity is small, we allow 100% usage. */
     /* Due to the use of quadratic prober, a maximum of 2 can only be obtained here. */
@@ -1199,7 +1199,8 @@ private:
     }
 
     static inline constexpr size_type calc_slot_capacity(size_type group_capacity, size_type init_capacity) noexcept {
-        return (init_capacity >= kGroupWidth) ? (group_capacity * kGroupSize) : init_capacity;
+        // Remove a sentinel marker
+        return (init_capacity >= kGroupWidth) ? (group_capacity * kGroupSize - 1) : init_capacity;
     }
 
     static inline constexpr size_type calc_slot_threshold(size_type mlf, size_type slot_capacity) noexcept {

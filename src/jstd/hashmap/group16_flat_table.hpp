@@ -211,8 +211,8 @@ public:
     using const_iterator = flat_map_iterator<this_type, const value_type, kIsIndirectKV>;
 
     static constexpr size_type kDefaultCapacity = 0;
-    // kMinCapacity must be >= 2
-    static constexpr size_type kMinCapacity = 2;
+    // kMinCapacity must be >= (kGroupWidth * 2)
+    static constexpr size_type kMinCapacity = kGroupWidth * 2;
 
     /* When capacity is small, we allow 100% usage. */
     /* Due to the use of quadratic prober, a maximum of 2 can only be obtained here. */

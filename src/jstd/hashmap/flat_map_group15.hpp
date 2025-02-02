@@ -383,23 +383,17 @@ public:
         __m128i ctrl_bits = _load_data();
         //__COMPILER_BARRIER();
 
-        __m128i empty_bits, match_mask;
-        if (kEmptySlot == 0b00000000) {
+        __m128i empty_bits;
+        if (kEmptySlot == 0b00000000)
             empty_bits = _mm_setzero_si128();
-            match_mask = _mm_cmpgt_epi8(ctrl_bits, empty_bits);
-        }
-        else if (kEmptySlot == 0b11111111) {
+        else if (kEmptySlot == 0b11111111)
             empty_bits = _mm_setones_si128();
-            match_mask = _mm_cmplt_epi8(ctrl_bits, empty_bits);
-        }
-        else {
+        else
             empty_bits = _mm_set1_epi8(kEmptySlot);
-            match_mask = _mm_cmpeq_epi8(ctrl_bits, empty_bits);
-        }
 
+        __m128i match_mask = _mm_cmpeq_epi8(ctrl_bits, empty_bits);
         int mask = _mm_movemask_epi8(match_mask);
-        if (kEmptySlot != 0b00000000 && kEmptySlot != 0b11111111)
-            mask = ~mask;
+        mask = ~mask;
         return static_cast<std::uint32_t>(mask & 0x7FFFU);
     }
 
