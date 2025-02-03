@@ -85,9 +85,11 @@
 #define USE_STD_UNORDERED_MAP           0
 #define USE_JSTD_ROBIN_HASH_MAP         1
 #define USE_JSTD_GROUP16_FALT_MAP       1
+#define USE_JSTD_GROUP15_FALT_MAP       1
 #else
 #define USE_STD_UNORDERED_MAP           0
 #define USE_JSTD_ROBIN_HASH_MAP         1
+#define USE_JSTD_GROUP16_FALT_MAP       1
 #define USE_JSTD_GROUP16_FALT_MAP       1
 #endif // _DEBUG
 
@@ -121,6 +123,9 @@
 #endif
 #if USE_JSTD_GROUP16_FALT_MAP
 #include <jstd/hashmap/group16_flat_map.hpp>
+#endif
+#if USE_JSTD_GROUP15_FALT_MAP
+#include <jstd/hashmap/group15_flat_map.hpp>
 #endif
 #include <jstd/hashmap/hashmap_analyzer.h>
 #include <jstd/hasher/hashes.h>
@@ -457,6 +462,10 @@ void benchmark_insert_random_impl()
     run_insert_random<jstd::group16_flat_map<Key, Value>>
         ("jstd::group16_flat_map", keys, Cardinal);
 #endif
+#if USE_JSTD_GROUP15_FALT_MAP
+    run_insert_random<jstd::group15_flat_map<Key, Value>>
+        ("jstd::group15_flat_map", keys, Cardinal);
+#endif
 }
 
 template <typename Key, typename Value>
@@ -526,6 +535,10 @@ void benchmark_MumHash_insert_random_impl()
 #if USE_JSTD_GROUP16_FALT_MAP
     run_insert_random<jstd::group16_flat_map<Key, Value, test::MumHash<Key>>>
         ("jstd::group16_flat_map", keys, Cardinal);
+#endif
+#if USE_JSTD_GROUP15_FALT_MAP
+    run_insert_random<jstd::group15_flat_map<Key, Value, test::MumHash<Key>>>
+        ("jstd::group15_flat_map", keys, Cardinal);
 #endif
 }
 

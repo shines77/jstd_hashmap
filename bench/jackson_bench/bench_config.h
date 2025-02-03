@@ -14,7 +14,7 @@
 #ifndef _DEBUG
 #define BENCHMARK_TOTAL_BYTES  (64 * 1024 * 1024)
 #else
-#define BENCHMARK_TOTAL_BYTES  (512 * 1024)
+#define BENCHMARK_TOTAL_BYTES  (1024 * 1024)
 #endif
 
 // The randomize test keys actual usage length.
@@ -84,9 +84,9 @@
 
 // Blueprint slots.
 #define BLUEPRINT_1         uint32_uint32_murmur
-#define BLUEPRINT_2         uint64_struct448_murmur
-#define BLUEPRINT_3         cstring_uint64_fnv1a
-// #define BLUEPRINT_4
+#define BLUEPRINT_2         uint64_uint64_murmur
+#define BLUEPRINT_3         uint64_struct448_murmur
+#define BLUEPRINT_4         cstring_uint64_fnv1a
 // #define BLUEPRINT_5
 // #define BLUEPRINT_6
 // #define BLUEPRINT_7

@@ -88,10 +88,12 @@
 #define USE_STD_UNORDERED_MAP           0
 #define USE_JSTD_ROBIN_HASH_MAP         1
 #define USE_JSTD_GROUP16_FALT_MAP       1
+#define USE_JSTD_GROUP15_FALT_MAP       1
 #else
 #define USE_STD_UNORDERED_MAP           0
 #define USE_JSTD_ROBIN_HASH_MAP         1
 #define USE_JSTD_GROUP16_FALT_MAP       1
+#define USE_JSTD_GROUP15_FALT_MAP       1
 #endif // _DEBUG
 
 #ifdef __SSE4_2__
@@ -136,6 +138,9 @@
 #endif
 #if USE_JSTD_GROUP16_FALT_MAP
 #include <jstd/hashmap/group16_flat_map.hpp>
+#endif
+#if USE_JSTD_GROUP15_FALT_MAP
+#include <jstd/hashmap/group15_flat_map.hpp>
 #endif
 #include <jstd/hashmap/hashmap_analyzer.h>
 #include <jstd/hasher/hashes.h>
@@ -1289,6 +1294,18 @@ static void test_all_hashmaps(std::size_t obj_size, std::size_t iters) {
                         HashFn<typename HashObj::key_type, false, HashObj::cSize, HashObj::cHashSize>>
                         >(
             "jstd::group16_flat_map<K, V>", obj_size, iters, has_stress_hash_function);
+    }
+#endif
+
+#if USE_JSTD_GROUP15_FALT_MAP
+    if (1) {
+        measure_hashmap<jstd::group15_flat_map<HashObj, Value,
+                        HashFn<typename HashObj::key_type, false, HashObj::cSize, HashObj::cHashSize>,
+                        HashEqualTo<typename HashObj::key_type, HashObj::cSize, HashObj::cHashSize>>,
+                        jstd::group15_flat_map<HashObj *, Value,
+                        HashFn<typename HashObj::key_type, false, HashObj::cSize, HashObj::cHashSize>>
+                        >(
+            "jstd::group15_flat_map<K, V>", obj_size, iters, has_stress_hash_function);
     }
 #endif
 }
