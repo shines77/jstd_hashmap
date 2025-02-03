@@ -629,10 +629,10 @@ public:
     }
 
     ctrl_type * last_ctrl() {
-        return (this->ctrls() + this->slot_capacity());
+        return (this->ctrls() + this->ctrl_capacity());
     }
     const ctrl_type * last_ctrl() const {
-        return (this->ctrls() + this->slot_capacity());
+        return (this->ctrls() + this->ctrl_capacity());
     }
 
     slot_type * slots() { return this->slots_; }
@@ -724,14 +724,14 @@ public:
     ///
     JSTD_FORCED_INLINE
     size_type count(const key_type & key) const {
-        size_type slot_index = this->find_impl(key);
-        return (slot_index != this->slot_capacity()) ? 1 : 0;
+        locator_t locator = this->find_impl(key);
+        return (locator.slot() != nullptr) ? 1 : 0;
     }
 
     JSTD_FORCED_INLINE
     bool contains(const key_type & key) const {
-        size_type slot_index = this->find_impl(key);
-        return (slot_index != this->slot_capacity());
+        locator_t locator = this->find_impl(key);
+        return (locator.slot() != nullptr);
     }
 
     ///
@@ -995,19 +995,13 @@ public:
         return ((index + 1) & slot_mask);
     }
 
-    inline ctrl_type * ctrl_at(size_type slot_index) noexcept {
-        assert(slot_index <= this->slot_capacity());
-        size_type group_index = slot_index / kGroupSize;
-        size_type group_pos = slot_index % kGroupSize;
-        size_type ctrl_index = group_index * kGroupWidth + group_pos;
+    inline ctrl_type * ctrl_at(size_type ctrl_index) noexcept {
+        assert(ctrl_index <= this->ctrl_capacity());
         return (this->ctrls() + std::ptrdiff_t(ctrl_index));
     }
 
-    inline const ctrl_type * ctrl_at(size_type slot_index) const noexcept {
-        assert(slot_index <= this->slot_capacity());
-        size_type group_index = slot_index / kGroupSize;
-        size_type group_pos = slot_index % kGroupSize;
-        size_type ctrl_index = group_index * kGroupWidth + group_pos;
+    inline const ctrl_type * ctrl_at(size_type ctrl_index) const noexcept {
+        assert(ctrl_index <= this->ctrl_capacity());
         return (this->ctrls() + std::ptrdiff_t(ctrl_index));
     }
 
@@ -1299,38 +1293,14 @@ private:
             return { locator.slot() };
     }
 
-    inline iterator next_valid_iterator(ctrl_type * ctrl, iterator iter) {
-        if (ctrl->is_used())
-            return iter;
-        else
-            return (++iter);
-    }
-
-    inline iterator next_valid_iterator(ctrl_type * ctrl, const_iterator iter) {
-        if (ctrl->is_used())
-            return iter;
-        else
-            return (++iter);
-    }
-
     inline iterator next_valid_iterator(iterator iter) {
-        size_type index = this->index_of(iter);
-        if (!kIsIndirectKV) {
-            ctrl_type * ctrl = this->ctrl_at(index);
-            return this->next_valid_iterator(ctrl, iter);
-        } else {
-            return (++iter);
-        }
+        ++iter;
+        return iter;
     }
 
     inline iterator next_valid_iterator(const_iterator iter) {
-        size_type index = this->index_of(iter);
-        if (!kIsIndirectKV) {
-            ctrl_type * ctrl = this->ctrl_at(index);
-            return this->next_valid_iterator(ctrl, iter);
-        } else {
-            return (++iter);
-        }
+        ++iter;
+        return iter;
     }
 
     inline size_type index_salt() const noexcept {
