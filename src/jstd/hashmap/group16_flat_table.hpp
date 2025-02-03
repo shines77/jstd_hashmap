@@ -1977,8 +1977,8 @@ private:
         new_capacity = this->calc_capacity(new_capacity);
         assert(new_capacity > 0);
         assert(new_capacity >= kMinCapacity);
-        if ((!AllowShrink && (new_capacity > this->slot_capacity())) ||
-            (AllowShrink && (new_capacity != this->slot_capacity()))) {
+        if ((!AllowShrink && (new_capacity > this->ctrl_capacity())) ||
+            (AllowShrink && (new_capacity != this->ctrl_capacity()))) {
             if (!AllowShrink) {
                 assert(new_capacity >= this->slot_size());
             }
@@ -2042,15 +2042,15 @@ private:
     }
 
     JSTD_FORCED_INLINE
-    void construct_slot(size_type index) {
-        slot_type * slot = this->slot_at(index);
+    void construct_slot(size_type slot_index) {
+        slot_type * slot = this->slot_at(slot_index);
         this->construct_slot(slot);
     }
 
     JSTD_FORCED_INLINE
     void destroy_slot(slot_type * slot) {
         if (!is_slot_trivial_destructor) {
-            SlotPolicyTraits::destroy(&this->allocator_, slot);
+            SlotPolicyTraits::destroy(&this->slot_allocator_, slot);
         }
     }
 

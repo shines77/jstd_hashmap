@@ -958,10 +958,10 @@ public:
 
     JSTD_FORCED_INLINE
     iterator erase(iterator pos) {
-        size_type slot_index = pos.index();
-        this->erase_index(slot_index);
-        ctrl_type * ctrl = this->ctrl_at(slot_index);
-        return this->next_valid_iterator(ctrl, pos);
+        locator_t & locator = pos.locator();
+        this->erase_index(locator);
+        locator.increment();
+        return { locator };
     }
 
     JSTD_FORCED_INLINE
@@ -1045,26 +1045,6 @@ public:
     }
 
     inline const slot_type * slot_at(size_type slot_index) const noexcept {
-        assert(slot_index <= this->slot_capacity());
-        return (this->slots() + std::ptrdiff_t(slot_index));
-    }
-
-    inline slot_type * slot_at(ctrl_type * ctrl) noexcept {
-        size_type slot_index;
-        if (kIsIndirectKV)
-            slot_index = ctrl->index();
-        else
-            slot_index = this->index_of(ctrl);
-        assert(slot_index <= this->slot_capacity());
-        return (this->slots() + std::ptrdiff_t(slot_index));
-    }
-
-    inline const slot_type * slot_at(const ctrl_type * ctrl) const noexcept {
-        size_type slot_index;
-        if (kIsIndirectKV)
-            slot_index = ctrl->index();
-        else
-            slot_index = this->index_of(ctrl);
         assert(slot_index <= this->slot_capacity());
         return (this->slots() + std::ptrdiff_t(slot_index));
     }
@@ -1215,6 +1195,13 @@ private:
         return this_type::calc_slot_threshold(this->mlf_, slot_capacity);
     }
 
+    static inline size_type calc_group_capacity(size_type capacity) noexcept {
+        assert(pow2::is_pow2(capacity));
+        size_type group_capacity = (capacity + (kGroupWidth - 1)) / kGroupWidth;
+        assert(pow2::is_pow2(group_capacity));
+        return group_capacity;
+    }
+
     static inline size_type calc_group_mask(size_type capacity) noexcept {
         size_type group_capacity = this_type::calc_group_capacity(capacity);
         return static_cast<size_type>(group_capacity - 1);
@@ -1223,13 +1210,6 @@ private:
     static inline size_type calc_group_mask(size_type group_capacity, size_type capacity) noexcept {
         JSTD_UNUSED(capacity);
         return static_cast<size_type>(group_capacity - 1);
-    }
-
-    static inline size_type calc_group_capacity(size_type capacity) noexcept {
-        assert(pow2::is_pow2(capacity));
-        size_type group_capacity = (capacity + (kGroupWidth - 1)) / kGroupWidth;
-        assert(pow2::is_pow2(group_capacity));
-        return group_capacity;
     }
 
     static inline constexpr size_type calc_index_shift_round(size_type capacity) noexcept {
@@ -1947,7 +1927,8 @@ private:
                       "jstd::group15_flat_map::AlignedSlotsAndGroups<N>(): GroupAlignment must bigger than 0.");
         static_assert(((GroupAlignment & (GroupAlignment - 1)) == 0),
                       "jstd::group15_flat_map::AlignedSlotsAndGroups<N>(): GroupAlignment must be power of 2.");
-        const slot_type * last_slots = slots + slot_capacity;
+        // Added one sentinel mark
+        const slot_type * last_slots = slots + slot_capacity + 1;
         size_type last_slot = reinterpret_cast<size_type>(last_slots);
         size_type groups_first = (last_slot + GroupAlignment - 1) & (~(GroupAlignment - 1));
         assert(groups_first >= last_slot);
@@ -1978,7 +1959,8 @@ private:
     JSTD_FORCED_INLINE
     size_type TotalSlotAllocCount(size_type group_capacity, size_type slot_capacity) noexcept {
         const size_type num_group_bytes = group_capacity * sizeof(group_type);
-        const size_type num_slot_bytes = slot_capacity * sizeof(slot_type);
+        // Added one sentinel mark
+        const size_type num_slot_bytes = (slot_capacity + 1) * sizeof(slot_type);
         const size_type total_bytes = num_slot_bytes + GroupAlignment + num_group_bytes;
         const size_type total_alloc_count = (total_bytes + sizeof(slot_type) - 1) / sizeof(slot_type);
         return total_alloc_count;
@@ -2003,19 +1985,20 @@ private:
             this->hash_policy_.commit(hash_policy_setting);
 #endif
             size_type new_ctrl_capacity = new_capacity;
-            size_type new_group_capacity = (new_ctrl_capacity + (kGroupWidth - 1)) / kGroupWidth;
+            size_type new_group_capacity = this_type::calc_group_capacity(new_ctrl_capacity);
             assert(new_group_capacity > 0);
 
-            size_type new_max_slot_size = new_capacity * this->mlf_ / kLoadFactorAmplify;
-            size_type new_slot_size = calc_slot_capacity(new_group_capacity, new_capacity);
-            size_type new_slot_capacity = (!kIsIndirectKV) ? new_slot_size : new_max_slot_size;
+            size_type direct_slot_capacity = this_type::calc_slot_capacity(new_group_capacity, new_capacity);
+            size_type indirect_slot_capacity = new_capacity * this->mlf_ / kLoadFactorAmplify;
+            size_type new_slot_capacity = (!kIsIndirectKV) ? direct_slot_capacity : indirect_slot_capacity;
 
 #if GROUP15_USE_SEPARATE_SLOTS
             size_type total_group_alloc_count = this->TotalGroupAllocCount<kGroupAlignment>(new_group_capacity);
             group_type * new_groups_alloc = GroupAllocTraits::allocate(this->group_allocator_, total_group_alloc_count);
             group_type * new_groups = this->AlignedGroups<kGroupAlignment>(new_groups_alloc);
 
-            slot_type * new_slots = SlotAllocTraits::allocate(this->slot_allocator_, new_slot_capacity);
+            // Add one sentinel mark
+            slot_type * new_slots = SlotAllocTraits::allocate(this->slot_allocator_, (new_slot_capacity + 1));
 #else
             size_type total_slot_alloc_count = this->TotalSlotAllocCount<kGroupAlignment>(new_group_capacity, new_slot_capacity);
 
@@ -2034,11 +2017,10 @@ private:
             this->slot_size_ = 0;
             this->slot_mask_ = new_capacity - 1;
             this->slot_threshold_ = this->calc_slot_threshold(new_slot_capacity);
-            size_type group_capacity = this_type::calc_group_capacity(new_capacity);
-            this->slot_capacity_ = this_type::calc_slot_capacity(group_capacity, new_capacity);
+            this->slot_capacity_ = new_slot_capacity;
             assert(new_capacity > 0);
             // Because (new_capacity != 0), so (group_mask_ != -1) too.
-            this->group_mask_ = this_type::calc_group_mask(group_capacity, new_capacity);
+            this->group_mask_ = this_type::calc_group_mask(new_group_capacity, new_capacity);
 #if GROUP15_USE_INDEX_SHIFT
             this->index_shift_ = this_type::calc_index_shift(new_capacity);
 #endif
@@ -2056,8 +2038,8 @@ private:
         new_capacity = this->calc_capacity(new_capacity);
         assert(new_capacity > 0);
         assert(new_capacity >= kMinCapacity);
-        if ((!AllowShrink && (new_capacity > this->slot_capacity())) ||
-            (AllowShrink && (new_capacity != this->slot_capacity()))) {
+        if ((!AllowShrink && (new_capacity > this->ctrl_capacity())) ||
+            (AllowShrink && (new_capacity != this->ctrl_capacity()))) {
             if (!AllowShrink) {
                 assert(new_capacity >= this->slot_size());
             }
@@ -2107,7 +2089,7 @@ private:
                 GroupAllocTraits::deallocate(this->group_allocator_, old_groups_alloc, total_group_alloc_count);
             }
             if (old_slots != nullptr) {
-                SlotAllocTraits::deallocate(this->slot_allocator_, old_slots, old_slot_capacity);
+                SlotAllocTraits::deallocate(this->slot_allocator_, old_slots, (old_slot_capacity + 1));
             }
 #else
             if (old_slots != nullptr) {
@@ -2133,7 +2115,7 @@ private:
     JSTD_FORCED_INLINE
     void destroy_slot(slot_type * slot) {
         if (!is_slot_trivial_destructor) {
-            SlotPolicyTraits::destroy(&this->allocator_, slot);
+            SlotPolicyTraits::destroy(&this->slot_allocator_, slot);
         }
     }
 
@@ -2145,7 +2127,7 @@ private:
 
     JSTD_FORCED_INLINE
     void destroy_slot_data(ctrl_type * ctrl, slot_type * slot) {
-        assert(ctrl->is_used());
+        assert(ctrl->is_used() && !ctrl->is_sentinel());
         ctrl->set_empty();
         this->destroy_slot(slot);
     }
@@ -2386,7 +2368,7 @@ private:
             // The key to be inserted is not exists.
             slot_type * slot = locator.slot();
             assert(slot != nullptr);
-            assert(slot_index < this->slot_capacity());
+            assert(slot < this->last_slot());
             SlotPolicyTraits::construct(&this->slot_allocator_, slot, std::move(value));
             this->slot_size_++;
         } else {
@@ -2426,6 +2408,7 @@ private:
             // The key to be inserted is not exists.
             slot_type * slot = locator.slot();
             assert(slot != nullptr);
+            assert(slot < this->last_slot());
             SlotPolicyTraits::construct(&this->slot_allocator_, slot,
                                         std::forward<KeyT>(key),
                                         std::forward<MappedT>(value));
@@ -2464,6 +2447,7 @@ private:
             // The key to be inserted is not exists.
             slot_type * slot = locator.slot();
             assert(slot != nullptr);
+            assert(slot < this->last_slot());
             SlotPolicyTraits::construct(&this->slot_allocator_, slot,
                                         std::piecewise_construct,
                                         std::forward_as_tuple(std::forward<KeyT>(key)),
@@ -2501,6 +2485,7 @@ private:
             // The key to be inserted is not exists.
             slot_type * slot = locator.slot();
             assert(slot != nullptr);
+            assert(slot < this->last_slot());
             SlotPolicyTraits::construct(&this->slot_allocator_, slot,
                                         std::piecewise_construct,
                                         std::forward<std::tuple<Ts1...>>(first),
@@ -2542,7 +2527,7 @@ private:
             // The key to be inserted is not exists.
             slot_type * slot = locator.slot();
             assert(slot != nullptr);
-
+            assert(slot < this->last_slot());
             SlotPolicyTraits::transfer(&this->slot_allocator_, slot, tmp_slot);
             this->slot_size_++;
         } else {
@@ -2568,6 +2553,7 @@ private:
             // The key to be inserted is not exists.
             slot_type * slot = locator.slot();
             assert(slot != nullptr);
+            assert(slot < this->last_slot());
             SlotPolicyTraits::construct(&this->slot_allocator_, slot,
                                         std::piecewise_construct,
                                         std::forward_as_tuple(key),
@@ -2587,6 +2573,7 @@ private:
             // The key to be inserted is not exists.
             slot_type * slot = locator.slot();
             assert(slot != nullptr);
+            assert(slot < this->last_slot());
             SlotPolicyTraits::construct(&this->slot_allocator_, slot,
                                         std::piecewise_construct,
                                         std::forward_as_tuple(std::forward<KeyT>(key)),
