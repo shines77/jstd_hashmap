@@ -32,6 +32,9 @@
     <Filter Include="src\hashmaps\jstd_group15_flat_map">
       <UniqueIdentifier>{9b2e496c-67a6-4463-ad46-c7073c674bec}</UniqueIdentifier>
     </Filter>
+    <Filter Include="src\blueprints\uint64_uint64_murmur">
+      <UniqueIdentifier>{5bd04fbb-1385-4617-8cdc-1e1448fbe463}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\bench\jackson_bench\jackson_bench.cpp">
@@ -65,6 +68,9 @@
     </ClInclude>
     <ClInclude Include="..\..\..\bench\jackson_bench\hashmaps\jstd_group15_flat_map\hashmap_wrapper.h">
       <Filter>src\hashmaps\jstd_group15_flat_map</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\bench\jackson_bench\blueprints\uint64_uint64_murmur\blueprint.h">
+      <Filter>src\blueprints\uint64_uint64_murmur</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

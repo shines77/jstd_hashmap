@@ -1,4 +1,4 @@
-// /jackson_bench/blueprints/uint64_uint64_murmur/blueprint.h
+// /bench/jackson_bench/blueprints/uint64_uint64_murmur/blueprint.h
 // Copyright (c) 2024 Jackson L. Allan.
 // Distributed under the MIT License (see the accompanying LICENSE file).
 
@@ -11,7 +11,7 @@
 
 #include "bench_config.h"
 
-#define uint64_uint64_murmur_ENABLED
+#define UINT64_UINT64_MURMUR_ENABLED
 
 struct uint64_uint64_murmur
 {
