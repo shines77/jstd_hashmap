@@ -69,7 +69,7 @@
 #ifndef _DEBUG
 #define MILLISECOND_COOLDOWN_BETWEEN_BENCHMARKS     1000
 #else
-#define MILLISECOND_COOLDOWN_BETWEEN_BENCHMARKS     200
+#define MILLISECOND_COOLDOWN_BETWEEN_BENCHMARKS     100
 #endif
 
 // The specific benchmarks to run (comment them out to disable them).
