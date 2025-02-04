@@ -746,6 +746,7 @@ public:
         return const_cast<this_type *>(this)->find(key);
     }
 
+#if 0
     template <typename KeyT, typename std::enable_if<
               (!jstd::is_same_ex<KeyT, key_type>::value) &&
                 std::is_constructible<key_type, const KeyT &>::value>::type * = nullptr>
@@ -762,6 +763,7 @@ public:
     const_iterator find(const KeyT & key) const {
         return const_cast<this_type *>(this)->find(key);
     }
+#endif
 
     ///
     /// Modifiers
@@ -1358,19 +1360,19 @@ private:
     }
 
     JSTD_FORCED_INLINE
-    std::uint8_t ctrl_for_hash(std::size_t key_hash) const noexcept {
+    std::size_t ctrl_for_hash(std::size_t key_hash) const noexcept {
         std::size_t ctrl_hash = this->ctrl_hasher(key_hash);
 #if GROUP15_USE_LOOK_UP_TABLE
         std::uint8_t ctrl_hash8 = ctrl_type::reduced_hash(ctrl_hash);
-        return ctrl_hash8;
+        return static_cast<std::size_t>(ctrl_hash8);
 #else
         std::uint8_t ctrl_hash8 = static_cast<std::uint8_t>(ctrl_hash);
         if (likely(ctrl_hash8 > kSentinelSlot))
-            return ctrl_hash8;
+            return static_cast<std::size_t>(ctrl_hash8);
         else if (likely(ctrl_hash8 == kEmptySlot))
-            return kEmptyHash;
+            return static_cast<std::size_t>(kEmptyHash);
         else
-            return kSentinelHash;
+            return static_cast<std::size_t>(kSentinelHash);
 #endif
     }
 
@@ -2171,7 +2173,7 @@ private:
     locator_t find_impl(const KeyT & key) const {
         std::size_t key_hash = this->hash_for(key);
         size_type group_index = this->index_for_hash(key_hash);
-        std::uint8_t ctrl_hash = this->ctrl_for_hash(key_hash);
+        std::size_t ctrl_hash = this->ctrl_for_hash(key_hash);
         return this->find_impl(key, group_index, ctrl_hash);
     }
 
@@ -2183,11 +2185,11 @@ private:
 
     template <typename KeyT>
     JSTD_FORCED_INLINE
-    locator_t find_impl(const KeyT & key, size_type group_index, std::uint8_t ctrl_hash) const {
-        prober_type prober(group_index);
+    locator_t find_impl(const KeyT & key, size_type group_index0, std::size_t ctrl_hash) const {
+        prober_type prober(group_index0);
 
         do {
-            group_index = prober.get();
+            size_type group_index = prober.get();
             const group_type * group = this->group_at(group_index);
             std::uint32_t match_mask = group->match_hash(ctrl_hash);
             if (match_mask != 0) {
@@ -2230,11 +2232,11 @@ private:
 
     template <bool IsNoGrow, typename KeyT = key_type>
     JSTD_FORCED_INLINE
-    locator_t find_empty_to_insert(const KeyT & key, size_type group_index, std::uint8_t ctrl_hash) {
-        prober_type prober(group_index);
+    locator_t find_empty_to_insert(const KeyT & key, size_type group_index0, std::size_t ctrl_hash) {
+        prober_type prober(group_index0);
 
         do {
-            group_index = prober.get();
+            size_type group_index = prober.get();
             group_type * group = this->group_at(group_index);
             std::uint32_t empty_mask = group->match_empty();
             if (likely(empty_mask != 0)) {
@@ -2271,7 +2273,7 @@ private:
     std::pair<locator_t, bool> find_or_insert(const KeyT & key) {
         std::size_t key_hash = this->hash_for(key);
         size_type group_index = this->index_for_hash(key_hash);
-        std::uint8_t ctrl_hash = this->ctrl_for_hash(key_hash);
+        std::size_t ctrl_hash = this->ctrl_for_hash(key_hash);
 
         locator_t locator = this->find_impl(key, group_index, ctrl_hash);
         if (locator.slot() != nullptr) {
@@ -2308,7 +2310,7 @@ private:
     locator_t no_grow_unique_insert(const key_type & key) {
         std::size_t key_hash = this->hash_for(key);
         size_type group_index = this->index_for_hash(key_hash);
-        std::uint8_t ctrl_hash = this->ctrl_for_hash(key_hash);
+        std::size_t ctrl_hash = this->ctrl_for_hash(key_hash);
 
         locator_t locator = this->find_empty_to_insert<true, key_type>(key, group_index, ctrl_hash);
         return locator;
@@ -2670,7 +2672,7 @@ private:
     size_type find_and_erase(const key_type & key) {
         std::size_t key_hash = this->hash_for(key);
         size_type group_index = this->index_for_hash(key_hash);
-        std::uint8_t ctrl_hash = this->ctrl_for_hash(key_hash);
+        std::size_t ctrl_hash = this->ctrl_for_hash(key_hash);
 
         locator_t locator = this->find_impl(key, group_index, ctrl_hash);
         if (locator.slot() != nullptr) {

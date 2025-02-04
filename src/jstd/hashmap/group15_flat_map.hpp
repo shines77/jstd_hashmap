@@ -364,6 +364,7 @@ public:
         return table_.find(key);
     }
 
+#if 0
     template <typename KeyT, typename std::enable_if<
               (!jstd::is_same_ex<KeyT, key_type>::value) &&
                 std::is_constructible<key_type, const KeyT &>::value>::type * = nullptr>
@@ -379,6 +380,7 @@ public:
     const_iterator find(const KeyT & key) const {
         return table_.find(key);
     }
+#endif
 
     ///
     /// Modifiers

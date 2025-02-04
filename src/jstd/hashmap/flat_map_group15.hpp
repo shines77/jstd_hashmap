@@ -73,12 +73,12 @@ public:
 
     static constexpr const value_type kEmptyHash      = 0x08;
     static constexpr const value_type kSentinelHash   = 0x09;
-    static constexpr const std::uint32_t kEmptyHash32    = 0x08080808;
-    static constexpr const std::uint32_t kSentinelHash32 = 0x09090909;
+    static constexpr const std::uint32_t kEmptyHash32    = 0x08080808u;
+    static constexpr const std::uint32_t kSentinelHash32 = 0x09090909u;
 
     group15_meta_ctrl(value_type value = kEmptySlot) : value_(value) {}
 
-    static inline int repeated_hash8(std::uint8_t hash) {
+    static inline int repeated_hash(std::size_t hash) {
         static constexpr const std::uint32_t dword_hashs[] = {
             // [0, 127]
            kEmptyHash32, kSentinelHash32, 0x02020202u, 0x03030303u,
@@ -149,15 +149,11 @@ public:
             0xFCFCFCFCu, 0xFDFDFDFDu, 0xFEFEFEFEu, 0xFFFFFFFFu,
         };
 
-        return (int)dword_hashs[hash];
-    }
-
-    static inline int repeated_hash(std::size_t hash) {
-        return repeated_hash8(static_cast<std::uint8_t>(hash));
+        return (int)dword_hashs[static_cast<std::uint8_t>(hash)];
     }
 
     static inline std::uint8_t reduced_hash(std::size_t hash) {
-        return static_cast<std::uint8_t>(repeated_hash(hash));
+        return static_cast<std::uint8_t>(repeated_hash(hash) & kHashMask);
     }
 
     static inline std::size_t hash_bits64(std::size_t hash) {
@@ -196,9 +192,9 @@ public:
         return (hash > kSentinelSlot);
     }
 
-    inline bool is_equals(value_type hash) const {
-        value_type hash8 = this->value_;
-        return (hash == hash8);
+    inline bool is_equals(std::size_t hash) const {
+        value_type hash8 = static_cast<value_type>(hash);
+        return (this->value_ == hash8);
     }
 
     inline bool is_equals64(std::size_t hash) const {
@@ -214,9 +210,9 @@ public:
         this->value_ = kSentinelSlot;
     }
 
-    inline void set_used(value_type hash) {
+    inline void set_used(std::size_t hash) {
         assert(hash > kSentinelSlot);
-        this->value_ = hash;
+        this->value_ = static_cast<value_type>(hash);
     }
 
     inline void set_used64(std::size_t hash) {
@@ -312,7 +308,7 @@ public:
         return !this->is_overflow(hash);
     }
 
-    inline bool is_equals(std::size_t pos, value_type hash) {
+    inline bool is_equals(std::size_t pos, std::size_t hash) {
         assert(pos < kGroupSize);
         const ctrl_type * ctrl = &ctrls[pos];
         return ctrl->is_equals(hash);
@@ -335,7 +331,7 @@ public:
         ctrl->set_sentinel();
     }
 
-    inline void set_used(std::size_t pos, value_type hash) {
+    inline void set_used(std::size_t pos, std::size_t hash) {
         assert(pos < kGroupSize);
         ctrl_type * ctrl = &ctrls[pos];
         ctrl->set_used(hash);
@@ -382,16 +378,16 @@ public:
         return static_cast<std::uint32_t>((~mask) & 0x7FFFU);
     }
 
-    inline std::uint32_t match_hash(value_type hash) const {
+    inline std::uint32_t match_hash(std::size_t hash) const {
         // Latency = 6
         __m128i ctrl_bits  = _load_data();
         //__COMPILER_BARRIER();
 #if GROUP15_USE_LOOK_UP_TABLE
         // Use lookup table
-        int hash32 = ctrl_type::repeated_hash8(hash);
+        int hash32 = ctrl_type::repeated_hash(hash);
         __m128i hash_bits = _mm_set1_epi32(hash32);
 #else
-        __m128i hash_bits = _mm_set1_epi8(hash);
+        __m128i hash_bits = _mm_set1_epi8(static_cast<char>(hash));
 #endif
         __m128i match_mask = _mm_cmpeq_epi8(ctrl_bits, hash_bits);
         int mask = _mm_movemask_epi8(match_mask);
