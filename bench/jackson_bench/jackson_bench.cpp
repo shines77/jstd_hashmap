@@ -748,7 +748,7 @@ void benchmark_iteration(std::size_t run,
             //do_not_optimize += *(unsigned char *)&HashMap<BluePrint>::get_value_from_iter(table, iter);
 
             HashMap<BluePrint>::increment_iter(table, iter);
-            if (unlikely(HashMap<BluePrint>::is_iter_valid(table, iter))) {
+            if (unlikely(!HashMap<BluePrint>::is_iter_valid(table, iter))) {
                 iter = HashMap<BluePrint>::begin_iter(table);
             }
         }
