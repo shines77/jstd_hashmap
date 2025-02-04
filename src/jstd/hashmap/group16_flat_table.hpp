@@ -2284,9 +2284,6 @@ private:
 
     JSTD_FORCED_INLINE
     void move_unique_insert(group16_flat_table & other, iterator first, iterator last) {
-        this_type * other = first.hashmap();
-        assert(other != nullptr);
-        assert(other != this);
         for (; first != last; ++first) {
             slot_type * old_slot = first.slot();
             this->move_no_grow_unique_insert(other, old_slot);
