@@ -106,11 +106,13 @@ public:
     }
 
     friend inline bool operator == (const flat_map_locator15 & lhs, const flat_map_locator15 & rhs) noexcept {
-        return (lhs.slot() == rhs.slot()) && (lhs.pos() == rhs.pos()) && (lhs.group() == rhs.group());
+        //return (lhs.slot() == rhs.slot()) && (lhs.pos() == rhs.pos()) && (lhs.group() == rhs.group());
+        return (lhs.slot() == rhs.slot());
     }
 
     friend inline bool operator != (const flat_map_locator15 & lhs, const flat_map_locator15 & rhs) noexcept {
-        return (lhs.slot() != rhs.slot()) || (lhs.pos() != rhs.pos()) || (lhs.group() != rhs.group());
+        //return (lhs.slot() != rhs.slot()) || (lhs.pos() != rhs.pos()) || (lhs.group() != rhs.group());
+        return (lhs.slot() != rhs.slot());
     }
 
     inline group_type * group() noexcept { return const_cast<group_type *>(this->group_); }
