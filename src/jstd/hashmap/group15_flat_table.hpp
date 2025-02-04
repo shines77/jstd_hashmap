@@ -1057,7 +1057,7 @@ public:
 
     JSTD_FORCED_INLINE
     locator_t find_first_used_index() const {
-        if (this->size() != 0) {
+        if (likely(this->size() != 0)) {
             const group_type * group = this->groups();
             const group_type * last_group = this->last_group();
             size_type slot_base_index = 0;
@@ -1971,13 +1971,14 @@ private:
         return total_alloc_count;
     }
 
-    inline void set_sentinel_mark(group_type * groups, size_type group_capacity) noexcept {
+    static inline void set_sentinel_mark(group_type * groups, size_type group_capacity) noexcept {
         assert(groups != nullptr);
         assert(group_capacity > 0);
         group_type * last_group = groups + group_capacity;
+        group_type * tail_group = groups + group_capacity - 1;
         ctrl_type * ctrl = reinterpret_cast<ctrl_type *>(last_group) - 2;
         assert(ctrl->is_empty());
-        ctrl->set_sentinel();
+        tail_group->set_sentinel();
     }
 
     template <bool IsInitialize>
@@ -2014,7 +2015,7 @@ private:
             this->clear_groups(new_groups, new_group_capacity);
 
             // Set the sentinel mark
-            this->set_sentinel_mark(new_groups, new_group_capacity);
+            this_type::set_sentinel_mark(new_groups, new_group_capacity);
 
             this->groups_ = new_groups;
             this->slots_ = new_slots;

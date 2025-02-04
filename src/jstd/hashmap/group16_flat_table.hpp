@@ -1042,7 +1042,7 @@ public:
 
     JSTD_FORCED_INLINE
     size_type find_first_used_index() const {
-        if (this->size() != 0) {
+        if (likely(this->size() != 0)) {
 #if 0
             const group_type * group = this->groups();
             const group_type * last_group = this->last_group();

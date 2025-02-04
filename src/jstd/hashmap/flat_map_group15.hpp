@@ -330,9 +330,9 @@ public:
         ctrl->set_empty();
     }
 
-    inline void set_sentinel(std::size_t pos) {
+    inline void set_sentinel() {
         assert(pos < kGroupSize);
-        ctrl_type * ctrl = &ctrls[pos];
+        ctrl_type * ctrl = &ctrls[kGroupSize - 1];
         ctrl->set_sentinel();
     }
 
@@ -379,22 +379,8 @@ public:
     }
 
     inline std::uint32_t match_used() const {
-        // Latency = 6
-        __m128i ctrl_bits = _load_data();
-        //__COMPILER_BARRIER();
-
-        __m128i empty_bits;
-        if (kEmptySlot == 0b00000000)
-            empty_bits = _mm_setzero_si128();
-        else if (kEmptySlot == 0b11111111)
-            empty_bits = _mm_setones_si128();
-        else
-            empty_bits = _mm_set1_epi8(kEmptySlot);
-
-        __m128i match_mask = _mm_cmpeq_epi8(ctrl_bits, empty_bits);
-        int mask = _mm_movemask_epi8(match_mask);
-        mask = ~mask;
-        return static_cast<std::uint32_t>(mask & 0x7FFFU);
+        std::uint32_t mask = this->match_empty();
+        return static_cast<std::uint32_t>((~mask) & 0x7FFFU);
     }
 
     inline std::uint32_t match_hash(value_type hash) const {
