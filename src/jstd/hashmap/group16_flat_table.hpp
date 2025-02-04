@@ -731,31 +731,31 @@ public:
     ///
     JSTD_FORCED_INLINE
     iterator find(const key_type & key) {
-        return const_cast<const this_type *>(this)->find(key);
+        size_type slot_index = this->find_index(key);
+        return make_iterator(slot_index);
     }
 
     JSTD_FORCED_INLINE
     const_iterator find(const key_type & key) const {
-        size_type slot_index = this->find_index(key);
-        return this->iterator_at(slot_index);
+        return const_cast<this_type *>(this)->find(key);
     }
 
     template <typename KeyT, typename std::enable_if<
               (!jstd::is_same_ex<KeyT, key_type>::value) &&
                 std::is_constructible<key_type, const KeyT &>::value>::type * = nullptr>
     JSTD_FORCED_INLINE
-    iterator find(const KeyT & key) {
-        return const_cast<const this_type *>(this)->find(key);
-    }
-
-    template <typename KeyT, typename std::enable_if<
-              (!jstd::is_same_ex<KeyT, key_type>::value) &&
-                std::is_constructible<key_type, const KeyT &>::value>::type * = nullptr>
-    JSTD_FORCED_INLINE
-    const_iterator find(const KeyT & key_t) const {
+    iterator find(const KeyT & key_t) {
         key_type key(key_t);
         size_type slot_index = this->find_index(key);
-        return this->iterator_at(slot_index);
+        return make_iterator(slot_index);
+    }
+
+    template <typename KeyT, typename std::enable_if<
+              (!jstd::is_same_ex<KeyT, key_type>::value) &&
+                std::is_constructible<key_type, const KeyT &>::value>::type * = nullptr>
+    JSTD_FORCED_INLINE
+    const_iterator find(const KeyT & key) const {
+        return const_cast<this_type *>(this)->find(key);
     }
 
     ///
@@ -2077,11 +2077,20 @@ private:
         printf(" ]\n");
     }
 
+    JSTD_FORCED_INLINE iterator make_iterator(size_type slot_index) const noexcept {
+        if (!kIsIndirectKV)
+            return { this, slot_index };
+        else
+            return { this->slot_at(slot_index) };
+    }
+
+#if 0
     template <typename KeyT>
     JSTD_FORCED_INLINE
     size_type find_index(const KeyT & key) {
         return const_cast<const this_type *>(this)->find_index<KeyT>(key);
     }
+#endif
 
     template <typename KeyT>
     JSTD_FORCED_INLINE
