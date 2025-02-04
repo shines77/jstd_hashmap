@@ -81,15 +81,15 @@
 
 namespace jstd {
 
-void Prefetch_Read_T0(const void * addr);
-void Prefetch_Read_T1(const void * addr);
-void Prefetch_Read_T2(const void * addr);
-void Prefetch_Read_Nta(const void * addr);
+inline void Prefetch_Read_T0(const void * addr);
+inline void Prefetch_Read_T1(const void * addr);
+inline void Prefetch_Read_T2(const void * addr);
+inline void Prefetch_Read_Nta(const void * addr);
 
-void Prefetch_Write_T0(const void * addr);
-void Prefetch_Write_T1(const void * addr);
-void Prefetch_Write_T2(const void * addr);
-void Prefetch_Write_Nta(const void * addr);
+inline void Prefetch_Write_T0(const void * addr);
+inline void Prefetch_Write_T1(const void * addr);
+inline void Prefetch_Write_T2(const void * addr);
+inline void Prefetch_Write_Nta(const void * addr);
 
 #if __has_builtin(__builtin_prefetch) || defined(__GNUC__) || defined(__clang__)
 

@@ -216,11 +216,7 @@ public:
         const slot_type * _slot = this->slot();
         return std::addressof(_slot->value);
     }
-#if 0
-    operator flat_map_iterator<HashMap, const mutable_value_type, IsIndirectKV>() const noexcept {
-        return { this->hashmap_, this->index_ };
-    }
-#endif
+
     inline hashmap_type * hashmap() noexcept {
         return this->hashmap_;
     }

@@ -985,16 +985,6 @@ public:
     ///
     /// For iterator
     ///
-    inline size_type next_index(size_type index) const noexcept {
-        assert(index < this->slot_capacity());
-        return ((index + 1) & this->slot_mask());
-    }
-
-    inline size_type next_index(size_type index, size_type slot_mask) const noexcept {
-        assert(index < this->slot_capacity());
-        return ((index + 1) & slot_mask);
-    }
-
     inline ctrl_type * ctrl_at(size_type ctrl_index) noexcept {
         assert(ctrl_index <= this->ctrl_capacity());
         return (this->ctrls() + std::ptrdiff_t(ctrl_index));
@@ -1007,46 +997,62 @@ public:
 
     inline group_type * group_at(size_type group_index) noexcept {
         assert(group_index <= this->group_capacity());
-        return (this->groups() + std::ptrdiff_t(group_index));
+        group_type * group_start = this->groups();
+        JSTD_ASSUME(group_start != nullptr);
+        return (group_start + std::ptrdiff_t(group_index));
     }
 
     inline const group_type * group_at(size_type group_index) const noexcept {
         assert(group_index <= this->group_capacity());
+        const group_type * group_start = this->groups();
+        JSTD_ASSUME(group_start != nullptr);
         return (this->groups() + std::ptrdiff_t(group_index));
     }
 
     inline group_type * group_by_ctrl_index(size_type ctrl_index) noexcept {
         assert(ctrl_index <= this->ctrl_capacity());
         size_type group_index = ctrl_index / kGroupWidth;
-        return (this->groups() + std::ptrdiff_t(group_index));
+        group_type * group_start = this->groups();
+        JSTD_ASSUME(group_start != nullptr);
+        return (group_start + std::ptrdiff_t(group_index));
     }
 
     inline const group_type * group_by_ctrl_index(size_type ctrl_index) const noexcept {
         assert(ctrl_index <= this->ctrl_capacity());
         size_type group_index = ctrl_index / kGroupWidth;
-        return (this->groups() + std::ptrdiff_t(group_index));
+        const group_type * group_start = this->groups();
+        JSTD_ASSUME(group_start != nullptr);
+        return (group_start + std::ptrdiff_t(group_index));
     }
 
     inline group_type * group_by_slot_index(size_type slot_index) noexcept {
         assert(slot_index <= this->slot_capacity());
         size_type group_index = slot_index / kGroupSize;
-        return (this->groups() + std::ptrdiff_t(group_index));
+        group_type * group_start = this->groups();
+        JSTD_ASSUME(group_start != nullptr);
+        return (group_start + std::ptrdiff_t(group_index));
     }
 
     inline const group_type * group_by_slot_index(size_type slot_index) const noexcept {
         assert(slot_index <= this->slot_capacity());
         size_type group_index = slot_index / kGroupSize;
-        return (this->groups() + std::ptrdiff_t(group_index));
+        const group_type * group_start = this->groups();
+        JSTD_ASSUME(group_start != nullptr);
+        return (group_start + std::ptrdiff_t(group_index));
     }
 
     inline slot_type * slot_at(size_type slot_index) noexcept {
         assert(slot_index <= this->slot_capacity());
-        return (this->slots() + std::ptrdiff_t(slot_index));
+        slot_type * slot_start = this->slots();
+        JSTD_ASSUME(slot_start != nullptr);
+        return (slot_start + std::ptrdiff_t(slot_index));
     }
 
     inline const slot_type * slot_at(size_type slot_index) const noexcept {
         assert(slot_index <= this->slot_capacity());
-        return (this->slots() + std::ptrdiff_t(slot_index));
+        const slot_type * slot_start = this->slots();
+        JSTD_ASSUME(slot_start != nullptr);
+        return (slot_start + std::ptrdiff_t(slot_index));
     }
 
     JSTD_FORCED_INLINE
@@ -1687,7 +1693,7 @@ private:
                 do {
                     if (ctrl->is_used()) {
                         if (likely(!ctrl->is_sentinel())) {
-                            SlotPolicyTraits::destroy(&this->slot_allocator_, &slot[index], &other_slot[index]);
+                            SlotPolicyTraits::destroy(&this->slot_allocator_, &slot[index]);
                         } else {
                             break;
                         }
@@ -1706,7 +1712,7 @@ private:
                 do {
                     if (ctrl->is_used()) {
                         if (likely(!ctrl->is_sentinel())) {
-                            SlotPolicyTraits::destroy(&this->slot_allocator_, &slot[index], &other_slot[index]);
+                            SlotPolicyTraits::destroy(&this->slot_allocator_, &slot[index]);
                         } else {
                             break;
                         }
@@ -1735,7 +1741,7 @@ private:
             this->fast_move_slots_from(other);
         } else {
             try {
-                this->unique_insert(other.begin(), other.end());
+                this->move_unique_insert(other, other.begin(), other.end());
             } catch (const std::bad_alloc & ex) {
                 JSTD_UNUSED(ex);
                 this->destroy<true>();
@@ -1824,6 +1830,7 @@ private:
                 if (ctrl->is_used()) {
                     if (likely(!ctrl->is_sentinel())) {
                         SlotPolicyTraits::construct(&this->slot_allocator_, &slot[index], &other_slot[index]);
+                        other.destroy_slot(&other_slot[index]);
                     } else {
                         break;
                     }
@@ -1842,7 +1849,7 @@ private:
                 do {
                     if (ctrl->is_used()) {
                         if (likely(!ctrl->is_sentinel())) {
-                            SlotPolicyTraits::destroy(&this->slot_allocator_, &slot[index], &other_slot[index]);
+                            SlotPolicyTraits::destroy(&this->slot_allocator_, &slot[index]);
                         } else {
                             break;
                         }
@@ -1861,7 +1868,7 @@ private:
                 do {
                     if (ctrl->is_used()) {
                         if (likely(!ctrl->is_sentinel())) {
-                            SlotPolicyTraits::destroy(&this->slot_allocator_, &slot[index], &other_slot[index]);
+                            SlotPolicyTraits::destroy(&this->slot_allocator_, &slot[index]);
                         } else {
                             break;
                         }
@@ -2070,8 +2077,8 @@ private:
                         if (likely(!group->is_sentinel(used_pos))) {
                             slot_type * old_slot = slot_base + used_pos;
                             assert(old_slot < old_last_slot);
-                            this->no_grow_unique_insert(old_slot);
-                            this->destroy_slot(old_slot);
+                            this->move_no_grow_unique_insert(old_slot);
+                            //this->destroy_slot(old_slot);
                         } else {
                             break;
                         }
@@ -2154,6 +2161,12 @@ private:
         return this->find_impl(key, group_index, ctrl_hash);
     }
 
+#if defined(_MSC_VER)
+/* warning: forcing value to bool 'true' or 'false' in bool(key_equal()...) */
+#pragma warning(push)
+#pragma warning(disable:4800)
+#endif
+
     template <typename KeyT>
     JSTD_FORCED_INLINE
     locator_t find_impl(const KeyT & key, size_type group_index, std::uint8_t ctrl_hash) const {
@@ -2164,14 +2177,16 @@ private:
             const group_type * group = this->group_at(group_index);
             std::uint32_t match_mask = group->match_hash(ctrl_hash);
             if (match_mask != 0) {
-                const slot_type * slot_base = this->slots() + group_index * kGroupSize;
+                const slot_type * slot_start = this->slots();
+                JSTD_ASSUME(slot_start != nullptr);
+                const slot_type * slot_base = slot_start + group_index * kGroupSize;
                 if (sizeof(value_type) <= 16) {
                     Prefetch_Read_T0((const void *)slot_base);
                 }
                 do {
                     size_type match_pos = static_cast<size_type>(BitUtils::bsf32(match_mask));
                     const slot_type * slot = slot_base + match_pos;
-                    if (likely(this->key_equal_(key, slot->value.first))) {
+                    if (likely(bool(this->key_equal_(key, slot->value.first)))) {
                         return { group, match_pos, slot };
                     }
                     match_mask = BitUtils::clearLowBit32(match_mask);
@@ -2194,6 +2209,10 @@ private:
 
         return {};
     }
+
+#if defined(_MSC_VER)
+#pragma warning(pop) /* C4800 */
+#endif
 
     void display_meta_datas(group_type * group) {
         ctrl_type * ctrl = reinterpret_cast<ctrl_type *>(group);
@@ -2219,7 +2238,9 @@ private:
             std::uint32_t empty_mask = group->match_empty();
             if (empty_mask != 0) {
                 std::uint32_t empty_pos = BitUtils::bsf32(empty_mask);
-                const slot_type * slot_base = this->slots() + group_index * kGroupSize;
+                const slot_type * slot_start = this->slots();
+                JSTD_ASSUME(slot_start != nullptr);
+                const slot_type * slot_base = slot_start + group_index * kGroupSize;
                 assert(group->is_empty(empty_pos));
                 group->set_used(empty_pos, ctrl_hash);
                 const slot_type * slot = slot_base + empty_pos;
@@ -2293,13 +2314,27 @@ private:
     /// Use in rehash_impl()
     ///
     JSTD_FORCED_INLINE
-    void no_grow_unique_insert(slot_type * old_slot) {
+    void move_no_grow_unique_insert(slot_type * old_slot) {
         assert(old_slot != nullptr);
         locator_t locator = this->no_grow_unique_insert(old_slot->value.first);
         slot_type * new_slot = locator.slot();
         assert(new_slot != nullptr);
 
         SlotPolicyTraits::construct(&this->slot_allocator_, new_slot, old_slot);
+        this->destroy_slot(old_slot);
+        this->slot_size_++;
+        assert(this->slot_size() <= this->slot_capacity());
+    }
+
+    JSTD_FORCED_INLINE
+    void move_no_grow_unique_insert(group15_flat_table * other, slot_type * old_slot) {
+        assert(old_slot != nullptr);
+        locator_t locator = this->no_grow_unique_insert(old_slot->value.first);
+        slot_type * new_slot = locator.slot();
+        assert(new_slot != nullptr);
+
+        SlotPolicyTraits::construct(&this->slot_allocator_, new_slot, old_slot);
+        other->destroy_slot(old_slot);
         this->slot_size_++;
         assert(this->slot_size() <= this->slot_capacity());
     }
@@ -2324,6 +2359,22 @@ private:
         for (; first != last; ++first) {
             const slot_type * old_slot = first.slot();
             this->no_grow_unique_insert(old_slot);
+        }
+    }
+
+    JSTD_FORCED_INLINE
+    void move_unique_insert(iterator first, iterator last) {
+        for (; first != last; ++first) {
+            slot_type * old_slot = first.slot();
+            this->move_no_grow_unique_insert(old_slot);
+        }
+    }
+
+    JSTD_FORCED_INLINE
+    void move_unique_insert(group15_flat_table & other, iterator first, iterator last) {
+        for (; first != last; ++first) {
+            slot_type * old_slot = first.slot();
+            this->move_no_grow_unique_insert(&other, old_slot);
         }
     }
 

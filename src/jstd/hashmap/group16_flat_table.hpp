@@ -978,16 +978,6 @@ public:
     ///
     /// For iterator
     ///
-    inline size_type next_index(size_type index) const noexcept {
-        assert(index < this->slot_capacity());
-        return ((index + 1) & this->slot_mask_);
-    }
-
-    inline size_type next_index(size_type index, size_type slot_mask) const noexcept {
-        assert(index < this->slot_capacity());
-        return ((index + 1) & slot_mask);
-    }
-
     inline ctrl_type * ctrl_at(size_type slot_index) noexcept {
         assert(slot_index <= this->slot_capacity());
         return (this->ctrls() + std::ptrdiff_t(slot_index));
@@ -1686,7 +1676,7 @@ private:
             if (index != 0) {
                 do {
                     if (ctrl->is_used()) {
-                        SlotPolicyTraits::destroy(&this->slot_allocator_, &slot[index], &other_slot[index]);
+                        SlotPolicyTraits::destroy(&this->slot_allocator_, &slot[index]);
                     }
                     --ctrl;
                     --index;
@@ -1697,7 +1687,7 @@ private:
             if (index != 0) {
                 do {
                     if (ctrl->is_used()) {
-                        SlotPolicyTraits::destroy(&this->slot_allocator_, &slot[index], &other_slot[index]);
+                        SlotPolicyTraits::destroy(&this->slot_allocator_, &slot[index]);
                     }
                     --ctrl;
                     --index;
@@ -1719,7 +1709,7 @@ private:
             this->fast_move_slots_from(other);
         } else {
             try {
-                this->unique_insert(other.begin(), other.end());
+                this->move_unique_insert(other, other.begin(), other.end());
             } catch (const std::bad_alloc & ex) {
                 JSTD_UNUSED(ex);
                 this->destroy<true>();
@@ -1805,6 +1795,7 @@ private:
             while (ctrl < last_ctrl) {
                 if (ctrl->is_used()) {
                     SlotPolicyTraits::construct(&this->slot_allocator_, &slot[index], &other_slot[index]);
+                    other.destroy_slot(&other_slot[index]);
                 }
                 ++index;
                 ++ctrl;
@@ -1815,7 +1806,7 @@ private:
             if (index != 0) {
                 do {
                     if (ctrl->is_used()) {
-                        SlotPolicyTraits::destroy(&this->slot_allocator_, &slot[index], &other_slot[index]);
+                        SlotPolicyTraits::destroy(&this->slot_allocator_, &slot[index]);
                     }
                     --ctrl;
                     --index;
@@ -1826,7 +1817,7 @@ private:
             if (index != 0) {
                 do {
                     if (ctrl->is_used()) {
-                        SlotPolicyTraits::destroy(&this->slot_allocator_, &slot[index], &other_slot[index]);
+                        SlotPolicyTraits::destroy(&this->slot_allocator_, &slot[index]);
                     }
                     --ctrl;
                     --index;
@@ -2008,8 +1999,8 @@ private:
                         used_mask = BitUtils::clearLowBit32(used_mask);
                         slot_type * old_slot = slot_base + used_pos;
                         assert(old_slot < old_last_slot);
-                        this->no_grow_unique_insert(old_slot);
-                        this->destroy_slot(old_slot);
+                        this->move_no_grow_unique_insert(old_slot);
+                        //this->destroy_slot(old_slot);
                     }
                     slot_base += kGroupWidth;
                 }
@@ -2229,13 +2220,27 @@ private:
     /// Use in rehash_impl()
     ///
     JSTD_FORCED_INLINE
-    void no_grow_unique_insert(slot_type * old_slot) {
+    void move_no_grow_unique_insert(slot_type * old_slot) {
         assert(old_slot != nullptr);
         size_type slot_index = this->no_grow_unique_insert(old_slot->value.first);
         slot_type * new_slot = this->slot_at(slot_index);
         assert(new_slot != nullptr);
 
         SlotPolicyTraits::construct(&this->slot_allocator_, new_slot, old_slot);
+        this->destroy_slot(old_slot);
+        this->slot_size_++;
+        assert(this->slot_size() <= this->slot_capacity());
+    }
+
+    JSTD_FORCED_INLINE
+    void move_no_grow_unique_insert(group16_flat_table * other, slot_type * old_slot) {
+        assert(old_slot != nullptr);
+        size_type slot_index = this->no_grow_unique_insert(old_slot->value.first);
+        slot_type * new_slot = this->slot_at(slot_index);
+        assert(new_slot != nullptr);
+
+        SlotPolicyTraits::construct(&this->slot_allocator_, new_slot, old_slot);
+        other->destroy_slot(old_slot);
         this->slot_size_++;
         assert(this->slot_size() <= this->slot_capacity());
     }
@@ -2263,6 +2268,28 @@ private:
         for (; first != last; ++first) {
             const slot_type * old_slot = first.slot();
             this->no_grow_unique_insert(old_slot);
+        }
+    }
+
+    JSTD_FORCED_INLINE
+    void move_unique_insert(iterator first, iterator last) {
+        this_type * other = first.hashmap();
+        assert(other != nullptr);
+        assert(other != this);
+        for (; first != last; ++first) {
+            slot_type * old_slot = first.slot();
+            this->move_no_grow_unique_insert(old_slot);
+        }
+    }
+
+    JSTD_FORCED_INLINE
+    void move_unique_insert(group16_flat_table & other, iterator first, iterator last) {
+        this_type * other = first.hashmap();
+        assert(other != nullptr);
+        assert(other != this);
+        for (; first != last; ++first) {
+            slot_type * old_slot = first.slot();
+            this->move_no_grow_unique_insert(other, old_slot);
         }
     }
 

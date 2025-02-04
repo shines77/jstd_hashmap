@@ -110,9 +110,34 @@
 // Clang 3.4 does not support __builtin_assume_aligned().
 # define JSTD_ASSUME_ALIGNED(ptr, alignment) \
            (((uintptr_t(ptr) % (alignment)) == 0) ? (ptr) : (LLVM_BUILTIN_UNREACHABLE, (ptr)))
+#elif defined(__GNUC__) || __has_builtin(__builtin_unreachable)
+// If gcc does not support __builtin_assume_aligned().
+# define JSTD_ASSUME_ALIGNED(ptr, alignment) \
+           (((uintptr_t(ptr) % (alignment)) == 0) ? (ptr) : (__builtin_unreachable, (ptr)))
 #else
 # define JSTD_ASSUME_ALIGNED(ptr, alignment)  ((void *)(ptr))
-#endif
+#endif // JSTD_ASSUME_ALIGNED
+
+//
+// From boost::unordered
+//
+#if !defined(NDEBUG)
+#define JSTD_ASSUME(cond)   assert(cond)
+#elif __has_builtin(__builtin_assume)
+#define JSTD_ASSUME(cond)   __builtin_assume(cond)
+#elif defined(__GNUC__) || __has_builtin(__builtin_unreachable)
+#define JSTD_ASSUME(cond)                       \
+    do {                                        \
+        if (!(cond)) __builtin_unreachable();   \
+    } while (0)
+#elif defined(_MSC_VER)
+#define JSTD_ASSUME(cond)   __assume(cond)
+#else
+#define JSTD_ASSUME(cond)                   \
+    do {                                    \
+        static_cast<void>(false &&(cond));  \
+    } while (0)
+#endif // JSTD_ASSUME
 
 #if defined(__GNUC__) && !defined(__GNUC_STDC_INLINE__) && !defined(__GNUC_GNU_INLINE__)
   #define __GNUC_GNU_INLINE__   1
