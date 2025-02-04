@@ -8,7 +8,7 @@ High performance hash table: jstd::robin_hash_map,
 
 High performance hash table for `jstd` library:
 
-* `jstd:: robin_hash_map`: Using the robin-hood hashing method, SIMD instruction + distance, with a group size of 32 bytes, and 8-bit hash value, and 7-bit distance value. The performance is good for integer keys, but for keys for large objects, The value performance is slightly poor, but it performs quite well in certain scenarios.
+* `jstd:: robin_hash_map`: Using the robin-hood hashing method, SIMD instruction + distance, with a group size of 32 bytes, and 8-bit hash value, and 7-bit distance value, the remaining 1-bit is reserved for the flag bit. The performance is good for integer keys, but for keys for large objects, The value performance is slightly poor, but it performs quite well in certain scenarios.
 
 * `jstd:: group15_flat_map`: The principle and implementation of the quadratic probing method using SIMD instructions are basically the same as similar to boost::unordered_flat_map. The segmentation (Group) is 16 bytes (including 1 byte overflow bit), using 8-bit hash values and 8-bit overflow bits. Except for the insert new element which is slightly faster than it, all other operations are slightly slower, but the performance is better than jstd:group16_flat_map is slightly better.
 
