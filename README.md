@@ -8,9 +8,9 @@
 
 * `jstd::robin_hash_map`：采用 robin-hood hashing 方法，采用 SIMD 指令 + distance，分段 (Group) 为 32 Bytes，采用 8-bit 的 hash 值， 7-bits 的 distance，剩下的 1-bit 留给了标志位。对整型 key 性能不错，对于大对象的 key, value 性能稍差，在某些场景场景下性能还不错。
 
-* `jstd::group15_flat_map`：采用 SIMD 指令的二次探测法，原理和实现跟 boost::unordered_flat_map 基本一样，分段 (Group) 为 16 Bytes（其中 1 Bytes overflow bits），采用 8 bit 的 hash 值，8 bit 的 overflow bits，除了 insert 新元素比它快一点，其他操作都稍微慢一点点，但性能比 jstd::group16_flat_map 稍微好一点。
+* `jstd::group15_flat_map`：采用 SIMD 指令和二次探测法，原理和实现跟 boost::unordered_flat_map 基本一样，分段 (Group) 为 16 Bytes（其中 1 Bytes overflow bits），采用 8 bit 的 hash 值，8 bit 的 overflow bits，除了 insert 新元素比它快一点，其他操作都稍微慢一点点，但性能比 jstd::group16_flat_map 稍微好一点。
 
-* `jstd::group16_flat_map`：采用 SIMD 指令的二次探测法，根据 boost::unordered_flat_map 的原理改制，分段 (Group) 为 16 Bytes，采用 7 bit 的 hash 值，每个 byte 最高位为 overflow bits，即每个分段有 16 bits overflow，性能比 jstd::group15_flat_map、boost::unordered_flat_map 稍差一点。
+* `jstd::group16_flat_map`：采用 SIMD 指令和二次探测法，根据 boost::unordered_flat_map 的原理改制，分段 (Group) 为 16 Bytes，采用 7 bit 的 hash 值，每个 byte 最高位为 overflow bits，即每个分段有 16 bits overflow，性能比 jstd::group15_flat_map、boost::unordered_flat_map 稍差一点。
 
 关键技术：Cache Friendly
 

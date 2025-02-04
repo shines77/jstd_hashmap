@@ -10,9 +10,9 @@ High performance hash table for `jstd` library:
 
 * `jstd:: robin_hash_map`: Using the robin-hood hashing method, SIMD instruction + distance, with a group size of 32 bytes, and 8-bit hash value, and 7-bit distance value, the remaining 1-bit is reserved for the flag bit. The performance is good for integer keys, but for keys for large objects, The value performance is slightly poor, but it performs quite well in certain scenarios.
 
-* `jstd:: group15_flat_map`: The principle and implementation of the quadratic probing method using SIMD instructions are basically the same as similar to boost::unordered_flat_map. The segmentation (Group) is 16 bytes (including 1 byte overflow bit), using 8-bit hash values and 8-bit overflow bits. Except for the insert new element which is slightly faster than it, all other operations are slightly slower, but the performance is better than jstd:group16_flat_map is slightly better.
+* `jstd:: group15_flat_map`: Using SIMD instructions and quadratic probing method, the principle and the implementation are similar to boost:unordered_flat_map, is basically the same. The segmentation (Group) is 16 bytes (including 1 byte overflow bit), using 8-bit hash values and 8-bit overflow bits. Except for the insert new element which is slightly faster than it, all other operations are slightly slower, but the performance is better than jstd:group16_flat_map.
 
-* `jstd:: group16_flat_map`: The quadratic probing method using SIMD instructions, based on boost::unordered_flat_map, the principle of boost::unordered_flat_map is modified. With a group size of 16 bytes and a 7-bit hash value, the highest bit of each byte is overflow bits, which means each segment has 16 bits of overflow. The performance is better than jstd::group15_flat_map and boost::unordered_flat_map are slightly inferior.
+* `jstd:: group16_flat_map`: Using SIMD instructions and quadratic probing method, based on boost::unordered_flat_map, the principle of boost::unordered_flat_map is modified. With a group size of 16 bytes and a 7-bit hash value, the highest bit of each byte is overflow bits, which means each segment has 16 bits of overflow. The performance is slightly worse than jstd::group15_flat_map and boost::unordered_flat_map.
 
 Key technology: Cache Friendly
 
