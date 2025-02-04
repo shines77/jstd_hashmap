@@ -417,7 +417,7 @@ public:
         // TODO: We should only use the operations from the noexcept clause
         // to make sure we actually adhere to other contract.
         return this->move_assign(std::move(other),
-                     typename AllocTraits::propagate_on_container_move_assignment());
+                        typename AllocTraits::propagate_on_container_move_assignment());
     }
 
     ///
