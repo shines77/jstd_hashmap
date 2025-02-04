@@ -325,10 +325,11 @@ public:
         if (pos != table_.end()) {
             return pos->second;
         }
+        //
         // TODO: someday refactor this to conditionally serialize the key and
         // include it in the error message
         //
-        throw std::out_of_range("key was not found in unordered_flat_map");
+        throw std::out_of_range("key was not found in jstd::group16_flat_map");
     }
 
     const mapped_type & at(const key_type & key) const {
@@ -337,7 +338,7 @@ public:
             return pos->second;
         }
 
-        throw std::out_of_range("key was not found in unordered_flat_map");
+        throw std::out_of_range("key was not found in jstd::group16_flat_map");
     }
 
     JSTD_FORCED_INLINE
@@ -655,7 +656,8 @@ public:
     }
 
     JSTD_FORCED_INLINE
-    void swap(this_type & other) {
+    void swap(this_type & other) noexcept(
+        noexcept(std::declval<table_type &>().swap(std::declval<table_type &>()))) {
         table_.swap(other.table_);
     }
 

@@ -84,8 +84,7 @@
 #include "jstd/hashmap/slot_policy_traits.h"
 
 #define GROUP15_USE_HASH_POLICY     0
-#define GROUP15_USE_SEPARATE_SLOTS  1
-#define GROUP15_USE_SWAP_TRAITS     1
+#define GROUP15_USE_SEPARATE_SLOTS  0
 
 #define GROUP15_USE_GROUP_SCAN      1
 #define GROUP15_USE_INDEX_SHIFT     1

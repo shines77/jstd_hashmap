@@ -331,7 +331,6 @@ public:
     }
 
     inline void set_sentinel() {
-        assert(pos < kGroupSize);
         ctrl_type * ctrl = &ctrls[kGroupSize - 1];
         ctrl->set_sentinel();
     }
