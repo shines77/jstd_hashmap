@@ -263,7 +263,7 @@ private:
     group_allocator_type    group_allocator_;
     slot_allocator_type     slot_allocator_;
 
-    static constexpr bool kIsExists = false;
+    static constexpr bool kIsKeyExists = false;
     static constexpr bool kNeedInsert = true;
 
 public:
@@ -1832,7 +1832,7 @@ private:
         return (this->slot_size() >= this->slot_threshold());
     }
 
-    //JSTD_NO_INLINE
+    JSTD_FORCED_INLINE
     void grow_if_necessary() {
         // The growth rate is 2 times
         size_type new_capacity = this->ctrl_capacity() * 2;
@@ -2065,6 +2065,19 @@ private:
         this->destroy_slot_data(ctrl, slot);
     }
 
+    inline void display_meta_datas(const group_type * group) const {
+        const ctrl_type * ctrl = reinterpret_cast<const ctrl_type *>(group);
+        printf("[");
+        for (std::size_t i = 0; i < kGroupWidth; i++) {
+            if (i < kGroupWidth - 1)
+                printf(" %02x,", (int)ctrl->value());
+            else
+                printf(" %02x", (int)ctrl->value());
+            ctrl++;
+        }
+        printf(" ]\n");
+    }
+
     template <typename KeyT>
     JSTD_FORCED_INLINE
     size_type find_index(const KeyT & key) {
@@ -2090,7 +2103,9 @@ private:
             const group_type * group = this->group_at(group_index);
             std::uint32_t match_mask = group->match_hash(ctrl_hash);
             if (match_mask != 0) {
-                const slot_type * slot_base = this->slots() + group_index * kGroupWidth;
+                const slot_type * slot_start = this->slots();
+                JSTD_ASSUME(slot_start != nullptr);
+                const slot_type * slot_base = slot_start + group_index * kGroupWidth;
                 if (sizeof(value_type) <= 16) {
                     Prefetch_Read_T0((const void *)slot_base);
                 }
@@ -2117,25 +2132,12 @@ private:
                              ", load_factor = " << this->load_factor() << std::endl;
             }
 #endif
-        } while (prober.next_bucket(this->group_mask()));
+        } while (likely(prober.next_bucket(this->group_mask())));
 
         return this->slot_capacity();
     }
 
-    void display_meta_datas(group_type * group) {
-        ctrl_type * ctrl = reinterpret_cast<ctrl_type *>(group);
-        printf("[");
-        for (std::size_t i = 0; i < kGroupWidth; i++) {
-            if (i < kGroupWidth - 1)
-                printf(" %02x,", (int)ctrl->value());
-            else
-                printf(" %02x", (int)ctrl->value());
-            ctrl++;
-        }
-        printf(" ]\n");
-    }
-
-    template <typename KeyT>
+    template <bool IsNoGrow, typename KeyT = key_type>
     JSTD_FORCED_INLINE
     size_type find_empty_to_insert(const KeyT & key, size_type group_index, std::uint8_t ctrl_hash) {
         prober_type prober(group_index);
@@ -2144,7 +2146,7 @@ private:
             group_index = prober.get();
             group_type * group = this->group_at(group_index);
             std::uint32_t empty_mask = group->match_empty();
-            if (empty_mask != 0) {
+            if (likely(empty_mask != 0)) {
                 std::uint32_t empty_pos = BitUtils::bsf32(empty_mask);
                 size_type slot_base = group_index * kGroupWidth;
                 assert(group->is_empty(empty_pos));
@@ -2157,13 +2159,16 @@ private:
             }
 #if GROUP16_DISPLAY_DEBUG_INFO
             if (unlikely(prober.steps() > kSkipGroupsLimit)) {
-                std::cout << "find_empty_to_insert(): key = " << key <<
+                std::cout << "$(): key = " << key <<
                              ", skip_groups = " << prober.steps() <<
                              ", load_factor = " << this->load_factor() << std::endl;
                 display_meta_datas(group);
             }
 #endif
-        } while (prober.next_bucket(this->group_mask()));
+            if (IsNoGrow) {
+                prober.next_bucket(this->group_mask());
+            }
+        } while (likely(IsNoGrow || prober.next_bucket(this->group_mask())));
 
         return this->slot_capacity();
     }
@@ -2177,7 +2182,7 @@ private:
 
         size_type slot_index = this->find_index(key, group_index, ctrl_hash);
         if (slot_index != this->slot_capacity()) {
-            return { slot_index, kIsExists };
+            return { slot_index, kIsKeyExists };
         }
 
         if (unlikely(this->need_grow())) {
@@ -2189,7 +2194,7 @@ private:
             // ctrl_hash = this->ctrl_for_hash(key_hash);
         }
 
-        slot_index = this->find_empty_to_insert(key, group_index, ctrl_hash);
+        slot_index = this->find_empty_to_insert<true, KeyT>(key, group_index, ctrl_hash);
         if (likely(true || (slot_index != this->slot_capacity()))) {
             return { slot_index, kNeedInsert };
         }
@@ -2200,7 +2205,7 @@ private:
             this->grow_if_necessary();
 
             group_index = this->index_for_hash(key_hash);
-            slot_index = this->find_empty_to_insert(key, group_index, ctrl_hash);
+            slot_index = this->find_empty_to_insert<true, KeyT>(key, group_index, ctrl_hash);
             assert(slot_index < this->slot_capacity());
             return { slot_index, kNeedInsert };
         }
@@ -2212,7 +2217,7 @@ private:
         size_type group_index = this->index_for_hash(key_hash);
         std::uint8_t ctrl_hash = this->ctrl_for_hash(key_hash);
 
-        size_type slot_index = this->find_empty_to_insert(key, group_index, ctrl_hash);
+        size_type slot_index = this->find_empty_to_insert<true, key_type>(key, group_index, ctrl_hash);
         return slot_index;
     }
 

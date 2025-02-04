@@ -267,7 +267,7 @@ private:
     group_allocator_type    group_allocator_;
     slot_allocator_type     slot_allocator_;
 
-    static constexpr bool kIsExists = false;
+    static constexpr bool kIsKeyExists = false;
     static constexpr bool kNeedInsert = true;
 
 public:
@@ -1179,7 +1179,7 @@ private:
     }
 
     static inline constexpr size_type calc_slot_capacity(size_type group_capacity, size_type init_capacity) noexcept {
-        // Remove a sentinel marker
+        // Exclude a sentinel mark
         return (init_capacity >= kGroupWidth) ? (group_capacity * kGroupSize - 1) : init_capacity;
     }
 
@@ -1890,7 +1890,7 @@ private:
         return (this->slot_size() >= this->slot_threshold());
     }
 
-    //JSTD_NO_INLINE
+    JSTD_FORCED_INLINE
     void grow_if_necessary() {
         // The growth rate is 2 times
         size_type new_capacity = this->ctrl_capacity() * 2;
@@ -1934,8 +1934,7 @@ private:
                       "jstd::group15_flat_map::AlignedSlotsAndGroups<N>(): GroupAlignment must bigger than 0.");
         static_assert(((GroupAlignment & (GroupAlignment - 1)) == 0),
                       "jstd::group15_flat_map::AlignedSlotsAndGroups<N>(): GroupAlignment must be power of 2.");
-        // Added one sentinel mark
-        const slot_type * last_slots = slots + slot_capacity + 1;
+        const slot_type * last_slots = slots + slot_capacity;
         size_type last_slot = reinterpret_cast<size_type>(last_slots);
         size_type groups_first = (last_slot + GroupAlignment - 1) & (~(GroupAlignment - 1));
         assert(groups_first >= last_slot);
@@ -1966,8 +1965,7 @@ private:
     JSTD_FORCED_INLINE
     size_type TotalSlotAllocCount(size_type group_capacity, size_type slot_capacity) noexcept {
         const size_type num_group_bytes = group_capacity * sizeof(group_type);
-        // Added one sentinel mark
-        const size_type num_slot_bytes = (slot_capacity + 1) * sizeof(slot_type);
+        const size_type num_slot_bytes = slot_capacity * sizeof(slot_type);
         const size_type total_bytes = num_slot_bytes + GroupAlignment + num_group_bytes;
         const size_type total_alloc_count = (total_bytes + sizeof(slot_type) - 1) / sizeof(slot_type);
         return total_alloc_count;
@@ -2004,8 +2002,7 @@ private:
             group_type * new_groups_alloc = GroupAllocTraits::allocate(this->group_allocator_, total_group_alloc_count);
             group_type * new_groups = this->AlignedGroups<kGroupAlignment>(new_groups_alloc);
 
-            // Add one sentinel mark
-            slot_type * new_slots = SlotAllocTraits::allocate(this->slot_allocator_, (new_slot_capacity + 1));
+            slot_type * new_slots = SlotAllocTraits::allocate(this->slot_allocator_, new_slot_capacity);
 #else
             size_type total_slot_alloc_count = this->TotalSlotAllocCount<kGroupAlignment>(new_group_capacity, new_slot_capacity);
 
@@ -2016,7 +2013,7 @@ private:
             // Reset groups to default state
             this->clear_groups(new_groups, new_group_capacity);
 
-            // Set sentinel mark
+            // Set the sentinel mark
             this->set_sentinel_mark(new_groups, new_group_capacity);
 
             this->groups_ = new_groups;
@@ -2096,7 +2093,7 @@ private:
                 GroupAllocTraits::deallocate(this->group_allocator_, old_groups_alloc, total_group_alloc_count);
             }
             if (old_slots != nullptr) {
-                SlotAllocTraits::deallocate(this->slot_allocator_, old_slots, (old_slot_capacity + 1));
+                SlotAllocTraits::deallocate(this->slot_allocator_, old_slots, old_slot_capacity);
             }
 #else
             if (old_slots != nullptr) {
@@ -2146,6 +2143,19 @@ private:
         this->destroy_slot_data(ctrl, slot);
     }
 
+    inline void display_meta_datas(group_type * group) const {
+        const ctrl_type * ctrl = reinterpret_cast<const ctrl_type *>(group);
+        printf("[");
+        for (std::size_t i = 0; i < kGroupWidth; i++) {
+            if (i < kGroupWidth - 1)
+                printf(" %02x,", (int)ctrl->value());
+            else
+                printf(" %02x", (int)ctrl->value());
+            ctrl++;
+        }
+        printf(" ]\n");
+    }
+
     template <typename KeyT>
     JSTD_FORCED_INLINE
     locator_t find_impl(const KeyT & key) {
@@ -2185,9 +2195,9 @@ private:
                 }
                 do {
                     size_type match_pos = static_cast<size_type>(BitUtils::bsf32(match_mask));
-                    const slot_type * slot = slot_base + match_pos;
-                    if (likely(bool(this->key_equal_(key, slot->value.first)))) {
-                        return { group, match_pos, slot };
+                    //const slot_type * slot = slot_base + match_pos;
+                    if (likely(bool(this->key_equal_(key, slot_base[match_pos].value.first)))) {
+                        return { group, match_pos, (slot_base + match_pos) };
                     }
                     match_mask = BitUtils::clearLowBit32(match_mask);
                 } while (match_mask != 0);
@@ -2205,7 +2215,7 @@ private:
                              ", load_factor = " << this->load_factor() << std::endl;
             }
 #endif
-        } while (prober.next_bucket(this->group_mask()));
+        } while (likely(prober.next_bucket(this->group_mask())));
 
         return {};
     }
@@ -2214,20 +2224,7 @@ private:
 #pragma warning(pop) /* C4800 */
 #endif
 
-    void display_meta_datas(group_type * group) {
-        ctrl_type * ctrl = reinterpret_cast<ctrl_type *>(group);
-        printf("[");
-        for (std::size_t i = 0; i < kGroupWidth; i++) {
-            if (i < kGroupWidth - 1)
-                printf(" %02x,", (int)ctrl->value());
-            else
-                printf(" %02x", (int)ctrl->value());
-            ctrl++;
-        }
-        printf(" ]\n");
-    }
-
-    template <typename KeyT>
+    template <bool IsNoGrow, typename KeyT = key_type>
     JSTD_FORCED_INLINE
     locator_t find_empty_to_insert(const KeyT & key, size_type group_index, std::uint8_t ctrl_hash) {
         prober_type prober(group_index);
@@ -2236,7 +2233,7 @@ private:
             group_index = prober.get();
             group_type * group = this->group_at(group_index);
             std::uint32_t empty_mask = group->match_empty();
-            if (empty_mask != 0) {
+            if (likely(empty_mask != 0)) {
                 std::uint32_t empty_pos = BitUtils::bsf32(empty_mask);
                 const slot_type * slot_start = this->slots();
                 JSTD_ASSUME(slot_start != nullptr);
@@ -2257,7 +2254,10 @@ private:
                 display_meta_datas(group);
             }
 #endif
-        } while (prober.next_bucket(this->group_mask()));
+            if (IsNoGrow) {
+                prober.next_bucket(this->group_mask());
+            }
+        } while (likely(IsNoGrow || prober.next_bucket(this->group_mask())));
 
         return {};
     }
@@ -2271,7 +2271,7 @@ private:
 
         locator_t locator = this->find_impl(key, group_index, ctrl_hash);
         if (locator.slot() != nullptr) {
-            return { locator, kIsExists };
+            return { locator, kIsKeyExists };
         }
 
         if (unlikely(this->need_grow())) {
@@ -2283,7 +2283,7 @@ private:
             // ctrl_hash = this->ctrl_for_hash(key_hash);
         }
 
-        locator = this->find_empty_to_insert(key, group_index, ctrl_hash);
+        locator = this->find_empty_to_insert<true, KeyT>(key, group_index, ctrl_hash);
         if (likely(true || (locator.slot() != nullptr))) {
             return { locator, kNeedInsert };
         }
@@ -2294,7 +2294,7 @@ private:
             this->grow_if_necessary();
 
             group_index = this->index_for_hash(key_hash);
-            locator = this->find_empty_to_insert(key, group_index, ctrl_hash);
+            locator = this->find_empty_to_insert<true, KeyT>(key, group_index, ctrl_hash);
             assert(locator.slot() < this->last_slot());
             return { locator, kNeedInsert };
         }
@@ -2306,7 +2306,7 @@ private:
         size_type group_index = this->index_for_hash(key_hash);
         std::uint8_t ctrl_hash = this->ctrl_for_hash(key_hash);
 
-        locator_t locator = this->find_empty_to_insert(key, group_index, ctrl_hash);
+        locator_t locator = this->find_empty_to_insert<true, key_type>(key, group_index, ctrl_hash);
         return locator;
     }
 
