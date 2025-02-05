@@ -245,10 +245,10 @@ private:
         }
 
         for (size_type i = M; --i; ++p) {
-            *p = (p[M - N] ^ this->twist(p[0], p[1]));
+            *p = (p[N - M] ^ this->twist(p[0], p[1]));
         }
 
-        *p = p[M - N] ^ this->twist(p[0], this->state[0]);
+        *p = p[N - M] ^ this->twist(p[0], this->state[0]);
         this->left = (value_type)N;
         this->next = &this->state[0];
     }
