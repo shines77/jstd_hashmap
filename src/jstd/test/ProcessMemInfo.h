@@ -137,7 +137,7 @@ std::size_t GetCurrentMemoryUsage()
     char filename[128];
     ::snprintf(filename, sizeof(filename) - 1, "/proc/self/status");
 
-    std::size_t memory_usage = 0;
+    std::size_t _memory_usage = 0;
     std::ifstream ifs;
     try {
         ifs.open(filename, std::ios::in);
@@ -161,6 +161,7 @@ std::size_t GetCurrentMemoryUsage()
                     memory_usage *= 1024;
                 else if (memory_uint == "mB" || memory_uint == "MB")
                     memory_usage *= (1024 * 1024);
+                _memory_usage = memory_usage;
                 break;
             }
         }
@@ -170,7 +171,7 @@ std::size_t GetCurrentMemoryUsage()
         std::cerr << "Exception: " << ex.what() << std::endl;
         ifs.close();
     }
-    return memory_usage;
+    return _memory_usage;
 }
 
 #endif // _MSC_VER
