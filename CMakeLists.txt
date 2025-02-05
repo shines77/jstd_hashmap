@@ -49,7 +49,7 @@ endif()
 
 include(CMakePackageConfigHelpers)
 
-configure_file("${PROJECT_SOURCE_DIR}/src/jstd/version.h.in" "${PROJECT_SOURCE_DIR}/src/jstd/config/version.h")
+configure_file("${PROJECT_SOURCE_DIR}/src/jstd/version.h.in" "${PROJECT_SOURCE_DIR}/src/jstd/version.h")
 
 set(CMAKE_ALLOW_LOOSE_LOOP_CONSTRUCTS ON)
 set(CMAKE_VERBOSE_MAKEFILE ON)
