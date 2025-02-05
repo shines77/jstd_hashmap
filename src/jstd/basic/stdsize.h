@@ -45,10 +45,10 @@
 
 #endif // _MSC_VER
 
-#if !(defined(_SSIZE_T_DEFINED) || defined(_SSIZE_T_) || defined(_SIZE_T_) || defined(_BSD_SIZE_T_) || defined(_SIZE_T))
+// __ssize_t_defined for GNUC
+#if !(defined(_SSIZE_T_DEFINED) || defined(__ssize_t_defined) || defined(_SSIZE_T_) || defined(_SIZE_T_) || defined(_BSD_SIZE_T_) || defined(_SIZE_T))
 #if (defined(_WIN32) || defined(_WIN64)) \
-    && (!(defined(__MINGW__) || defined(__MINGW32__) || defined(__MINGW64__))) \
-    && (!defined(__CYGWIN__))
+    && (!(defined(__MINGW__) || defined(__MINGW32__) || defined(__MINGW64__))) && (!defined(__CYGWIN__))
 
 typedef uintptr_t   ssize_t;
 
@@ -72,6 +72,7 @@ typedef _W64 signed int     ssize_t;
 #ifndef _SIZE_T_
 #ifndef _BSD_SIZE_T_
 #ifndef _SIZE_T_DEFINED_
+#ifndef __ssize_t_defined
 #ifndef _SIZE_T_DEFINED
 #ifndef _BSD_SIZE_T_DEFINED_	/* Darwin */
 #ifndef _SIZE_T_DECLARED	    /* FreeBSD 5 */
@@ -99,6 +100,7 @@ typedef signed int          ssize_t;
 #endif /* _BSD_SIZE_T_DEFINED_ */
 #endif /* _SIZE_T_DEFINED */
 #endif /* _SIZE_T_DEFINED_ */
+#endif /* __ssize_t_defined */
 #endif /* _BSD_SIZE_T_ */
 #endif /* _SIZE_T_ */
 #endif /* __SIZE_T */
@@ -111,6 +113,7 @@ typedef signed int          ssize_t;
 
 #endif // defined(_WIN32) || defined(_WIN64)
 #define _SSIZE_T_DEFINED
+#define __ssize_t_defined
 #endif // _SSIZE_T_DEFINED
 
 #endif // JSTD_BASIC_STDSIZE_H
