@@ -469,13 +469,13 @@ public:
     template <typename MappedT>
     JSTD_FORCED_INLINE
     std::pair<iterator, bool> insert_or_assign(const key_type & key, MappedT && value) {
-        return table_.emplace_impl<true>(key, std::forward<MappedT>(value));
+        return table_.template emplace_impl<true>(key, std::forward<MappedT>(value));
     }
 
     template <typename MappedT>
     JSTD_FORCED_INLINE
     std::pair<iterator, bool> insert_or_assign(key_type && key, MappedT && value) {
-        return table_.emplace_impl<true>(std::move(key), std::forward<MappedT>(value));
+        return table_.template emplace_impl<true>(std::move(key), std::forward<MappedT>(value));
     }
 
     template <typename KeyT, typename MappedT, typename std::enable_if<
@@ -485,19 +485,19 @@ public:
               !std::is_convertible<KeyT, const_iterator>::value>::type * = nullptr>
     JSTD_FORCED_INLINE
     std::pair<iterator, bool> insert_or_assign(KeyT && key, MappedT && value) {
-        return table_.emplace_impl<true>(std::move(key), std::forward<MappedT>(value));
+        return table_.template emplace_impl<true>(std::move(key), std::forward<MappedT>(value));
     }
 
     template <typename MappedT>
     JSTD_FORCED_INLINE
     iterator insert_or_assign(const_iterator hint, const key_type & key, MappedT && value) {
-        return table_.emplace_impl<true>(key, std::forward<MappedT>(value))->first;
+        return table_.template emplace_impl<true>(key, std::forward<MappedT>(value))->first;
     }
 
     template <typename MappedT>
     JSTD_FORCED_INLINE
     iterator insert_or_assign(const_iterator hint, key_type && key, MappedT && value) {
-        return table_.emplace_impl<true>(std::move(key), std::forward<MappedT>(value))->first;
+        return table_.template emplace_impl<true>(std::move(key), std::forward<MappedT>(value))->first;
     }
 
     template <typename KeyT, typename MappedT, typename std::enable_if<
@@ -507,7 +507,7 @@ public:
               !std::is_convertible<KeyT, const_iterator>::value>::type * = nullptr>
     JSTD_FORCED_INLINE
     iterator insert_or_assign(const_iterator hint, KeyT && key, MappedT && value) {
-        return table_.emplace_impl<true>(std::move(key), std::forward<MappedT>(value))->first;
+        return table_.template emplace_impl<true>(std::move(key), std::forward<MappedT>(value))->first;
     }
 
     ///
