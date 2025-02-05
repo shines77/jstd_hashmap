@@ -146,7 +146,7 @@ namespace BitUtils {
 
     static inline
     unsigned int bsf32(unsigned int x) {
-        assert(x != 0);
+        JSTD_ASSUME(x != 0);
         unsigned long index;
         ::_BitScanForward(&index, (unsigned long)x);
         return (unsigned int)index;
@@ -155,7 +155,7 @@ namespace BitUtils {
 #if (JSTD_WORD_LEN == 64)
     static inline
     unsigned int bsf64(unsigned __int64 x) {
-        assert(x != 0);
+        JSTD_ASSUME(x != 0);
         unsigned long index;
         ::_BitScanForward64(&index, x);
         return (unsigned int)index;
@@ -163,7 +163,7 @@ namespace BitUtils {
 #else
     static inline
     unsigned int bsf64(unsigned __int64 x) {
-        assert(x != 0);
+        JSTD_ASSUME(x != 0);
         unsigned int index;
         unsigned int low = (unsigned int)(x & 0xFFFFFFFFU);
         if (low != 0) {
@@ -180,7 +180,7 @@ namespace BitUtils {
 
     static inline
     unsigned int bsr32(unsigned int x) {
-        assert(x != 0);
+        JSTD_ASSUME(x != 0);
         unsigned long index;
         ::_BitScanReverse(&index, (unsigned long)x);
         return (unsigned int)index;
@@ -189,7 +189,7 @@ namespace BitUtils {
 #if (JSTD_WORD_LEN == 64)
     static inline
     unsigned int bsr64(unsigned __int64 x) {
-        assert(x != 0);
+        JSTD_ASSUME(x != 0);
         unsigned long index;
         ::_BitScanReverse64(&index, x);
         return (unsigned int)index;
@@ -197,7 +197,7 @@ namespace BitUtils {
 #else
     static inline
     unsigned int bsr64(unsigned __int64 x) {
-        assert(x != 0);
+        JSTD_ASSUME(x != 0);
         unsigned int index;
         unsigned int high = (unsigned int)(x >> 32U);
         if (high != 0) {
@@ -217,7 +217,7 @@ namespace BitUtils {
 
     static inline
     unsigned int bsf32(unsigned int x) {
-        assert(x != 0);
+        JSTD_ASSUME(x != 0);
 #if __has_builtin(__builtin_ctz)
         // gcc: __bsfd(x)
         return (unsigned int)__builtin_ctz(x);
@@ -231,7 +231,7 @@ namespace BitUtils {
 #if (JSTD_WORD_LEN == 64)
     static inline
     unsigned int bsf64(uint64_t x) {
-        assert(x != 0);
+        JSTD_ASSUME(x != 0);
 #if __has_builtin(__builtin_ctzll)
         // gcc: __bsfq(x)
         return (unsigned int)__builtin_ctzll((unsigned long long)x);
@@ -244,7 +244,7 @@ namespace BitUtils {
 #else
     static inline
     unsigned int bsf64(uint64_t x) {
-        assert(x != 0);
+        JSTD_ASSUME(x != 0);
         unsigned int index;
         unsigned int low = (unsigned int)(x & 0xFFFFFFFFU);
         if (low != 0) {
@@ -261,7 +261,7 @@ namespace BitUtils {
 
     static inline
     unsigned int bsr32(unsigned int x) {
-        assert(x != 0);
+        JSTD_ASSUME(x != 0);
 #if __has_builtin(__builtin_clz)
         // gcc: __bsrd(x)
         return (unsigned int)(31 - __builtin_clz(x));
@@ -275,7 +275,7 @@ namespace BitUtils {
 #if (JSTD_WORD_LEN == 64)
     static inline
     unsigned int bsr64(uint64_t x) {
-        assert(x != 0);
+        JSTD_ASSUME(x != 0);
 #if __has_builtin(__builtin_clzll)
         // gcc: __bsrq(x)
         return (unsigned int)(63 - __builtin_clzll((unsigned long long)x));
@@ -288,7 +288,7 @@ namespace BitUtils {
 #else
     static inline
     unsigned int bsr64(uint64_t x) {
-        assert(x != 0);
+        JSTD_ASSUME(x != 0);
         unsigned int index;
         unsigned int high = (unsigned int)(x >> 32U);
         if (high != 0) {
@@ -307,25 +307,25 @@ namespace BitUtils {
 
     static inline
     unsigned int bsf32(unsigned int x) {
-        assert(x != 0);
+        JSTD_ASSUME(x != 0);
         return (unsigned int)BitUtils::__internal_ctz(x);
     }
 
     static inline
     unsigned int bsf64(uint64_t x) {
-        assert(x != 0);
+        JSTD_ASSUME(x != 0);
         return (unsigned int)BitUtils::__internal_ctzll(x);
     }
 
     static inline
     unsigned int bsr32(unsigned int x) {
-        assert(x != 0);
+        JSTD_ASSUME(x != 0);
         return (unsigned int)BitUtils::__internal_clz(x);
     }
 
     static inline
     unsigned int bsr64(uint64_t x) {
-        assert(x != 0);
+        JSTD_ASSUME(x != 0);
         return (unsigned int)BitUtils::__internal_clzll(x);
     }
 

@@ -32,7 +32,7 @@ struct cstring_uint64_fnv1a
     }
 
     // FNV-1a.
-    static std::uint64_t hash_key(const key_type & key)
+    static inline std::uint64_t hash_key(const key_type & key)
     {
         std::size_t hash = 0xcbf29ce484222325ull;
         char * c = key;
@@ -43,7 +43,7 @@ struct cstring_uint64_fnv1a
         return hash;
     }
 
-    static bool cmpr_keys(const key_type & key_1, const key_type & key_2)
+    static inline bool cmpr_keys(const key_type & key_1, const key_type & key_2)
     {
         return (::strcmp(key_1, key_2) == 0);
     }

@@ -78,7 +78,7 @@ public:
 
     group15_meta_ctrl(value_type value = kEmptySlot) : value_(value) {}
 
-    static inline int repeated_hash(std::size_t hash) {
+    static JSTD_FORCED_INLINE int repeated_hash(std::size_t hash) {
         static constexpr const std::uint32_t dword_hashs[] = {
             // [0, 127]
            kEmptyHash32, kSentinelHash32, 0x02020202u, 0x03030303u,
@@ -152,76 +152,76 @@ public:
         return (int)dword_hashs[static_cast<std::uint8_t>(hash)];
     }
 
-    static inline std::uint8_t reduced_hash(std::size_t hash) {
+    static JSTD_FORCED_INLINE std::uint8_t reduced_hash(std::size_t hash) {
         return static_cast<std::uint8_t>(repeated_hash(hash) & kHashMask);
     }
 
-    static inline std::size_t hash_bits64(std::size_t hash) {
+    static JSTD_FORCED_INLINE std::size_t hash_bits64(std::size_t hash) {
         return (hash & static_cast<std::size_t>(kHashMask));
     }
 
-    inline value_type value() const {
+    JSTD_FORCED_INLINE value_type value() const {
         return this->value_;
     }
 
-    inline value_type index() const {
+    JSTD_FORCED_INLINE value_type index() const {
         return 0;
     }
 
-    inline value_type get_hash() const {
+    JSTD_FORCED_INLINE value_type get_hash() const {
         return this->value_;
     }
 
-    inline bool is_empty() const {
+    JSTD_FORCED_INLINE bool is_empty() const {
         value_type hash = this->value_;
         return (hash == kEmptySlot);
     }
 
-    inline bool is_sentinel() const {
+    JSTD_FORCED_INLINE bool is_sentinel() const {
         value_type hash = this->value_;
         return (hash == kSentinelSlot);
     }
 
-    inline bool is_used() const {
+    JSTD_FORCED_INLINE bool is_used() const {
         value_type hash = this->value_;
         return (hash != kEmptySlot);
     }
 
-    inline bool is_valid() const {
+    JSTD_FORCED_INLINE bool is_valid() const {
         value_type hash = this->value_;
         return (hash > kSentinelSlot);
     }
 
-    inline bool is_equals(std::size_t hash) const {
+    JSTD_FORCED_INLINE bool is_equals(std::size_t hash) const {
         value_type hash8 = static_cast<value_type>(hash);
         return (this->value_ == hash8);
     }
 
-    inline bool is_equals64(std::size_t hash) const {
+    JSTD_FORCED_INLINE bool is_equals64(std::size_t hash) const {
         std::size_t hash64 = static_cast<std::size_t>(this->value_);
         return (hash == hash64);
     }
 
-    inline void set_empty() {
+    JSTD_FORCED_INLINE void set_empty() {
         this->value_ = kEmptySlot;
     }
 
-    inline void set_sentinel() {
+    JSTD_FORCED_INLINE void set_sentinel() {
         this->value_ = kSentinelSlot;
     }
 
-    inline void set_used(std::size_t hash) {
+    JSTD_FORCED_INLINE void set_used(std::size_t hash) {
         assert(hash > kSentinelSlot);
         this->value_ = static_cast<value_type>(hash);
     }
 
-    inline void set_used64(std::size_t hash) {
+    JSTD_FORCED_INLINE void set_used64(std::size_t hash) {
         value_type hash8 = static_cast<value_type>(hash_bits64(hash));
         assert(hash8 > kSentinelSlot);
         this->value_ = hash8;
     }
 
-    inline void set_value(value_type value) {
+    JSTD_FORCED_INLINE void set_value(value_type value) {
         this->value_ = value;
     }
 
@@ -248,7 +248,7 @@ public:
     static constexpr const std::size_t kGroupSize = kGroupWidth - 1;
     static constexpr const bool kIsRegularLayout = true;
 
-    inline void init() {
+    JSTD_FORCED_INLINE void init() {
         if (kEmptySlot == 0b00000000) {
             __m128i zeros = _mm_setzero_si128();
             _mm_store_si128(reinterpret_cast<__m128i *>(ctrls), zeros);
@@ -265,97 +265,110 @@ public:
         }
     }
 
-    inline __m128i _load_data() const {
+    JSTD_FORCED_INLINE __m128i _load_data() const {
+#if defined(JSTD_THREAD_SANITIZER)
+        /*
+         * ThreadSanitizer complains on 1-byte atomic writes combined with
+         * 16-byte atomic reads.
+         */
+        return _mm_set_epi8(
+            (char)ctrls[15], (char)ctrls[14], (char)ctrls[13], (char)ctrls[12],
+            (char)ctrls[11], (char)ctrls[10], (char)ctrls[9],  (char)ctrls[8],
+            (char)ctrls[7],  (char)ctrls[6],  (char)ctrls[5],  (char)ctrls[4],
+            (char)ctrls[3],  (char)ctrls[2],  (char)ctrls[1],  (char)ctrls[0]
+        );
+#else
         return _mm_load_si128(reinterpret_cast<const __m128i *>(ctrls));
+#endif
     }
 
-    inline value_type value(std::size_t pos) const {
+    JSTD_FORCED_INLINE value_type value(std::size_t pos) const {
         const ctrl_type * ctrl = &ctrls[pos];
         return ctrl->value();
     }
 
-    inline bool is_empty(std::size_t pos) const {
+    JSTD_FORCED_INLINE bool is_empty(std::size_t pos) const {
         assert(pos < kGroupSize);
         const ctrl_type * ctrl = &ctrls[pos];
         return ctrl->is_empty();
     }
 
-    inline bool is_sentinel(std::size_t pos) const {
+    JSTD_FORCED_INLINE bool is_sentinel(std::size_t pos) const {
         assert(pos < kGroupSize);
         const ctrl_type * ctrl = &ctrls[pos];
         return ctrl->is_sentinel();
     }
 
-    inline bool is_used(std::size_t pos) const {
+    JSTD_FORCED_INLINE bool is_used(std::size_t pos) const {
         assert(pos < kGroupSize);
         const ctrl_type * ctrl = &ctrls[pos];
         return ctrl->is_used();
     }
 
-    inline bool is_valid(std::size_t pos) const {
+    JSTD_FORCED_INLINE bool is_valid(std::size_t pos) const {
         assert(pos < kGroupSize);
         const ctrl_type * ctrl = &ctrls[pos];
         return ctrl->is_valid();
     }
 
-    inline bool is_overflow(std::size_t hash) const {
+    JSTD_FORCED_INLINE bool is_overflow(std::size_t hash) const {
         const ctrl_type * ctrl = &ctrls[kGroupSize];
         std::size_t pos = hash % std::size_t(CHAR_BIT);
         return ((ctrl->value() & static_cast<value_type>(std::size_t(1) << pos)) != 0);
     }
 
-    inline bool is_not_overflow(std::size_t hash) const {
+    JSTD_FORCED_INLINE bool is_not_overflow(std::size_t hash) const {
         return !this->is_overflow(hash);
     }
 
-    inline bool is_equals(std::size_t pos, std::size_t hash) {
+    JSTD_FORCED_INLINE bool is_equals(std::size_t pos, std::size_t hash) {
         assert(pos < kGroupSize);
         const ctrl_type * ctrl = &ctrls[pos];
         return ctrl->is_equals(hash);
     }
 
-    inline bool is_equals64(std::size_t pos, std::size_t hash) {
+    JSTD_FORCED_INLINE bool is_equals64(std::size_t pos, std::size_t hash) {
         assert(pos < kGroupSize);
         const ctrl_type * ctrl = &ctrls[pos];
         return ctrl->is_equals64(hash);
     }
 
-    inline void set_empty(std::size_t pos) {
+    JSTD_FORCED_INLINE void set_empty(std::size_t pos) {
         assert(pos < kGroupSize);
         ctrl_type * ctrl = &ctrls[pos];
         ctrl->set_empty();
     }
 
-    inline void set_sentinel() {
+    JSTD_FORCED_INLINE void set_sentinel() {
         ctrl_type * ctrl = &ctrls[kGroupSize - 1];
         ctrl->set_sentinel();
     }
 
-    inline void set_used(std::size_t pos, std::size_t hash) {
+    JSTD_FORCED_INLINE void set_used(std::size_t pos, std::size_t hash) {
         assert(pos < kGroupSize);
         ctrl_type * ctrl = &ctrls[pos];
         ctrl->set_used(hash);
     }
 
-    inline void set_used64(std::size_t pos, std::size_t hash) {
+    JSTD_FORCED_INLINE void set_used64(std::size_t pos, std::size_t hash) {
         assert(pos < kGroupSize);
         ctrl_type * ctrl = &ctrls[pos];
         ctrl->set_used64(hash);
     }
 
-    inline void set_overflow(std::size_t hash) {
+    JSTD_FORCED_INLINE void set_overflow(std::size_t hash) {
         ctrl_type * ctrl = &ctrls[kGroupSize];
         std::size_t pos = hash % std::size_t(CHAR_BIT);
         value_type value = (ctrl->value() | static_cast<value_type>(std::size_t(1) << pos));
         ctrl->set_value(value);
     }
 
-    inline void clear_overflow() {
+    JSTD_FORCED_INLINE void clear_overflow() {
         ctrl_type * ctrl = &ctrls[kGroupSize];
         ctrl->set_value(0);
     }
 
-    inline std::uint32_t match_empty() const {
+    JSTD_FORCED_INLINE std::uint32_t match_empty() const {
         // Latency = 6
         __m128i ctrl_bits = _load_data();
         //__COMPILER_BARRIER();
@@ -373,12 +386,12 @@ public:
         return static_cast<std::uint32_t>(mask & 0x7FFFU);
     }
 
-    inline std::uint32_t match_used() const {
+    JSTD_FORCED_INLINE std::uint32_t match_used() const {
         std::uint32_t mask = this->match_empty();
         return static_cast<std::uint32_t>((~mask) & 0x7FFFU);
     }
 
-    inline std::uint32_t match_hash(std::size_t hash) const {
+    JSTD_FORCED_INLINE std::uint32_t match_hash(std::size_t hash) const {
         // Latency = 6
         __m128i ctrl_bits  = _load_data();
         //__COMPILER_BARRIER();

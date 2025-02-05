@@ -982,24 +982,28 @@ public:
     ///
     /// For iterator
     ///
-    inline ctrl_type * ctrl_at(size_type ctrl_index) noexcept {
+    JSTD_FORCED_INLINE
+    ctrl_type * ctrl_at(size_type ctrl_index) noexcept {
         assert(ctrl_index <= this->ctrl_capacity());
         return (this->ctrls() + std::ptrdiff_t(ctrl_index));
     }
 
-    inline const ctrl_type * ctrl_at(size_type ctrl_index) const noexcept {
+    JSTD_FORCED_INLINE
+    const ctrl_type * ctrl_at(size_type ctrl_index) const noexcept {
         assert(ctrl_index <= this->ctrl_capacity());
         return (this->ctrls() + std::ptrdiff_t(ctrl_index));
     }
 
-    inline group_type * group_at(size_type group_index) noexcept {
+    JSTD_FORCED_INLINE
+    group_type * group_at(size_type group_index) noexcept {
         assert(group_index <= this->group_capacity());
         group_type * group_start = this->groups();
         JSTD_ASSUME(group_start != nullptr);
         return (group_start + std::ptrdiff_t(group_index));
     }
 
-    inline const group_type * group_at(size_type group_index) const noexcept {
+    JSTD_FORCED_INLINE
+    const group_type * group_at(size_type group_index) const noexcept {
         assert(group_index <= this->group_capacity());
         const group_type * group_start = this->groups();
         JSTD_ASSUME(group_start != nullptr);
@@ -1038,14 +1042,16 @@ public:
         return (group_start + std::ptrdiff_t(group_index));
     }
 
-    inline slot_type * slot_at(size_type slot_index) noexcept {
+    JSTD_FORCED_INLINE
+    slot_type * slot_at(size_type slot_index) noexcept {
         assert(slot_index <= this->slot_capacity());
         slot_type * slot_start = this->slots();
         JSTD_ASSUME(slot_start != nullptr);
         return (slot_start + std::ptrdiff_t(slot_index));
     }
 
-    inline const slot_type * slot_at(size_type slot_index) const noexcept {
+    JSTD_FORCED_INLINE
+    const slot_type * slot_at(size_type slot_index) const noexcept {
         assert(slot_index <= this->slot_capacity());
         const slot_type * slot_start = this->slots();
         JSTD_ASSUME(slot_start != nullptr);
@@ -2198,9 +2204,9 @@ private:
                     Prefetch_Read_T0((const void *)slot_base);
                 }
                 do {
-                    size_type match_pos = static_cast<size_type>(BitUtils::bsf32(match_mask));
+                    std::uint32_t match_pos = BitUtils::bsf32(match_mask);
                     //const slot_type * slot = slot_base + match_pos;
-                    if (likely(bool(this->key_equal_(key, slot_base[match_pos].value.first)))) {
+                    if (likely(bool(key_equal()(key, slot_base[match_pos].value.first)))) {
                         return { group, match_pos, (slot_base + match_pos) };
                     }
                     match_mask = BitUtils::clearLowBit32(match_mask);

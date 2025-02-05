@@ -30,7 +30,7 @@ struct uint64_struct448_murmur
     }
 
     // MurmurHash3’s 64-bit finalizer.
-    static std::uint64_t hash_key(const key_type & key)
+    static inline std::uint64_t hash_key(const key_type & key)
     {
         std::uint64_t result = key;
         result ^= result >> 33;
@@ -41,7 +41,7 @@ struct uint64_struct448_murmur
         return result;
     }
 
-    static bool cmpr_keys(const key_type & key_1, const key_type & key_2)
+    static inline bool cmpr_keys(const key_type & key_1, const key_type & key_2)
     {
         return (key_1 == key_2);
     }

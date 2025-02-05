@@ -139,6 +139,11 @@
     } while (0)
 #endif // JSTD_ASSUME
 
+// Thread sanitizer
+#if __has_feature(thread_sanitizer) || defined(__SANITIZE_THREAD__)
+#define JSTD_THREAD_SANITIZER
+#endif
+
 #if defined(__GNUC__) && !defined(__GNUC_STDC_INLINE__) && !defined(__GNUC_GNU_INLINE__)
   #define __GNUC_GNU_INLINE__   1
 #endif
