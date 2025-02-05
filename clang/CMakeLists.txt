@@ -212,9 +212,9 @@ if (NOT MSVC)
     # -fexec-charset=gbk -finput-charset=gbk
     set(CMAKE_CXX_COMPILER              "/usr/bin/clang++")
     if (CMakeIPOEnable)
-        set(CMAKE_CXX_FLAGS_DEFAULT     "${CMAKE_CXX_FLAGS} -std=c++17 -stdlib=libstdc++ -march=native -mtune=native -finput-charset=utf-8 -flto=thin -fPIC -fpic")
+        set(CMAKE_CXX_FLAGS_DEFAULT     "${CMAKE_CXX_FLAGS} -std=c++17 -stdlib=libstdc++17 -march=native -mtune=native -finput-charset=utf-8 -flto=thin -fPIC -fpic")
     else()
-        set(CMAKE_CXX_FLAGS_DEFAULT     "${CMAKE_CXX_FLAGS} -std=c++17 -stdlib=libstdc++ -march=native -mtune=native -finput-charset=utf-8 -fPIC -fpic")
+        set(CMAKE_CXX_FLAGS_DEFAULT     "${CMAKE_CXX_FLAGS} -std=c++17 -stdlib=libstdc++17 -march=native -mtune=native -finput-charset=utf-8 -fPIC -fpic")
     endif()
     set(CMAKE_CXX_FLAGS_RELEASE         "${CMAKE_CXX_FLAGS_DEFAULT} -O3 -DNDEBUG")
     set(CMAKE_CXX_FLAGS_DEBUG           "${CMAKE_CXX_FLAGS_DEFAULT} -g -pg -D_DEBUG")
@@ -233,7 +233,7 @@ if (NOT MSVC)
     ## Clang C++ lib: libc++
     ## set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -lc++ -stdlib=libc++")
     ## GCC C++ lib: GLibCxx
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -lstdc++ -stdlib=libstdc++")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -lstdc++ -stdlib=libstdc++17")
 
     ##
     ## See: https://cloud.tencent.com/developer/ask/101584
@@ -245,6 +245,12 @@ if (NOT MSVC)
         # using Clang
         if (CONAN_LIBCXX STREQUAL "libstdc++11")
             add_definitions(-D_GLIBCXX_USE_CXX11_ABI=1)
+        elseif (CONAN_LIBCXX STREQUAL "libstdc++14")
+            add_definitions(-D_GLIBCXX_USE_CXX14_ABI=1)
+        elseif (CONAN_LIBCXX STREQUAL "libstdc++17")
+            add_definitions(-D_GLIBCXX_USE_CXX17_ABI=1)
+        elseif (CONAN_LIBCXX STREQUAL "libstdc++20")
+            add_definitions(-D_GLIBCXX_USE_CXX20_ABI=1)
         elseif (CONAN_LIBCXX STREQUAL "libstdc++")
             add_definitions(-D_GLIBCXX_USE_CXX11_ABI=0)
         endif()
