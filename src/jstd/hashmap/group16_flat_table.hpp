@@ -2381,7 +2381,7 @@ private:
                 std::is_constructible<mapped_type, MappedT &&>::value)>::type * = nullptr>
     JSTD_FORCED_INLINE
     std::pair<iterator, bool> emplace_impl(KeyT && key, MappedT && value) {
-        auto find_info = this->find_or_insert(key);
+        auto find_info = this->find_or_insert(std::forward<KeyT>(key));
         size_type slot_index = find_info.first;
         bool need_insert = find_info.second;
         if (need_insert) {

@@ -581,13 +581,13 @@ public:
 
     template <typename KeyT, typename ... Args>
     JSTD_FORCED_INLINE
-    typename std::enable_if<(!jstd::are_transparent<KeyT, Hash, KeyEqual>::value ||
-                             (std::is_convertible<key_type, const KeyT &>::value ||
-                              std::is_convertible<key_type, KeyT &&>::value)) &&
-                             !std::is_same<key_type, KeyT>::value &&
-                             !std::is_convertible<KeyT, iterator>::value &&
-                             !std::is_convertible<KeyT, const_iterator>::value,
-                              std::pair<iterator, bool> >::type
+    typename std::enable_if<jstd::are_transparent<KeyT, Hash, KeyEqual>::value &&
+                           (!std::is_convertible<key_type, const KeyT &>::value &&
+                            !std::is_convertible<key_type, KeyT &&>::value) &&
+                            !std::is_same<key_type, KeyT>::value &&
+                            !std::is_convertible<KeyT, iterator>::value &&
+                            !std::is_convertible<KeyT, const_iterator>::value,
+                             iterator >::type
     try_emplace(const_iterator hint, KeyT && key, Args && ... args) {
         return table_.try_emplace(hint, std::forward<KeyT>(key), std::forward<Args>(args)...);
     }
@@ -595,13 +595,13 @@ public:
     // For compatibility with versions below C++17 that do not support T::is_transparent
     template <typename KeyT, typename ... Args>
     JSTD_FORCED_INLINE
-    typename std::enable_if<!jstd::are_transparent<KeyT, Hash, KeyEqual>::value ||
-                            (std::is_convertible<key_type, const KeyT &>::value ||
-                             std::is_convertible<key_type, KeyT &&>::value) &&
-                            !std::is_same<key_type, KeyT>::value &&
-                            !std::is_convertible<KeyT, iterator>::value &&
-                            !std::is_convertible<KeyT, const_iterator>::value,
-                             iterator >::type
+    typename std::enable_if<(!jstd::are_transparent<KeyT, Hash, KeyEqual>::value ||
+                             (std::is_convertible<key_type, const KeyT &>::value ||
+                              std::is_convertible<key_type, KeyT &&>::value)) &&
+                             !std::is_same<key_type, KeyT>::value &&
+                             !std::is_convertible<KeyT, iterator>::value &&
+                             !std::is_convertible<KeyT, const_iterator>::value,
+                              std::pair<iterator, bool> >::type
     try_emplace(const_iterator hint, KeyT && key, Args && ... args) {
         return table_.try_emplace(hint, std::forward<KeyT>(key), std::forward<Args>(args)...);
     }
