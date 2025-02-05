@@ -113,7 +113,8 @@ public:
     typedef Hash                                hasher;
     typedef KeyEqual                            key_equal;
     typedef Allocator                           allocator_type;
-    typedef typename Hash::result_type          hash_result_t;
+    //typedef typename Hash::result_type          hash_result_t;
+    typedef std::size_t                         hash_result_t;
 
     typedef value_type &                        reference;
     typedef value_type const &                  const_reference;

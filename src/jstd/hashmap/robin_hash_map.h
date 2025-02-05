@@ -188,7 +188,8 @@ public:
     typedef Hash                                    hasher;
     typedef KeyEqual                                key_equal;
     typedef Allocator                               allocator_type;
-    typedef typename Hash::result_type              hash_result_t;
+    //typedef typename Hash::result_type              hash_result_t;
+    typedef std::size_t                             hash_result_t;
     typedef typename hash_policy_selector<Hash>::type
                                                     hash_policy_t;
     typedef LayoutPolicy                            layout_policy_t;
