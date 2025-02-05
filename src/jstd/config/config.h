@@ -15,7 +15,7 @@
 
 #include "jstd/config/config_pre.h"
 
- #include "jstd/version.h"
+#include "jstd/version.h"
 
 // Could not change their order.
 #include "jstd/basic/platform.h"
