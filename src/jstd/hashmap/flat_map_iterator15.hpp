@@ -151,10 +151,12 @@ public:
             ++this->pos_;
             if (this->group_->is_empty(this->pos_))
                 continue;
-            if (likely(!(this->group_->is_sentinel(this->pos_))))
+            if (likely(!(this->group_->is_sentinel(this->pos_)))) {
                 return;
-            else
+            } else {
                 this->slot_ = nullptr;
+                return;
+            }
         }
 
         for (;;) {
@@ -190,10 +192,12 @@ public:
             --this->pos_;
             if (this->group_->is_empty(this->pos_))
                 continue;
-            if (likely(!(this->group_->is_sentinel(this->pos_))))
+            if (likely(!(this->group_->is_sentinel(this->pos_)))) {
                 return;
-            else
+            } else {
                 this->slot_ = nullptr;
+                return;
+            }
         }
 
         for (;;) {
@@ -545,10 +549,12 @@ private:
             ++this->ctrl_;
             if (this->ctrl_->is_empty())
                 continue;
-            if (likely(!(this->ctrl_->is_sentinel())))
+            if (likely(!(this->ctrl_->is_sentinel()))) {
                 return;
-            else
+            } else {
                 this->slot_ = nullptr;
+                return;
+            }
         }
 
         for (;;) {
@@ -587,10 +593,12 @@ private:
             --this->ctrl_;
             if (this->ctrl_->is_empty())
                 continue;
-            if (likely(!(this->ctrl_->is_sentinel())))
+            if (likely(!(this->ctrl_->is_sentinel()))) {
                 return;
-            else
+            } else {
                 this->slot_ = nullptr;
+                return;
+            }
         }
 
         for (;;) {
