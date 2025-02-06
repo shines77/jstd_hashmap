@@ -598,7 +598,7 @@ private:
                 }
                 return;
             }
-            this->ctrl_ += static_cast<difference_type>(kGroupWidth)
+            this->ctrl_ += static_cast<difference_type>(kGroupWidth);
             this->slot_ += static_cast<difference_type>(kGroupSize);
         }
     }
