@@ -179,9 +179,6 @@ public:
 
     JSTD_FORCED_INLINE
     void decrement() noexcept {
-        if (this->pos() == kGroupSize) {
-            --this->pos_;
-        }
         for (;;) {
             --this->slot_;
             if (this->pos() == 0) {
@@ -214,7 +211,7 @@ public:
             }
             --this->group_;
             //this->pos_ = kGroupSize - 1;
-            this->slot_ += static_cast<difference_type>(kGroupSize);
+            this->slot_ -= static_cast<difference_type>(kGroupSize);
         }
     }
 
@@ -577,19 +574,14 @@ private:
     }
 
     JSTD_FORCED_INLINE
-    void decrement() noexcept {
-        std::uintptr_t pos = reinterpret_cast<std::uintptr_t>(this->ctrl()) % kGroupWidth;
-        if (pos == kGroupSize) {
-            --this->ctrl_;
-            --pos;
-        }
+    void decrement() noexcept {        
         for (;;) {
             --this->slot_;
+            std::uintptr_t pos = reinterpret_cast<std::uintptr_t>(this->ctrl()) % kGroupWidth;
             if (pos == 0) {
                 this->ctrl_ -= static_cast<difference_type>(kGroupWidth - (kGroupSize - 1));
                 break;
             }
-            --pos;
             --this->ctrl_;
             if (this->ctrl_->is_empty())
                 continue;
