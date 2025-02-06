@@ -334,6 +334,12 @@
     <ClInclude Include="..\..\..\src\jstd\hashmap\flat_map_iterator15.hpp">
       <Filter>src\hashmap</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\config\config_jstd.h">
+      <Filter>src\config</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\config\config_hw_use.h">
+      <Filter>src\config</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\src\jstd\dll_main.cpp">

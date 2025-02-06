@@ -139,7 +139,8 @@ public:
         return _ctrl;
     }
 
-    inline void increment() noexcept {
+    JSTD_FORCED_INLINE
+    void increment() noexcept {
         for (;;) {
             ++this->slot_;
             if (this->pos() == (kGroupSize - 1)) {
@@ -150,16 +151,17 @@ public:
             ++this->pos_;
             if (this->group_->is_empty(this->pos_))
                 continue;
-            if (unlikely(this->group_->is_sentinel(this->pos_)))
+            if (likely(!(this->group_->is_sentinel(this->pos_))))
+                return;
+            else
                 this->slot_ = nullptr;
-            return;
         }
 
         for (;;) {
             std::uint32_t used_mask = this->group_->match_used();
             if (used_mask != 0) {
                 std::uint32_t used_pos = BitUtils::bsf32(used_mask);
-                if (likely(!this->group_->is_sentinel(used_pos))) {
+                if (likely(!(this->group_->is_sentinel(used_pos)))) {
                     this->pos_ = static_cast<size_type>(used_pos);
                     this->slot_ += static_cast<difference_type>(used_pos);
                 } else {
@@ -173,7 +175,8 @@ public:
         }
     }
 
-    inline void decrement() noexcept {
+    JSTD_FORCED_INLINE
+    void decrement() noexcept {
         if (this->pos() == kGroupSize) {
             --this->pos_;
         }
@@ -187,16 +190,17 @@ public:
             --this->pos_;
             if (this->group_->is_empty(this->pos_))
                 continue;
-            if (unlikely(this->group_->is_sentinel(this->pos_)))
+            if (likely(!(this->group_->is_sentinel(this->pos_))))
+                return;
+            else
                 this->slot_ = nullptr;
-            return;
         }
 
         for (;;) {
             std::uint32_t used_mask = this->group_->match_used();
             if (used_mask != 0) {
                 std::uint32_t used_pos = BitUtils::bsr32(used_mask);
-                if (likely(!this->group_->is_sentinel(used_pos))) {
+                if (likely(!(this->group_->is_sentinel(used_pos)))) {
                     this->pos_ = static_cast<size_type>(used_pos);
                     this->slot_ -= (kGroupSize - 1) - static_cast<difference_type>(used_pos);
                 } else {
@@ -530,7 +534,8 @@ public:
     }
 
 private:
-    inline void increment() noexcept {
+    JSTD_FORCED_INLINE
+    void increment() noexcept {
         for (;;) {
             ++this->slot_;
             if ((reinterpret_cast<std::uintptr_t>(this->ctrl()) % kGroupWidth) == (kGroupSize - 1)) {
@@ -540,9 +545,10 @@ private:
             ++this->ctrl_;
             if (this->ctrl_->is_empty())
                 continue;
-            if (unlikely(this->ctrl_->is_sentinel()))
+            if (likely(!(this->ctrl_->is_sentinel())))
+                return;
+            else
                 this->slot_ = nullptr;
-            return;
         }
 
         for (;;) {
@@ -551,7 +557,7 @@ private:
             std::uint32_t used_mask = group->match_used();
             if (used_mask != 0) {
                 std::uint32_t used_pos = BitUtils::bsf32(used_mask);
-                if (likely(!group->is_sentinel(used_pos))) {
+                if (likely(!(group->is_sentinel(used_pos)))) {
                     this->ctrl_ += static_cast<difference_type>(used_pos);
                     this->slot_ += static_cast<difference_type>(used_pos);
                 } else {
@@ -564,7 +570,8 @@ private:
         }
     }
 
-    inline void decrement() noexcept {
+    JSTD_FORCED_INLINE
+    void decrement() noexcept {
         std::uintptr_t pos = reinterpret_cast<std::uintptr_t>(this->ctrl()) % kGroupWidth;
         if (pos == kGroupSize) {
             --this->ctrl_;
@@ -580,9 +587,10 @@ private:
             --this->ctrl_;
             if (this->ctrl_->is_empty())
                 continue;
-            if (unlikely(this->ctrl_->is_sentinel()))
+            if (likely(!(this->ctrl_->is_sentinel())))
+                return;
+            else
                 this->slot_ = nullptr;
-            return;
         }
 
         for (;;) {
@@ -595,7 +603,7 @@ private:
             std::uint32_t used_mask = group->match_used();
             if (used_mask != 0) {
                 std::uint32_t used_pos = BitUtils::bsr32(used_mask);
-                if (likely(!group->is_sentinel(used_pos))) {
+                if (likely(!(group->is_sentinel(used_pos)))) {
                     this->ctrl_ -= (kGroupSize - 1) - static_cast<difference_type>(used_pos);
                     this->slot_ -= (kGroupSize - 1) - static_cast<difference_type>(used_pos);
                 } else {

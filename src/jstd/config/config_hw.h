@@ -1,3 +1,4 @@
+
 #ifndef JSTD_CONFIG_CONFIG_HW_H
 #define JSTD_CONFIG_CONFIG_HW_H
 
@@ -5,25 +6,11 @@
 #pragma once
 #endif
 
-#define JSTD_USE_HW_DETECT      1
+#include "jstd/config/config_hw_use.h"
 
-#define JSTD_ALWAYS_USE_SIMD    1
-
-#define JSTD_USE_MMX            1
-#define JSTD_USE_SSE            1
-#define JSTD_USE_SSE2           1
-#define JSTD_USE_AES            1
-#define JSTD_USE_SSE3           1
-#define JSTD_USE_SSSE3          1
-#define JSTD_USE_SSE4_1         1
-#define JSTD_USE_SSE4_2         1
-#define JSTD_USE_AVX            1
-#define JSTD_USE_AVX2           1
-
-#define JSTD_USE_F16C           1
-#define JSTD_USE_RDRND          1
-#define JSTD_USE_SHA            1
-
+//
+// JSTD_USE_HW_DETECT define in "jstd/config/config_hw_use.h"
+//
 #if defined(JSTD_USE_HW_DETECT) && (JSTD_USE_HW_DETECT != 0)
 #include "jstd/config/config_hw_detect.h"
 #endif
@@ -38,7 +25,7 @@
 #define JSTD_HAVE_MMX
 #elif defined(_M_X64) || (defined(_M_IX86_FP) && (_M_IX86_FP >= 1))
 #define JSTD_HAVE_MMX
-#endif
+#endif // JSTD_HAVE_MMX
 
 // SSE
 
@@ -266,6 +253,25 @@
 #elif defined(__AVX5124VPCLMULQDQ__) || defined(HAVE_AVX5124VPCLMULQDQ)
 #define JSTD_HAVE_AVX5124VPCLMULQDQ
 #endif
+
+//
+// This is the only predef define needed for boost, so pull it
+// out here so we don't need to include all of predef.
+//
+#if defined(__ARM_ARCH) || defined(__TARGET_ARCH_ARM) || \
+    defined(__TARGET_ARCH_THUMB) || defined(_M_ARM) || \
+    defined(__arm__) || defined(__arm64) || defined(__thumb__) || \
+    defined(_M_ARM64) || defined(__aarch64__) || defined(__AARCH64EL__) || \
+    defined(__ARM_ARCH_7__) || defined(__ARM_ARCH_7A__) || \
+    defined(__ARM_ARCH_7R__) || defined(__ARM_ARCH_7M__) || \
+    defined(__ARM_ARCH_6K__) || defined(__ARM_ARCH_6Z__) || \
+    defined(__ARM_ARCH_6KZ__) || defined(__ARM_ARCH_6T2__) || \
+    defined(__ARM_ARCH_5TE__) || defined(__ARM_ARCH_5TEJ__) || \
+    defined(__ARM_ARCH_4T__) || defined(__ARM_ARCH_4__)
+#define JSTD_ARCH_ARM   1
+#else
+#define JSTD_ARCH_ARM   0
+#endif // JSTD_ARCH_ARM
 
 //
 // JSTD_HAVE_ARM_ACLE is used for compile-time detection of ACLE (ARM

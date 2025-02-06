@@ -37,7 +37,9 @@
     <ClInclude Include="..\..\..\src\jstd\config\config.h" />
     <ClInclude Include="..\..\..\src\jstd\config\config_cxx.h" />
     <ClInclude Include="..\..\..\src\jstd\config\config_hw.h" />
+    <ClInclude Include="..\..\..\src\jstd\config\config_hw_use.h" />
     <ClInclude Include="..\..\..\src\jstd\config\config_hw_detect.h" />
+    <ClInclude Include="..\..\..\src\jstd\config\config_jstd.h" />
     <ClInclude Include="..\..\..\src\jstd\config\config_post.h" />
     <ClInclude Include="..\..\..\src\jstd\config\config_pre.h" />
     <ClInclude Include="..\..\..\src\jstd\hasher\fnv1a.h" />

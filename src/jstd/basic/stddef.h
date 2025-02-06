@@ -48,7 +48,7 @@
 // update the condition if the version is not accurate. (Andrey Semashev)
 //
 #if (defined(__GNUC__) && ((__GNUC__ == 2 && __GNUC_MINOR__ >= 96) || (__GNUC__ >= 3))) \
-    || (defined(__GNUC__) && (__INTEL_CXX_VERSION >= 800))
+    || ((defined(__GNUC__) && (__INTEL_CXX_VERSION >= 800)))
   #define SUPPORT_LIKELY        1
 #elif defined(__clang__)
   //
@@ -74,23 +74,26 @@
 //
 #if defined(SUPPORT_LIKELY) && (SUPPORT_LIKELY != 0)
 #ifndef likely
-#define likely(x)               __builtin_expect(!!(x), 1)
+//#define likely(expr)                __builtin_expect(!!(expr), 1)
+#define likely(expr)                __builtin_expect((expr), 1)
 #endif
 #ifndef unlikely
-#define unlikely(x)             __builtin_expect(!!(x), 0)
+//#define unlikely(expr)              __builtin_expect(!!(expr), 0)
+#define unlikely(expr)              __builtin_expect((expr), 0)
 #endif
 #ifndef switch_likely
-#define switch_likely(x, v)     __builtin_expect(!!(x), (v))
+//#define switch_likely(expr, v)      __builtin_expect(!!(expr), (v))
+#define switch_likely(expr, v)      __builtin_expect((expr), (v))
 #endif
 #else
 #ifndef likely
-#define likely(x)               (x)
+#define likely(expr)                (expr)
 #endif
 #ifndef unlikely
-#define unlikely(x)             (x)
+#define unlikely(expr)              (expr)
 #endif
 #ifndef switch_likely
-#define switch_likely(x, v)     (x)
+#define switch_likely(expr, v)      (expr)
 #endif
 #endif // likely() & unlikely()
 
@@ -140,9 +143,11 @@
 #endif // JSTD_ASSUME
 
 // Thread sanitizer
+#ifndef JSTD_THREAD_SANITIZER
 #if __has_feature(thread_sanitizer) || defined(__SANITIZE_THREAD__)
 #define JSTD_THREAD_SANITIZER
 #endif
+#endif // JSTD_THREAD_SANITIZER
 
 #if defined(__GNUC__) && !defined(__GNUC_STDC_INLINE__) && !defined(__GNUC_GNU_INLINE__)
   #define __GNUC_GNU_INLINE__   1
@@ -151,27 +156,58 @@
 /**
  * For inline, force-inline and no-inline define.
  */
+#ifndef JSTD_FORCED_INLINE
+#  if defined(_MSC_VER)
+#    define JSTD_FORCED_INLINE  __forceinline
+#  elif defined(__GNUC__) && (__GNUC__ > 3)
+     // Clang also defines __GNUC__ (as 4)
+#    define JSTD_FORCED_INLINE  inline __attribute__((__always_inline__))
+#  else
+#    define JSTD_FORCED_INLINE  inline
+#  endif
+#endif // JSTD_FORCED_INLINE
+
+#ifndef JSTD_NO_INLINE
+#  if defined(_MSC_VER)
+#    define JSTD_NO_INLINE      __declspec(noinline)
+#  elif defined(__GNUC__) && __GNUC__ > 3
+     // Clang also defines __GNUC__ (as 4)
+#    if defined(__CUDACC__)
+       // nvcc doesn't always parse __noinline__,
+       // see: https://svn.boost.org/trac/boost/ticket/9392
+#      define JSTD_NO_INLINE    __attribute__((noinline))
+#    elif defined(__HIP__)
+       // See https://github.com/boostorg/config/issues/392
+#      define JSTD_NO_INLINE    __attribute__((noinline))
+#    else
+#      define JSTD_NO_INLINE    __attribute__((__noinline__))
+#    endif
+#  else
+#    define JSTD_NO_INLINE
+#  endif
+#endif // JSTD_NO_INLINE
+
 #if defined(_MSC_VER) && !defined(__clang__)
 
 #define JSTD_INLINE             __inline
-#define JSTD_FORCED_INLINE      __forceinline
-#define JSTD_NO_INLINE          __declspec(noinline)
+//#define JSTD_FORCED_INLINE      __forceinline
+//#define JSTD_NO_INLINE          __declspec(noinline)
 
 #define JSTD_RESTRICT           __restrict
 
-#elif (defined(__GNUC__) || defined(__clang__)) && __has_attribute(always_inline)
+#elif (defined(__GNUC__) || defined(__clang__))
 
 #define JSTD_INLINE             inline __attribute__((gnu_inline))
-#define JSTD_FORCED_INLINE      inline __attribute__((always_inline))
-#define JSTD_NO_INLINE          __attribute__((noinline))
+//#define JSTD_FORCED_INLINE      inline __attribute__((always_inline))
+//#define JSTD_NO_INLINE          __attribute__((noinline))
 
 #define JSTD_RESTRICT           __restrict__
 
 #else // Unknown compiler
 
 #define JSTD_INLINE             inline
-#define JSTD_FORCED_INLINE      inline
-#define JSTD_NO_INLINE
+//#define JSTD_FORCED_INLINE      inline
+//#define JSTD_NO_INLINE
 
 #define JSTD_RESTRICT
 
