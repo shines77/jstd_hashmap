@@ -51,9 +51,10 @@
 
 #pragma once
 
-#include <type_traits>
-#include <utility>      // For std::pair<F, S>
-#include <memory>       // For std::allocator<T>
+#include "jstd/basic/stddef.h"
+
+#include <cstdint>
+#include <cstddef>
 
 namespace jstd {
 
@@ -85,7 +86,7 @@ public:
      * probing (in practice, full-table probing will only happen with very small
      * arrays).
      */
-    inline bool next_bucket(std::size_t bucket_mask) noexcept {
+    JSTD_FORCED_INLINE bool next_bucket(std::size_t bucket_mask) noexcept {
         step_ += 1;
         index_ = (index_ + step_) & bucket_mask;
         return (step_ <= bucket_mask);

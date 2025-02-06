@@ -153,7 +153,7 @@ public:
     }
 
     static JSTD_FORCED_INLINE std::uint8_t reduced_hash(std::size_t hash) {
-        return static_cast<std::uint8_t>(repeated_hash(hash) & kHashMask);
+        return static_cast<std::uint8_t>(repeated_hash(hash));
     }
 
     static JSTD_FORCED_INLINE std::size_t hash_bits64(std::size_t hash) {
