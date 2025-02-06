@@ -59,6 +59,7 @@
 #include <assert.h>
 
 #define ITERATOR15_USE_GROUP_SCAN  0
+#define ITERATOR15_USE_LOCATOR15   0
 
 namespace jstd {
 
@@ -168,6 +169,9 @@ public:
     }
 
     inline void decrement() noexcept {
+        if (this->pos() == kGroupSize) {
+            --this->pos_;
+        }
         for (;;) {
             --this->slot_;
             if (this->pos() == 0) {
@@ -207,6 +211,8 @@ protected:
     const slot_type *   slot_;
 };
 
+#if ITERATOR15_USE_LOCATOR15
+
 template <typename HashMap, typename T, bool IsIndirectKV /* = false */>
 class flat_map_iterator15 {
 public:
@@ -244,12 +250,12 @@ protected:
 
 public:
     flat_map_iterator15() noexcept : locator_() {}
+
     flat_map_iterator15(slot_type * slot) noexcept
-        : locator_(nullptr, 0, const_cast<const slot_type *>(slot)) {
-    }
+        : locator_(nullptr, 0, const_cast<const slot_type *>(slot)) {}
     flat_map_iterator15(const slot_type * slot) noexcept
-        : locator_(nullptr, 0, slot) {
-    }
+        : locator_(nullptr, 0, slot) {}
+
     flat_map_iterator15(const group_type * group, size_type pos, const slot_type * slot) noexcept
         : locator_(group, pos, slot) {}
 
@@ -257,11 +263,10 @@ public:
         : locator_(locator) {}
 
     flat_map_iterator15(const flat_map_iterator15 & src) noexcept
-        : locator_(src.locator()) {
-    }
+        : locator_(src.locator()) {}
+
     flat_map_iterator15(const opp_flat_map_iterator & src) noexcept
-        : locator_(src.locator()) {
-    }
+        : locator_(src.locator()) {}
 
     inline flat_map_iterator15 & operator = (const flat_map_iterator15 & rhs) noexcept {
         this->locator_ = rhs.locator();
@@ -374,6 +379,233 @@ private:
     }
 };
 
+#else // !(ITERATOR15_USE_LOCATOR15 != 0)
+
+template <typename HashMap, typename T, bool IsIndirectKV /* = false */>
+class flat_map_iterator15 {
+public:
+    using iterator_category = std::forward_iterator_tag;
+
+    using value_type = T;
+    using raw_value_type = typename std::remove_const<T>::type;
+    using pointer = raw_value_type *;
+    using const_pointer = const raw_value_type *;
+    using reference = raw_value_type &;
+    using const_reference = const raw_value_type &;
+
+    using mutable_value_type = raw_value_type;
+    using const_value_type = typename std::add_const<raw_value_type>::type;
+
+    using opp_value_type = typename std::conditional<std::is_const<value_type>::value,
+                                                     mutable_value_type,
+                                                     const_value_type>::type;
+    using opp_flat_map_iterator = flat_map_iterator15<HashMap, opp_value_type, IsIndirectKV>;
+
+    using hashmap_type = HashMap;
+    using ctrl_type = typename HashMap::ctrl_type;
+    using group_type = typename HashMap::group_type;
+    using slot_type = typename HashMap::slot_type;
+    using locator_t = typename HashMap::locator_t;
+    using size_type = typename HashMap::size_type;
+    using ssize_type = typename HashMap::ssize_type;
+    using difference_type = typename HashMap::difference_type;
+
+    static constexpr const size_type kGroupSize  = group_type::kGroupSize;
+    static constexpr const size_type kGroupWidth = group_type::kGroupWidth;
+
+protected:
+    const ctrl_type *   ctrl_;
+    const slot_type *   slot_;
+
+public:
+    flat_map_iterator15() noexcept : ctrl_(nullptr), slot_(nullptr) {}
+
+    flat_map_iterator15(slot_type * slot) noexcept
+        : ctrl_(nullptr), slot_(const_cast<const slot_type *>(slot)) {}
+    flat_map_iterator15(const slot_type * slot) noexcept
+        : ctrl_(nullptr), slot_(slot) {}
+
+    flat_map_iterator15(const group_type * group, size_type pos, const slot_type * slot) noexcept
+        : ctrl_(const_cast<const ctrl_type *>(
+                reinterpret_cast<ctrl_type *>(const_cast<group_type *>(group)) + pos)),
+          slot_(slot) {}
+
+    flat_map_iterator15(const locator_t & locator) noexcept
+        : flat_map_iterator15(locator.group(), locator.pos(), locator.slot()) {}
+
+    flat_map_iterator15(const flat_map_iterator15 & src) noexcept
+        : ctrl_(src.ctrl()), slot_(src.slot()) {}
+
+    flat_map_iterator15(const opp_flat_map_iterator & src) noexcept
+        : ctrl_(src.ctrl()), slot_(src.slot()) {}
+
+    inline flat_map_iterator15 & operator = (const flat_map_iterator15 & rhs) noexcept {
+        this->ctrl_ = rhs.ctrl();
+        this->slot_ = rhs.slot();
+        return *this;
+    }
+
+    inline flat_map_iterator15 & operator = (const opp_flat_map_iterator & rhs) noexcept {
+        this->ctrl_ = rhs.ctrl();
+        this->slot_ = rhs.slot();
+        return *this;
+    }
+
+    friend inline bool operator == (const flat_map_iterator15 & lhs, const flat_map_iterator15 & rhs) noexcept {
+        return (lhs.slot() == rhs.slot());
+    }
+
+    friend inline bool operator != (const flat_map_iterator15 & lhs, const flat_map_iterator15 & rhs) noexcept {
+        return (lhs.slot() != rhs.slot());
+    }
+
+    friend inline bool operator == (const flat_map_iterator15 & lhs, const opp_flat_map_iterator & rhs) noexcept {
+        return (lhs.slot() == rhs.slot());
+    }
+
+    friend inline bool operator != (const flat_map_iterator15 & lhs, const opp_flat_map_iterator & rhs) noexcept {
+        return (lhs.slot() != rhs.slot());
+    }
+
+    JSTD_FORCED_INLINE
+    flat_map_iterator15 & operator ++ () {
+        this->increment();
+        return *this;
+    }
+
+    JSTD_FORCED_INLINE
+    flat_map_iterator15 operator ++ (int) {
+        flat_map_iterator15 copy(*this);
+        ++(*this);
+        return copy;
+    }
+
+    JSTD_FORCED_INLINE
+    flat_map_iterator15 & operator -- () {
+        this->decrement();
+        return *this;
+    }
+
+    JSTD_FORCED_INLINE
+    flat_map_iterator15 operator -- (int) {
+        flat_map_iterator15 copy(*this);
+        --(*this);
+        return copy;
+    }
+
+    inline reference operator * () {
+        slot_type * _slot = this->slot();
+        return _slot->value;
+    }
+
+    inline const_reference operator * () const {
+        const slot_type * _slot = this->slot();
+        return _slot->value;
+    }
+
+    inline pointer operator -> () {
+        slot_type * _slot = this->slot();
+        return std::addressof(_slot->value);
+    }
+
+    inline const_pointer operator -> () const {
+        const slot_type * _slot = this->slot();
+        return std::addressof(_slot->value);
+    }
+
+    inline ctrl_type * ctrl() noexcept { return const_cast<ctrl_type *>(this->ctrl_); }
+    inline const ctrl_type * ctrl() const noexcept { return this->ctrl_; }
+
+    inline slot_type * slot() noexcept { return const_cast<slot_type *>(this->slot_); }
+    inline const slot_type * slot() const noexcept { return this->slot_; }
+
+    inline ssize_type index(const hashmap_type * hashmap) const noexcept {
+        assert(hashmap != nullptr);
+        return hashmap->ctrl_at(this->ctrl());
+    }
+
+private:
+    inline void increment() noexcept {
+        for (;;) {
+            ++this->slot_;
+            if ((reinterpret_cast<std::uintptr_t>(this->ctrl()) % kGroupWidth) == (kGroupSize - 1)) {
+                this->ctrl_ += static_cast<difference_type>(kGroupWidth - (kGroupSize - 1));
+                break;
+            }
+            ++this->ctrl_;
+            if (this->ctrl_->is_empty())
+                continue;
+            if (unlikely(this->ctrl_->is_sentinel()))
+                this->slot_ = nullptr;
+            return;
+        }
+
+        for (;;) {
+            const group_type * group = reinterpret_cast<group_type *>(this->ctrl());
+            assert(group != nullptr);
+            std::uint32_t used_mask = group->match_used();
+            if (used_mask != 0) {
+                std::uint32_t used_pos = BitUtils::bsf32(used_mask);
+                if (likely(!group->is_sentinel(used_pos))) {
+                    this->ctrl_ += static_cast<difference_type>(used_pos);
+                    this->slot_ += static_cast<difference_type>(used_pos);
+                } else {
+                    this->slot_ = nullptr;
+                }
+                return;
+            }
+            this->ctrl_ += static_cast<difference_type>(kGroupWidth);
+            this->slot_ += static_cast<difference_type>(kGroupSize);
+        }
+    }
+
+    inline void decrement() noexcept {
+        std::uintptr_t pos = reinterpret_cast<std::uintptr_t>(this->ctrl()) % kGroupWidth;
+        if (pos == kGroupSize) {
+            --this->ctrl_;
+            --pos;
+        }
+        for (;;) {
+            --this->slot_;
+            if (pos == 0) {
+                this->ctrl_ -= static_cast<difference_type>(kGroupWidth - (kGroupSize - 1));
+                break;
+            }
+            --pos;
+            --this->ctrl_;
+            if (this->ctrl_->is_empty())
+                continue;
+            if (unlikely(this->ctrl_->is_sentinel()))
+                this->slot_ = nullptr;
+            return;
+        }
+
+        for (;;) {
+            const group_type * group = reinterpret_cast<group_type *>(
+                    reinterpret_cast<ctrl_type *>(
+                        reinterpret_cast<std::uintptr_t>(this->ctrl()) & ~(kGroupWidth - 1)
+                    )
+                );
+            assert(group != nullptr);
+            std::uint32_t used_mask = group->match_used();
+            if (used_mask != 0) {
+                std::uint32_t used_pos = BitUtils::bsr32(used_mask);
+                if (likely(!group->is_sentinel(used_pos))) {
+                    this->ctrl_ -= (kGroupSize - 1) - static_cast<difference_type>(used_pos);
+                    this->slot_ -= (kGroupSize - 1) - static_cast<difference_type>(used_pos);
+                } else {
+                    this->slot_ = nullptr;
+                }
+                return;
+            }
+            this->ctrl_ += static_cast<difference_type>(kGroupWidth)
+            this->slot_ += static_cast<difference_type>(kGroupSize);
+        }
+    }
+};
+
+#endif // ITERATOR15_USE_LOCATOR15 != 0
+
 template <typename HashMap, typename T>
 class flat_map_iterator15<HashMap, T, true> {
 public:
@@ -413,6 +645,7 @@ public:
         : slot_(const_cast<const slot_type *>(slot)) {}
     flat_map_iterator15(const slot_type * slot) noexcept
         : slot_(slot) {}
+
     flat_map_iterator15(const group_type * group, size_type pos, const slot_type * slot) noexcept
         : slot_(slot) {}
 
