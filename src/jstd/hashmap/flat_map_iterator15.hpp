@@ -95,7 +95,7 @@ public:
     }
 #endif
 
-#if 0
+#if 1
     flat_map_locator15(const flat_map_locator15 & locator) noexcept
         : group_(locator.group()), pos_(locator.pos()), slot_(locator.slot()) {}
 
@@ -619,8 +619,8 @@ private:
                 }
                 return;
             }
-            this->ctrl_ += static_cast<difference_type>(kGroupWidth);
-            this->slot_ += static_cast<difference_type>(kGroupSize);
+            this->ctrl_ -= static_cast<difference_type>(kGroupWidth);
+            this->slot_ -= static_cast<difference_type>(kGroupSize);
         }
     }
 };
