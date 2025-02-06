@@ -81,6 +81,7 @@ public:
     flat_map_locator15() noexcept : group_(nullptr), pos_(0), slot_(nullptr) {}
     flat_map_locator15(const group_type * group, size_type pos, const slot_type * slot) noexcept
         : group_(group), pos_(pos), slot_(slot) {}
+#if 0
     flat_map_locator15(const hashmap_type * hashmap, size_type index) noexcept
         : flat_map_locator15() {
         size_type group_index = index / kGroupWidth;
@@ -92,6 +93,9 @@ public:
         size_type slot_index = group_index * kGroupSize + group_pos;
         this->slot_ = hashmap->slot_at(slot_index);
     }
+#endif
+
+#if 0
     flat_map_locator15(const flat_map_locator15 & locator) noexcept
         : group_(locator.group()), pos_(locator.pos()), slot_(locator.slot()) {}
 
@@ -101,6 +105,7 @@ public:
         this->slot_   = rhs.slot();
         return *this;
     }
+#endif
 
     explicit operator bool() const noexcept {
         return (this->slot_ != nullptr);
