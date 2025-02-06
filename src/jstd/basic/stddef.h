@@ -75,15 +75,15 @@
 #if defined(SUPPORT_LIKELY) && (SUPPORT_LIKELY != 0)
 #ifndef likely
 //#define likely(expr)                __builtin_expect(!!(expr), 1)
-#define likely(expr)                __builtin_expect((expr), 1)
+#define likely(expr)                __builtin_expect(expr, 1)
 #endif
 #ifndef unlikely
 //#define unlikely(expr)              __builtin_expect(!!(expr), 0)
-#define unlikely(expr)              __builtin_expect((expr), 0)
+#define unlikely(expr)              __builtin_expect(expr, 0)
 #endif
 #ifndef switch_likely
 //#define switch_likely(expr, v)      __builtin_expect(!!(expr), (v))
-#define switch_likely(expr, v)      __builtin_expect((expr), (v))
+#define switch_likely(expr, v)      __builtin_expect(expr, (v))
 #endif
 #else
 #ifndef likely
