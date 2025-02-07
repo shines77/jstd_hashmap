@@ -369,7 +369,7 @@ public:
     }
 
     JSTD_FORCED_INLINE
-    std::uint32_t match_empty() const {
+    std::uint32_t match_empty() const noexcept {
         // Latency = 6
         __m128i ctrl_bits = load_metadata();
         //__COMPILER_BARRIER();
@@ -394,7 +394,7 @@ public:
     }
 
     static JSTD_FORCED_INLINE
-    __m128i make_hash_bits(std::size_t hash) const {
+    __m128i make_hash_bits(std::size_t hash) noexcept {
 #if GROUP15_USE_LOOK_UP_TABLE
         // Use lookup table
         int hash32 = ctrl_type::repeated_hash(hash);
@@ -406,7 +406,7 @@ public:
     }
 
     JSTD_FORCED_INLINE
-    std::uint32_t match_hash(std::size_t hash) const {
+    std::uint32_t match_hash(std::size_t hash) const noexcept {
         // Latency = 6
         __m128i ctrl_bits  = load_metadata();
         //__COMPILER_BARRIER();
@@ -423,7 +423,7 @@ public:
     }
 
     JSTD_FORCED_INLINE
-    std::uint32_t match_hash(const __m128i & hash_bits) const {
+    std::uint32_t match_hash(const __m128i & hash_bits) const noexcept {
         // Latency = 6
         __m128i ctrl_bits  = load_metadata();
         //__COMPILER_BARRIER();
