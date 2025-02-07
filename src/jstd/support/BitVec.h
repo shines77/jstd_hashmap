@@ -369,7 +369,7 @@ inline __m128i _mm_cmplt_epi8_fixed(__m128i A, __m128i B) {
     return _mm_cmplt_epi8(A, B);
 }
 
-struct SSE {
+namespace SSE {
 
 static inline
 uint32_t mm_cvtsi128_si32_low(__m128i m128)
@@ -383,6 +383,22 @@ uint32_t mm_cvtsi128_si32_high(__m128i m128)
 {
     uint32_t low32 = _mm_cvtsi128_si32(m128);
     return (low32 >> 16U);
+}
+
+static inline
+__m128i mm_set1_epi32(int i32)
+{
+    __m128i mm_i32 = _mm_cvtsi32_si128(i32);
+    __m128i result = _mm_shuffle_epi32(mm_i32, 0);
+    return result;
+}
+
+static inline
+__m128i mm_set1_epi64(int64_t i64)
+{
+    __m128i mm_i64 = _mm_cvtsi64_si128(i64);
+    __m128i result = _mm_unpacklo_epi64(mm_i64, mm_i64);
+    return result;
 }
 
 #if defined(JSTD_IS_X86_I386)
@@ -457,7 +473,7 @@ __m128i mm_insert_epi64(__m128i target, int64_t value)
 
 #endif // _MSC_VER
 
-struct AVX {
+namespace AVX {
 
 #if defined(__AVX__)
 
@@ -847,7 +863,7 @@ __m256i mm256_insert_epi64(__m256i target, int64_t value)
 
 }; // AVX Wrapper
 
-struct AVX512 {
+namespace AVX512 {
 
 #if !(defined(__AVX512__) && defined(__AVX512_FP16__))
 

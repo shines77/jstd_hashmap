@@ -262,7 +262,7 @@ public:
         else if (kEmptySlot == 0b11111111)
             return _mm_setones_si128();
         else
-            return _mm_set1_epi32((int)kEmptySlot32);
+            return SSE::mm_set1_epi32((int)kEmptySlot32);
     }
 
     JSTD_FORCED_INLINE
@@ -419,7 +419,7 @@ public:
 #if GROUP15_USE_LOOK_UP_TABLE
         // Use lookup table
         int hash32 = ctrl_type::repeated_hash(hash);
-        __m128i hash_bits = _mm_set1_epi32(hash32);
+        __m128i hash_bits = SSE::mm_set1_epi32(hash32);
 #else
         __m128i hash_bits = _mm_set1_epi8(static_cast<char>(hash));
 #endif
