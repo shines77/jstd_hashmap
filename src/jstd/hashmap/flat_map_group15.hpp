@@ -265,7 +265,7 @@ public:
         }
     }
 
-    JSTD_FORCED_INLINE __m128i _load_data() const {
+    JSTD_FORCED_INLINE __m128i load_metadata() const {
 #if defined(JSTD_THREAD_SANITIZER)
         /*
          * ThreadSanitizer complains on 1-byte atomic writes combined with
@@ -368,9 +368,10 @@ public:
         ctrl->set_value(0);
     }
 
-    JSTD_FORCED_INLINE std::uint32_t match_empty() const {
+    JSTD_FORCED_INLINE
+    std::uint32_t match_empty() const {
         // Latency = 6
-        __m128i ctrl_bits = _load_data();
+        __m128i ctrl_bits = load_metadata();
         //__COMPILER_BARRIER();
 
         __m128i empty_bits;
@@ -386,14 +387,28 @@ public:
         return static_cast<std::uint32_t>(mask & 0x7FFFU);
     }
 
-    JSTD_FORCED_INLINE std::uint32_t match_used() const {
+    JSTD_FORCED_INLINE
+    std::uint32_t match_used() const {
         std::uint32_t mask = this->match_empty();
         return static_cast<std::uint32_t>((~mask) & 0x7FFFU);
     }
 
-    JSTD_FORCED_INLINE std::uint32_t match_hash(std::size_t hash) const {
+    static JSTD_FORCED_INLINE
+    __m128i make_hash_bits(std::size_t hash) const {
+#if GROUP15_USE_LOOK_UP_TABLE
+        // Use lookup table
+        int hash32 = ctrl_type::repeated_hash(hash);
+        __m128i hash_bits = _mm_set1_epi32(hash32);
+#else
+        __m128i hash_bits = _mm_set1_epi8(static_cast<char>(hash));
+#endif
+        return hash_bits;
+    }
+
+    JSTD_FORCED_INLINE
+    std::uint32_t match_hash(std::size_t hash) const {
         // Latency = 6
-        __m128i ctrl_bits  = _load_data();
+        __m128i ctrl_bits  = load_metadata();
         //__COMPILER_BARRIER();
 #if GROUP15_USE_LOOK_UP_TABLE
         // Use lookup table
@@ -402,6 +417,16 @@ public:
 #else
         __m128i hash_bits = _mm_set1_epi8(static_cast<char>(hash));
 #endif
+        __m128i match_mask = _mm_cmpeq_epi8(ctrl_bits, hash_bits);
+        int mask = _mm_movemask_epi8(match_mask);
+        return static_cast<std::uint32_t>(mask & 0x7FFFU);
+    }
+
+    JSTD_FORCED_INLINE
+    std::uint32_t match_hash(const __m128i & hash_bits) const {
+        // Latency = 6
+        __m128i ctrl_bits  = load_metadata();
+        //__COMPILER_BARRIER();
         __m128i match_mask = _mm_cmpeq_epi8(ctrl_bits, hash_bits);
         int mask = _mm_movemask_epi8(match_mask);
         return static_cast<std::uint32_t>(mask & 0x7FFFU);

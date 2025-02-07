@@ -2193,10 +2193,12 @@ private:
     locator_t find_impl(const KeyT & key, size_type group_index0, std::size_t ctrl_hash) const {
         prober_type prober(group_index0);
 
+        auto hash_bits = group_type::make_hash_bits(ctrl_hash);
+
         do {
             size_type group_index = prober.get();
             const group_type * group = this->group_at(group_index);
-            std::uint32_t match_mask = group->match_hash(ctrl_hash);
+            std::uint32_t match_mask = group->match_hash(hash_bits);
             if (match_mask != 0) {
                 const slot_type * slot_start = this->slots();
                 JSTD_ASSUME(slot_start != nullptr);
@@ -2680,10 +2682,12 @@ private:
         std::size_t ctrl_hash = this->ctrl_for_hash(key_hash);
 
         locator_t locator = this->find_impl(key, group_index, ctrl_hash);
-        if (locator.slot() != nullptr) {
+        if (likely(locator.slot() != nullptr)) {
             this->erase_index(locator);
+            return 1;
+        } else {
+            return 0;
         }
-        return (locator.slot() != nullptr) ? 1 : 0;
     }
 
     // TODO: Optimize this assuming *this and other don't overlap.
