@@ -71,14 +71,17 @@ public:
     static constexpr const value_type kEmptySlot      = 0b00000000;
     static constexpr const value_type kSentinelSlot   = 0b00000001;
 
-    static constexpr const value_type kEmptyHash      = 0x08;
-    static constexpr const value_type kSentinelHash   = 0x09;
+    static constexpr const std::uint32_t kEmptySlot32    = 0x00000000u;
+
+    static constexpr const value_type kEmptyHash         = 0x08;
+    static constexpr const value_type kSentinelHash      = 0x09;
     static constexpr const std::uint32_t kEmptyHash32    = 0x08080808u;
     static constexpr const std::uint32_t kSentinelHash32 = 0x09090909u;
 
     group15_meta_ctrl(value_type value = kEmptySlot) : value_(value) {}
 
-    static JSTD_FORCED_INLINE int repeated_hash(std::size_t hash) {
+    static JSTD_FORCED_INLINE
+    int repeated_hash(std::size_t hash) {
         static constexpr const std::uint32_t dword_hashs[] = {
             // [0, 127]
            kEmptyHash32, kSentinelHash32, 0x02020202u, 0x03030303u,
@@ -152,11 +155,13 @@ public:
         return (int)dword_hashs[static_cast<std::uint8_t>(hash)];
     }
 
-    static JSTD_FORCED_INLINE std::uint8_t reduced_hash(std::size_t hash) {
+    static JSTD_FORCED_INLINE
+    std::uint8_t reduced_hash(std::size_t hash) {
         return static_cast<std::uint8_t>(repeated_hash(hash));
     }
 
-    static JSTD_FORCED_INLINE std::size_t hash_bits64(std::size_t hash) {
+    static JSTD_FORCED_INLINE
+    std::size_t hash_bits64(std::size_t hash) {
         return (hash & static_cast<std::size_t>(kHashMask));
     }
 
@@ -240,15 +245,28 @@ public:
     typedef ctrl_type &             reference;
     typedef const ctrl_type &       const_reference;
 
-    static constexpr const std::uint8_t kHashMask     = ctrl_type::kHashMask;
-    static constexpr const std::uint8_t kEmptySlot    = ctrl_type::kEmptySlot;
-    static constexpr const std::uint8_t kSentinelSlot = ctrl_type::kSentinelSlot;
+    static constexpr const value_type kHashMask     = ctrl_type::kHashMask;
+    static constexpr const value_type kEmptySlot    = ctrl_type::kEmptySlot;
+    static constexpr const value_type kSentinelSlot = ctrl_type::kSentinelSlot;
+
+    static constexpr const std::uint32_t kEmptySlot32 = ctrl_type::kEmptySlot32;
 
     static constexpr const std::size_t kGroupWidth = 16;
     static constexpr const std::size_t kGroupSize = kGroupWidth - 1;
     static constexpr const bool kIsRegularLayout = true;
 
-    JSTD_FORCED_INLINE void init() {
+    static JSTD_FORCED_INLINE
+    __m128i make_empty_bits() noexcept {
+        if (kEmptySlot == 0b00000000)
+            return _mm_setzero_si128();
+        else if (kEmptySlot == 0b11111111)
+            return _mm_setones_si128();
+        else
+            return _mm_set1_epi32((int)kEmptySlot32);
+    }
+
+    JSTD_FORCED_INLINE
+    void init() {
         if (kEmptySlot == 0b00000000) {
             __m128i zeros = _mm_setzero_si128();
             _mm_store_si128(reinterpret_cast<__m128i *>(ctrls), zeros);
@@ -259,13 +277,14 @@ public:
             clear_overflow();
         }
         else {
-            __m128i empty_bits = _mm_set1_epi8(kEmptySlot);
+            __m128i empty_bits = make_empty_bits();
             _mm_store_si128(reinterpret_cast<__m128i *>(ctrls), empty_bits);
             clear_overflow();
         }
     }
 
-    JSTD_FORCED_INLINE __m128i load_metadata() const {
+    JSTD_FORCED_INLINE
+    __m128i load_metadata() const {
 #if defined(JSTD_THREAD_SANITIZER)
         /*
          * ThreadSanitizer complains on 1-byte atomic writes combined with
@@ -283,38 +302,39 @@ public:
     }
 
     JSTD_FORCED_INLINE value_type value(std::size_t pos) const {
-        const ctrl_type * ctrl = &ctrls[pos];
-        return ctrl->value();
+        const ctrl_type & ctrl = at(pos);
+        return ctrl.value();
     }
 
     JSTD_FORCED_INLINE bool is_empty(std::size_t pos) const {
         assert(pos < kGroupSize);
-        const ctrl_type * ctrl = &ctrls[pos];
-        return ctrl->is_empty();
+        const ctrl_type & ctrl = at(pos);
+        return ctrl.is_empty();
     }
 
     JSTD_FORCED_INLINE bool is_sentinel(std::size_t pos) const {
         assert(pos < kGroupSize);
-        const ctrl_type * ctrl = &ctrls[pos];
-        return ctrl->is_sentinel();
+        const ctrl_type & ctrl = at(pos);
+        return ctrl.is_sentinel();
     }
 
     JSTD_FORCED_INLINE bool is_used(std::size_t pos) const {
         assert(pos < kGroupSize);
-        const ctrl_type * ctrl = &ctrls[pos];
-        return ctrl->is_used();
+        const ctrl_type & ctrl = at(pos);
+        return ctrl.is_used();
     }
 
     JSTD_FORCED_INLINE bool is_valid(std::size_t pos) const {
         assert(pos < kGroupSize);
-        const ctrl_type * ctrl = &ctrls[pos];
-        return ctrl->is_valid();
+        const ctrl_type & ctrl = at(pos);
+        return ctrl.is_valid();
     }
 
     JSTD_FORCED_INLINE bool is_overflow(std::size_t hash) const {
-        const ctrl_type * ctrl = &ctrls[kGroupSize];
+        const ctrl_type & ctrl = overflow();
         std::size_t pos = hash % std::size_t(CHAR_BIT);
-        return ((ctrl->value() & static_cast<value_type>(std::size_t(1) << pos)) != 0);
+        JSTD_ASSUME(pos < std::size_t(CHAR_BIT));
+        return ((ctrl.value() & static_cast<value_type>(std::size_t(1) << pos)) != 0);
     }
 
     JSTD_FORCED_INLINE bool is_not_overflow(std::size_t hash) const {
@@ -323,49 +343,50 @@ public:
 
     JSTD_FORCED_INLINE bool is_equals(std::size_t pos, std::size_t hash) {
         assert(pos < kGroupSize);
-        const ctrl_type * ctrl = &ctrls[pos];
-        return ctrl->is_equals(hash);
+        const ctrl_type & ctrl = at(pos);
+        return ctrl.is_equals(hash);
     }
 
     JSTD_FORCED_INLINE bool is_equals64(std::size_t pos, std::size_t hash) {
         assert(pos < kGroupSize);
-        const ctrl_type * ctrl = &ctrls[pos];
-        return ctrl->is_equals64(hash);
+        const ctrl_type & ctrl = at(pos);
+        return ctrl.is_equals64(hash);
     }
 
     JSTD_FORCED_INLINE void set_empty(std::size_t pos) {
         assert(pos < kGroupSize);
-        ctrl_type * ctrl = &ctrls[pos];
-        ctrl->set_empty();
+        ctrl_type & ctrl = at(pos);
+        ctrl.set_empty();
     }
 
     JSTD_FORCED_INLINE void set_sentinel() {
-        ctrl_type * ctrl = &ctrls[kGroupSize - 1];
-        ctrl->set_sentinel();
+        ctrl_type & ctrl = at(kGroupSize - 1);
+        ctrl.set_sentinel();
     }
 
     JSTD_FORCED_INLINE void set_used(std::size_t pos, std::size_t hash) {
         assert(pos < kGroupSize);
-        ctrl_type * ctrl = &ctrls[pos];
-        ctrl->set_used(hash);
+        ctrl_type & ctrl = at(pos);
+        ctrl.set_used(hash);
     }
 
     JSTD_FORCED_INLINE void set_used64(std::size_t pos, std::size_t hash) {
         assert(pos < kGroupSize);
-        ctrl_type * ctrl = &ctrls[pos];
-        ctrl->set_used64(hash);
+        ctrl_type & ctrl = at(pos);
+        ctrl.set_used64(hash);
     }
 
     JSTD_FORCED_INLINE void set_overflow(std::size_t hash) {
-        ctrl_type * ctrl = &ctrls[kGroupSize];
+        ctrl_type & ctrl = overflow();
         std::size_t pos = hash % std::size_t(CHAR_BIT);
-        value_type value = (ctrl->value() | static_cast<value_type>(std::size_t(1) << pos));
-        ctrl->set_value(value);
+        JSTD_ASSUME(pos < std::size_t(CHAR_BIT));
+        value_type value = (ctrl.value() | static_cast<value_type>(std::size_t(1) << pos));
+        ctrl.set_value(value);
     }
 
     JSTD_FORCED_INLINE void clear_overflow() {
-        ctrl_type * ctrl = &ctrls[kGroupSize];
-        ctrl->set_value(0);
+        ctrl_type & ctrl = overflow();
+        ctrl.set_value(0);
     }
 
     JSTD_FORCED_INLINE
@@ -380,15 +401,15 @@ public:
         else if (kEmptySlot == 0b11111111)
             empty_bits = _mm_setones_si128();
         else
-            empty_bits = _mm_set1_epi8(kEmptySlot);
+            empty_bits = make_empty_bits();
 
-        __m128i match_mask = _mm_cmpeq_epi8(ctrl_bits, empty_bits);
+        __m128i match_mask = _mm_cmpeq_epi8(empty_bits, ctrl_bits);
         int mask = _mm_movemask_epi8(match_mask);
         return static_cast<std::uint32_t>(mask & 0x7FFFU);
     }
 
     JSTD_FORCED_INLINE
-    std::uint32_t match_used() const {
+    std::uint32_t match_used() const noexcept {
         std::uint32_t mask = this->match_empty();
         return static_cast<std::uint32_t>((~mask) & 0x7FFFU);
     }
@@ -410,13 +431,9 @@ public:
         // Latency = 6
         __m128i ctrl_bits  = load_metadata();
         //__COMPILER_BARRIER();
-#if GROUP15_USE_LOOK_UP_TABLE
-        // Use lookup table
-        int hash32 = ctrl_type::repeated_hash(hash);
-        __m128i hash_bits = _mm_set1_epi32(hash32);
-#else
-        __m128i hash_bits = _mm_set1_epi8(static_cast<char>(hash));
-#endif
+        __m128i hash_bits = make_hash_bits(hash);
+        //__COMPILER_BARRIER();
+
         __m128i match_mask = _mm_cmpeq_epi8(ctrl_bits, hash_bits);
         int mask = _mm_movemask_epi8(match_mask);
         return static_cast<std::uint32_t>(mask & 0x7FFFU);
@@ -427,9 +444,27 @@ public:
         // Latency = 6
         __m128i ctrl_bits  = load_metadata();
         //__COMPILER_BARRIER();
-        __m128i match_mask = _mm_cmpeq_epi8(ctrl_bits, hash_bits);
+
+        __m128i match_mask = _mm_cmpeq_epi8(hash_bits, ctrl_bits);
         int mask = _mm_movemask_epi8(match_mask);
         return static_cast<std::uint32_t>(mask & 0x7FFFU);
+    }
+
+private:
+    JSTD_FORCED_INLINE ctrl_type & at(std::size_t pos) {
+        return ctrls[pos];
+    }
+
+    JSTD_FORCED_INLINE const ctrl_type & at(std::size_t pos) const {
+        return ctrls[pos];
+    }
+
+    JSTD_FORCED_INLINE ctrl_type & overflow() {
+        return at(kGroupSize);
+    }
+
+    JSTD_FORCED_INLINE const ctrl_type & overflow() const {
+        return at(kGroupSize);
     }
 
 private:

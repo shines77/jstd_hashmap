@@ -1048,11 +1048,13 @@ public:
     size_type find_first_used_index() const {
         if (likely(this->size() != 0)) {
 #if 0
+            auto mask_bits = group_type::make_mask_bits();
+
             const group_type * group = this->groups();
             const group_type * last_group = this->last_group();
             size_type slot_base_index = 0;
             for (; group < last_group; ++group) {
-                std::uint32_t used_mask = group->match_used();
+                std::uint32_t used_mask = group->match_used(mask_bits);
                 if (likely(used_mask != 0)) {
                     std::uint32_t used_pos = BitUtils::bsf32(used_mask);
                     size_type slot_index = slot_base_index + used_pos;
@@ -1080,6 +1082,8 @@ public:
             start_slot_index++;
             if (unlikely(start_slot_index >= this->slot_capacity()))
                 return this->slot_capacity();
+
+            auto mask_bits = group_type::make_mask_bits();
             const group_type * group = this->group_by_slot_index(start_slot_index);
             const group_type * last_group = this->last_group();
             size_type slot_pos = start_slot_index % kGroupWidth;
@@ -1088,7 +1092,7 @@ public:
             static const size_type kCtrlFasterSeekPos = 4;
             if (likely(slot_pos < (kGroupWidth - kCtrlFasterSeekPos))) {
                 if (group < last_group) {
-                    std::uint32_t used_mask = group->match_used();
+                    std::uint32_t used_mask = group->match_used(mask_bits);
                     // Filter out the bits in the leading position
                     // std::uint32_t non_excluded_mask = ~((std::uint32_t(1) << std::uint32_t(slot_pos)) - 1);
                     std::uint32_t non_excluded_mask = (std::uint32_t(0xFFFFFFFFu) << std::uint32_t(slot_pos));
@@ -1113,7 +1117,7 @@ public:
             slot_base_index += kGroupWidth;
             group++;
             for (; group < last_group; ++group) {
-                std::uint32_t used_mask = group->match_used();
+                std::uint32_t used_mask = group->match_used(mask_bits);
                 if (likely(used_mask != 0)) {
                     std::uint32_t used_pos = BitUtils::bsf32(used_mask);
                     size_type slot_index = slot_base_index + used_pos;
@@ -1546,11 +1550,12 @@ private:
         if (!is_slot_trivial_destructor && (this->slots_ != nullptr)) {
             if (!kIsIndirectKV) {
 #if GROUP16_USE_GROUP_SCAN
+                auto mask_bits = group_type::make_mask_bits();
                 group_type * group = this->groups();
                 group_type * last_group = this->last_group();
                 slot_type * slot_base = this->slots();
                 for (; group < last_group; ++group) {
-                    std::uint32_t used_mask = group->match_used();
+                    std::uint32_t used_mask = group->match_used(mask_bits);
                     while (used_mask != 0) {
                         std::uint32_t used_pos = BitUtils::bsf32(used_mask);
                         used_mask = BitUtils::clearLowBit32(used_mask);
@@ -1992,12 +1997,13 @@ private:
             this->create_slots<false>(new_capacity);
 
             if (old_groups != this_type::default_empty_groups()) {
+                auto mask_bits = group_type::make_mask_bits();
                 group_type * group = old_groups;
                 group_type * last_group = old_groups + old_group_capacity;
                 slot_type * slot_base = old_slots;
 
                 for (; group < last_group; ++group) {
-                    std::uint32_t used_mask = group->match_used();
+                    std::uint32_t used_mask = group->match_used(mask_bits);
                     while (used_mask != 0) {
                         std::uint32_t used_pos = BitUtils::bsf32(used_mask);
                         used_mask = BitUtils::clearLowBit32(used_mask);
@@ -2109,12 +2115,14 @@ private:
     template <typename KeyT>
     JSTD_FORCED_INLINE
     size_type find_index(const KeyT & key, size_type group_index, std::uint8_t ctrl_hash) const {
+        auto hash_bits = group_type::make_hash_bits(ctrl_hash);
+        auto mask_bits = group_type::make_mask_bits();
         prober_type prober(group_index);
 
         do {
             group_index = prober.get();
             const group_type * group = this->group_at(group_index);
-            std::uint32_t match_mask = group->match_hash(ctrl_hash);
+            std::uint32_t match_mask = group->match_hash(hash_bits, mask_bits);
             if (match_mask != 0) {
                 const slot_type * slot_start = this->slots();
                 JSTD_ASSUME(slot_start != nullptr);
@@ -2153,12 +2161,13 @@ private:
     template <bool IsNoGrow, typename KeyT = key_type>
     JSTD_FORCED_INLINE
     size_type find_empty_to_insert(const KeyT & key, size_type group_index, std::uint8_t ctrl_hash) {
+        auto mask_bits = group_type::make_mask_bits();
         prober_type prober(group_index);
 
         do {
             group_index = prober.get();
             group_type * group = this->group_at(group_index);
-            std::uint32_t empty_mask = group->match_empty();
+            std::uint32_t empty_mask = group->match_empty(mask_bits);
             if (likely(empty_mask != 0)) {
                 std::uint32_t empty_pos = BitUtils::bsf32(empty_mask);
                 size_type slot_base = group_index * kGroupWidth;

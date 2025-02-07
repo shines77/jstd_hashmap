@@ -2191,9 +2191,8 @@ private:
     template <typename KeyT>
     JSTD_FORCED_INLINE
     locator_t find_impl(const KeyT & key, size_type group_index0, std::size_t ctrl_hash) const {
-        prober_type prober(group_index0);
-
         auto hash_bits = group_type::make_hash_bits(ctrl_hash);
+        prober_type prober(group_index0);
 
         do {
             size_type group_index = prober.get();
