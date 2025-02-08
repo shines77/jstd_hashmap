@@ -52,6 +52,7 @@
 #pragma once
 
 #include <cstdint>
+#include <cstddef>
 #include <assert.h>
 
 #include "jstd/basic/stddef.h"
@@ -240,7 +241,8 @@ public:
     }
 
     JSTD_FORCED_INLINE bool is_not_overflow() const {
-        return !this->is_overflow();
+        value_type overflow = overflow_bits(this->value_);
+        return (overflow == 0);
     }
 
     JSTD_FORCED_INLINE bool is_equals(value_type hash) const {
