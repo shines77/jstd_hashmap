@@ -349,7 +349,7 @@ public:
     }
 
     JSTD_FORCED_INLINE bool is_overflow(std::size_t hash) const {
-        return !ctrl.is_not_overflow(hash);
+        return !is_not_overflow(hash);
     }
 
     JSTD_FORCED_INLINE bool is_not_overflow(std::size_t hash) const {
