@@ -331,14 +331,16 @@ public:
     }
 
     JSTD_FORCED_INLINE bool is_overflow(std::size_t hash) const {
-        const ctrl_type & ctrl = overflow();
-        std::size_t pos = hash % std::size_t(CHAR_BIT);
-        JSTD_ASSUME(pos < std::size_t(CHAR_BIT));
-        return ((ctrl.value() & static_cast<value_type>(std::size_t(1) << pos)) != 0);
+        return !(this->is_not_overflow(hash));
     }
 
     JSTD_FORCED_INLINE bool is_not_overflow(std::size_t hash) const {
-        return !this->is_overflow(hash);
+        static constexpr unsigned char shift[] = { 1, 2, 4, 8, 16, 32, 64, 128 };
+        const ctrl_type & ctrl = overflow();
+        std::size_t pos = hash % std::size_t(CHAR_BIT);
+        JSTD_ASSUME(pos < std::size_t(CHAR_BIT));
+        // return ((ctrl.value() & static_cast<value_type>(std::size_t(1) << pos)) == 0);
+        return ((ctrl.value() & shift[pos]) == 0);
     }
 
     JSTD_FORCED_INLINE bool is_equals(std::size_t pos, std::size_t hash) {
@@ -380,7 +382,7 @@ public:
         ctrl_type & ctrl = overflow();
         std::size_t pos = hash % std::size_t(CHAR_BIT);
         JSTD_ASSUME(pos < std::size_t(CHAR_BIT));
-        value_type value = (ctrl.value() | static_cast<value_type>(std::size_t(1) << pos));
+        value_type value = (ctrl.value() | static_cast<value_type>(1 << pos));
         ctrl.set_value(value);
     }
 
