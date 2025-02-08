@@ -1299,7 +1299,7 @@ private:
 
     JSTD_FORCED_INLINE
     std::size_t hash_for(const key_type & key) const
-        noexcept(noexcept(this->hasher_(key))) {
+        noexcept(noexcept(hasher()(key))) {
 #if GROUP15_USE_HASH_POLICY
         std::size_t key_hash = static_cast<std::size_t>(this->hash_policy_.get_hash_code(key));
 #else
@@ -1547,16 +1547,20 @@ private:
                 group_type * last_group = this->last_group();
                 slot_type * slot_base = this->slots();
                 for (; group < last_group; ++group) {
+                    JSTD_ASSUME(slot_base != nullptr);
+                    Prefetch_Read_T0((const void *)&slot_base->get_key());
                     std::uint32_t used_mask = group->match_used();
-                    while (used_mask != 0) {
-                        std::uint32_t used_pos = BitUtils::bsf32(used_mask);
-                        used_mask = BitUtils::clearLowBit32(used_mask);
-                        if (likely(!group->is_sentinel(used_pos))) {
-                            slot_type * slot = slot_base + used_pos;
-                            this->destroy_slot(slot);
-                        } else {
-                            break;
-                        }
+                    if (used_mask != 0) {
+                        do {
+                            std::uint32_t used_pos = BitUtils::bsf32(used_mask);
+                            if (likely(!group->is_sentinel(used_pos))) {
+                                slot_type * slot = slot_base + used_pos;
+                                this->destroy_slot(slot);
+                            } else {
+                                break;
+                            }
+                            used_mask = BitUtils::clearLowBit32(used_mask);
+                        } while (used_mask != 0);
                     }
                     slot_base += kGroupSize;
                 }
@@ -2071,18 +2075,22 @@ private:
                 slot_type * slot_base = old_slots;
 
                 for (; group < last_group; ++group) {
+                    JSTD_ASSUME(slot_base != nullptr);
+                    Prefetch_Read_T0((const void *)&slot_base->get_key());
                     std::uint32_t used_mask = group->match_used();
-                    while (used_mask != 0) {
-                        std::uint32_t used_pos = BitUtils::bsf32(used_mask);
-                        used_mask = BitUtils::clearLowBit32(used_mask);
-                        if (likely(!group->is_sentinel(used_pos))) {
-                            slot_type * old_slot = slot_base + used_pos;
-                            assert(old_slot < old_last_slot);
-                            this->move_no_grow_unique_insert(old_slot);
-                            //this->destroy_slot(old_slot);
-                        } else {
-                            break;
-                        }
+                    if (used_mask != 0) {
+                        do {
+                            std::uint32_t used_pos = BitUtils::bsf32(used_mask);
+                            if (likely(!group->is_sentinel(used_pos))) {
+                                slot_type * old_slot = slot_base + used_pos;
+                                assert(old_slot < old_last_slot);
+                                this->move_no_grow_unique_insert(old_slot);
+                                //this->destroy_slot(old_slot);
+                            } else {
+                                break;
+                            }
+                            used_mask = BitUtils::clearLowBit32(used_mask);
+                        } while (used_mask != 0);
                     }
                     slot_base += kGroupSize;
                 }
@@ -2219,17 +2227,18 @@ private:
             JSTD_ASSUME(group_start != nullptr);
             const group_type * group = group_start + group_index;
             std::uint32_t match_mask = group->match_hash(hash_bits);
-            if (likely(match_mask != 0)) {
+            if (match_mask != 0) {
                 const slot_type * slot_start = this->slots();
                 JSTD_ASSUME(slot_start != nullptr);
                 const slot_type * slot_base = slot_start + group_index * kGroupSize;
-                if (sizeof(value_type) <= 16) {
-                    Prefetch_Read_T0((const void *)slot_base);
+                JSTD_ASSUME(slot_base != nullptr);
+                if (sizeof(value_type) <= 32) {
+                    Prefetch_Read_T0((const void *)&slot_base->get_key());
                 }
                 do {
                     std::uint32_t match_pos = BitUtils::bsf32(match_mask);
                     //const slot_type * slot = slot_base + match_pos;
-                    if (likely(bool(key_equal()(key, slot_base[match_pos].value.first)))) {
+                    if (likely(bool(key_equal()(key, slot_base[match_pos].get_key())))) {
                         return { group, match_pos, (slot_base + match_pos) };
                     }
                     match_mask = BitUtils::clearLowBit32(match_mask);
@@ -2273,6 +2282,7 @@ private:
                 const slot_type * slot_start = this->slots();
                 JSTD_ASSUME(slot_start != nullptr);
                 const slot_type * slot_base = slot_start + group_index * kGroupSize;
+                JSTD_ASSUME(slot_base != nullptr);
                 assert(group->is_empty(empty_pos));
                 group->set_used(empty_pos, ctrl_hash);
                 const slot_type * slot = slot_base + empty_pos;
@@ -2351,7 +2361,7 @@ private:
     JSTD_FORCED_INLINE
     void move_no_grow_unique_insert(slot_type * old_slot) {
         assert(old_slot != nullptr);
-        locator_t locator = this->no_grow_unique_insert(old_slot->value.first);
+        locator_t locator = this->no_grow_unique_insert(old_slot->get_key());
         slot_type * new_slot = locator.slot();
         assert(new_slot != nullptr);
 
@@ -2364,7 +2374,7 @@ private:
     JSTD_FORCED_INLINE
     void move_no_grow_unique_insert(group15_flat_table * other, slot_type * old_slot) {
         assert(old_slot != nullptr);
-        locator_t locator = this->no_grow_unique_insert(old_slot->value.first);
+        locator_t locator = this->no_grow_unique_insert(old_slot->get_key());
         slot_type * new_slot = locator.slot();
         assert(new_slot != nullptr);
 
@@ -2380,7 +2390,7 @@ private:
     JSTD_FORCED_INLINE
     void no_grow_unique_insert(const slot_type * old_slot) {
         assert(old_slot != nullptr);
-        locator_t locator = this->no_grow_unique_insert(old_slot->value.first);
+        locator_t locator = this->no_grow_unique_insert(old_slot->get_key());
         slot_type * new_slot = locator.slot();
         assert(new_slot != nullptr);
 
@@ -2606,7 +2616,7 @@ private:
                                     std::forward<First>(first),
                                     std::forward<Args>(args)...);
 
-        auto find_info = this->find_or_insert(tmp_slot->value.first);
+        auto find_info = this->find_or_insert(tmp_slot->get_key());
         locator_t & locator = find_info.first;
         bool need_insert = find_info.second;
         if (need_insert) {

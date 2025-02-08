@@ -54,6 +54,22 @@ public:
 
     map_slot_type() {}
     ~map_slot_type() = delete;
+
+    inline const key_type & get_key() noexcept {
+        if (kIsLayoutCompatible) {
+            return mutable_value.first;
+        } else {
+            return value.first;
+        }
+    }
+
+    inline const key_type & get_key() const noexcept {
+        if (kIsLayoutCompatible) {
+            return mutable_value.first;
+        } else {
+            return value.first;
+        }
+    }
 };
 
 template <typename SlotType>

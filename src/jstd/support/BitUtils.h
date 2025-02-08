@@ -224,12 +224,12 @@ namespace BitUtils {
         JSTD_ASSUME(x != 0);
 #if (jstd_cplusplus >= 2020L)
         return (unsigned int)std::countr_zero((unsigned int)x);
-#elif __has_builtin(__builtin_ctz)
-        // gcc: __bsfd(x)
+#elif __has_builtin(__builtin_ctz)        
         return (unsigned int)__builtin_ctz(x);
 #elif defined(__GNUC__) && (__GNUC__ > 3 || (__GNUC__ == 3 && __GNUC_MINOR__ >= 4))
         return (unsigned int)__builtin_ctz(x);
 #elif defined(__GNUC__) || __has_builtin(__bsfd) || (__clang_major__ >= 12)
+        // gcc: __bsfd(x)
         return __bsfd(x);
 #else
         return (unsigned int)BitUtils::__internal_ctz(x);
@@ -243,11 +243,11 @@ namespace BitUtils {
 #if (jstd_cplusplus >= 2020L)
         return (unsigned int)std::countr_zero((uint64_t)x);
 #elif __has_builtin(__builtin_ctzll)
-        // gcc: __bsfq(x)
         return (unsigned int)__builtin_ctzll((unsigned long long)x);
 #elif defined(__GNUC__) && (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 3))
         return (unsigned int)__builtin_ctzll((unsigned long long)x);
 #elif defined(__GNUC__) || __has_builtin(__bsfq) || (__clang_major__ >= 12)
+        // gcc: __bsfq(x)
         return __bsfq(x);
 #else
         return (unsigned int)BitUtils::__internal_ctzll(x);
@@ -277,11 +277,11 @@ namespace BitUtils {
 #if (jstd_cplusplus >= 2020L)
         return (unsigned int)(31 - std::countl_zero((unsigned int)x));
 #elif __has_builtin(__builtin_clz)
-        // gcc: __bsrd(x)
         return (unsigned int)(31 - __builtin_clz(x));
 #elif defined(__GNUC__) && (__GNUC__ > 3 || (__GNUC__ == 3 && __GNUC_MINOR__ >= 4))
         return (unsigned int)(31 - __builtin_clz(x));
 #elif defined(__GNUC__) || __has_builtin(__bsrd) || (__clang_major__ >= 12)
+        // gcc: __bsrd(x)
         return __bsrd(x);
 #else
         return (unsigned int)(31 - BitUtils::__internal_clz(x));
@@ -295,11 +295,11 @@ namespace BitUtils {
 #if (jstd_cplusplus >= 2020L)
         return (unsigned int)(63 - std::countl_zero((uint64_t)x));
 #elif __has_builtin(__builtin_clzll)
-        // gcc: __bsrq(x)
         return (unsigned int)(63 - __builtin_clzll((unsigned long long)x));
 #elif defined(__GNUC__) && (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 3))
         return (unsigned int)(63 - __builtin_clzll((unsigned long long)x));
 #elif defined(__GNUC__) || __has_builtin(__bsrq) || (__clang_major__ >= 12)
+        // gcc: __bsrq(x)
         return __bsrq(x);
 #else
         return (unsigned int)(63 - BitUtils::__internal_clzll(x));

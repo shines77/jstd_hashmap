@@ -64,7 +64,7 @@ private:
         // Here, instead to use jstd::launder.
         template <typename Key, typename std::enable_if<std::is_lvalue_reference<Key>::value, int>::type = 0>
         static key_type & ReturnKey_Impl(Key && key, int) {
-            return *launder(const_cast<key_type *>(std::addressof(std::forward<Key>(key))));
+            return *jstd::launder(const_cast<key_type *>(std::addressof(std::forward<Key>(key))));
         }
 
         template <typename Key>

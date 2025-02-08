@@ -235,14 +235,14 @@ public:
         //static constexpr unsigned char shift[] = { 1, 2, 4, 8, 16, 32, 64, 128 };
         std::size_t pos = hash % 8;
         JSTD_ASSUME(pos < 8);
-        std::size_t mask = 1 << pos;
+        std::size_t mask = std::size_t(1) << pos;
         return ((static_cast<std::size_t>(this->value_) & mask) == 0);
     }
 
     JSTD_FORCED_INLINE void set_overflow(std::size_t hash) {
         std::size_t pos = hash % 8;
         JSTD_ASSUME(pos < 8);
-        std::size_t mask = 1 << pos;
+        std::size_t mask = std::size_t(1) << pos;
         std::size_t value64 = static_cast<std::size_t>(this->value_);
         value64 |= mask;
         this->value_ = static_cast<value_type>(value64);
