@@ -52,6 +52,7 @@
 #pragma once
 
 #include <cstdint>
+#include <cstddef>
 #include <assert.h>
 
 #include "jstd/basic/stddef.h"

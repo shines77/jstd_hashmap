@@ -52,6 +52,7 @@
 #pragma once
 
 #include <cstdint>
+#include <cstddef>
 #include <assert.h>
 
 #include "jstd/basic/stddef.h"
@@ -230,6 +231,23 @@ public:
         this->value_ = value;
     }
 
+    JSTD_FORCED_INLINE bool is_not_overflow(std::size_t hash) const {
+        //static constexpr unsigned char shift[] = { 1, 2, 4, 8, 16, 32, 64, 128 };
+        std::size_t pos = hash % 8;
+        JSTD_ASSUME(pos < 8);
+        std::size_t mask = 1 << pos;
+        return ((static_cast<std::size_t>(this->value_) & mask) == 0);
+    }
+
+    JSTD_FORCED_INLINE void set_overflow(std::size_t hash) {
+        std::size_t pos = hash % 8;
+        JSTD_ASSUME(pos < 8);
+        std::size_t mask = 1 << pos;
+        std::size_t value64 = static_cast<std::size_t>(this->value_);
+        value64 |= mask;
+        this->value_ = static_cast<value_type>(value64);
+    }
+
 private:
     value_type value_;
 };
@@ -331,16 +349,12 @@ public:
     }
 
     JSTD_FORCED_INLINE bool is_overflow(std::size_t hash) const {
-        return !(this->is_not_overflow(hash));
+        return !ctrl.is_not_overflow(hash);
     }
 
     JSTD_FORCED_INLINE bool is_not_overflow(std::size_t hash) const {
-        static constexpr unsigned char shift[] = { 1, 2, 4, 8, 16, 32, 64, 128 };
         const ctrl_type & ctrl = overflow();
-        std::size_t pos = hash % std::size_t(CHAR_BIT);
-        JSTD_ASSUME(pos < std::size_t(CHAR_BIT));
-        // return ((ctrl.value() & static_cast<value_type>(std::size_t(1) << pos)) == 0);
-        return ((ctrl.value() & shift[pos]) == 0);
+        return ctrl.is_not_overflow(hash);
     }
 
     JSTD_FORCED_INLINE bool is_equals(std::size_t pos, std::size_t hash) {
@@ -380,10 +394,7 @@ public:
 
     JSTD_FORCED_INLINE void set_overflow(std::size_t hash) {
         ctrl_type & ctrl = overflow();
-        std::size_t pos = hash % std::size_t(CHAR_BIT);
-        JSTD_ASSUME(pos < std::size_t(CHAR_BIT));
-        value_type value = (ctrl.value() | static_cast<value_type>(1 << pos));
-        ctrl.set_value(value);
+        ctrl.set_overflow(hash);
     }
 
     JSTD_FORCED_INLINE void clear_overflow() {
