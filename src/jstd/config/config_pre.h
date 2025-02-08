@@ -56,6 +56,11 @@
   #define __has_include(x)              0
 #endif
 
+// Since from gcc 4.9
+#ifndef __has_type
+  #define __has_type(x)                 0
+#endif
+
 #if defined(_MSC_VER) && !defined(__clang__)
 #ifndef __attribute__
   #define __attribute__(x)

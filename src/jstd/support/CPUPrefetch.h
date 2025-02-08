@@ -130,8 +130,8 @@ static inline
 void Prefetch_Read_T0(const void * addr)
 {
     // Note: this uses prefetcht0 on Intel.
-    //__builtin_prefetch(addr, 0, 3);
-    __builtin_prefetch((const char *)addr);
+    __builtin_prefetch(addr, 0, 3);
+    //__builtin_prefetch((const char *)addr);
 }
 
 static inline
@@ -241,9 +241,7 @@ void Prefetch_Write_Nta(const void * addr)
 
 #else // !JSTD_HAVE_SSE
 
-inline void Prefetch_Read_T0(const void * addr) {
-    printf("Not support Prefetch_Read_T0()\n");
-}
+inline void Prefetch_Read_T0(const void * addr) {}
 
 inline void Prefetch_Read_T1(const void * addr) {}
 

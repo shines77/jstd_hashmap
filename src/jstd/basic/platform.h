@@ -10,11 +10,14 @@
 // Arch
 //
 #if defined(_M_X64) || defined(_M_IX64) || defined(_M_AMD64) \
- || defined(_M_IA64) || defined(__amd64__) || defined(__x86_64__)
+ || defined(__amd64__) || defined(__x86_64__) \
+ || defined(__ia64) || defined(__ia64__) || defined(__IA64__) \
+ || defined(__itanium__) || defined(_M_IA64)
   #define JSTD_IS_X86           1
   #define JSTD_IS_X86_64        1
   #define JSTD_WORD_LEN         64
-#elif defined (_M_IX86) || defined(__i386__)
+#elif defined (_M_IX86) || defined(__i386__) \
+ || defined(_X86_) || defined(__ia86__) || defined(i386)
   #define JSTD_IS_X86           1
   #define JSTD_IS_X86_I386      1
   #define JSTD_WORD_LEN         32
@@ -65,7 +68,7 @@
     #define JSTD_WORD_LEN       32
   #elif defined(WIN64) || defined(_WIN64)
     #define JSTD_WORD_LEN       64
-  #elif defined (__LP64__) || (SIZE_MAX == UINT64_MAX)
+  #elif defined(__64BIT__) || defined(_LP64) || defined(__LP64__) || (SIZE_MAX == UINT64_MAX)
     #define JSTD_WORD_LEN       64
   #else
     #define JSTD_WORD_LEN       (sizeof(size_t) * 8)

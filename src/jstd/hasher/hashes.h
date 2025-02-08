@@ -16,6 +16,7 @@
 #include <vector>
 #include <thread>
 #include <bitset>
+#include <climits>
 
 #if (jstd_cplusplus >= 2017L)
 #include <string_view>
@@ -131,6 +132,12 @@
 #elif defined(UINTPTR_MAX)
   /* used as proxy for std::size_t */
   #if ((((UINTPTR_MAX >> 16) >> 16) >> 16) >> 15) != 0
+    #define JSTD_64B_ARCHITECTURE
+  #endif
+#endif
+
+#ifndef JSTD_64B_ARCHITECTURE
+  #if (sizeof(std::size_t) == 8)
     #define JSTD_64B_ARCHITECTURE
   #endif
 #endif
@@ -721,7 +728,8 @@ std::size_t msvc_fnv_1a(const unsigned char * first, const std::size_t count) no
 
 #if defined(_MSC_VER) && (defined(_M_X64) || defined(_M_IX64) || defined(_M_AMD64)) && !defined(__clang__)
 
-__forceinline std::uint64_t mum_mul_mix64(std::uint64_t x, std::uint64_t y)
+JSTD_FORCED_INLINE
+std::uint64_t mum_mul_mix64(std::uint64_t x, std::uint64_t y)
 {
     std::uint64_t r2;
     std::uint64_t r = _umul128(x, y, &r2);
@@ -730,24 +738,38 @@ __forceinline std::uint64_t mum_mul_mix64(std::uint64_t x, std::uint64_t y)
 
 #elif defined(_MSC_VER) && defined(_M_ARM64) && !defined(__clang__)
 
-__forceinline std::uint64_t mum_mul_mix64(std::uint64_t x, std::uint64_t y)
+JSTD_FORCED_INLINE
+std::uint64_t mum_mul_mix64(std::uint64_t x, std::uint64_t y)
 {
     std::uint64_t r = x * y;
     std::uint64_t r2 = __umulh(x, y);
     return (r ^ r2);
 }
 
-#elif defined(__SIZEOF_INT128__) && !defined(__wasm__)
+#elif defined(__SIZEOF_INT128__) || __has_type(__uint128_t) || \
+      (defined(__GNUC__) && (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 6)))
 
-inline std::uint64_t mum_mul_mix64(std::uint64_t x, std::uint64_t y)
+// Maybe need !defined(__wasm__)
+JSTD_FORCED_INLINE
+std::uint64_t mum_mul_mix64(std::uint64_t x, std::uint64_t y)
 {
     __uint128_t r = (__uint128_t)x * y;
     return ((std::uint64_t)r ^ (std::uint64_t)(r >> 64));
 }
 
+#elif __has_type(__int128)
+
+JSTD_FORCED_INLINE
+std::uint64_t mum_mul_mix64(std::uint64_t x, std::uint64_t y)
+{
+    unsigned __int128 r = (unsigned __int128)x * y;
+    return ((std::uint64_t)r ^ (std::uint64_t)(r >> 64));
+}
+
 #else
 
-inline std::uint64_t mum_mul_mix64(std::uint64_t x, std::uint64_t y)
+JSTD_FORCED_INLINE
+std::uint64_t mum_mul_mix64(std::uint64_t x, std::uint64_t y)
 {
     std::uint64_t x1 = (std::uint32_t)x;
     std::uint64_t x2 = x >> 32;
@@ -774,7 +796,8 @@ inline std::uint64_t mum_mul_mix64(std::uint64_t x, std::uint64_t y)
 
 #endif // mum_mul_mix64
 
-inline std::uint32_t mum_mul_mix32(std::uint32_t x, std::uint32_t y)
+JSTD_FORCED_INLINE
+std::uint32_t mum_mul_mix32(std::uint32_t x, std::uint32_t y)
 {
     std::uint64_t r = (std::uint64_t)x * y;
 
@@ -789,7 +812,8 @@ inline std::uint32_t mum_mul_mix32(std::uint32_t x, std::uint32_t y)
 // Find Prime URL: https://fyter.cn/prime.htm
 //
 
-inline std::size_t mum_mul_mix(std::size_t value) noexcept
+JSTD_FORCED_INLINE
+std::size_t mum_mul_mix(std::size_t value) noexcept
 {
 #if defined(JSTD_64B_ARCHITECTURE)
 
