@@ -52,8 +52,10 @@
 #pragma once
 
 #include <stdint.h>
+#include <stddef.h>
 
 #include <cstdint>
+#include <cstddef>
 #include <memory>               // For std::allocator<T>
 #include <functional>           // For std::hash<Key>
 #include <initializer_list>
@@ -62,6 +64,7 @@
 #include <exception>
 #include <stdexcept>
 
+#include "jstd/basic/stddef.h"
 #include "jstd/hashmap/detail/hashmap_traits.h"
 #include "jstd/hashmap/flat_map_type_policy.hpp"
 #include "jstd/hashmap/group15_flat_table.hpp"
@@ -626,7 +629,7 @@ public:
 
     JSTD_FORCED_INLINE
     iterator erase(iterator first, iterator last) {
-        if (likely(first.hashmap() == this)) {
+        if (JSTD_LIKELY(first.hashmap() == this)) {
             for (; first != last; ++first) {
                 this->erase(first);
             }

@@ -58,6 +58,8 @@
 
 #include <assert.h>
 
+#include "jstd/basic/stddef.h"
+
 #define ITERATOR15_USE_GROUP_SCAN  0
 #define ITERATOR15_USE_LOCATOR15   0
 
@@ -151,7 +153,7 @@ public:
             ++this->pos_;
             if (this->group_->is_empty(this->pos_))
                 continue;
-            if (likely(!(this->group_->is_sentinel(this->pos_)))) {
+            if (JSTD_LIKELY(!(this->group_->is_sentinel(this->pos_)))) {
                 return;
             } else {
                 this->slot_ = nullptr;
@@ -163,7 +165,7 @@ public:
             std::uint32_t used_mask = this->group_->match_used();
             if (used_mask != 0) {
                 std::uint32_t used_pos = BitUtils::bsf32(used_mask);
-                if (likely(!(this->group_->is_sentinel(used_pos)))) {
+                if (JSTD_LIKELY(!(this->group_->is_sentinel(used_pos)))) {
                     this->pos_ = static_cast<size_type>(used_pos);
                     this->slot_ += static_cast<difference_type>(used_pos);
                 } else {
@@ -189,7 +191,7 @@ public:
             --this->pos_;
             if (this->group_->is_empty(this->pos_))
                 continue;
-            if (likely(!(this->group_->is_sentinel(this->pos_)))) {
+            if (JSTD_LIKELY(!(this->group_->is_sentinel(this->pos_)))) {
                 return;
             } else {
                 this->slot_ = nullptr;
@@ -201,7 +203,7 @@ public:
             std::uint32_t used_mask = this->group_->match_used();
             if (used_mask != 0) {
                 std::uint32_t used_pos = BitUtils::bsr32(used_mask);
-                if (likely(!(this->group_->is_sentinel(used_pos)))) {
+                if (JSTD_LIKELY(!(this->group_->is_sentinel(used_pos)))) {
                     this->pos_ = static_cast<size_type>(used_pos);
                     this->slot_ -= (kGroupSize - 1) - static_cast<difference_type>(used_pos);
                 } else {
@@ -554,7 +556,7 @@ private:
             ++this->ctrl_;
             if (this->ctrl_->is_empty())
                 continue;
-            if (likely(!(this->ctrl_->is_sentinel()))) {
+            if (JSTD_LIKELY(!(this->ctrl_->is_sentinel()))) {
                 return;
             } else {
                 this->slot_ = nullptr;
@@ -568,7 +570,7 @@ private:
             std::uint32_t used_mask = group->match_used();
             if (used_mask != 0) {
                 std::uint32_t used_pos = BitUtils::bsf32(used_mask);
-                if (likely(!(group->is_sentinel(used_pos)))) {
+                if (JSTD_LIKELY(!(group->is_sentinel(used_pos)))) {
                     this->ctrl_ += static_cast<difference_type>(used_pos);
                     this->slot_ += static_cast<difference_type>(used_pos);
                 } else {
@@ -593,7 +595,7 @@ private:
             --this->ctrl_;
             if (this->ctrl_->is_empty())
                 continue;
-            if (likely(!(this->ctrl_->is_sentinel()))) {
+            if (JSTD_LIKELY(!(this->ctrl_->is_sentinel()))) {
                 return;
             } else {
                 this->slot_ = nullptr;
@@ -611,7 +613,7 @@ private:
             std::uint32_t used_mask = group->match_used();
             if (used_mask != 0) {
                 std::uint32_t used_pos = BitUtils::bsr32(used_mask);
-                if (likely(!(group->is_sentinel(used_pos)))) {
+                if (JSTD_LIKELY(!(group->is_sentinel(used_pos)))) {
                     this->ctrl_ -= (kGroupSize - 1) - static_cast<difference_type>(used_pos);
                     this->slot_ -= (kGroupSize - 1) - static_cast<difference_type>(used_pos);
                 } else {

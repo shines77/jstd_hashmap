@@ -67,11 +67,14 @@
   #define JSTD_COMPILER_MANGLES_RETURN_TYPE
   #define JSTD_FUNC_INFO            __FUNCSIG__
   #define JSTD_ALIGNOF(type)        __alignof(type)
-  #define JSTD_DECL_ALIGN(n)        __declspec(align(n))
   #define JSTD_ASSUME_IMPL(expr)    __assume(expr)
   #define JSTD_UNREACHABLE_IMPL()   __assume(0)
-  #define JSTD_NORETURN             __declspec(noreturn)
   #define JSTD_DECL_DEPRECATED      __declspec(deprecated)
+  #define JSTD_DECL_ALIGN(n)        __declspec(align(n))
+  #define JSTD_DECL_UNUSED
+  //#define JSTD_LIKELY(expr)         (expr)
+  //#define JSTD_UNLIKELY(expr)       (expr)
+  #define JSTD_NORETURN             __declspec(noreturn)
   #ifndef JSTD_CC_CLANG
     #define JSTD_DECL_DEPRECATED_X(text) __declspec(deprecated(text))
   #endif
@@ -251,8 +254,8 @@
   #define JSTD_DECL_DEPRECATED      __attribute__((__deprecated__))
   #define JSTD_DECL_ALIGN(n)        __attribute__((__aligned__(n)))
   #define JSTD_DECL_UNUSED          __attribute__((__unused__))
-  #define JSTD_LIKELY(expr)         __builtin_expect(!!(expr), true)
-  #define JSTD_UNLIKELY(expr)       __builtin_expect(!!(expr), false)
+  //#define JSTD_LIKELY(expr)         __builtin_expect(!!(expr), true)
+  //#define JSTD_UNLIKELY(expr)       __builtin_expect(!!(expr), false)
   #define JSTD_NORETURN             __attribute__((__noreturn__))
   #define JSTD_REQUIRED_RESULT      __attribute__((__warn_unused_result__))
   #define JSTD_DECL_PURE_FUNCTION   __attribute__((pure))

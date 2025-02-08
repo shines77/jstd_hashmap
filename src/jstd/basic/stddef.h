@@ -97,6 +97,31 @@
 #endif
 #endif // likely() & unlikely()
 
+#if defined(SUPPORT_LIKELY) && (SUPPORT_LIKELY != 0)
+#ifndef JSTD_LIKELY
+//#define JSTD_LIKELY(expr)           __builtin_expect(!!(expr), 1)
+#define JSTD_LIKELY(expr)           __builtin_expect(expr, 1)
+#endif
+#ifndef JSTD_UNLIKELY
+//#define JSTD_UNLIKELY(expr)         __builtin_expect(!!(expr), 0)
+#define JSTD_UNLIKELY(expr)         __builtin_expect(expr, 0)
+#endif
+#ifndef JSTD_SWITCH_LIKELY
+//#define JSTD_SWITCH_LIKELY(expr, v) __builtin_expect(!!(expr), (v))
+#define JSTD_SWITCH_LIKELY(expr, v) __builtin_expect(expr, (v))
+#endif
+#else
+#ifndef JSTD_LIKELY
+#define JSTD_LIKELY(expr)           (expr)
+#endif
+#ifndef JSTD_UNLIKELY
+#define JSTD_UNLIKELY(expr)         (expr)
+#endif
+#ifndef JSTD_SWITCH_LIKELY
+#define JSTD_SWITCH_LIKELY(expr, v) (expr)
+#endif
+#endif // JSTD_LIKELY() & JSTD_UNLIKELY()
+
 //
 // From: https://hackage.haskell.org/package/LibClang-3.4.0/src/llvm/include/llvm/Support/Compiler.h
 //

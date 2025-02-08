@@ -53,8 +53,10 @@
 
 #define NOMINMAX
 #include <stdint.h>
+#include <stddef.h>
 
 #include <cstdint>
+#include <cstddef>
 #include <memory>           // For std::allocator<T>
 #include <limits>           // For std::numeric_limits<T>, CHAR_BIT
 #include <initializer_list>
@@ -668,7 +670,7 @@ public:
     //
     JSTD_FORCED_INLINE
     void reserve(size_type new_capacity) {
-        if (likely(new_capacity != 0)) {
+        if (JSTD_LIKELY(new_capacity != 0)) {
             new_capacity = this->shrink_to_fit_capacity(new_capacity);
             this->rehash_impl<false>(new_capacity);
         } else {
@@ -698,7 +700,7 @@ public:
     void rehash(size_type new_capacity) {
         size_type fit_to_now = this->shrink_to_fit_capacity(this->size());
         new_capacity = (std::max)(fit_to_now, new_capacity);
-        if (likely(new_capacity != 0)) {
+        if (JSTD_LIKELY(new_capacity != 0)) {
             this->rehash_impl<true>(new_capacity);
         } else {
             this->destroy<true>();
@@ -708,11 +710,11 @@ public:
     JSTD_FORCED_INLINE
     void shrink_to_fit(bool read_only = false) {
         size_type new_capacity;
-        if (likely(!read_only))
+        if (JSTD_LIKELY(!read_only))
             new_capacity = this->shrink_to_fit_capacity(this->size());
         else
             new_capacity = this->size();
-        if (likely(new_capacity != 0)) {
+        if (JSTD_LIKELY(new_capacity != 0)) {
             this->rehash_impl<true>(new_capacity);
         } else {
             this->destroy<true>();
@@ -1061,15 +1063,15 @@ public:
 
     JSTD_FORCED_INLINE
     locator_t find_first_used_index() const {
-        if (likely(this->size() != 0)) {
+        if (JSTD_LIKELY(this->size() != 0)) {
             const group_type * group = this->groups();
             const group_type * last_group = this->last_group();
             size_type slot_base_index = 0;
             for (; group < last_group; ++group) {
                 std::uint32_t used_mask = group->match_used();
-                if (likely(used_mask != 0)) {
+                if (JSTD_LIKELY(used_mask != 0)) {
                     std::uint32_t used_pos = BitUtils::bsf32(used_mask);
-                    if (likely(!group->is_sentinel(used_pos))) {
+                    if (JSTD_LIKELY(!group->is_sentinel(used_pos))) {
                         size_type slot_index = slot_base_index + used_pos;
                         const slot_type * slot = this->slot_at(slot_index);
                         return { group, used_pos, slot };
@@ -1087,7 +1089,7 @@ public:
     size_type skip_empty_slots(size_type start_ctrl_index) const {
         if (this->size() != 0) {
             start_ctrl_index++;
-            if (unlikely(start_ctrl_index >= this->ctrl_capacity()))
+            if (JSTD_UNLIKELY(start_ctrl_index >= this->ctrl_capacity()))
                 return this->ctrl_capacity();
             const group_type * group = this->group_by_ctrl_index(start_ctrl_index);
             const group_type * last_group = this->last_group();
@@ -1095,14 +1097,14 @@ public:
             size_type ctrl_base_index = start_ctrl_index - ctrl_pos;
             // Last 4 items use ctrl seek, maybe faster.
             static const size_type kCtrlFasterSeekPos = 6;
-            if (unlikely(ctrl_pos > (kGroupWidth - kCtrlFasterSeekPos))) {
+            if (JSTD_UNLIKELY(ctrl_pos > (kGroupWidth - kCtrlFasterSeekPos))) {
                 if (group < last_group) {
                     std::uint32_t used_mask = group->match_used();
                     // Filter out the bits in the leading position
                     // std::uint32_t non_excluded_mask = ~((std::uint32_t(1) << std::uint32_t(slot_pos)) - 1);
                     std::uint32_t non_excluded_mask = (std::uint32_t(0xFFFFFFFFu) << std::uint32_t(ctrl_pos));
                     used_mask &= non_excluded_mask;
-                    if (likely(used_mask != 0)) {
+                    if (JSTD_LIKELY(used_mask != 0)) {
                         std::uint32_t used_pos = BitUtils::bsf32(used_mask);
                         size_type slot_index = ctrl_base_index + used_pos;
                         return slot_index;
@@ -1123,7 +1125,7 @@ public:
             group++;
             for (; group < last_group; ++group) {
                 std::uint32_t used_mask = group->match_used();
-                if (likely(used_mask != 0)) {
+                if (JSTD_LIKELY(used_mask != 0)) {
                     std::uint32_t used_pos = BitUtils::bsf32(used_mask);
                     size_type ctrl_index = ctrl_base_index + used_pos;
                     return ctrl_index;
@@ -1372,9 +1374,9 @@ private:
         return static_cast<std::size_t>(ctrl_hash8);
 #else
         std::uint8_t ctrl_hash8 = static_cast<std::uint8_t>(ctrl_hash);
-        if (likely(ctrl_hash8 > kSentinelSlot))
+        if (JSTD_LIKELY(ctrl_hash8 > kSentinelSlot))
             return static_cast<std::size_t>(ctrl_hash8);
-        else if (likely(ctrl_hash8 == kEmptySlot))
+        else if (JSTD_LIKELY(ctrl_hash8 == kEmptySlot))
             return static_cast<std::size_t>(kEmptyHash);
         else
             return static_cast<std::size_t>(kSentinelHash);
@@ -1553,7 +1555,7 @@ private:
                     if (used_mask != 0) {
                         do {
                             std::uint32_t used_pos = BitUtils::bsf32(used_mask);
-                            if (likely(!group->is_sentinel(used_pos))) {
+                            if (JSTD_LIKELY(!group->is_sentinel(used_pos))) {
                                 slot_type * slot = slot_base + used_pos;
                                 this->destroy_slot(slot);
                             } else {
@@ -1568,7 +1570,7 @@ private:
                 ctrl_type * ctrl = this->ctrls();
                 size_type slot_index = 0;
                 for (size_type ctrl_index = 0; ctrl_index < this->ctrl_capacity(); ctrl_index++) {
-                    if (likely((ctrl_index % kGroupWidth) != kGroupSize) {
+                    if (JSTD_LIKELY((ctrl_index % kGroupWidth) != kGroupSize) {
                         if (ctrl->is_valid()) {
                             this->destroy_slot(slot_index);
                         }
@@ -1680,14 +1682,14 @@ private:
         try {
             while (ctrl < last_ctrl) {
                 if (ctrl->is_used()) {
-                    if (likely(!ctrl->is_sentinel())) {
+                    if (JSTD_LIKELY(!ctrl->is_sentinel())) {
                         SlotPolicyTraits::construct(&this->slot_allocator_, &slot[index], &other_slot[index]);
                     } else {
                         break;
                     }
                 }
                 ++index;
-                if (likely((reinterpret_cast<size_type>(ctrl) % kGroupWidth) != (kGroupSize - 1))) {
+                if (JSTD_LIKELY((reinterpret_cast<size_type>(ctrl) % kGroupWidth) != (kGroupSize - 1))) {
                     ++ctrl;
                 } else {
                     ctrl += 2;
@@ -1699,14 +1701,14 @@ private:
             if (index != 0) {
                 do {
                     if (ctrl->is_used()) {
-                        if (likely(!ctrl->is_sentinel())) {
+                        if (JSTD_LIKELY(!ctrl->is_sentinel())) {
                             SlotPolicyTraits::destroy(&this->slot_allocator_, &slot[index]);
                         } else {
                             break;
                         }
                     }
                     --index;
-                    if (likely((reinterpret_cast<size_type>(ctrl) % kGroupWidth) != 0)) {
+                    if (JSTD_LIKELY((reinterpret_cast<size_type>(ctrl) % kGroupWidth) != 0)) {
                         --ctrl;
                     } else {
                         ctrl -= 2;
@@ -1718,14 +1720,14 @@ private:
             if (index != 0) {
                 do {
                     if (ctrl->is_used()) {
-                        if (likely(!ctrl->is_sentinel())) {
+                        if (JSTD_LIKELY(!ctrl->is_sentinel())) {
                             SlotPolicyTraits::destroy(&this->slot_allocator_, &slot[index]);
                         } else {
                             break;
                         }
                     }
                     --index;
-                    if (likely((reinterpret_cast<size_type>(ctrl) % kGroupWidth) != 0)) {
+                    if (JSTD_LIKELY((reinterpret_cast<size_type>(ctrl) % kGroupWidth) != 0)) {
                         --ctrl;
                     } else {
                         ctrl -= 2;
@@ -1835,7 +1837,7 @@ private:
         try {
             while (ctrl < last_ctrl) {
                 if (ctrl->is_used()) {
-                    if (likely(!ctrl->is_sentinel())) {
+                    if (JSTD_LIKELY(!ctrl->is_sentinel())) {
                         SlotPolicyTraits::construct(&this->slot_allocator_, &slot[index], &other_slot[index]);
                         other.destroy_slot(&other_slot[index]);
                     } else {
@@ -1843,7 +1845,7 @@ private:
                     }
                 }
                 ++index;
-                if (likely((reinterpret_cast<size_type>(ctrl) % kGroupWidth) != (kGroupSize - 1))) {
+                if (JSTD_LIKELY((reinterpret_cast<size_type>(ctrl) % kGroupWidth) != (kGroupSize - 1))) {
                     ++ctrl;
                 } else {
                     ctrl += 2;
@@ -1855,14 +1857,14 @@ private:
             if (index != 0) {
                 do {
                     if (ctrl->is_used()) {
-                        if (likely(!ctrl->is_sentinel())) {
+                        if (JSTD_LIKELY(!ctrl->is_sentinel())) {
                             SlotPolicyTraits::destroy(&this->slot_allocator_, &slot[index]);
                         } else {
                             break;
                         }
                     }
                     --index;
-                    if (likely((reinterpret_cast<size_type>(ctrl) % kGroupWidth) != 0)) {
+                    if (JSTD_LIKELY((reinterpret_cast<size_type>(ctrl) % kGroupWidth) != 0)) {
                         --ctrl;
                     } else {
                         ctrl -= 2;
@@ -1874,14 +1876,14 @@ private:
             if (index != 0) {
                 do {
                     if (ctrl->is_used()) {
-                        if (likely(!ctrl->is_sentinel())) {
+                        if (JSTD_LIKELY(!ctrl->is_sentinel())) {
                             SlotPolicyTraits::destroy(&this->slot_allocator_, &slot[index]);
                         } else {
                             break;
                         }
                     }
                     --index;
-                    if (likely((reinterpret_cast<size_type>(ctrl) % kGroupWidth) != 0)) {
+                    if (JSTD_LIKELY((reinterpret_cast<size_type>(ctrl) % kGroupWidth) != 0)) {
                         --ctrl;
                     } else {
                         ctrl -= 2;
@@ -1992,7 +1994,7 @@ private:
     JSTD_FORCED_INLINE
     void create_slots(size_type new_capacity) {
         assert(pow2::is_pow2(new_capacity));
-        if (likely(IsInitialize || (new_capacity != 0))) {
+        if (JSTD_LIKELY(IsInitialize || (new_capacity != 0))) {
 #if GROUP15_USE_HASH_POLICY
             auto hash_policy_setting = this->hash_policy_.calc_next_capacity(new_capacity);
             this->hash_policy_.commit(hash_policy_setting);
@@ -2081,7 +2083,7 @@ private:
                     if (used_mask != 0) {
                         do {
                             std::uint32_t used_pos = BitUtils::bsf32(used_mask);
-                            if (likely(!group->is_sentinel(used_pos))) {
+                            if (JSTD_LIKELY(!group->is_sentinel(used_pos))) {
                                 slot_type * old_slot = slot_base + used_pos;
                                 assert(old_slot < old_last_slot);
                                 this->move_no_grow_unique_insert(old_slot);
@@ -2238,7 +2240,7 @@ private:
                 do {
                     std::uint32_t match_pos = BitUtils::bsf32(match_mask);
                     //const slot_type * slot = slot_base + match_pos;
-                    if (likely(bool(key_equal()(key, slot_base[match_pos].get_key())))) {
+                    if (JSTD_LIKELY(bool(key_equal()(key, slot_base[match_pos].get_key())))) {
                         return { group, match_pos, (slot_base + match_pos) };
                     }
                     match_mask = BitUtils::clearLowBit32(match_mask);
@@ -2246,18 +2248,18 @@ private:
             }
 
             // If it's not overflow, means it hasn't been found.
-            if (likely(group->is_not_overflow(ctrl_hash))) {
+            if (JSTD_LIKELY(group->is_not_overflow(ctrl_hash))) {
                 return {};
             }
 
 #if GROUP15_DISPLAY_DEBUG_INFO
-            if (unlikely(prober.steps() > kSkipGroupsLimit)) {
+            if (JSTD_UNLIKELY(prober.steps() > kSkipGroupsLimit)) {
                 std::cout << "find_impl(): key = " << key <<
                              ", skip_groups = " << prober.steps() <<
                              ", load_factor = " << this->load_factor() << std::endl;
             }
 #endif
-        } while (likely(prober.next_bucket(this->group_mask())));
+        } while (JSTD_LIKELY(prober.next_bucket(this->group_mask())));
 
         return {};
     }
@@ -2277,7 +2279,7 @@ private:
             JSTD_ASSUME(group_start != nullptr);
             group_type * group = group_start + group_index;
             std::uint32_t empty_mask = group->match_empty();
-            if (likely(empty_mask != 0)) {
+            if (JSTD_LIKELY(empty_mask != 0)) {
                 std::uint32_t empty_pos = BitUtils::bsf32(empty_mask);
                 const slot_type * slot_start = this->slots();
                 JSTD_ASSUME(slot_start != nullptr);
@@ -2292,7 +2294,7 @@ private:
                 group->set_overflow(ctrl_hash);
             }
 #if GROUP15_DISPLAY_DEBUG_INFO
-            if (unlikely(prober.steps() > kSkipGroupsLimit)) {
+            if (JSTD_UNLIKELY(prober.steps() > kSkipGroupsLimit)) {
                 std::cout << "find_empty_to_insert(): key = " << key <<
                              ", skip_groups = " << prober.steps() <<
                              ", load_factor = " << this->load_factor() << std::endl;
@@ -2302,7 +2304,7 @@ private:
             if (IsNoGrow) {
                 prober.next_bucket(this->group_mask());
             }
-        } while (likely(IsNoGrow || prober.next_bucket(this->group_mask())));
+        } while (JSTD_LIKELY(IsNoGrow || prober.next_bucket(this->group_mask())));
 
         return {};
     }
@@ -2319,7 +2321,7 @@ private:
             return { locator, kIsKeyExists };
         }
 
-        if (unlikely(this->need_grow())) {
+        if (JSTD_UNLIKELY(this->need_grow())) {
             // The size of slot reach the slot threshold or hashmap is full.
             this->grow_if_necessary();
 
@@ -2329,7 +2331,7 @@ private:
         }
 
         locator = this->find_empty_to_insert<true, KeyT>(key, group_index, ctrl_hash);
-        if (likely(true || (locator.slot() != nullptr))) {
+        if (JSTD_LIKELY(true || (locator.slot() != nullptr))) {
             return { locator, kNeedInsert };
         }
         else {
@@ -2714,7 +2716,7 @@ private:
         std::size_t ctrl_hash = this->ctrl_for_hash(key_hash);
 
         locator_t locator = this->find_impl(key, group_index, ctrl_hash);
-        if (likely(locator.slot() != nullptr)) {
+        if (JSTD_LIKELY(locator.slot() != nullptr)) {
             this->erase_index(locator);
             return 1;
         } else {

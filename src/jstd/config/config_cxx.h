@@ -39,6 +39,8 @@
 // GCC 11.0.0, Clang 10.0.0, VC++ 19.29, ICX: 2021, ICC
 //
 
+#undef jstd_cplusplus
+
 #if defined(_MSC_VER) && !defined(__clang__)
   #if (defined(_MSVC_LANG) && (_MSVC_LANG >= 202002L)) || (__cplusplus >= 202002L)
     #ifndef JSTD_IS_CXX_20
@@ -99,17 +101,17 @@
   #endif
 #endif // _MSC_VER && !__clang__
 
-#ifndef JSTD_NORETURN
+#ifndef JSTD_CC_NORETURN
 #if (__has_cpp_attribute(noreturn) >= 200809L) || defined(JSTD_IS_CXX_11)
-#define JSTD_NORETURN   [[noreturn]]
+#define JSTD_CC_NORETURN    [[noreturn]]
 #else
-#define JSTD_NORETURN
+#define JSTD_CC_NORETURN
 #endif
-#endif // JSTD_NORETURN
+#endif // JSTD_CC_NORETURN
 
 #ifndef JSTD_DEPRECATED
 #if (__has_cpp_attribute(deprecated) >= 201309L) || defined(JSTD_IS_CXX_14)
-#define JSTD_DEPRECATED [[deprecated]]
+#define JSTD_DEPRECATED     [[deprecated]]
 #else
 #define JSTD_DEPRECATED
 #endif
@@ -117,7 +119,7 @@
 
 #ifndef JSTD_MAYBE_UNUSED
 #if (__has_cpp_attribute(maybe_unused) >= 201603L) || defined(JSTD_IS_CXX_17)
-#define JSTD_MAYBE_UNUSED  [[maybe_unused]]
+#define JSTD_MAYBE_UNUSED   [[maybe_unused]]
 #else
 #define JSTD_MAYBE_UNUSED
 #endif
@@ -128,7 +130,7 @@
 //
 #ifndef JSTD_NODISCARD
 #if (__has_cpp_attribute(nodiscard) >= 201603L) || defined(JSTD_IS_CXX_17)
-#define JSTD_NODISCARD  [[nodiscard]]
+#define JSTD_NODISCARD      [[nodiscard]]
 #else
 #define JSTD_NODISCARD
 #endif
@@ -136,27 +138,27 @@
 
 #ifndef JSTD_FALLTHROUGH
 #if (__has_cpp_attribute(fallthrough) >= 201603L) || defined(JSTD_IS_CXX_17)
-#define JSTD_FALLTHROUGH  [[fallthrough]]
+#define JSTD_FALLTHROUGH    [[fallthrough]]
 #else
 #define JSTD_FALLTHROUGH
 #endif
 #endif // JSTD_FALLTHROUGH
 
-#ifndef JSTD_LIKELY
+#ifndef JSTD_CC_LIKELY
 #if (__has_cpp_attribute(likely) >= 201803L) || defined(JSTD_IS_CXX_20)
-#define JSTD_LIKELY     [[likely]]
+#define JSTD_CC_LIKELY      [[likely]]
 #else
-#define JSTD_LIKELY
+#define JSTD_CC_LIKELY
 #endif
-#endif // JSTD_LIKELY
+#endif // JSTD_CC_LIKELY
 
-#ifndef JSTD_UNLIKELY
+#ifndef JSTD_CC_UNLIKELY
 #if (__has_cpp_attribute(unlikely) >= 201803L) || defined(JSTD_IS_CXX_20)
-#define JSTD_UNLIKELY   [[unlikely]]
+#define JSTD_CC_UNLIKELY    [[unlikely]]
 #else
-#define JSTD_UNLIKELY
+#define JSTD_CC_UNLIKELY
 #endif
-#endif // JSTD_UNLIKELY
+#endif // JSTD_CC_UNLIKELY
 
 #ifndef JSTD_NO_UNIQUE_ADDRESS
 #if (__has_cpp_attribute(no_unique_address) >= 201803L) || defined(JSTD_IS_CXX_20)
