@@ -13,6 +13,10 @@
 
 #include "jstd/basic/stddef.h"
 
+#if (jstd_cplusplus >= 2020L)
+#include <bit>
+#endif
+
 #if (defined(_MSC_VER) && (_MSC_VER >= 1500)) && !defined(__clang__)
 #include <intrin.h>
 #endif
@@ -218,7 +222,9 @@ namespace BitUtils {
     static inline
     unsigned int bsf32(unsigned int x) {
         JSTD_ASSUME(x != 0);
-#if __has_builtin(__builtin_ctz)
+#if (jstd_cplusplus >= 2020L)
+        return (unsigned int)std::countr_zero((unsigned int)x);
+#elif __has_builtin(__builtin_ctz)
         // gcc: __bsfd(x)
         return (unsigned int)__builtin_ctz(x);
 #elif defined(__GNUC__) && (__GNUC__ > 3 || (__GNUC__ == 3 && __GNUC_MINOR__ >= 4))
@@ -234,7 +240,9 @@ namespace BitUtils {
     static inline
     unsigned int bsf64(uint64_t x) {
         JSTD_ASSUME(x != 0);
-#if __has_builtin(__builtin_ctzll)
+#if (jstd_cplusplus >= 2020L)
+        return (unsigned int)std::countr_zero((uint64_t)x);
+#elif __has_builtin(__builtin_ctzll)
         // gcc: __bsfq(x)
         return (unsigned int)__builtin_ctzll((unsigned long long)x);
 #elif defined(__GNUC__) && (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 3))
@@ -266,7 +274,9 @@ namespace BitUtils {
     static inline
     unsigned int bsr32(unsigned int x) {
         JSTD_ASSUME(x != 0);
-#if __has_builtin(__builtin_clz)
+#if (jstd_cplusplus >= 2020L)
+        return (unsigned int)(31 - std::countl_zero((unsigned int)x));
+#elif __has_builtin(__builtin_clz)
         // gcc: __bsrd(x)
         return (unsigned int)(31 - __builtin_clz(x));
 #elif defined(__GNUC__) && (__GNUC__ > 3 || (__GNUC__ == 3 && __GNUC_MINOR__ >= 4))
@@ -282,7 +292,9 @@ namespace BitUtils {
     static inline
     unsigned int bsr64(uint64_t x) {
         JSTD_ASSUME(x != 0);
-#if __has_builtin(__builtin_clzll)
+#if (jstd_cplusplus >= 2020L)
+        return (unsigned int)(63 - std::countl_zero((uint64_t)x));
+#elif __has_builtin(__builtin_clzll)
         // gcc: __bsrq(x)
         return (unsigned int)(63 - __builtin_clzll((unsigned long long)x));
 #elif defined(__GNUC__) && (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 3))
