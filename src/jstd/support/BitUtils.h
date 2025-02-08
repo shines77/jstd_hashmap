@@ -221,7 +221,9 @@ namespace BitUtils {
 #if __has_builtin(__builtin_ctz)
         // gcc: __bsfd(x)
         return (unsigned int)__builtin_ctz(x);
-#elif defined(__GNUC__) || defined(__clang__)
+#elif defined(__GNUC__) && (__GNUC__ > 3 || (__GNUC__ == 3 && __GNUC_MINOR__ >= 4))
+        return (unsigned int)__builtin_ctz(x);
+#elif defined(__GNUC__) || __has_builtin(__bsfd) || (__clang_major__ >= 12)
         return __bsfd(x);
 #else
         return (unsigned int)BitUtils::__internal_ctz(x);
@@ -235,7 +237,9 @@ namespace BitUtils {
 #if __has_builtin(__builtin_ctzll)
         // gcc: __bsfq(x)
         return (unsigned int)__builtin_ctzll((unsigned long long)x);
-#elif defined(__GNUC__) || defined(__clang__)
+#elif defined(__GNUC__) && (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 3))
+        return (unsigned int)__builtin_ctzll((unsigned long long)x);
+#elif defined(__GNUC__) || __has_builtin(__bsfq) || (__clang_major__ >= 12)
         return __bsfq(x);
 #else
         return (unsigned int)BitUtils::__internal_ctzll(x);
@@ -265,7 +269,9 @@ namespace BitUtils {
 #if __has_builtin(__builtin_clz)
         // gcc: __bsrd(x)
         return (unsigned int)(31 - __builtin_clz(x));
-#elif defined(__GNUC__) || defined(__clang__)
+#elif defined(__GNUC__) && (__GNUC__ > 3 || (__GNUC__ == 3 && __GNUC_MINOR__ >= 4))
+        return (unsigned int)(31 - __builtin_clz(x));
+#elif defined(__GNUC__) || __has_builtin(__bsrd) || (__clang_major__ >= 12)
         return __bsrd(x);
 #else
         return (unsigned int)(31 - BitUtils::__internal_clz(x));
@@ -279,7 +285,9 @@ namespace BitUtils {
 #if __has_builtin(__builtin_clzll)
         // gcc: __bsrq(x)
         return (unsigned int)(63 - __builtin_clzll((unsigned long long)x));
-#elif defined(__GNUC__) || defined(__clang__)
+#elif defined(__GNUC__) && (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 3))
+        return (unsigned int)(63 - __builtin_clzll((unsigned long long)x));
+#elif defined(__GNUC__) || __has_builtin(__bsrq) || (__clang_major__ >= 12)
         return __bsrq(x);
 #else
         return (unsigned int)(63 - BitUtils::__internal_clzll(x));
@@ -355,6 +363,8 @@ namespace BitUtils {
     unsigned int popcnt32(unsigned int x) {
 #if __has_builtin(__builtin_popcount)
         return (unsigned int)__builtin_popcount(x);
+#elif defined(__GNUC__) && (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 3))
+        return (unsigned int)__builtin_popcount(x);
 #elif defined(__POPCNT__)
         int popcount = _mm_popcnt_u32(x);
         return (unsigned int)popcount;
@@ -368,6 +378,8 @@ namespace BitUtils {
     static inline
     unsigned int popcnt64(uint64_t x) {
 #if __has_builtin(__builtin_popcountll)
+        return (unsigned int)__builtin_popcountll((unsigned long long)x);
+#elif defined(__GNUC__) && (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 3))
         return (unsigned int)__builtin_popcountll((unsigned long long)x);
 #elif defined(__POPCNT__)
         int64_t popcount = _mm_popcnt_u64(x);

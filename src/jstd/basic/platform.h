@@ -18,11 +18,20 @@
   #define JSTD_IS_X86           1
   #define JSTD_IS_X86_I386      1
   #define JSTD_WORD_LEN         32
-#elif defined(__aarch64__) || defined(_M_ARM64) || defined(__ARM64__) || defined(__arm64__)
+#elif defined(__aarch64__) || defined(_M_ARM64) || defined(__ARM64__) || defined(__arm64__) \
+  || defined(__arm64) || defined(__AARCH64EL__)
   #define JSTD_IS_ARM           1
   #define JSTD_IS_ARM64         1
   #define JSTD_WORD_LEN         64
-#elif defined(__aarch32__) || defined(_M_ARM) || defined(__ARM__) || defined(__arm__)
+#elif defined(__aarch32__) || defined(_M_ARM) || defined(__ARM__) || defined(__arm__) || \
+    defined(__ARM_ARCH) || defined(__TARGET_ARCH_ARM) || \
+    defined(__thumb__) || defined(__TARGET_ARCH_THUMB) || \
+    defined(__ARM_ARCH_7__) || defined(__ARM_ARCH_7A__) || \
+    defined(__ARM_ARCH_7R__) || defined(__ARM_ARCH_7M__) || \
+    defined(__ARM_ARCH_6K__) || defined(__ARM_ARCH_6Z__) || \
+    defined(__ARM_ARCH_6KZ__) || defined(__ARM_ARCH_6T2__) || \
+    defined(__ARM_ARCH_5TE__) || defined(__ARM_ARCH_5TEJ__) || \
+    defined(__ARM_ARCH_4T__) || defined(__ARM_ARCH_4__)
   #define JSTD_IS_ARM           1
   #define JSTD_IS_ARM32         1
   #define JSTD_WORD_LEN         32
@@ -34,11 +43,32 @@
   #define JSTD_WORD_LEN         32
 #endif
 
+#ifndef JSTD_IS_ARM
+#if defined(__ARM_ARCH) || defined(__TARGET_ARCH_ARM) || \
+    defined(__TARGET_ARCH_THUMB) || defined(_M_ARM) || \
+    defined(__arm__) || defined(__arm64) || defined(__thumb__) || \
+    defined(_M_ARM64) || defined(__aarch64__) || defined(__AARCH64EL__) || \
+    defined(__ARM_ARCH_7__) || defined(__ARM_ARCH_7A__) || \
+    defined(__ARM_ARCH_7R__) || defined(__ARM_ARCH_7M__) || \
+    defined(__ARM_ARCH_6K__) || defined(__ARM_ARCH_6Z__) || \
+    defined(__ARM_ARCH_6KZ__) || defined(__ARM_ARCH_6T2__) || \
+    defined(__ARM_ARCH_5TE__) || defined(__ARM_ARCH_5TEJ__) || \
+    defined(__ARM_ARCH_4T__) || defined(__ARM_ARCH_4__)
+#define JSTD_IS_ARM   1
+#else
+#define JSTD_IS_ARM   0
+#endif
+#endif // !JSTD_IS_ARM
+
 #ifndef JSTD_WORD_LEN
   #if defined(WIN32) || defined(_WIN32)
     #define JSTD_WORD_LEN       32
   #elif defined(WIN64) || defined(_WIN64)
     #define JSTD_WORD_LEN       64
+  #elif defined (__LP64__) || (SIZE_MAX == UINT64_MAX)
+    #define JSTD_WORD_LEN       64
+  #else
+    #define JSTD_WORD_LEN       (sizeof(size_t) * 8)
   #endif
 #endif // !JSTD_WORD_LEN
 

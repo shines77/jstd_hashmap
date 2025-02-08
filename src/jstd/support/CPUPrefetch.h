@@ -23,7 +23,7 @@
 #pragma once
 #endif
 
-#include "jstd/config/config.h"
+#include "jstd/basic/stddef.h"
 
 #ifdef __SSE__
 #include <xmmintrin.h>
@@ -81,16 +81,6 @@
 
 namespace jstd {
 
-inline void Prefetch_Read_T0(const void * addr);
-inline void Prefetch_Read_T1(const void * addr);
-inline void Prefetch_Read_T2(const void * addr);
-inline void Prefetch_Read_Nta(const void * addr);
-
-inline void Prefetch_Write_T0(const void * addr);
-inline void Prefetch_Write_T1(const void * addr);
-inline void Prefetch_Write_T2(const void * addr);
-inline void Prefetch_Write_Nta(const void * addr);
-
 #if __has_builtin(__builtin_prefetch) || defined(__GNUC__) || defined(__clang__)
 
 #define JSTD_HAVE_CPU_PREFETCH  1
@@ -136,26 +126,30 @@ inline void Prefetch_Write_Nta(const void * addr);
 //      3: (Default), High, L1 cache, leave the data in the L1, L2, and L3 cache levels after the access.
 //
 
-inline void Prefetch_Read_T0(const void * addr)
+static inline
+void Prefetch_Read_T0(const void * addr)
 {
     // Note: this uses prefetcht0 on Intel.
     //__builtin_prefetch(addr, 0, 3);
     __builtin_prefetch((const char *)addr);
 }
 
-inline void Prefetch_Read_T1(const void * addr)
+static inline
+void Prefetch_Read_T1(const void * addr)
 {
     // Note: this uses prefetcht1 on Intel.
     __builtin_prefetch(addr, 0, 2);
 }
 
-inline void Prefetch_Read_T2(const void * addr)
+static inline
+void Prefetch_Read_T2(const void * addr)
 {
     // Note: this uses prefetcht2 on Intel.
     __builtin_prefetch(addr, 0, 1);
 }
 
-inline void Prefetch_Read_Nta(const void * addr)
+static inline
+void Prefetch_Read_Nta(const void * addr)
 {
     // Note: this uses prefetchtnta on Intel.
     __builtin_prefetch(addr, 0, 0);
@@ -163,25 +157,29 @@ inline void Prefetch_Read_Nta(const void * addr)
 
 // -----------------------------------------------------------------
 
-inline void Prefetch_Write_T0(const void * addr)
+static inline
+void Prefetch_Write_T0(const void * addr)
 {
     // Note: this uses prefetcht0 on Intel.
     __builtin_prefetch(addr, 1, 3);
 }
 
-inline void Prefetch_Write_T1(const void * addr)
+static inline
+void Prefetch_Write_T1(const void * addr)
 {
     // Note: this uses prefetcht1 on Intel.
     __builtin_prefetch(addr, 1, 2);
 }
 
-inline void Prefetch_Write_T2(const void * addr)
+static inline
+void Prefetch_Write_T2(const void * addr)
 {
     // Note: this uses prefetcht2 on Intel.
     __builtin_prefetch(addr, 1, 1);
 }
 
-inline void Prefetch_Write_Nta(const void * addr)
+static inline
+void Prefetch_Write_Nta(const void * addr)
 {
     // Note: this uses prefetchtnta on Intel.
     __builtin_prefetch(addr, 1, 0);
@@ -191,51 +189,61 @@ inline void Prefetch_Write_Nta(const void * addr)
 
 #define JSTD_HAVE_CPU_PREFETCH  1
 
-inline void Prefetch_Read_T0(const void * addr)
+static inline
+void Prefetch_Read_T0(const void * addr)
 {
     _mm_prefetch(reinterpret_cast<const char *>(addr), _MM_HINT_T0);
 }
 
-inline void Prefetch_Read_T1(const void * addr)
+static inline
+void Prefetch_Read_T1(const void * addr)
 {
     _mm_prefetch(reinterpret_cast<const char *>(addr), _MM_HINT_T1);
 }
 
-inline void Prefetch_Read_T2(const void * addr)
+static inline
+void Prefetch_Read_T2(const void * addr)
 {
     _mm_prefetch(reinterpret_cast<const char *>(addr), _MM_HINT_T2);
 }
 
-inline void Prefetch_Read_Nta(const void * addr)
+static inline
+void Prefetch_Read_Nta(const void * addr)
 {
     _mm_prefetch(reinterpret_cast<const char *>(addr), _MM_HINT_NTA);
 }
 
 // -----------------------------------------------------------------
 
-inline void Prefetch_Write_T0(const void * addr)
+static inline
+void Prefetch_Write_T0(const void * addr)
 {
     _mm_prefetch(reinterpret_cast<const char *>(addr), _MM_HINT_T0);
 }
 
-inline void Prefetch_Write_T1(const void * addr)
+static inline
+void Prefetch_Write_T1(const void * addr)
 {
     _mm_prefetch(reinterpret_cast<const char *>(addr), _MM_HINT_T1);
 }
 
-inline void Prefetch_Write_T2(const void * addr)
+static inline
+void Prefetch_Write_T2(const void * addr)
 {
     _mm_prefetch(reinterpret_cast<const char *>(addr), _MM_HINT_T2);
 }
 
-inline void Prefetch_Write_Nta(const void * addr)
+static inline
+void Prefetch_Write_Nta(const void * addr)
 {
     _mm_prefetch(reinterpret_cast<const char *>(addr), _MM_HINT_NTA);
 }
 
 #else // !JSTD_HAVE_SSE
 
-inline void Prefetch_Read_T0(const void * addr) {}
+inline void Prefetch_Read_T0(const void * addr) {
+    printf("Not support Prefetch_Read_T0()\n");
+}
 
 inline void Prefetch_Read_T1(const void * addr) {}
 
