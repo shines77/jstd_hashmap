@@ -1251,19 +1251,29 @@ private:
         return (static_cast<intptr_t>(value) >= 0);
     }
 
-    inline iterator iterator_at(size_type index) noexcept {
+    inline iterator iterator_at(size_type ctrl_index, size_type slot_index) noexcept {
         if (!kIsIndirectKV) {
-            locator_t locator(this, index);
-            return { locator };
+#if ITERATOR15_USE_LOCATOR15
+            return { this->group_at(ctrl_index / kGroupWidth),
+                     (ctrl_index % kGroupWidth),
+                     this->slot_at(slot_index) };
+#else
+            return { this->ctrl_at(ctrl_index), this->slot_at(slot_index) };
+#endif
         } else {
             return { this->slot_at(index) };
         }
     }
 
-    inline const_iterator iterator_at(size_type index) const noexcept {
+    inline const_iterator iterator_at(size_type ctrl_index, size_type slot_index) const noexcept {
         if (!kIsIndirectKV) {
-            locator_t locator(this, index);
-            return { locator };
+#if ITERATOR15_USE_LOCATOR15
+            return { this->group_at(ctrl_index / kGroupWidth),
+                     (ctrl_index % kGroupWidth),
+                     this->slot_at(slot_index) };
+#else
+            return { this->ctrl_at(ctrl_index), this->slot_at(slot_index) };
+#endif
         } else {
             return { this->slot_at(index) };
         }
@@ -1281,16 +1291,6 @@ private:
             return { locator };
         else
             return { locator.slot() };
-    }
-
-    inline iterator next_valid_iterator(iterator iter) {
-        ++iter;
-        return iter;
-    }
-
-    inline iterator next_valid_iterator(const_iterator iter) {
-        ++iter;
-        return iter;
     }
 
     inline size_type index_salt() const noexcept {
@@ -1436,13 +1436,12 @@ private:
     }
 
     template <bool NeedClearSlots>
-    JSTD_NO_INLINE
     void destroy() {
         this->destroy_data<NeedClearSlots>();
     }
 
     template <bool NeedClearSlots>
-    JSTD_FORCED_INLINE
+    JSTD_NO_INLINE
     void destroy_data() {
         // Note!!: destroy_slots() need use this->ctrls(), so must destroy slots first.
         size_type group_capacity = this->group_capacity();
@@ -2161,7 +2160,27 @@ private:
         printf(" ]\n");
     }
 
-    static inline iterator make_iterator(const locator_t & locator) noexcept {
+    JSTD_FORCED_INLINE
+    iterator make_iterator(size_type ctrl_index) const noexcept {
+        size_type group_index = ctrl_index / kGroupWidth;
+        size_type group_pos = ctrl_index % kGroupWidth;
+        assert(group_index < this->group_capacity());
+        assert(group_pos != kGroupSize);
+        const group_type * group = this->group_at(group_index);
+        size_type slot_index = group_index * kGroupSize + group_pos;
+        const slot_type * slot = this->slot_at(slot_index);
+        return { group, group_pos, slot };
+    }
+
+    JSTD_FORCED_INLINE
+    iterator make_iterator(size_type ctrl_index, size_type slot_index) const noexcept {
+        const ctrl_type * ctrl = this->ctrl_at(ctrl_index);
+        const slot_type * slot = this->slot_at(slot_index);
+        return { ctrl, slot };
+    }
+
+    static JSTD_FORCED_INLINE
+    iterator make_iterator(const locator_t & locator) noexcept {
         return { locator.group(), locator.pos(), locator.slot() };
     }
 

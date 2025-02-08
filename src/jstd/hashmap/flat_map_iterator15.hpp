@@ -82,11 +82,11 @@ public:
     flat_map_locator15(const group_type * group, size_type pos, const slot_type * slot) noexcept
         : group_(group), pos_(pos), slot_(slot) {}
 #if 0
-    flat_map_locator15(const hashmap_type * hashmap, size_type index) noexcept
+    flat_map_locator15(const hashmap_type * hashmap, size_type ctrl_index) noexcept
         : flat_map_locator15() {
-        size_type group_index = index / kGroupWidth;
-        size_type group_pos = index % kGroupWidth;
-        assert(group_index != this->group_capacity());
+        size_type group_index = ctrl_index / kGroupWidth;
+        size_type group_pos = ctrl_index % kGroupWidth;
+        assert(group_index < hashmap->group_capacity());
         assert(group_pos != kGroupSize);
         this->group_ = hashmap->group_at(group_index);
         this->pos_ = group_pos;
@@ -266,6 +266,11 @@ public:
     flat_map_iterator15(const slot_type * slot) noexcept
         : locator_(nullptr, 0, slot) {}
 
+    flat_map_iterator15(const ctrl_type * ctrl, const slot_type * slot) noexcept
+        : locator_(reinterpret_cast<const group_type *>((reinterpret_cast<std::uintptr_t>(ctrl) & (~(kGroupWidth - 1)))),
+                   (static_cast<size_type>(reinterpret_cast<std::uintptr_t>(ctrl) & kGroupWidth)),
+                   slot) {}
+
     flat_map_iterator15(const group_type * group, size_type pos, const slot_type * slot) noexcept
         : locator_(group, pos, slot) {}
 
@@ -434,6 +439,9 @@ public:
         : ctrl_(nullptr), slot_(const_cast<const slot_type *>(slot)) {}
     flat_map_iterator15(const slot_type * slot) noexcept
         : ctrl_(nullptr), slot_(slot) {}
+
+    flat_map_iterator15(const ctrl_type * ctrl, const slot_type * slot) noexcept
+        : ctrl_(ctrl), slot_(slot) {}
 
     flat_map_iterator15(const group_type * group, size_type pos, const slot_type * slot) noexcept
         : ctrl_(const_cast<const ctrl_type *>(
@@ -657,6 +665,9 @@ public:
     flat_map_iterator15(slot_type * slot) noexcept
         : slot_(const_cast<const slot_type *>(slot)) {}
     flat_map_iterator15(const slot_type * slot) noexcept
+        : slot_(slot) {}
+
+    flat_map_iterator15(const ctrl_type * ctrl, const slot_type * slot) noexcept
         : slot_(slot) {}
 
     flat_map_iterator15(const group_type * group, size_type pos, const slot_type * slot) noexcept
