@@ -469,7 +469,13 @@ void benchmark_find_existing(std::size_t run,
             // Accessing the first byte of the value prevents the above call from being optimized out and ensures that
             // tables that can preform look-ups without accessing the values (because the keys are stored separately)
             // actually incur the additional cache miss that they would incur during normal use.
-            do_not_optimize += *(unsigned char *)&HashMap<BluePrint>::get_value_from_iter(table, iter);
+
+            //
+            // (Modified by shines77, 2025-02-09)
+            // To avoid unnecessary cache pollution caused by accessing the values,
+            // we will change to accessing the first byte of the Key value.
+            //
+            do_not_optimize += *(unsigned char *)&HashMap<BluePrint>::get_key_from_iter(table, iter);
         }
         sw.stop();
 
