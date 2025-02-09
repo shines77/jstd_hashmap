@@ -53,8 +53,10 @@
 
 #define NOMINMAX
 #include <stdint.h>
+#include <stddef.h>
 
 #include <cstdint>
+#include <cstddef>
 #include <memory>           // For std::allocator<T>
 #include <limits>           // For std::numeric_limits<T>, CHAR_BIT
 #include <initializer_list>
@@ -70,6 +72,7 @@
 #include "jstd/support/BitUtils.h"
 #include "jstd/support/CPUPrefetch.h"
 
+#include "jstd/traits/type_traits.h"    // For jstd::narrow_cast<T>()
 #include "jstd/hasher/hashes.h"
 #include "jstd/utility/utility.h"
 
@@ -1379,7 +1382,7 @@ private:
         std::uint8_t ctrl_hash8 = ctrl_type::reduced_hash(ctrl_hash);
         return ctrl_hash8;
 #else
-        std::uint8_t ctrl_hash8 = ctrl_type::hash_bits(static_cast<std::uint8_t>(ctrl_hash));
+        std::uint8_t ctrl_hash8 = ctrl_type::hash_bits(jstd::narrow_cast<std::uint8_t>(ctrl_hash));
   #if 1
         if (likely(ctrl_hash8 != kEmptySlot))
             return ctrl_hash8;

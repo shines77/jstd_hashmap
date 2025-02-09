@@ -56,6 +56,7 @@
 #include <assert.h>
 
 #include "jstd/basic/stddef.h"
+#include "jstd/traits/type_traits.h"    // For jstd::narrow_cast<T>()
 #include "jstd/support/BitVec.h"
 #include "jstd/memory/memory_barrier.h"
 
@@ -153,12 +154,12 @@ public:
             0xFCFCFCFCu, 0xFDFDFDFDu, 0xFEFEFEFEu, 0xFFFFFFFFu,
         };
 
-        return (int)dword_hashs[static_cast<std::uint8_t>(hash)];
+        return (int)dword_hashs[jstd::narrow_cast<std::uint8_t>(hash)];
     }
 
     static JSTD_FORCED_INLINE
     std::uint8_t reduced_hash(std::size_t hash) {
-        return static_cast<std::uint8_t>(repeated_hash(hash));
+        return jstd::narrow_cast<std::uint8_t>(repeated_hash(hash));
     }
 
     static JSTD_FORCED_INLINE
@@ -280,7 +281,7 @@ public:
         else if (kEmptySlot == 0b11111111)
             return _mm_setones_si128();
         else
-            return SSE::mm_set1_epi32((int)kEmptySlot32);
+            return _mm_set1_epi32((int)kEmptySlot32);
     }
 
     JSTD_FORCED_INLINE
@@ -432,7 +433,7 @@ public:
 #if GROUP15_USE_LOOK_UP_TABLE
         // Use lookup table
         int hash32 = ctrl_type::repeated_hash(hash);
-        __m128i hash_bits = SSE::mm_set1_epi32(hash32);
+        __m128i hash_bits = _mm_set1_epi32(hash32);
 #else
         __m128i hash_bits = _mm_set1_epi8(static_cast<char>(hash));
 #endif

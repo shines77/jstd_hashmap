@@ -72,6 +72,7 @@
 #include "jstd/support/BitUtils.h"
 #include "jstd/support/CPUPrefetch.h"
 
+#include "jstd/traits/type_traits.h"    // For jstd::narrow_cast<T>()
 #include "jstd/hasher/hashes.h"
 #include "jstd/utility/utility.h"
 
@@ -1373,7 +1374,7 @@ private:
         std::uint8_t ctrl_hash8 = ctrl_type::reduced_hash(ctrl_hash);
         return static_cast<std::size_t>(ctrl_hash8);
 #else
-        std::uint8_t ctrl_hash8 = static_cast<std::uint8_t>(ctrl_hash);
+        std::uint8_t ctrl_hash8 = jstd::narrow_cast<std::uint8_t>(ctrl_hash);
         if (JSTD_LIKELY(ctrl_hash8 > kSentinelSlot))
             return static_cast<std::size_t>(ctrl_hash8);
         else if (JSTD_LIKELY(ctrl_hash8 == kEmptySlot))
@@ -2225,15 +2226,12 @@ private:
 
         do {
             size_type group_index = prober.get();
-            const group_type * group_start = this->groups();
-            JSTD_ASSUME(group_start != nullptr);
-            const group_type * group = group_start + group_index;
+            const group_type * group = this->groups() + group_index;
             std::uint32_t match_mask = group->match_hash(hash_bits);
-            if (match_mask != 0) {
+            if (JSTD_LIKELY(match_mask != 0)) {
                 const slot_type * slot_start = this->slots();
                 JSTD_ASSUME(slot_start != nullptr);
                 const slot_type * slot_base = slot_start + group_index * kGroupSize;
-                JSTD_ASSUME(slot_base != nullptr);
                 if (sizeof(value_type) <= 32) {
                     Prefetch_Read_T0((const void *)&slot_base->get_key());
                 }
@@ -2275,16 +2273,13 @@ private:
 
         do {
             size_type group_index = prober.get();
-            group_type * group_start = this->groups();
-            JSTD_ASSUME(group_start != nullptr);
-            group_type * group = group_start + group_index;
+            group_type * group = this->groups() + group_index;
             std::uint32_t empty_mask = group->match_empty();
             if (JSTD_LIKELY(empty_mask != 0)) {
                 std::uint32_t empty_pos = BitUtils::bsf32(empty_mask);
                 const slot_type * slot_start = this->slots();
                 JSTD_ASSUME(slot_start != nullptr);
                 const slot_type * slot_base = slot_start + group_index * kGroupSize;
-                JSTD_ASSUME(slot_base != nullptr);
                 assert(group->is_empty(empty_pos));
                 group->set_used(empty_pos, ctrl_hash);
                 const slot_type * slot = slot_base + empty_pos;
