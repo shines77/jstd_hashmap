@@ -233,19 +233,19 @@ public:
     }
 
     JSTD_FORCED_INLINE bool is_not_overflow(std::size_t hash) const {
-        //static constexpr unsigned char shift[] = { 1, 2, 4, 8, 16, 32, 64, 128 };
+        // static constexpr unsigned char shift[] = { 1, 2, 4, 8, 16, 32, 64, 128 };
         std::size_t pos = hash % std::size_t(CHAR_BIT);
         JSTD_ASSUME(pos < std::size_t(CHAR_BIT));
         std::size_t mask = std::size_t(1) << pos;
         JSTD_ASSUME(mask < (std::size_t(1) << std::size_t(CHAR_BIT)));
-        //return ((this->value_ & jstd::naarrow_cast<value_type>(mask)) == 0);
-        return ((static_cast<std::size_t>(this->value_) & mask) == 0);
+        return ((this->value_ & jstd::narrow_cast<value_type>(mask)) == 0);
+        // return ((static_cast<std::size_t>(this->value_) & mask) == 0);
     }
 
     JSTD_FORCED_INLINE void set_overflow(std::size_t hash) {
         std::size_t pos = hash % std::size_t(CHAR_BIT);
         JSTD_ASSUME(pos < std::size_t(CHAR_BIT));
-#if 1
+#if 0
         std::size_t mask = std::size_t(1) << pos;
         JSTD_ASSUME(mask < (std::size_t(1) << std::size_t(CHAR_BIT)));
         std::size_t value64 = static_cast<std::size_t>(this->value_);
@@ -253,7 +253,7 @@ public:
         this->value_ = static_cast<value_type>(value64);
 #else
         std::uint32_t mask = 1 << static_cast<std::uint32_t>(pos);
-        JSTD_ASSUME(mask < (1 << std::uint32_t(CHAR_BIT)));
+        JSTD_ASSUME(mask < (1 << CHAR_BIT));
         this->value_ |= jstd::narrow_cast<value_type>(mask);
 #endif
     }

@@ -4370,7 +4370,7 @@ private:
         ctrl_type * new_ctrls = CtrlAllocTraits::allocate(this->ctrl_allocator_, total_alloc_size);
 #endif
         // Prefetch for resolve potential ctrls TLB misses.
-        //Prefetch_Write_T2(new_ctrls);
+        //CPU_Prefetch_Write_T2(new_ctrls);
 
         // Reset ctrls to default state
         this->clear_ctrls(new_ctrls, new_capacity, new_max_lookups, new_group_count);
@@ -4381,7 +4381,7 @@ private:
         slot_type * new_slots = this->AlignedSlots<kSlotAlignment>(new_ctrls, ctrl_alloc_size);
 #endif
         // Prefetch for resolve potential ctrls TLB misses.
-        Prefetch_Write_T2(new_slots);
+        CPU_Prefetch_Write_T2(new_slots);
 
         this->ctrls_ = new_ctrls;
         this->max_lookups_ = new_max_lookups;
@@ -4422,9 +4422,9 @@ private:
 
             // Prefetch for resolve potential ctrls TLB misses.
             if (!kIsIndirectKV) {
-                Prefetch_Read_T2(old_ctrls);
+                CPU_Prefetch_Read_T2(old_ctrls);
             }
-            Prefetch_Read_T2(old_slots);
+            CPU_Prefetch_Read_T2(old_slots);
 
             this->create_slots<false>(new_capacity);
 
@@ -4451,76 +4451,76 @@ private:
                     slot_type * slot_base = old_slots;
                     for (; group < end_group; ++group) {
                         // Prefetch for read old ctrl
-                        Prefetch_Read_T0(PtrOffset(group.ctrl(), kPrefetchCtrlOffset));
+                        jstd::CPU_Prefetch_Read_T0(PtrOffset(group.ctrl(), kPrefetchCtrlOffset));
 
                         // Prefetch for read old slot
                         if (kSlotSetp < 64) {
                             // sizeof(value_type) = [1, 4)
-                            Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 0));
+                            jstd::CPU_Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 0));
                         } else {
                             if (kSlotSetp >= 64 * 1) {   // >= 64
                                 // sizeof(value_type) = [4, 8)
-                                Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 0));
+                                jstd::CPU_Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 0));
                             }
                             if (kSlotSetp >= 64 * 2) {   // >= 128
                                 // sizeof(value_type) = [8, 12)
-                                Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 1));
+                                jstd::CPU_Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 1));
                             }
                             if (kSlotSetp >= 64 * 3) {   // >= 192
                                 // sizeof(value_type) = [12, 16)
-                                Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 2));
+                                jstd::CPU_Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 2));
                             }
                             if (kSlotSetp >= 64 * 4) {   // >= 256
                                 // sizeof(value_type) = [16, 20)
-                                Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 3));
+                                jstd::CPU_Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 3));
                             }
                             if (kSlotSetp >= 64 * 5) {   // >= 320
                                 // sizeof(value_type) = [20, 24)
-                                Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 4));
+                                jstd::CPU_Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 4));
                             }
                             if (kSlotSetp >= 64 * 6) {   // >= 384
                                 // sizeof(value_type) = [24, 28)
-                                Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 5));
+                                jstd::CPU_Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 5));
                             }
                             if (kSlotSetp >= 64 * 7) {   // >= 448
                                 // sizeof(value_type) = [28, 32)
-                                Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 6));
+                                jstd::CPU_Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 6));
                             }
                             if (kSlotSetp >= 64 * 8) {   // >= 512
                                 // sizeof(value_type) = [32, 36)
-                                Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 7));
+                                jstd::CPU_Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 7));
                             }
                             if (kSlotSetp >= 64 * 9) {   // >= 576
                                 // sizeof(value_type) = [36, 40)
-                                Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 8));
+                                jstd::CPU_Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 8));
                             }
                             if (kSlotSetp >= 64 * 10) {   // >= 640
                                 // sizeof(value_type) = [40, 44)
-                                Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 9));
+                                jstd::CPU_Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 9));
                             }
                             if (kSlotSetp >= 64 * 11) {   // >= 704
                                 // sizeof(value_type) = [44, 48)
-                                Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 10));
+                                jstd::CPU_Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 10));
                             }
                             if (kSlotSetp >= 64 * 12) {   // >= 768
                                 // sizeof(value_type) = [48, 52)
-                                Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 11));
+                                jstd::CPU_Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 11));
                             }
                             if (kSlotSetp >= 64 * 13) {   // >= 832
                                 // sizeof(value_type) = [52, 56)
-                                Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 12));
+                                jstd::CPU_Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 12));
                             }
                             if (kSlotSetp >= 64 * 14) {   // >= 896
                                 // sizeof(value_type) = [56, 60)
-                                Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 13));
+                                jstd::CPU_Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 13));
                             }
                             if (kSlotSetp >= 64 * 15) {   // >= 960
                                 // sizeof(value_type) = [60, 64)
-                                Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 14));
+                                jstd::CPU_Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 14));
                             }
                             if (kSlotSetp >= 64 * 16) {   // >= 1024
                                 // sizeof(value_type) = [64, Max)
-                                Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 15));
+                                jstd::CPU_Prefetch_Read_T0(PtrOffset(slot_base, kPrefetchOffset + 64 * 15));
                             }
                         }
 
@@ -5082,7 +5082,7 @@ private:
     template <typename KeyT>
     const slot_type * direct_find(const KeyT & key) const {
         // Prefetch for resolve potential ctrls TLB misses.
-        //Prefetch_Read_T2(this->ctrls());
+        //CPU_Prefetch_Read_T2(this->ctrls());
 
         hash_code_t hash_code = this->get_hash(key);
         size_type slot_index = this->index_for_hash(hash_code);
@@ -5221,7 +5221,7 @@ private:
     template <typename KeyT>
     const slot_type * indirect_find(const KeyT & key) const {
         // Prefetch for resolve potential ctrls TLB misses.
-        //Prefetch_Read_T2(this->ctrls());
+        //CPU_Prefetch_Read_T2(this->ctrls());
 
         hash_code_t hash_code = this->get_hash(key);
         size_type ctrl_index = this->index_for_hash(hash_code);
@@ -5283,7 +5283,7 @@ private:
     template <typename KeyT, bool IsCtrlIndex>
     size_type direct_find_index(const KeyT & key) const {
         // Prefetch for resolve potential ctrls TLB misses.
-        //Prefetch_Read_T2(this->ctrls());
+        //CPU_Prefetch_Read_T2(this->ctrls());
 
         hash_code_t hash_code = this->get_hash(key);
         size_type slot_index = this->index_for_hash(hash_code);
@@ -5422,7 +5422,7 @@ private:
     template <typename KeyT, bool IsCtrlIndex>
     size_type indirect_find_index(const KeyT & key) const {
         // Prefetch for resolve potential ctrls TLB misses.
-        //Prefetch_Read_T2(this->ctrls());
+        //CPU_Prefetch_Read_T2(this->ctrls());
 
         if (!kIsIndirectKV) {
             assert(false);

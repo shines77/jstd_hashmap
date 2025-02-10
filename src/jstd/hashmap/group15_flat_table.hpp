@@ -1551,7 +1551,7 @@ private:
                 slot_type * slot_base = this->slots();
                 for (; group < last_group; ++group) {
                     //JSTD_ASSUME(slot_base != nullptr);
-                    //Prefetch_Read_T0((const void *)&slot_base->get_key());
+                    //jstd::CPU_Prefetch_Read_T0((const void *)&slot_base->get_key());
                     std::uint32_t used_mask = group->match_used();
                     if (used_mask != 0) {
                         do {
@@ -2079,7 +2079,7 @@ private:
 
                 for (; group < last_group; ++group) {
                     //JSTD_ASSUME(slot_base != nullptr);
-                    //Prefetch_Read_T0((const void *)&slot_base->get_key());
+                    //jstd::CPU_Prefetch_Read_T0((const void *)&slot_base->get_key());
                     std::uint32_t used_mask = group->match_used();
                     if (used_mask != 0) {
                         do {
@@ -2232,8 +2232,8 @@ private:
                 const slot_type * slot_start = this->slots();
                 JSTD_ASSUME(slot_start != nullptr);
                 const slot_type * slot_base = slot_start + group_index * kGroupSize;
-                if (sizeof(value_type) <= 32) {
-                    //Prefetch_Read_T0((const void *)&slot_base->get_key());
+                if (sizeof(value_type) <= 64) {
+                    jstd::CPU_Prefetch_Read_T0((const void *)&slot_base->get_key());
                 }
                 do {
                     std::uint32_t match_pos = BitUtils::bsf32(match_mask);

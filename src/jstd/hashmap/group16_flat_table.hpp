@@ -2130,8 +2130,8 @@ private:
                 const slot_type * slot_start = this->slots();
                 JSTD_ASSUME(slot_start != nullptr);
                 const slot_type * slot_base = slot_start + group_index * kGroupWidth;
-                if (sizeof(value_type) <= 16) {
-                    Prefetch_Read_T0((const void *)slot_base);
+                if (sizeof(value_type) <= 64) {
+                    jstd::CPU_Prefetch_Read_T0((const void *)slot_base);
                 }
                 do {
                     std::uint32_t match_pos = BitUtils::bsf32(match_mask);
