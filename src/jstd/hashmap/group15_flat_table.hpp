@@ -1302,7 +1302,7 @@ private:
 
     JSTD_FORCED_INLINE
     std::size_t hash_for(const key_type & key) const
-        noexcept(noexcept(hasher()(key))) {
+        noexcept(noexcept(this->hasher_(key))) {
 #if GROUP15_USE_HASH_POLICY
         std::size_t key_hash = static_cast<std::size_t>(this->hash_policy_.get_hash_code(key));
 #else
@@ -1311,9 +1311,9 @@ private:
         if (std::is_integral<key_type>::value && jstd::is_default_std_hash<Hash, key_type>::value)
             key_hash = static_cast<std::size_t>(jstd::SimpleHash<Hash>()(key));
         else
-            key_hash = static_cast<std::size_t>(hasher()(key));
+            key_hash = static_cast<std::size_t>(this->hasher_(key));
   #else
-        std::size_t key_hash = static_cast<std::size_t>(hasher()(key));
+        std::size_t key_hash = static_cast<std::size_t>(this->hasher_(key));
   #endif
         if (!jstd::detail::hash_is_avalanching<Hash>::value)
             key_hash = hashes::mum_mul_mix(key_hash);
@@ -1550,8 +1550,8 @@ private:
                 group_type * last_group = this->last_group();
                 slot_type * slot_base = this->slots();
                 for (; group < last_group; ++group) {
-                    JSTD_ASSUME(slot_base != nullptr);
-                    Prefetch_Read_T0((const void *)&slot_base->get_key());
+                    //JSTD_ASSUME(slot_base != nullptr);
+                    //Prefetch_Read_T0((const void *)&slot_base->get_key());
                     std::uint32_t used_mask = group->match_used();
                     if (used_mask != 0) {
                         do {
@@ -2078,8 +2078,8 @@ private:
                 slot_type * slot_base = old_slots;
 
                 for (; group < last_group; ++group) {
-                    JSTD_ASSUME(slot_base != nullptr);
-                    Prefetch_Read_T0((const void *)&slot_base->get_key());
+                    //JSTD_ASSUME(slot_base != nullptr);
+                    //Prefetch_Read_T0((const void *)&slot_base->get_key());
                     std::uint32_t used_mask = group->match_used();
                     if (used_mask != 0) {
                         do {
@@ -2233,12 +2233,12 @@ private:
                 JSTD_ASSUME(slot_start != nullptr);
                 const slot_type * slot_base = slot_start + group_index * kGroupSize;
                 if (sizeof(value_type) <= 32) {
-                    Prefetch_Read_T0((const void *)&slot_base->get_key());
+                    //Prefetch_Read_T0((const void *)&slot_base->get_key());
                 }
                 do {
                     std::uint32_t match_pos = BitUtils::bsf32(match_mask);
                     //const slot_type * slot = slot_base + match_pos;
-                    if (JSTD_LIKELY(bool(key_equal()(key, slot_base[match_pos].get_key())))) {
+                    if (JSTD_LIKELY(bool(this->key_equal_(key, slot_base[match_pos].get_key())))) {
                         return { group, match_pos, (slot_base + match_pos) };
                     }
                     match_mask = BitUtils::clearLowBit32(match_mask);

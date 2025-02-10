@@ -1110,9 +1110,9 @@ struct IsDecomposable<jstd::void_t<decltype(
 template <typename To, typename From>
 constexpr To narrow_cast(From val) noexcept
 {
-    static_assert(std::is_integral<From>::value);
-    static_assert(std::is_integral<To>::value);
-    static_assert(sizeof(From) >= sizeof(To));
+    static_assert(std::is_integral<From>::value, "jstd::narrow_cast<T>: std::is_integral<From>::value");
+    static_assert(std::is_integral<To>::value, "jstd::narrow_cast<T>: std::is_integral<To>::value");
+    static_assert(sizeof(From) >= sizeof(To), "jstd::narrow_cast<T>: sizeof(From) >= sizeof(To)");
 
     return static_cast<To>(val
 #if defined(__MSVC_RUNTIME_CHECKS)
