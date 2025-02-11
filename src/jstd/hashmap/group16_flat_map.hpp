@@ -626,13 +626,15 @@ public:
 
     JSTD_FORCED_INLINE
     iterator erase(iterator first, iterator last) {
-        if (likely(first.hashmap() == this)) {
-            for (; first != last; ++first) {
-                this->erase(first);
+        iterator iter = first;
+        if (JSTD_LIKELY(iter.hashmap() == this)) {
+            for (; iter != last; ++iter) {
+                this->erase(iter);
             }
         } else {
-            for (; first != last; ++first) {
-                this->erase_slot(*first);
+            for (; iter != last; ++iter) {
+                const slot_type * slot = iter.slots();
+                this->erase(slot->get_key());
             }
         }
         return { last };
@@ -647,9 +649,10 @@ public:
               !jstd::is_same_ex<InputIter, iterator      >::value &&
               !jstd::is_same_ex<InputIter, const_iterator>::value>::type * = nullptr>
     JSTD_FORCED_INLINE
-    iterator erase(InputIter first, InputIter last) {
+    size_type erase(InputIter first, InputIter last) {
         size_type num_deleted = 0;
-        for (; first != last; ++first) {
+        InputIter iter = first;
+        for (; iter != last; ++iter) {
             num_deleted += static_cast<size_type>(this->erase(*first));
         }
         return num_deleted;
