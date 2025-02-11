@@ -2237,9 +2237,9 @@ private:
                 }
                 do {
                     std::uint32_t match_pos = BitUtils::bsf32(match_mask);
-                    //const slot_type * slot = slot_base + match_pos;
-                    if (JSTD_LIKELY(bool(this->key_equal_(key, slot_base[match_pos].get_key())))) {
-                        return { group, match_pos, (slot_base + match_pos) };
+                    const slot_type * slot = slot_base + match_pos;
+                    if (JSTD_LIKELY(bool(this->key_equal_(key, slot->get_key())))) {
+                        return { group, match_pos, slot };
                     }
                     match_mask = BitUtils::clearLowBit32(match_mask);
                 } while (match_mask != 0);
@@ -2266,9 +2266,19 @@ private:
 #pragma warning(pop) /* C4800 */
 #endif
 
-    template <bool IsNoGrow, typename KeyT = key_type>
+    JSTD_FORCED_INLINE
+    bool ctrl_is_last_bit(const locator_t & locator) const noexcept {
+        const group_type * group = locator.group();
+        size_type group_pos = locator.pos();
+        std::uint32_t used_mask = group->match_used();
+        std::uint32_t last_bit_pos = BitUtils::bsr32(used_mask);
+        return (group_pos == static_cast<size_type>(last_bit_pos));
+    }
+
+    template <bool IsNoCheck, typename KeyT = key_type>
     JSTD_FORCED_INLINE
     locator_t find_empty_to_insert(const KeyT & key, size_type group_index0, std::size_t ctrl_hash) {
+        static constexpr bool IsNoGrow = true;
         prober_type prober(group_index0);
 
         do {
@@ -2280,9 +2290,19 @@ private:
                 const slot_type * slot_start = this->slots();
                 JSTD_ASSUME(slot_start != nullptr);
                 const slot_type * slot_base = slot_start + group_index * kGroupSize;
+                const slot_type * slot = slot_base + empty_pos;
+                if (!IsNoCheck) {
+                    // When we rehash() or batch read/write slots, it needn't to prefetch write.
+                    jstd::CPU_Prefetch_Write_T0((const void *)&slot->get_key());
+                }
                 assert(group->is_empty(empty_pos));
                 group->set_used(empty_pos, ctrl_hash);
-                const slot_type * slot = slot_base + empty_pos;
+                if (!IsNoCheck) {
+                    // If overflow bit is 1, and found a empty slot, the slot must be a deleted slot.
+                    bool is_deleted_slot = group->is_overflow(ctrl_hash);
+                    this->slot_threshold_ += is_deleted_slot;
+                    assert(this->slot_threshold_ < this->slot_capacity());
+                }
                 return { group, empty_pos, slot };
             } else {
                 // If it's not overflow, set the overflow bit.
@@ -2316,7 +2336,7 @@ private:
             return { locator, kIsKeyExists };
         }
 
-        if (JSTD_UNLIKELY(this->need_grow())) {
+        if (JSTD_LIKELY(this->need_grow())) {
             // The size of slot reach the slot threshold or hashmap is full.
             this->grow_if_necessary();
 
@@ -2325,7 +2345,7 @@ private:
             // ctrl_hash = this->ctrl_for_hash(key_hash);
         }
 
-        locator = this->find_empty_to_insert<true, KeyT>(key, group_index, ctrl_hash);
+        locator = this->find_empty_to_insert<false, KeyT>(key, group_index, ctrl_hash);
         if (JSTD_LIKELY(true || (locator.slot() != nullptr))) {
             return { locator, kNeedInsert };
         }
@@ -2336,7 +2356,7 @@ private:
             this->grow_if_necessary();
 
             group_index = this->index_for_hash(key_hash);
-            locator = this->find_empty_to_insert<true, KeyT>(key, group_index, ctrl_hash);
+            locator = this->find_empty_to_insert<false, KeyT>(key, group_index, ctrl_hash);
             assert(locator.slot() < this->last_slot());
             return { locator, kNeedInsert };
         }
@@ -2677,26 +2697,17 @@ private:
     }
 
     JSTD_FORCED_INLINE
-    bool ctrl_is_last_bit(const locator_t & locator) const noexcept {
+    bool maybe_caused_overflow(const locator_t & locator, std::size_t ctrl_hash) const noexcept {
         const group_type * group = locator.group();
-        size_type group_pos = locator.pos();
-        std::uint32_t used_mask = group->match_used();
-        std::uint32_t last_bit_pos = BitUtils::bsr32(used_mask);
-        return (group_pos == static_cast<size_type>(last_bit_pos));
-    }
-
-    JSTD_FORCED_INLINE
-    bool ctrl_maybe_caused_overflow(const locator_t & locator) const noexcept {
-        const group_type * group = locator.group();
-        size_type group_pos = locator.pos();
-        size_type ctrl_hash = group->value(group_pos);
+        //size_type group_pos = locator.pos();
+        //size_type ctrl_hash = group->value(group_pos);
         return group->is_overflow(ctrl_hash);
     }
 
     JSTD_FORCED_INLINE
-    void erase_index(locator_t & locator) {
+    void erase_index(locator_t & locator, std::size_t ctrl_hash) {
         assert(locator.slot() >= this->slots() && locator.slot() < this->last_slot());
-        bool maybe_overflow = this->ctrl_maybe_caused_overflow(locator);
+        bool maybe_overflow = this->maybe_caused_overflow(locator, ctrl_hash);
         assert(this->slot_threshold_ > 0);
         this->slot_threshold_ -= maybe_overflow;
         assert(this->slot_size_ > 0);
@@ -2712,7 +2723,7 @@ private:
 
         locator_t locator = this->find_impl(key, group_index, ctrl_hash);
         if (JSTD_LIKELY(locator.slot() != nullptr)) {
-            this->erase_index(locator);
+            this->erase_index(locator, ctrl_hash);
             return 1;
         } else {
             return 0;
