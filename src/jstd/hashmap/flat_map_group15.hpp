@@ -61,6 +61,7 @@
 #include "jstd/memory/memory_barrier.h"
 
 #define GROUP15_USE_LOOK_UP_TABLE   1
+#define GROUP15_USE_SHIFT_TABLE     1
 
 namespace jstd {
 
@@ -81,6 +82,8 @@ public:
     static constexpr const std::uint32_t kSentinelHash32 = 0x09090909u;
 
     group15_meta_ctrl(value_type value = kEmptySlot) : value_(value) {}
+
+    static constexpr unsigned char shift_mask[] = { 1, 2, 4, 8, 16, 32, 64, 128 };
 
     static JSTD_FORCED_INLINE
     int repeated_hash(std::size_t hash) {
@@ -233,24 +236,25 @@ public:
     }
 
     JSTD_FORCED_INLINE bool is_not_overflow(std::size_t hash) const {
-        // static constexpr unsigned char shift[] = { 1, 2, 4, 8, 16, 32, 64, 128 };
         std::size_t pos = hash % std::size_t(CHAR_BIT);
         JSTD_ASSUME(pos < std::size_t(CHAR_BIT));
+#if GROUP15_USE_SHIFT_TABLE
+        std::uint8_t mask = shift_mask[pos];
+        return ((this->value_ & static_cast<value_type>(mask)) == 0);
+#else
         std::size_t mask = std::size_t(1) << pos;
         JSTD_ASSUME(mask < (std::size_t(1) << std::size_t(CHAR_BIT)));
         return ((this->value_ & jstd::narrow_cast<value_type>(mask)) == 0);
         // return ((static_cast<std::size_t>(this->value_) & mask) == 0);
+#endif
     }
 
     JSTD_FORCED_INLINE void set_overflow(std::size_t hash) {
         std::size_t pos = hash % std::size_t(CHAR_BIT);
         JSTD_ASSUME(pos < std::size_t(CHAR_BIT));
-#if 0
-        std::size_t mask = std::size_t(1) << pos;
-        JSTD_ASSUME(mask < (std::size_t(1) << std::size_t(CHAR_BIT)));
-        std::size_t value64 = static_cast<std::size_t>(this->value_);
-        value64 |= mask;
-        this->value_ = static_cast<value_type>(value64);
+#if GROUP15_USE_SHIFT_TABLE
+        std::uint8_t mask = shift_mask[pos];
+        this->value_ |= static_cast<value_type>(mask);
 #else
         std::uint32_t mask = 1 << static_cast<std::uint32_t>(pos);
         JSTD_ASSUME(mask < (1 << CHAR_BIT));
@@ -359,7 +363,7 @@ public:
     }
 
     JSTD_FORCED_INLINE bool is_overflow(std::size_t hash) const {
-        return !is_not_overflow(hash);
+        return !this->is_not_overflow(hash);
     }
 
     JSTD_FORCED_INLINE bool is_not_overflow(std::size_t hash) const {
