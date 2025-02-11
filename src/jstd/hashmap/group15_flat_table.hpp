@@ -960,7 +960,7 @@ public:
     JSTD_FORCED_INLINE
     iterator erase(iterator pos) {
         locator_t & locator = pos.locator();
-        this->erase_index(locator);
+        this->erase_by_locator(locator);
         locator.increment();
         return { locator };
     }
@@ -2693,39 +2693,29 @@ private:
     }
 
     JSTD_FORCED_INLINE
-    bool maybe_caused_overflow(const locator_t & locator) const noexcept {
-        const group_type * group = locator.group();
+    bool maybe_caused_overflow(const group_type * group, size_type group_pos) const noexcept {
+        std::size_t ctrl_hash = static_cast<std::size_t>(group->value(group_pos));
+        return group->is_overflow(ctrl_hash);
+    }
+
+    JSTD_FORCED_INLINE
+    void reset_ctrl(locator_t & locator) {
+        group_type * group = locator.group();
         size_type group_pos = locator.pos();
-        size_type ctrl_hash = group->value(group_pos);
-        return group->is_overflow(ctrl_hash);
-    }
-
-    JSTD_FORCED_INLINE
-    bool maybe_caused_overflow(const locator_t & locator, std::size_t ctrl_hash) const noexcept {
-        const group_type * group = locator.group();
-        return group->is_overflow(ctrl_hash);
-    }
-
-    JSTD_FORCED_INLINE
-    void erase_index(locator_t & locator) {
-        assert(locator.slot() >= this->slots() && locator.slot() < this->last_slot());
-        bool maybe_overflow = this->maybe_caused_overflow(locator);
+        bool maybe_overflow = this->maybe_caused_overflow(group, group_pos);
+        assert(group->is_used(group_pos));
+        group->set_empty(group_pos);
         assert(this->slot_threshold_ > 0);
         this->slot_threshold_ -= maybe_overflow;
         assert(this->slot_size_ > 0);
         this->slot_size_--;
-        this->destroy_slot_data(locator);
     }
 
     JSTD_FORCED_INLINE
-    void erase_index(locator_t & locator, std::size_t ctrl_hash) {
+    void erase_by_locator(locator_t & locator) {
         assert(locator.slot() >= this->slots() && locator.slot() < this->last_slot());
-        bool maybe_overflow = this->maybe_caused_overflow(locator, ctrl_hash);
-        assert(this->slot_threshold_ > 0);
-        this->slot_threshold_ -= maybe_overflow;
-        assert(this->slot_size_ > 0);
-        this->slot_size_--;
-        this->destroy_slot_data(locator);
+        this->destroy_slot(locator.slot());
+        this->reset_ctrl(locator);
     }
 
     JSTD_FORCED_INLINE
@@ -2736,7 +2726,7 @@ private:
 
         locator_t locator = this->find_impl(key, group_index, ctrl_hash);
         if (JSTD_LIKELY(locator.slot() != nullptr)) {
-            this->erase_index(locator, ctrl_hash);
+            this->erase_by_locator(locator);
             return 1;
         } else {
             return 0;

@@ -955,7 +955,7 @@ public:
     JSTD_FORCED_INLINE
     iterator erase(iterator pos) {
         size_type slot_index = pos.index();
-        this->erase_index(slot_index);
+        this->erase_by_index(slot_index);
         ctrl_type * ctrl = this->ctrl_at(slot_index);
         return this->next_valid_iterator(ctrl, pos);
     }
@@ -2146,7 +2146,7 @@ private:
             }
 
             // If it's not overflow, means it hasn't been found.
-            if (JSTD_LIKELY(group->is_not_overflow(ctrl_hash % kGroupWidth))) {
+            if (JSTD_LIKELY(group->is_not_overflow(ctrl_hash))) {
                 return this->slot_capacity();
             }
 
@@ -2180,7 +2180,7 @@ private:
                 group->set_used(empty_pos, ctrl_hash);
                 if (!IsNoCheck) {
                     // If overflow bit is 1, and found a empty slot, the slot must be a deleted slot.
-                    bool is_deleted_slot = group->is_overflow(ctrl_hash % kGroupWidth);
+                    bool is_deleted_slot = group->is_overflow(ctrl_hash);
                     this->slot_threshold_ += is_deleted_slot;
                     assert(this->slot_threshold_ < this->slot_capacity());
                 }
@@ -2188,7 +2188,7 @@ private:
                 return slot_index;
             } else {
                 // If it's not overflow, set the overflow bit.
-                group->set_overflow(ctrl_hash % kGroupWidth);
+                group->set_overflow(ctrl_hash);
             }
 #if GROUP16_DISPLAY_DEBUG_INFO
             if (JSTD_UNLIKELY(prober.steps() > kSkipGroupsLimit)) {
@@ -2589,38 +2589,30 @@ private:
     }
 
     JSTD_FORCED_INLINE
-    bool maybe_caused_overflow(size_type slot_index) const noexcept {
-        const group_type * group = this->groups() + slot_index / kGroupWidth;
-        const ctrl_type * ctrl = this->ctrl_at(slot_index);
-        return group->is_overflow(ctrl->value() % kGroupWidth);
+    bool maybe_caused_overflow(ctrl_type * ctrl) const noexcept {
+        std::uintptr_t ngroup = reinterpret_cast<std::uintptr_t>(ctrl) & (~(kGroupWidth - 1));
+        const group_type * group = reinterpret_cast<const group_type *>(ngroup);
+        std::size_t ctrl_hash = static_cast<std::size_t>(ctrl->value());
+        return group->is_overflow(ctrl_hash);
     }
 
     JSTD_FORCED_INLINE
-    bool maybe_caused_overflow(size_type slot_index, std::size_t ctrl_hash) const noexcept {
-        const group_type * group = this->groups() + slot_index / kGroupWidth;
-        return group->is_overflow(ctrl_hash % kGroupWidth);
-    }
-
-    JSTD_FORCED_INLINE
-    void erase_index(size_type slot_index) {
-        assert(slot_index >= 0 && slot_index < this->slot_capacity());
-        bool maybe_overflow = this->maybe_caused_overflow(slot_index);
+    void reset_ctrl(size_type slot_index) {
+        ctrl_type * ctrl = this->ctrl_at(slot_index);
+        bool maybe_overflow = this->maybe_caused_overflow(ctrl);
+        assert(ctrl->is_used());
+        ctrl->set_empty();
         assert(this->slot_threshold_ > 0);
         this->slot_threshold_ -= maybe_overflow;
         assert(this->slot_size_ > 0);
         this->slot_size_--;
-        this->destroy_slot_data(slot_index);
     }
 
     JSTD_FORCED_INLINE
-    void erase_index(size_type slot_index, std::size_t ctrl_hash) {
+    void erase_by_index(size_type slot_index) {
         assert(slot_index >= 0 && slot_index < this->slot_capacity());
-        bool maybe_overflow = this->maybe_caused_overflow(slot_index, ctrl_hash);
-        assert(this->slot_threshold_ > 0);
-        this->slot_threshold_ -= maybe_overflow;
-        assert(this->slot_size_ > 0);
-        this->slot_size_--;
-        this->destroy_slot_data(slot_index);
+        this->destroy_slot(slot_index);
+        this->reset_ctrl(slot_index);
     }
 
     JSTD_FORCED_INLINE
@@ -2631,7 +2623,7 @@ private:
 
         size_type slot_index = this->find_index(key, group_index, ctrl_hash);
         if (slot_index != this->slot_capacity()) {
-            this->erase_index(slot_index, ctrl_hash);
+            this->erase_by_index(slot_index);
             return 1;
         } else {
             return 0;

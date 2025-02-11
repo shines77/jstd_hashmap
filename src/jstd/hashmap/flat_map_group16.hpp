@@ -323,14 +323,14 @@ public:
         return ctrl.is_used();
     }
 
-    JSTD_FORCED_INLINE bool is_overflow(std::size_t pos) const {
-        assert(pos < kGroupWidth);
+    JSTD_FORCED_INLINE bool is_overflow(std::size_t hash) const {
+        std::size_t pos = hash % kGroupWidth;
         const ctrl_type & ctrl = at(pos);
         return ctrl.is_overflow();
     }
 
-    JSTD_FORCED_INLINE bool is_not_overflow(std::size_t pos) const {
-        assert(pos < kGroupWidth);
+    JSTD_FORCED_INLINE bool is_not_overflow(std::size_t hash) const {
+        std::size_t pos = hash % kGroupWidth;
         const ctrl_type & ctrl = at(pos);
         return ctrl.is_not_overflow();
     }
@@ -359,7 +359,8 @@ public:
         ctrl.set_used_strict(hash);
     }
 
-    JSTD_FORCED_INLINE void set_overflow(std::size_t pos) {
+    JSTD_FORCED_INLINE void set_overflow(std::size_t hash) {
+        std::size_t pos = hash % kGroupWidth;
         ctrl_type & ctrl = at(pos);
         ctrl.set_overflow();
     }
