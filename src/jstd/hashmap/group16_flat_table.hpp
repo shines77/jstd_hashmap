@@ -583,10 +583,10 @@ public:
         size_type mlf_int = static_cast<size_type>((float)kLoadFactorAmplify * mlf);
         this->mlf_ = mlf_int;
 
-        size_type new_slot_capacity = this->shrink_to_fit_capacity(this->slot_capacity());
-        size_type new_capacity = this->calc_capacity(new_slot_capacity);
-        if (new_capacity > this->slot_capacity()) {
-            this->rehash(new_capacity);
+        size_type new_capacity = this->shrink_to_fit_capacity(this->ctrl_capacity());
+        size_type new_ctrl_capacity = this->calc_capacity(new_capacity);
+        if (new_ctrl_capacity > this->ctrl_capacity()) {
+            this->rehash(new_ctrl_capacity);
         }
     }
 
@@ -1928,6 +1928,7 @@ private:
     template <bool IsInitialize = false>
     JSTD_FORCED_INLINE
     void create_slots(size_type new_capacity) {
+        assert(pow2::is_pow2(new_capacity));
         if (JSTD_LIKELY(IsInitialize || (new_capacity != 0))) {
 #if GROUP16_USE_HASH_POLICY
             auto hash_policy_setting = this->hash_policy_.calc_next_capacity(new_capacity);
@@ -1937,8 +1938,8 @@ private:
             size_type new_group_capacity = (new_ctrl_capacity + (kGroupWidth - 1)) / kGroupWidth;
             assert(new_group_capacity > 0);
 
-            size_type new_max_slot_size = new_capacity * this->mlf_ / kLoadFactorAmplify;
-            size_type new_slot_capacity = (!kIsIndirectKV) ? new_capacity : new_max_slot_size;
+            size_type indirect_slot_capacity = new_capacity * this->mlf_ / kLoadFactorAmplify;
+            size_type new_slot_capacity = (!kIsIndirectKV) ? new_capacity : indirect_slot_capacity;
 
 #if GROUP16_USE_SEPARATE_SLOTS
             size_type total_group_alloc_count = this->TotalGroupAllocCount<kGroupAlignment>(new_group_capacity);
@@ -2588,11 +2589,27 @@ private:
     }
 
     JSTD_FORCED_INLINE
+    bool maybe_caused_overflow(size_type slot_index) const noexcept {
+        const group_type * group = this->groups() + slot_index / kGroupWidth;
+        const ctrl_type * ctrl = this->ctrl_at(slot_index);
+        return group->is_overflow(ctrl->value() % kGroupWidth);
+    }
+
+    JSTD_FORCED_INLINE
     bool maybe_caused_overflow(size_type slot_index, std::size_t ctrl_hash) const noexcept {
         const group_type * group = this->groups() + slot_index / kGroupWidth;
-        //const ctrl_type * ctrl = this->ctrl_at(slot_index);
-        //return group->is_overflow(ctrl->value() % kGroupWidth);
         return group->is_overflow(ctrl_hash % kGroupWidth);
+    }
+
+    JSTD_FORCED_INLINE
+    void erase_index(size_type slot_index) {
+        assert(slot_index >= 0 && slot_index < this->slot_capacity());
+        bool maybe_overflow = this->maybe_caused_overflow(slot_index);
+        assert(this->slot_threshold_ > 0);
+        this->slot_threshold_ -= maybe_overflow;
+        assert(this->slot_size_ > 0);
+        this->slot_size_--;
+        this->destroy_slot_data(slot_index);
     }
 
     JSTD_FORCED_INLINE
