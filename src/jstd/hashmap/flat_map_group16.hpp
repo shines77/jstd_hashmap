@@ -119,7 +119,7 @@ public:
             0x74747474u, 0x75757575u, 0x76767676u, 0x77777777u,
             0x78787878u, 0x79797979u, 0x7A7A7A7Au, 0x7B7B7B7Bu,
             0x7C7C7C7Cu, 0x7D7D7D7Du, 0x7E7E7E7Eu, 0x7F7F7F7Fu,
-#if 1
+
             // This is a mirror of 0 ~ 127
             // Actually, it wasn't used from here on
            kEmptyHash32, 0x01010101u, 0x02020202u, 0x03030303u,
@@ -153,42 +153,7 @@ public:
             0x70707070u, 0x71717171u, 0x72727272u, 0x73737373u,
             0x74747474u, 0x75757575u, 0x76767676u, 0x77777777u,
             0x78787878u, 0x79797979u, 0x7A7A7A7Au, 0x7B7B7B7Bu,
-            0x7C7C7C7Cu, 0x7D7D7D7Du, 0x7E7E7E7Eu, 0x7F7F7F7Fu,
-#else
-            // Actually, it wasn't used from here on
-            0x80808080u, 0x81818181u, 0x82828282u, 0x83838383u,
-            0x84848484u, 0x85858585u, 0x86868686u, 0x87878787u,
-            0x88888888u, 0x89898989u, 0x8A8A8A8Au, 0x8B8B8B8Bu,
-            0x8C8C8C8Cu, 0x8D8D8D8Du, 0x8E8E8E8Eu, 0x8F8F8F8Fu,
-            0x90909090u, 0x91919191u, 0x92929292u, 0x93939393u,
-            0x94949494u, 0x95959595u, 0x96969696u, 0x97979797u,
-            0x98989898u, 0x99999999u, 0x9A9A9A9Au, 0x9B9B9B9Bu,
-            0x9C9C9C9Cu, 0x9D9D9D9Du, 0x9E9E9E9Eu, 0x9F9F9F9Fu,
-            0xA0A0A0A0u, 0xA1A1A1A1u, 0xA2A2A2A2u, 0xA3A3A3A3u,
-            0xA4A4A4A4u, 0xA5A5A5A5u, 0xA6A6A6A6u, 0xA7A7A7A7u,
-            0xA8A8A8A8u, 0xA9A9A9A9u, 0xAAAAAAAAu, 0xABABABABu,
-            0xACACACACu, 0xADADADADu, 0xAEAEAEAEu, 0xAFAFAFAFu,
-            0xB0B0B0B0u, 0xB1B1B1B1u, 0xB2B2B2B2u, 0xB3B3B3B3u,
-            0xB4B4B4B4u, 0xB5B5B5B5u, 0xB6B6B6B6u, 0xB7B7B7B7u,
-            0xB8B8B8B8u, 0xB9B9B9B9u, 0xBABABABAu, 0xBBBBBBBBu,
-            0xBCBCBCBCu, 0xBDBDBDBDu, 0xBEBEBEBEu, 0xBFBFBFBFu,
-            0xC0C0C0C0u, 0xC1C1C1C1u, 0xC2C2C2C2u, 0xC3C3C3C3u,
-            0xC4C4C4C4u, 0xC5C5C5C5u, 0xC6C6C6C6u, 0xC7C7C7C7u,
-            0xC8C8C8C8u, 0xC9C9C9C9u, 0xCACACACAu, 0xCBCBCBCBu,
-            0xCCCCCCCCu, 0xCDCDCDCDu, 0xCECECECEu, 0xCFCFCFCFu,
-            0xD0D0D0D0u, 0xD1D1D1D1u, 0xD2D2D2D2u, 0xD3D3D3D3u,
-            0xD4D4D4D4u, 0xD5D5D5D5u, 0xD6D6D6D6u, 0xD7D7D7D7u,
-            0xD8D8D8D8u, 0xD9D9D9D9u, 0xDADADADAu, 0xDBDBDBDBu,
-            0xDCDCDCDCu, 0xDDDDDDDDu, 0xDEDEDEDEu, 0xDFDFDFDFu,
-            0xE0E0E0E0u, 0xE1E1E1E1u, 0xE2E2E2E2u, 0xE3E3E3E3u,
-            0xE4E4E4E4u, 0xE5E5E5E5u, 0xE6E6E6E6u, 0xE7E7E7E7u,
-            0xE8E8E8E8u, 0xE9E9E9E9u, 0xEAEAEAEAu, 0xEBEBEBEBu,
-            0xECECECECu, 0xEDEDEDEDu, 0xEEEEEEEEu, 0xEFEFEFEFu,
-            0xF0F0F0F0u, 0xF1F1F1F1u, 0xF2F2F2F2u, 0xF3F3F3F3u,
-            0xF4F4F4F4u, 0xF5F5F5F5u, 0xF6F6F6F6u, 0xF7F7F7F7u,
-            0xF8F8F8F8u, 0xF9F9F9F9u, 0xFAFAFAFAu, 0xFBFBFBFBu,
-            0xFCFCFCFCu, 0xFDFDFDFDu, 0xFEFEFEFEu, 0xFFFFFFFFu,
-#endif
+            0x7C7C7C7Cu, 0x7D7D7D7Du, 0x7E7E7E7Eu, 0x7F7F7F7Fu
         };
 
         return (int)dword_hashs[jstd::narrow_cast<std::uint8_t>(hash)];
@@ -212,6 +177,10 @@ public:
     static JSTD_FORCED_INLINE
     value_type overflow_bits(value_type hash) {
         return (hash & kOverflowMask);
+    }
+
+    inline bool is_valid_hash(value_type hash) const {
+        return (overflow_bits(hash) == 0);
     }
 
     JSTD_FORCED_INLINE value_type value() const {
@@ -246,35 +215,30 @@ public:
         return (overflow == 0);
     }
 
-    JSTD_FORCED_INLINE bool is_equals(value_type hash) const {
-        value_type hash8 = hash_bits(this->value_);
-        return (hash == hash8);
-    }
-
-    JSTD_FORCED_INLINE bool is_equals64(std::size_t hash) const {
-        std::size_t hash64 = static_cast<std::size_t>(this->value_);
-        return (hash == hash64);
+    JSTD_FORCED_INLINE bool is_equals(std::size_t hash) const {
+        value_type hash8 = jstd::narrow_cast<value_type>(hash);
+        assert(is_valid_hash(hash8));
+        assert(hash_bits(hash8) != kEmptySlot);
+        value_type value8 = hash_bits(this->value_);
+        return (hash8 == value8);
     }
 
     JSTD_FORCED_INLINE void set_empty() {
         this->value_ = overflow_bits(this->value_) | kEmptySlot;
     }
 
-    JSTD_FORCED_INLINE void set_used(value_type hash) {
-        assert(overflow_bits(hash) == 0);
-        assert(hash_bits(hash) != kEmptySlot);
-        this->value_ = overflow_bits(this->value_) | hash;
-    }
-
-    JSTD_FORCED_INLINE void set_used64(std::size_t hash) {
-        value_type hash8 = static_cast<value_type>(hash_bits64(hash));
-        assert(hash8 != kEmptySlot);
+    JSTD_FORCED_INLINE void set_used(std::size_t hash) {
+        value_type hash8 = jstd::narrow_cast<value_type>(hash);
+        assert(is_valid_hash(hash8));
+        assert(hash_bits(hash8) != kEmptySlot);
         this->value_ = overflow_bits(this->value_) | hash8;
     }
 
-    JSTD_FORCED_INLINE void set_used_strict(value_type hash) {
-        assert(hash_bits(hash) != kEmptySlot);
-        this->value_ = overflow_bits(this->value_) | hash_bits(hash);
+    JSTD_FORCED_INLINE void set_used_strict(std::size_t hash) {
+        value_type hash8 = jstd::narrow_cast<value_type>(hash_bits64(hash));
+        assert(is_valid_hash(hash8));
+        assert(hash_bits(hash8) != kEmptySlot);
+        this->value_ = overflow_bits(this->value_) | hash8;
     }
 
     JSTD_FORCED_INLINE void set_overflow() {
@@ -371,16 +335,10 @@ public:
         return ctrl.is_not_overflow();
     }
 
-    JSTD_FORCED_INLINE bool is_equals(std::size_t pos, value_type hash) {
+    JSTD_FORCED_INLINE bool is_equals(std::size_t pos, std::size_t hash) {
         assert(pos < kGroupWidth);
         const ctrl_type & ctrl = at(pos);
         return ctrl.is_equals(hash);
-    }
-
-    JSTD_FORCED_INLINE bool is_equals64(std::size_t pos, std::size_t hash) {
-        assert(pos < kGroupWidth);
-        const ctrl_type & ctrl = at(pos);
-        return ctrl.is_equals64(hash);
     }
 
     JSTD_FORCED_INLINE void set_empty(std::size_t pos) {
@@ -389,19 +347,13 @@ public:
         ctrl.set_empty();
     }
 
-    JSTD_FORCED_INLINE void set_used(std::size_t pos, value_type hash) {
+    JSTD_FORCED_INLINE void set_used(std::size_t pos, std::size_t hash) {
         assert(pos < kGroupWidth);
         ctrl_type & ctrl = at(pos);
         ctrl.set_used(hash);
     }
 
-    JSTD_FORCED_INLINE void set_used64(std::size_t pos, std::size_t hash) {
-        assert(pos < kGroupWidth);
-        ctrl_type & ctrl = at(pos);
-        ctrl.set_used64(hash);
-    }
-
-    JSTD_FORCED_INLINE void set_used_strict(std::size_t pos, value_type hash) {
+    JSTD_FORCED_INLINE void set_used_strict(std::size_t pos, std::size_t hash) {
         assert(pos < kGroupWidth);
         ctrl_type & ctrl = at(pos);
         ctrl.set_used_strict(hash);

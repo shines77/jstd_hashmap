@@ -664,7 +664,7 @@ public:
     //
     JSTD_FORCED_INLINE
     void reserve(size_type new_capacity) {
-        if (likely(new_capacity != 0)) {
+        if (JSTD_LIKELY(new_capacity != 0)) {
             new_capacity = this->shrink_to_fit_capacity(new_capacity);
             this->rehash_impl<false>(new_capacity);
         } else {
@@ -694,7 +694,7 @@ public:
     void rehash(size_type new_capacity) {
         size_type fit_to_now = this->shrink_to_fit_capacity(this->size());
         new_capacity = (std::max)(fit_to_now, new_capacity);
-        if (likely(new_capacity != 0)) {
+        if (JSTD_LIKELY(new_capacity != 0)) {
             this->rehash_impl<true>(new_capacity);
         } else {
             this->destroy<true>();
@@ -704,11 +704,11 @@ public:
     JSTD_FORCED_INLINE
     void shrink_to_fit(bool read_only = false) {
         size_type new_capacity;
-        if (likely(!read_only))
+        if (JSTD_LIKELY(!read_only))
             new_capacity = this->shrink_to_fit_capacity(this->size());
         else
             new_capacity = this->size();
-        if (likely(new_capacity != 0)) {
+        if (JSTD_LIKELY(new_capacity != 0)) {
             this->rehash_impl<true>(new_capacity);
         } else {
             this->destroy<true>();
@@ -1049,7 +1049,7 @@ public:
 
     JSTD_FORCED_INLINE
     size_type find_first_used_index() const {
-        if (likely(this->size() != 0)) {
+        if (JSTD_LIKELY(this->size() != 0)) {
 #if 0
             auto mask_bits = group_type::make_mask_bits();
 
@@ -1058,7 +1058,7 @@ public:
             size_type slot_base_index = 0;
             for (; group < last_group; ++group) {
                 std::uint32_t used_mask = group->match_used(mask_bits);
-                if (likely(used_mask != 0)) {
+                if (JSTD_LIKELY(used_mask != 0)) {
                     std::uint32_t used_pos = BitUtils::bsf32(used_mask);
                     size_type slot_index = slot_base_index + used_pos;
                     return slot_index;
@@ -1083,7 +1083,7 @@ public:
     size_type skip_empty_slots(size_type start_slot_index) const {
         if (this->size() != 0) {
             start_slot_index++;
-            if (unlikely(start_slot_index >= this->slot_capacity()))
+            if (JSTD_UNLIKELY(start_slot_index >= this->slot_capacity()))
                 return this->slot_capacity();
 
             auto mask_bits = group_type::make_mask_bits();
@@ -1093,14 +1093,14 @@ public:
             size_type slot_base_index = start_slot_index - slot_pos;
             // Last 4 items use ctrl seek, maybe faster.
             static const size_type kCtrlFasterSeekPos = 4;
-            if (likely(slot_pos < (kGroupWidth - kCtrlFasterSeekPos))) {
+            if (JSTD_LIKELY(slot_pos < (kGroupWidth - kCtrlFasterSeekPos))) {
                 if (group < last_group) {
                     std::uint32_t used_mask = group->match_used(mask_bits);
                     // Filter out the bits in the leading position
                     // std::uint32_t non_excluded_mask = ~((std::uint32_t(1) << std::uint32_t(slot_pos)) - 1);
                     std::uint32_t non_excluded_mask = (std::uint32_t(0xFFFFFFFFu) << std::uint32_t(slot_pos));
                     used_mask &= non_excluded_mask;
-                    if (likely(used_mask != 0)) {
+                    if (JSTD_LIKELY(used_mask != 0)) {
                         std::uint32_t used_pos = BitUtils::bsf32(used_mask);
                         size_type slot_index = slot_base_index + used_pos;
                         return slot_index;
@@ -1121,7 +1121,7 @@ public:
             group++;
             for (; group < last_group; ++group) {
                 std::uint32_t used_mask = group->match_used(mask_bits);
-                if (likely(used_mask != 0)) {
+                if (JSTD_LIKELY(used_mask != 0)) {
                     std::uint32_t used_pos = BitUtils::bsf32(used_mask);
                     size_type slot_index = slot_base_index + used_pos;
                     return slot_index;
@@ -1376,20 +1376,21 @@ private:
     }
 
     JSTD_FORCED_INLINE
-    std::uint8_t ctrl_for_hash(std::size_t key_hash) const noexcept {
+    std::size_t ctrl_for_hash(std::size_t key_hash) const noexcept {
         std::size_t ctrl_hash = this->ctrl_hasher(key_hash);
 #if GROUP16_USE_LOOK_UP_TABLE
         std::uint8_t ctrl_hash8 = ctrl_type::reduced_hash(ctrl_hash);
-        return ctrl_hash8;
+        return static_cast<std::size_t>(ctrl_hash8);
 #else
         std::uint8_t ctrl_hash8 = ctrl_type::hash_bits(jstd::narrow_cast<std::uint8_t>(ctrl_hash));
   #if 1
-        if (likely(ctrl_hash8 != kEmptySlot))
-            return ctrl_hash8;
+        if (JSTD_LIKELY(ctrl_hash8 != kEmptySlot))
+            return static_cast<std::size_t>(ctrl_hash8);
         else
-            return kEmptyHash;
+            return static_cast<std::size_t>(kEmptyHash);
   #else
-        return ((ctrl_hash8 != kEmptySlot) ? ctrl_hash8 : kEmptyHash);
+        return ((ctrl_hash8 != kEmptySlot) ? static_cast<std::size_t>(ctrl_hash8) :
+                                             static_cast<std::size_t>(kEmptyHash));
   #endif
 #endif // GROUP16_USE_LOOK_UP_TABLE
     }
@@ -1453,13 +1454,12 @@ private:
     }
 
     template <bool NeedClearSlots>
-    JSTD_NO_INLINE
     void destroy() {
         this->destroy_data<NeedClearSlots>();
     }
 
     template <bool NeedClearSlots>
-    JSTD_FORCED_INLINE
+    JSTD_NO_INLINE
     void destroy_data() {
         // Note!!: destroy_slots() need use this->ctrls(), so must destroy slots first.
         size_type group_capacity = this->group_capacity();
@@ -1928,7 +1928,7 @@ private:
     template <bool IsInitialize = false>
     JSTD_FORCED_INLINE
     void create_slots(size_type new_capacity) {
-        if (likely(IsInitialize || (new_capacity != 0))) {
+        if (JSTD_LIKELY(IsInitialize || (new_capacity != 0))) {
 #if GROUP16_USE_HASH_POLICY
             auto hash_policy_setting = this->hash_policy_.calc_next_capacity(new_capacity);
             this->hash_policy_.commit(hash_policy_setting);
@@ -2111,13 +2111,13 @@ private:
     size_type find_index(const KeyT & key) const {
         std::size_t key_hash = this->hash_for(key);
         size_type group_index = this->index_for_hash(key_hash);
-        std::uint8_t ctrl_hash = this->ctrl_for_hash(key_hash);
+        std::size_t ctrl_hash = this->ctrl_for_hash(key_hash);
         return this->find_index(key, group_index, ctrl_hash);
     }
 
     template <typename KeyT>
     JSTD_FORCED_INLINE
-    size_type find_index(const KeyT & key, size_type group_index, std::uint8_t ctrl_hash) const {
+    size_type find_index(const KeyT & key, size_type group_index, std::size_t ctrl_hash) const {
         auto hash_bits = group_type::make_hash_bits(ctrl_hash);
         auto mask_bits = group_type::make_mask_bits();
         prober_type prober(group_index);
@@ -2126,7 +2126,7 @@ private:
             group_index = prober.get();
             const group_type * group = this->group_at(group_index);
             std::uint32_t match_mask = group->match_hash(hash_bits, mask_bits);
-            if (match_mask != 0) {
+            if (JSTD_LIKELY(match_mask != 0)) {
                 const slot_type * slot_start = this->slots();
                 JSTD_ASSUME(slot_start != nullptr);
                 const slot_type * slot_base = slot_start + group_index * kGroupWidth;
@@ -2136,7 +2136,7 @@ private:
                 do {
                     std::uint32_t match_pos = BitUtils::bsf32(match_mask);
                     const slot_type * slot = slot_base + match_pos;
-                    if (likely(this->key_equal_(key, slot->value.first))) {
+                    if (JSTD_LIKELY(this->key_equal_(key, slot->value.first))) {
                         size_type slot_index = this->index_of(slot);
                         return slot_index;
                     }
@@ -2145,25 +2145,26 @@ private:
             }
 
             // If it's not overflow, means it hasn't been found.
-            if (likely(group->is_not_overflow(ctrl_hash % kGroupWidth))) {
+            if (JSTD_LIKELY(group->is_not_overflow(ctrl_hash % kGroupWidth))) {
                 return this->slot_capacity();
             }
 
 #if GROUP16_DISPLAY_DEBUG_INFO
-            if (unlikely(prober.steps() > kSkipGroupsLimit)) {
+            if (JSTD_UNLIKELY(prober.steps() > kSkipGroupsLimit)) {
                 std::cout << "find_index(): key = " << key <<
                              ", skip_groups = " << prober.steps() <<
                              ", load_factor = " << this->load_factor() << std::endl;
             }
 #endif
-        } while (likely(prober.next_bucket(this->group_mask())));
+        } while (JSTD_LIKELY(prober.next_bucket(this->group_mask())));
 
         return this->slot_capacity();
     }
 
-    template <bool IsNoGrow, typename KeyT = key_type>
+    template <bool IsNoCheck, typename KeyT = key_type>
     JSTD_FORCED_INLINE
-    size_type find_empty_to_insert(const KeyT & key, size_type group_index, std::uint8_t ctrl_hash) {
+    size_type find_empty_to_insert(const KeyT & key, size_type group_index, std::size_t ctrl_hash) {
+        static constexpr bool IsNoGrow = true;
         auto mask_bits = group_type::make_mask_bits();
         prober_type prober(group_index);
 
@@ -2171,11 +2172,17 @@ private:
             group_index = prober.get();
             group_type * group = this->group_at(group_index);
             std::uint32_t empty_mask = group->match_empty(mask_bits);
-            if (likely(empty_mask != 0)) {
+            if (JSTD_LIKELY(empty_mask != 0)) {
                 std::uint32_t empty_pos = BitUtils::bsf32(empty_mask);
                 size_type slot_base = group_index * kGroupWidth;
                 assert(group->is_empty(empty_pos));
                 group->set_used(empty_pos, ctrl_hash);
+                if (!IsNoCheck) {
+                    // If overflow bit is 1, and found a empty slot, the slot must be a deleted slot.
+                    bool is_deleted_slot = group->is_overflow(ctrl_hash % kGroupWidth);
+                    this->slot_threshold_ += is_deleted_slot;
+                    assert(this->slot_threshold_ < this->slot_capacity());
+                }
                 size_type slot_index = slot_base + empty_pos;
                 return slot_index;
             } else {
@@ -2183,7 +2190,7 @@ private:
                 group->set_overflow(ctrl_hash % kGroupWidth);
             }
 #if GROUP16_DISPLAY_DEBUG_INFO
-            if (unlikely(prober.steps() > kSkipGroupsLimit)) {
+            if (JSTD_UNLIKELY(prober.steps() > kSkipGroupsLimit)) {
                 std::cout << "$(): key = " << key <<
                              ", skip_groups = " << prober.steps() <<
                              ", load_factor = " << this->load_factor() << std::endl;
@@ -2193,7 +2200,7 @@ private:
             if (IsNoGrow) {
                 prober.next_bucket(this->group_mask());
             }
-        } while (likely(IsNoGrow || prober.next_bucket(this->group_mask())));
+        } while (JSTD_LIKELY(IsNoGrow || prober.next_bucket(this->group_mask())));
 
         return this->slot_capacity();
     }
@@ -2203,14 +2210,14 @@ private:
     std::pair<size_type, bool> find_or_insert(const KeyT & key) {
         std::size_t key_hash = this->hash_for(key);
         size_type group_index = this->index_for_hash(key_hash);
-        std::uint8_t ctrl_hash = this->ctrl_for_hash(key_hash);
+        std::size_t ctrl_hash = this->ctrl_for_hash(key_hash);
 
         size_type slot_index = this->find_index(key, group_index, ctrl_hash);
         if (slot_index != this->slot_capacity()) {
             return { slot_index, kIsKeyExists };
         }
 
-        if (unlikely(this->need_grow())) {
+        if (JSTD_UNLIKELY(this->need_grow())) {
             // The size of slot reach the slot threshold or hashmap is full.
             this->grow_if_necessary();
 
@@ -2219,8 +2226,8 @@ private:
             // ctrl_hash = this->ctrl_for_hash(key_hash);
         }
 
-        slot_index = this->find_empty_to_insert<true, KeyT>(key, group_index, ctrl_hash);
-        if (likely(true || (slot_index != this->slot_capacity()))) {
+        slot_index = this->find_empty_to_insert<false, KeyT>(key, group_index, ctrl_hash);
+        if (JSTD_LIKELY(true || (slot_index != this->slot_capacity()))) {
             return { slot_index, kNeedInsert };
         }
         else {
@@ -2230,7 +2237,7 @@ private:
             this->grow_if_necessary();
 
             group_index = this->index_for_hash(key_hash);
-            slot_index = this->find_empty_to_insert<true, KeyT>(key, group_index, ctrl_hash);
+            slot_index = this->find_empty_to_insert<false, KeyT>(key, group_index, ctrl_hash);
             assert(slot_index < this->slot_capacity());
             return { slot_index, kNeedInsert };
         }
@@ -2240,7 +2247,7 @@ private:
     size_type no_grow_unique_insert(const key_type & key) {
         std::size_t key_hash = this->hash_for(key);
         size_type group_index = this->index_for_hash(key_hash);
-        std::uint8_t ctrl_hash = this->ctrl_for_hash(key_hash);
+        std::size_t ctrl_hash = this->ctrl_for_hash(key_hash);
 
         size_type slot_index = this->find_empty_to_insert<true, key_type>(key, group_index, ctrl_hash);
         return slot_index;
@@ -2581,16 +2588,17 @@ private:
     }
 
     JSTD_FORCED_INLINE
-    bool ctrl_maybe_caused_overflow(size_type slot_index) const noexcept {
+    bool maybe_caused_overflow(size_type slot_index, std::size_t ctrl_hash) const noexcept {
         const group_type * group = this->groups() + slot_index / kGroupWidth;
-        const ctrl_type * ctrl = this->ctrl_at(slot_index);
-        return group->is_overflow(ctrl->value() % kGroupWidth);
+        //const ctrl_type * ctrl = this->ctrl_at(slot_index);
+        //return group->is_overflow(ctrl->value() % kGroupWidth);
+        return group->is_overflow(ctrl_hash % kGroupWidth);
     }
 
     JSTD_FORCED_INLINE
-    void erase_index(size_type slot_index) {
+    void erase_index(size_type slot_index, std::size_t ctrl_hash) {
         assert(slot_index >= 0 && slot_index < this->slot_capacity());
-        bool maybe_overflow = this->ctrl_maybe_caused_overflow(slot_index);
+        bool maybe_overflow = this->maybe_caused_overflow(slot_index, ctrl_hash);
         assert(this->slot_threshold_ > 0);
         this->slot_threshold_ -= maybe_overflow;
         assert(this->slot_size_ > 0);
@@ -2602,13 +2610,15 @@ private:
     size_type find_and_erase(const key_type & key) {
         std::size_t key_hash = this->hash_for(key);
         size_type group_index = this->index_for_hash(key_hash);
-        std::uint8_t ctrl_hash = this->ctrl_for_hash(key_hash);
+        std::size_t ctrl_hash = this->ctrl_for_hash(key_hash);
 
         size_type slot_index = this->find_index(key, group_index, ctrl_hash);
         if (slot_index != this->slot_capacity()) {
-            this->erase_index(slot_index);
+            this->erase_index(slot_index, ctrl_hash);
+            return 1;
+        } else {
+            return 0;
         }
-        return (slot_index != this->slot_capacity()) ? 1 : 0;
     }
 
     // TODO: Optimize this assuming *this and other don't overlap.

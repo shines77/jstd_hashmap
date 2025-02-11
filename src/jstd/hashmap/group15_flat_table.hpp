@@ -2291,10 +2291,6 @@ private:
                 JSTD_ASSUME(slot_start != nullptr);
                 const slot_type * slot_base = slot_start + group_index * kGroupSize;
                 const slot_type * slot = slot_base + empty_pos;
-                if (!IsNoCheck) {
-                    // When we rehash() or batch read/write slots, it needn't to prefetch write.
-                    //jstd::CPU_Prefetch_Write_T0((const void *)&slot->get_key());
-                }
                 assert(group->is_empty(empty_pos));
                 group->set_used(empty_pos, ctrl_hash);
                 if (!IsNoCheck) {
