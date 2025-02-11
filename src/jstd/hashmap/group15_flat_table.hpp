@@ -2336,7 +2336,7 @@ private:
             return { locator, kIsKeyExists };
         }
 
-        if (JSTD_LIKELY(this->need_grow())) {
+        if (JSTD_UNLIKELY(this->need_grow())) {
             // The size of slot reach the slot threshold or hashmap is full.
             this->grow_if_necessary();
 

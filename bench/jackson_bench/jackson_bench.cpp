@@ -402,12 +402,6 @@ double & results(std::size_t run_index, std::size_t result_index)
     return results[run_index * kLoopTimes + result_index];
 }
 
-void reset_random_generator()
-{
-    // Reset random generator
-    random_number_generator.seed(20250118U);
-}
-
 //
 // Function that attempts to reset the cache to the same state before each table is benchmarked.
 // The strategy is to iterate over an array that is at least as large as the L1, L2, and L3 caches combined.
@@ -438,12 +432,23 @@ void flush_cache_and_sleep()
     std::cout << "... " << std::endl;
 }
 
+void benchmark_routine_pre()
+{
+    // Reset random generator
+    random_number_generator.seed(20250118U);
+}
+
+void benchmark_routine_post()
+{
+    // Do something when the benchmark routine done, if you need.
+}
+
 template <template <typename> typename HashMap, typename BluePrint, std::size_t kDataSize>
 void benchmark_find_existing(std::size_t run,
                              std::vector<typename BluePrint::key_type> & keys,
                              double & elapsed_time)
 {
-    reset_random_generator();
+    benchmark_routine_pre();
 
     using table_type = typename HashMap<BluePrint>::table_type;
     table_type table;
@@ -493,6 +498,8 @@ void benchmark_find_existing(std::size_t run,
     }
 
     printf("Total elapsed time = %0.3f ms\n", elapsed_time);
+
+    benchmark_routine_post();
 }
 
 template <template <typename> typename HashMap, typename BluePrint, std::size_t kDataSize>
@@ -500,7 +507,7 @@ void benchmark_find_non_existing(std::size_t run,
                                  std::vector<typename BluePrint::key_type> & keys,
                                  double & elapsed_time)
 {
-    reset_random_generator();
+    benchmark_routine_pre();
 
     using table_type = typename HashMap<BluePrint>::table_type;
     table_type table;
@@ -541,6 +548,8 @@ void benchmark_find_non_existing(std::size_t run,
     }
 
     printf("Total elapsed time = %0.3f ms\n", elapsed_time);
+
+    benchmark_routine_post();
 }
 
 template <template <typename> typename HashMap, typename BluePrint, std::size_t kDataSize>
@@ -548,7 +557,7 @@ void benchmark_insert_non_existing(std::size_t run,
                                    std::vector<typename BluePrint::key_type> & keys,
                                    double & elapsed_time)
 {
-    reset_random_generator();
+    benchmark_routine_pre();
 
     using table_type = typename HashMap<BluePrint>::table_type;
     table_type table;
@@ -565,6 +574,8 @@ void benchmark_insert_non_existing(std::size_t run,
     printf("elapsed time = %0.3f ms\n", elapsed_time);
 
     results<HashMap, BluePrint, id_insert_non_existing>(run, 0) = elapsed_time;
+
+    benchmark_routine_post();
 }
 
 template <template <typename> typename HashMap, typename BluePrint, std::size_t kDataSize>
@@ -572,7 +583,7 @@ void benchmark_insert_existing(std::size_t run,
                                std::vector<typename BluePrint::key_type> & keys,
                                double & elapsed_time)
 {
-    reset_random_generator();
+    benchmark_routine_pre();
 
     using table_type = typename HashMap<BluePrint>::table_type;
     table_type table;
@@ -611,6 +622,8 @@ void benchmark_insert_existing(std::size_t run,
     }
 
     printf("Total elapsed time = %0.3f ms\n", elapsed_time);
+
+    benchmark_routine_post();
 }
 
 template <template <typename> typename HashMap, typename BluePrint, std::size_t kDataSize>
@@ -627,7 +640,7 @@ void benchmark_erase_existing(std::size_t run,
                               std::vector<typename BluePrint::key_type> & keys,
                               double & elapsed_time)
 {
-    reset_random_generator();
+    benchmark_routine_pre();
 
     using table_type = typename HashMap<BluePrint>::table_type;
     table_type table;
@@ -674,6 +687,8 @@ void benchmark_erase_existing(std::size_t run,
     }
 
     printf("Total elapsed time = %0.3f ms\n", elapsed_time);
+
+    benchmark_routine_post();
 }
 
 template <template <typename> typename HashMap, typename BluePrint, std::size_t kDataSize>
@@ -681,7 +696,7 @@ void benchmark_erase_non_existing(std::size_t run,
                                   std::vector<typename BluePrint::key_type> & keys,
                                   double & elapsed_time)
 {
-    reset_random_generator();
+    benchmark_routine_pre();
 
     using table_type = typename HashMap<BluePrint>::table_type;
     table_type table;
@@ -720,6 +735,8 @@ void benchmark_erase_non_existing(std::size_t run,
     }
 
     printf("Total elapsed time = %0.3f ms\n", elapsed_time);
+
+    benchmark_routine_post();
 }
 
 template <template <typename> typename HashMap, typename BluePrint, std::size_t kDataSize>
@@ -727,7 +744,7 @@ void benchmark_iteration(std::size_t run,
                          std::vector<typename BluePrint::key_type> & keys,
                          double & elapsed_time)
 {
-    reset_random_generator();
+    benchmark_routine_pre();
 
     using table_type = typename HashMap<BluePrint>::table_type;
     table_type table;
@@ -779,6 +796,8 @@ void benchmark_iteration(std::size_t run,
     }
 
     printf("Total elapsed time = %0.3f ms\n", elapsed_time);
+
+    benchmark_routine_post();
 }
 
 template <template <typename> typename HashMap, typename BluePrint,
