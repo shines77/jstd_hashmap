@@ -47,7 +47,6 @@ make
 # 根据 Jackson Allan 的基准测试改进而来
 ./bin/jackson_bench
 
-
 # 根据 Google sprasehash 开源库改进的基准测试
 
 # 默认迭代次数为 10000000（无参数时）
@@ -58,7 +57,6 @@ make
 
 # 只测试 (K = std::string, V = std::string)，节约时间
 ./bin/time_hash_map_new string
-
 
 # 低、中、高、超高 - 基数测试，主要测试 insert() 和 find()
 ./bin/cardinal_bench
@@ -87,8 +85,20 @@ make
 
 1. `cmake-clean.sh`
 
-清理 `cmake` 的缓存和编译结果（便于重新配置和编译）：
+```bash
+# 清理 cmake 的缓存和编译结果（便于重新配置和编译 benchmark）,
+# 效果类似 make clean, 但更彻底
+./cmake-clean.sh
+```
+
+2. `cmake-update.sh`
 
 ```bash
-./cmake-clean.sh
+# 一键更新和编译，但建议先拷贝到 build 目录
+./cmake-update.sh
+
+# 内容如下：
+git pull
+git submodule update --init --recursive
+make
 ```
