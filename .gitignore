@@ -195,10 +195,18 @@ _ReSharper*/
 /Device-Release/
 
 # Ignore VLD local switch define
-/src/jstd/basic/vld_def.h
+src/jstd/basic/vld_def.h
 
 # Ignore hardware detect config file
-/src/jstd/config/config_hw_detect.h
+src/jstd/config/config_hw_detect.h
+
+# Ignore version file
+src/jstd/config/version.h
+src/jstd/version.h
+
+# build folders
+clang/*
+[Bb]uild/*
 
 # Ignore jstd exe filename
 jstd.exe
