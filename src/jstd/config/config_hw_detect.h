@@ -2,7 +2,7 @@
 #define ARCH_X86_64        1
 #define C_GCC      1
 #define __64BIT__  1
-#define FUNDERSCORE        
+#define FUNDERSCORE
 #define SKYLAKEX
 #define L1_CODE_SIZE 32768
 #define L1_CODE_ASSOCIATIVE 8
