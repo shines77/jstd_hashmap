@@ -153,6 +153,7 @@ IcUpdateLog.htm
 *CMakeCache.txt
 # /cmake/
 # *.cmake
+cmake_install.cmake
 
 # Ignore dependency library folders
 /deps/boost/
