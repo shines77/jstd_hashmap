@@ -371,6 +371,11 @@ public:
         return ctrl.is_not_overflow(hash);
     }
 
+    JSTD_FORCED_INLINE bool has_any_overflow() const {
+        const ctrl_type & ctrl = overflow();
+        return (ctrl.value() != 0);
+    }
+
     JSTD_FORCED_INLINE bool is_equals(std::size_t pos, std::size_t hash) {
         assert(pos < kGroupSize);
         const ctrl_type & ctrl = at(pos);

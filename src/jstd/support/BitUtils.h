@@ -353,22 +353,36 @@ namespace BitUtils {
 
     static inline
     unsigned int countTrailingZeros32(unsigned int x) {
-        return bsf32(x);
+#if defined(__BMI1__)
+        return (unsigned int)_tzcnt_u32(x);
+#else
+        return ((x != 0) ? bsf32(x) : 32);
+#endif
     }
 
     static inline
     unsigned int countTrailingZeros64(uint64_t x) {
-        return bsf64(x);
+#if defined(__BMI1__)
+        return (unsigned int)_tzcnt_u64(x);
+#else
+        return ((x != 0) ? bsf64(x) : 64);
+#endif
     }
 
     static inline
     unsigned int countLeadingZeros32(unsigned int x) {
-        return (unsigned int)(31u - bsr32(x));
+        if (x != 0)
+            return (unsigned int)(31u - bsr32(x));
+        else
+            return 32;
     }
 
     static inline
     unsigned int countLeadingZeros64(uint64_t x) {
-        return (unsigned int)(63u - bsr64(x));
+        if (x != 0)
+            return (unsigned int)(63u - bsr64(x));
+        else
+            return 64;
     }
 
     static inline

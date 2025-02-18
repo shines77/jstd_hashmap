@@ -955,7 +955,7 @@ public:
     JSTD_FORCED_INLINE
     iterator erase(iterator pos) {
         size_type slot_index = pos.index();
-        this->erase_by_index(slot_index);
+        this->erase_slot(slot_index);
         ctrl_type * ctrl = this->ctrl_at(slot_index);
         return this->next_valid_iterator(ctrl, pos);
     }
@@ -1469,11 +1469,12 @@ private:
 
     JSTD_FORCED_INLINE
     void destroy_groups(size_type group_capacity) noexcept {
+        JSTD_UNUSED(group_capacity);
         if (this->groups_ != this_type::default_empty_groups()) {
             // Reset groups state
             this->groups_ = this_type::default_empty_groups();
-            size_type total_group_alloc_count = this->TotalGroupAllocCount<kGroupAlignment>(group_capacity);
 #if GROUP16_USE_SEPARATE_SLOTS
+            size_type total_group_alloc_count = this->TotalGroupAllocCount<kGroupAlignment>(group_capacity);
             GroupAllocTraits::deallocate(this->group_allocator_, this->groups_alloc_, total_group_alloc_count);
             this->groups_alloc_ = nullptr;
 #endif            
@@ -2580,15 +2581,6 @@ private:
     }
 
     JSTD_FORCED_INLINE
-    bool ctrl_is_last_bit(size_type slot_index) const noexcept {
-        const group_type * group = this->groups() + slot_index / kGroupWidth;
-        size_type ctrl_pos = slot_index % kGroupWidth;
-        std::uint32_t used_mask = group->match_used();
-        std::uint32_t last_bit_pos = BitUtils::bsr32(used_mask);
-        return (ctrl_pos == static_cast<size_type>(last_bit_pos));
-    }
-
-    JSTD_FORCED_INLINE
     bool maybe_caused_overflow(ctrl_type * ctrl) const noexcept {
         std::uintptr_t ngroup = reinterpret_cast<std::uintptr_t>(ctrl) & (~(kGroupWidth - 1));
         const group_type * group = reinterpret_cast<const group_type *>(ngroup);
@@ -2609,7 +2601,7 @@ private:
     }
 
     JSTD_FORCED_INLINE
-    void erase_by_index(size_type slot_index) {
+    void erase_slot(size_type slot_index) {
         assert(slot_index >= 0 && slot_index < this->slot_capacity());
         this->destroy_slot(slot_index);
         this->reset_ctrl(slot_index);
@@ -2623,7 +2615,7 @@ private:
 
         size_type slot_index = this->find_index(key, group_index, ctrl_hash);
         if (slot_index != this->slot_capacity()) {
-            this->erase_by_index(slot_index);
+            this->erase_slot(slot_index);
             return 1;
         } else {
             return 0;

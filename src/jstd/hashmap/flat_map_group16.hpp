@@ -272,6 +272,9 @@ public:
     static constexpr const std::uint32_t kHashMask32  = ctrl_type::kHashMask32;
     static constexpr const std::uint32_t kEmptySlot32 = ctrl_type::kEmptySlot32;
 
+    static constexpr const std::uint32_t kOverflowMask32 = 0x80808080u;
+    static constexpr const std::uint64_t kOverflowMask64 = 0x8080808080808080ull;
+
     static constexpr const std::size_t kGroupWidth = 16;
     static constexpr const bool kIsRegularLayout = true;
 
@@ -333,6 +336,25 @@ public:
         std::size_t pos = hash % kGroupWidth;
         const ctrl_type & ctrl = at(pos);
         return ctrl.is_not_overflow();
+    }
+
+    JSTD_FORCED_INLINE bool has_any_overflow() const {
+        static constexpr std::size_t kSizeofSizeT = sizeof(std::size_t);
+        if (kSizeofSizeT == 8) {
+            std::uint64_t * part0 = reinterpret_cast<std::uint64_t *>((ctrl *)&ctrls[0]);
+            std::uint64_t * part1 = reinterpret_cast<std::uint64_t *>((ctrl *)&ctrls[kSizeofSizeT]);
+            // return ((((*part0) & kOverflowMask64) != 0) || (((*part1) & kOverflowMask64) != 0));
+            return (((*part0) & (*part1) & kOverflowMask64) != 0);
+        } else {
+            std::uint32_t * part0 = reinterpret_cast<std::uint32_t *>((ctrl *)&ctrls[0]);
+            std::uint32_t * part1 = reinterpret_cast<std::uint32_t *>((ctrl *)&ctrls[kSizeofSizeT]);
+            std::uint32_t * part2 = reinterpret_cast<std::uint32_t *>((ctrl *)&ctrls[kSizeofSizeT * 2]);
+            std::uint32_t * part3 = reinterpret_cast<std::uint32_t *>((ctrl *)&ctrls[kSizeofSizeT * 3]);
+            // return ((((*part0) & kOverflowMask32) != 0) || (((*part1) & kOverflowMask32) != 0) ||
+            //         (((*part2) & kOverflowMask32) != 0) || (((*part3) & kOverflowMask32) != 0));
+            return ((((*part0) & (*part1) & kOverflowMask32) != 0) ||
+                    (((*part2) & (*part3) & kOverflowMask32) != 0));
+        }
     }
 
     JSTD_FORCED_INLINE bool is_equals(std::size_t pos, std::size_t hash) {

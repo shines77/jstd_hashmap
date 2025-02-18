@@ -92,6 +92,8 @@
 #define GROUP15_USE_GROUP_SCAN      1
 #define GROUP15_USE_INDEX_SHIFT     1
 
+#define GROUP15_USE_NEW_OVERFLOW    1
+
 #ifdef _DEBUG
 #define GROUP15_DISPLAY_DEBUG_INFO  0
 #endif
@@ -960,7 +962,7 @@ public:
     JSTD_FORCED_INLINE
     iterator erase(iterator pos) {
         locator_t & locator = pos.locator();
-        this->erase_by_locator(locator);
+        this->erase_slot(locator);
         locator.increment();
         return { locator };
     }
@@ -1454,13 +1456,14 @@ private:
 
     JSTD_FORCED_INLINE
     void destroy_groups(size_type group_capacity) noexcept {
+        JSTD_UNUSED(group_capacity);
         if (this->groups_ != this_type::default_empty_groups()) {
             // Reset groups state
             this->groups_ = this_type::default_empty_groups();
-            size_type total_group_alloc_count = this->TotalGroupAllocCount<kGroupAlignment>(group_capacity);
 #if GROUP15_USE_SEPARATE_SLOTS
+            size_type total_group_alloc_count = this->TotalGroupAllocCount<kGroupAlignment>(group_capacity);
             GroupAllocTraits::deallocate(this->group_allocator_, this->groups_alloc_, total_group_alloc_count);
-            this->groups_alloc_ = nullptr;
+            this->groups_alloc_ = nullptr;           
 #endif
         }
     }
@@ -2266,15 +2269,6 @@ private:
 #pragma warning(pop) /* C4800 */
 #endif
 
-    JSTD_FORCED_INLINE
-    bool ctrl_is_last_bit(const locator_t & locator) const noexcept {
-        const group_type * group = locator.group();
-        size_type group_pos = locator.pos();
-        std::uint32_t used_mask = group->match_used();
-        std::uint32_t last_bit_pos = BitUtils::bsr32(used_mask);
-        return (group_pos == static_cast<size_type>(last_bit_pos));
-    }
-
     template <bool IsNoCheck, typename KeyT = key_type>
     JSTD_FORCED_INLINE
     locator_t find_empty_to_insert(const KeyT & key, size_type group_index0, std::size_t ctrl_hash) {
@@ -2294,10 +2288,26 @@ private:
                 assert(group->is_empty(empty_pos));
                 group->set_used(empty_pos, ctrl_hash);
                 if (!IsNoCheck) {
-                    // If overflow bit is 1, and found a empty slot, the slot must be a deleted slot.
-                    bool is_deleted_slot = group->is_overflow(ctrl_hash);
+#if GROUP15_USE_NEW_OVERFLOW
+                    // If any overflow bit is not 0, it means that the group was once full.
+                    bool maybe_overflow = group->has_any_overflow();
+                    bool is_deleted_slot;
+                    if (JSTD_LIKELY(!maybe_overflow)) {
+#if 1
+                        std::uint32_t empty_bits = empty_mask ^ (empty_mask - 1);
+                        bool is_last_empty = (((empty_mask + empty_bits) & 0x8000u) != 0);
+                        is_deleted_slot = !is_last_empty;
+#else
+                        std::uint32_t used_mask = (~empty_mask) & 0x7FFFu;
+                        std::uint32_t last_used_pos = (used_mask != 0) ? BitUtils::bsr32(used_mask) : 32;
+                        is_deleted_slot = (last_used_pos < empty_pos);
+#endif
+                    } else {
+                        is_deleted_slot = true;
+                    }
                     this->slot_threshold_ += is_deleted_slot;
                     assert(this->slot_threshold_ < this->slot_capacity());
+#endif // GROUP15_USE_NEW_OVERFLOW
                 }
                 return { group, empty_pos, slot };
             } else {
@@ -2699,10 +2709,24 @@ private:
     }
 
     JSTD_FORCED_INLINE
+    bool maybe_is_deleted_slot(const group_type * group, size_type group_pos) const noexcept {
+        bool maybe_overflow = group->has_any_overflow();
+        if (JSTD_LIKELY(!maybe_overflow)) {
+            return maybe_caused_overflow(group, group_pos);
+        } else {
+            return maybe_overflow;
+        }
+    }
+
+    JSTD_FORCED_INLINE
     void reset_ctrl(locator_t & locator) {
         group_type * group = locator.group();
         size_type group_pos = locator.pos();
+#if GROUP15_USE_NEW_OVERFLOW
+        bool maybe_overflow = this->maybe_is_deleted_slot(group, group_pos);
+#else
         bool maybe_overflow = this->maybe_caused_overflow(group, group_pos);
+#endif
         assert(group->is_used(group_pos));
         group->set_empty(group_pos);
         assert(this->slot_threshold_ > 0);
@@ -2712,7 +2736,7 @@ private:
     }
 
     JSTD_FORCED_INLINE
-    void erase_by_locator(locator_t & locator) {
+    void erase_slot(locator_t & locator) {
         assert(locator.slot() >= this->slots() && locator.slot() < this->last_slot());
         this->destroy_slot(locator.slot());
         this->reset_ctrl(locator);
@@ -2726,7 +2750,7 @@ private:
 
         locator_t locator = this->find_impl(key, group_index, ctrl_hash);
         if (JSTD_LIKELY(locator.slot() != nullptr)) {
-            this->erase_by_locator(locator);
+            this->erase_slot(locator);
             return 1;
         } else {
             return 0;
