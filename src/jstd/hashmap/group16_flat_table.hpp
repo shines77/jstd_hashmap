@@ -125,7 +125,7 @@ public:
     typedef typename std::allocator_traits<allocator_type>::pointer         pointer;
     typedef typename std::allocator_traits<allocator_type>::const_pointer   const_pointer;
 
-    using this_type = group16_flat_table<TypePolicy, Hash, KeyEqual, Allocator>;
+    using this_type = jstd::group16_flat_table<TypePolicy, Hash, KeyEqual, Allocator>;
 
     static constexpr bool kUseIndexSalt = false;
     static constexpr bool kEnableExchange = true;
@@ -135,9 +135,9 @@ public:
 
     static constexpr size_type npos = static_cast<size_type>(-1);
 
-    using ctrl_type = group16_meta_ctrl;
-    using group_type = flat_map_group16<group16_meta_ctrl>;
-    using prober_type = group_quadratic_prober;
+    using ctrl_type = jstd::group16_meta_ctrl;
+    using group_type = jstd::flat_map_group16<group16_meta_ctrl>;
+    using prober_type = jstd::group_quadratic_prober;
 
     static constexpr std::uint8_t kEmptySlot = ctrl_type::kEmptySlot;
     static constexpr std::uint8_t kEmptyHash = ctrl_type::kEmptyHash;
@@ -194,9 +194,9 @@ public:
     static constexpr bool kIsIndirectKV = kIsIndirectKey | kIsIndirectValue;
     static constexpr bool kNeedStoreHash = true;
 
-    using slot_type = map_slot_type<key_type, mapped_type>;
-    using slot_policy_t = flat_map_slot_policy<slot_type>;
-    using SlotPolicyTraits = slot_policy_traits<slot_policy_t>;
+    using slot_type = jstd::map_slot_type<key_type, mapped_type>;
+    using slot_policy_t = jstd::flat_map_slot_policy<slot_type>;
+    using SlotPolicyTraits = jstd::slot_policy_traits<slot_policy_t>;
 
     //using slot_type = flat_map_slot_storage<type_policy, kIsIndirectKey, kIsIndirectValue>;
 
@@ -210,8 +210,8 @@ public:
                                                  kSlotAlignment_ :
                                                  compile_time::round_up_pow2<kSlotAlignment_>::value;
 
-    using iterator       = flat_map_iterator<this_type, value_type, kIsIndirectKV>;
-    using const_iterator = flat_map_iterator<this_type, const value_type, kIsIndirectKV>;
+    using iterator       = jstd::flat_map_iterator<this_type, value_type, kIsIndirectKV>;
+    using const_iterator = jstd::flat_map_iterator<this_type, const value_type, kIsIndirectKV>;
 
     static constexpr size_type kDefaultCapacity = 0;
     // kMinCapacity must be >= (kGroupWidth * 2)
@@ -239,7 +239,7 @@ public:
     using GroupAllocTraits = typename std::allocator_traits<allocator_type>::template rebind_traits<group_type>;
     using SlotAllocTraits = typename std::allocator_traits<allocator_type>::template rebind_traits<slot_type>;
 
-    using hash_policy_t = typename hash_policy_selector<Hash>::type;
+    using hash_policy_t = typename jstd::hash_policy_selector<Hash>::type;
 
 private:
     group_type *    groups_;

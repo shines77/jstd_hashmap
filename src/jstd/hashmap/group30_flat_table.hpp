@@ -46,8 +46,8 @@
 
 ************************************************************************************/
 
-#ifndef JSTD_HASHMAP_GROUP15_FLAT_TABLE_HPP
-#define JSTD_HASHMAP_GROUP15_FLAT_TABLE_HPP
+#ifndef JSTD_HASHMAP_GROUP30_FLAT_TABLE_HPP
+#define JSTD_HASHMAP_GROUP30_FLAT_TABLE_HPP
 
 #pragma once
 
@@ -77,7 +77,7 @@
 #include "jstd/utility/utility.h"
 
 #include "jstd/hashmap/flat_map_iterator15.hpp"
-#include "jstd/hashmap/flat_map_group15.hpp"
+#include "jstd/hashmap/flat_map_group30.hpp"
 #include "jstd/hashmap/group_quadratic_prober.hpp"
 
 #include "jstd/hashmap/detail/hashmap_traits.h"
@@ -86,23 +86,23 @@
 #include "jstd/hashmap/flat_map_slot_policy.hpp"
 #include "jstd/hashmap/slot_policy_traits.h"
 
-#define GROUP15_USE_HASH_POLICY     0
-#define GROUP15_USE_SEPARATE_SLOTS  1
+#define GROUP30_USE_HASH_POLICY     0
+#define GROUP30_USE_SEPARATE_SLOTS  1
 
-#define GROUP15_USE_GROUP_SCAN      1
-#define GROUP15_USE_INDEX_SHIFT     1
+#define GROUP30_USE_GROUP_SCAN      1
+#define GROUP30_USE_INDEX_SHIFT     1
 
-#define GROUP15_USE_NEW_OVERFLOW    1
+#define GROUP30_USE_NEW_OVERFLOW    1
 
 #ifdef _DEBUG
-#define GROUP15_DISPLAY_DEBUG_INFO  0
+#define GROUP30_DISPLAY_DEBUG_INFO  0
 #endif
 
 namespace jstd {
 
 template <typename TypePolicy, typename Hash,
           typename KeyEqual, typename Allocator>
-class JSTD_DLL group15_flat_table
+class JSTD_DLL group30_flat_table
 {
 public:
     typedef TypePolicy                          type_policy;
@@ -127,7 +127,7 @@ public:
     typedef typename std::allocator_traits<allocator_type>::pointer         pointer;
     typedef typename std::allocator_traits<allocator_type>::const_pointer   const_pointer;
 
-    using this_type = jstd::group15_flat_table<TypePolicy, Hash, KeyEqual, Allocator>;
+    using this_type = jstd::group30_flat_table<TypePolicy, Hash, KeyEqual, Allocator>;
 
     static constexpr bool kUseIndexSalt = false;
     static constexpr bool kEnableExchange = true;
@@ -137,8 +137,8 @@ public:
 
     static constexpr size_type npos = static_cast<size_type>(-1);
 
-    using ctrl_type = jstd::group15_meta_ctrl;
-    using group_type = jstd::flat_map_group15<group15_meta_ctrl>;
+    using ctrl_type = jstd::group30_meta_ctrl;
+    using group_type = jstd::flat_map_group15<group30_meta_ctrl>;
     using prober_type = jstd::group_quadratic_prober;
 
     static constexpr const std::uint8_t kEmptySlot    = ctrl_type::kEmptySlot;
@@ -250,18 +250,18 @@ private:
     group_type *    groups_;
     slot_type *     slots_;
     size_type       slot_size_;
-    size_type       slot_mask_;         // slot_mask_ = ctrl_capacity - 1    
+    size_type       slot_mask_;         // slot_mask_ = ctrl_capacity - 1
     size_type       slot_threshold_;
     size_type       slot_capacity_;     // slot_capacity = ctrl_capacity / kGroupWidth * kGroupSize
     size_type       group_mask_;        // Use in class group_quadratic_prober
-#if GROUP15_USE_INDEX_SHIFT
+#if GROUP30_USE_INDEX_SHIFT
     size_type       index_shift_;
 #endif
     size_type       mlf_;
-#if GROUP15_USE_SEPARATE_SLOTS
+#if GROUP30_USE_SEPARATE_SLOTS
     group_type *    groups_alloc_;
 #endif
-#if GROUP15_USE_HASH_POLICY
+#if GROUP30_USE_HASH_POLICY
     hash_policy_t   hash_policy_;
 #endif
 
@@ -276,9 +276,9 @@ private:
     static constexpr bool kNeedInsert = true;
 
 public:
-    group15_flat_table() : group15_flat_table(kDefaultCapacity) {}
+    group30_flat_table() : group30_flat_table(kDefaultCapacity) {}
 
-    explicit group15_flat_table(size_type capacity, hasher const & hash = hasher(),
+    explicit group30_flat_table(size_type capacity, hasher const & hash = hasher(),
                                 key_equal const & pred = key_equal(),
                                 allocator_type const & allocator = allocator_type())
         : groups_(default_empty_groups()), slots_(nullptr),
@@ -287,14 +287,14 @@ public:
           slot_threshold_(0),
           slot_capacity_(0),
           group_mask_(0),
-#if GROUP15_USE_INDEX_SHIFT
+#if GROUP30_USE_INDEX_SHIFT
           index_shift_(kWordLength - 1),
 #endif
           mlf_(kDefaultMaxLoadFactor),
-#if GROUP15_USE_SEPARATE_SLOTS
+#if GROUP30_USE_SEPARATE_SLOTS
           groups_alloc_(nullptr),
 #endif
-#if GROUP15_USE_HASH_POLICY
+#if GROUP30_USE_HASH_POLICY
           hash_policy_(),
 #endif
           hasher_(hash), key_equal_(pred),
@@ -305,26 +305,26 @@ public:
         }
     }
 
-    group15_flat_table(group15_flat_table const & other)
-        : group15_flat_table(other, std::allocator_traits<allocator_type>::
+    group30_flat_table(group30_flat_table const & other)
+        : group30_flat_table(other, std::allocator_traits<allocator_type>::
                                     select_on_container_copy_construction(other.get_allocator_ref())) {
     }
 
-    group15_flat_table(group15_flat_table const & other, allocator_type const & allocator) :
+    group30_flat_table(group30_flat_table const & other, allocator_type const & allocator) :
         groups_(default_empty_groups()), slots_(nullptr),
         slot_size_(0),
         slot_mask_(size_type(-1)),
         slot_threshold_(0),
         slot_capacity_(0),
         group_mask_(0),
-#if GROUP15_USE_INDEX_SHIFT
+#if GROUP30_USE_INDEX_SHIFT
         index_shift_(kWordLength - 1),
 #endif
         mlf_(other.mlf_),
-#if GROUP15_USE_SEPARATE_SLOTS
+#if GROUP30_USE_SEPARATE_SLOTS
         groups_alloc_(nullptr),
 #endif
-#if GROUP15_USE_HASH_POLICY
+#if GROUP30_USE_HASH_POLICY
         hash_policy_(),
 #endif
         hasher_(other.hash_function_ref()), key_equal_(other.key_eq_ref()),
@@ -338,7 +338,7 @@ public:
         }
     }
 
-    group15_flat_table(group15_flat_table && other) noexcept(
+    group30_flat_table(group30_flat_table && other) noexcept(
             std::is_nothrow_copy_constructible<hasher>::value &&
             std::is_nothrow_copy_constructible<key_equal>::value &&
             std::is_nothrow_copy_constructible<allocator_type>::value) :
@@ -349,14 +349,14 @@ public:
         slot_threshold_(jstd::exchange(other.slot_threshold_, 0)),
         slot_capacity_(jstd::exchange(other.slot_capacity_, 0)),
         group_mask_(jstd::exchange(other.group_mask_, 0)),
-#if GROUP15_USE_INDEX_SHIFT
+#if GROUP30_USE_INDEX_SHIFT
         index_shift_(jstd::exchange(other.index_shift_, kWordLength - 1)),
 #endif
         mlf_(jstd::exchange(other.mlf_, kDefaultMaxLoadFactor)),
-#if GROUP15_USE_SEPARATE_SLOTS
+#if GROUP30_USE_SEPARATE_SLOTS
         groups_alloc_(jstd::exchange(other.groups_alloc_, nullptr)),
 #endif
-#if GROUP15_USE_HASH_POLICY
+#if GROUP30_USE_HASH_POLICY
         hash_policy_(jstd::exchange(other.hash_policy_ref(), hash_policy_t())),
 #endif
         hasher_(std::move(other.hash_function_ref())),
@@ -366,21 +366,21 @@ public:
         slot_allocator_(std::move(other.get_slot_allocator_ref())) {
     }
 
-    group15_flat_table(group15_flat_table && other, allocator_type const & allocator) :
+    group30_flat_table(group30_flat_table && other, allocator_type const & allocator) :
         groups_(default_empty_groups()), slots_(nullptr),
         slot_size_(0),
         slot_mask_(size_type(-1)),
         slot_threshold_(0),
         slot_capacity_(0),
         group_mask_(0),
-#if GROUP15_USE_INDEX_SHIFT
+#if GROUP30_USE_INDEX_SHIFT
         index_shift_(kWordLength - 1),
 #endif
         mlf_(kDefaultMaxLoadFactor),
-#if GROUP15_USE_SEPARATE_SLOTS
+#if GROUP30_USE_SEPARATE_SLOTS
         groups_alloc_(nullptr),
 #endif
-#if GROUP15_USE_HASH_POLICY
+#if GROUP30_USE_HASH_POLICY
         hash_policy_(std::move(other.hash_policy_ref())),
 #endif
         hasher_(std::move(other.hash_function_ref())),
@@ -402,12 +402,12 @@ public:
         }
     }
 
-    ~group15_flat_table() {
+    ~group30_flat_table() {
         this->destroy<true>();
     }
 
-    group15_flat_table & operator = (const group15_flat_table & other) {
-        group15_flat_table tmp(other,
+    group30_flat_table & operator = (const group30_flat_table & other) {
+        group30_flat_table tmp(other,
                            AllocTraits::propagate_on_container_copy_assignment::value
                            ? other.get_allocator_ref()
                            : this->get_allocator_ref());
@@ -415,7 +415,7 @@ public:
         return *this;
     }
 
-    group15_flat_table & operator = (group15_flat_table && other) noexcept(
+    group30_flat_table & operator = (group30_flat_table && other) noexcept(
         AllocTraits::is_always_equal::value &&
         std::is_nothrow_move_assignable<hasher>::value &&
         std::is_nothrow_move_assignable<key_equal>::value) {
@@ -464,7 +464,7 @@ public:
         return this->key_equal_;
     }
 
-#if GROUP15_USE_HASH_POLICY
+#if GROUP30_USE_HASH_POLICY
     hash_policy_t & hash_policy_ref() noexcept {
         return this->hash_policy_;
     }
@@ -607,7 +607,7 @@ public:
         return const_cast<const group_type *>(this->groups_);
     }
 
-#if GROUP15_USE_SEPARATE_SLOTS
+#if GROUP30_USE_SEPARATE_SLOTS
     group_type * groups_alloc() { return this->groups_alloc_; }
     const group_type * groups_alloc() const {
         return const_cast<const group_type *>(this->groups_alloc_);
@@ -1199,7 +1199,7 @@ private:
 
     static inline constexpr size_type calc_index_shift(size_type capacity) noexcept {
         assert(jstd::pow2::is_pow2(capacity));
-#if GROUP15_USE_INDEX_SHIFT
+#if GROUP30_USE_INDEX_SHIFT
         return (kWordLength - (((capacity / kGroupWidth) <= 2) ? 1 : BitUtils::bsr((capacity / kGroupWidth))));
 #else
         return (kWordLength - ((capacity <= 2) ? 1 : BitUtils::bsr(capacity)));
@@ -1305,7 +1305,7 @@ private:
     JSTD_FORCED_INLINE
     std::size_t hash_for(const key_type & key) const
         noexcept(noexcept(this->hasher_(key))) {
-#if GROUP15_USE_HASH_POLICY
+#if GROUP30_USE_HASH_POLICY
         std::size_t key_hash = static_cast<std::size_t>(this->hash_policy_.get_hash_code(key));
 #else
   #if defined(_MSC_VER) && !defined(__clang__)
@@ -1328,7 +1328,7 @@ private:
     //
     JSTD_FORCED_INLINE
     std::size_t index_hasher(std::size_t key_hash) const noexcept {
-#if GROUP15_USE_INDEX_SHIFT
+#if GROUP30_USE_INDEX_SHIFT
         return (key_hash >> this->index_shift_);
 #else
         return key_hash;
@@ -1340,7 +1340,7 @@ private:
     //
     JSTD_FORCED_INLINE
     std::size_t ctrl_hasher(std::size_t key_hash) const noexcept {
-#if (GROUP15_USE_HASH_POLICY != 0) || (GROUP15_USE_INDEX_SHIFT != 0)
+#if (GROUP30_USE_HASH_POLICY != 0) || (GROUP30_USE_INDEX_SHIFT != 0)
         return key_hash;
 #elif 1
         return (size_type)hashes::fibonacci_hash(key_hash);
@@ -1354,25 +1354,25 @@ private:
         if (kUseIndexSalt) {
             key_hash ^= this->index_salt();
         }
-#if GROUP15_USE_HASH_POLICY
+#if GROUP30_USE_HASH_POLICY
         size_type index = this->hash_policy_.template index_for_hash<key_type>(key_hash, this->slot_mask());
         return (index / kGroupWidth);
 #else
         std::size_t index_hash = this->index_hasher(key_hash);
-  #if GROUP15_USE_INDEX_SHIFT
+  #if GROUP30_USE_INDEX_SHIFT
         size_type index = static_cast<size_type>(index_hash);
         return index;
   #else
         size_type index = (size_type)index_hash & this->slot_mask();
         return (index / kGroupWidth);
-  #endif // GROUP15_USE_INDEX_SHIFT
-#endif // GROUP15_USE_HASH_POLICY
+  #endif // GROUP30_USE_INDEX_SHIFT
+#endif // GROUP30_USE_HASH_POLICY
     }
 
     JSTD_FORCED_INLINE
     std::size_t ctrl_for_hash(std::size_t key_hash) const noexcept {
         std::size_t ctrl_hash = this->ctrl_hasher(key_hash);
-#if GROUP15_USE_LOOK_UP_TABLE
+#if GROUP30_USE_LOOK_UP_TABLE
         std::uint8_t ctrl_hash8 = ctrl_type::reduced_hash(ctrl_hash);
         return static_cast<std::size_t>(ctrl_hash8);
 #else
@@ -1460,10 +1460,10 @@ private:
         if (this->groups_ != this_type::default_empty_groups()) {
             // Reset groups state
             this->groups_ = this_type::default_empty_groups();
-#if GROUP15_USE_SEPARATE_SLOTS
+#if GROUP30_USE_SEPARATE_SLOTS
             size_type total_group_alloc_count = this->TotalGroupAllocCount<kGroupAlignment>(group_capacity);
             GroupAllocTraits::deallocate(this->group_allocator_, this->groups_alloc_, total_group_alloc_count);
-            this->groups_alloc_ = nullptr;           
+            this->groups_alloc_ = nullptr;
 #endif
         }
     }
@@ -1476,7 +1476,7 @@ private:
         }
 
         if (this->slots_ != nullptr) {
-#if GROUP15_USE_SEPARATE_SLOTS
+#if GROUP30_USE_SEPARATE_SLOTS
             SlotAllocTraits::deallocate(this->slot_allocator_, this->slots_, this->slot_capacity());
 #else
             size_type total_slot_alloc_size = this->TotalSlotAllocCount<kGroupAlignment>(
@@ -1490,10 +1490,10 @@ private:
             this->slot_threshold_ = 0;
             this->slot_capacity_ = 0;
             this->group_mask_ = 0;
-#if GROUP15_USE_INDEX_SHIFT
+#if GROUP30_USE_INDEX_SHIFT
             this->index_shift_ = kWordLength - 1;
 #endif
-#if GROUP15_USE_HASH_POLICY
+#if GROUP30_USE_HASH_POLICY
             this->hash_policy_.reset();
 #endif
         }
@@ -1548,7 +1548,7 @@ private:
     void clear_slots() {
         if (!is_slot_trivial_destructor && (this->slots_ != nullptr)) {
             if (!kIsIndirectKV) {
-#if GROUP15_USE_GROUP_SCAN
+#if GROUP30_USE_GROUP_SCAN
                 group_type * group = this->groups();
                 group_type * last_group = this->last_group();
                 slot_type * slot_base = this->slots();
@@ -1599,7 +1599,7 @@ private:
     // copy_slots_from()
     //
     JSTD_FORCED_INLINE
-    void copy_slots_from(group15_flat_table const & other) {
+    void copy_slots_from(group30_flat_table const & other) {
         assert(this->empty());
         assert(this != std::addressof(other));
         assert(other.size() > 0);
@@ -1620,7 +1620,7 @@ private:
     }
 
     JSTD_FORCED_INLINE
-    void fast_copy_slots_from(group15_flat_table const & other) {
+    void fast_copy_slots_from(group30_flat_table const & other) {
         if (this->slots() != nullptr && other.slots() != nullptr) {
             copy_groups_array_from(other);
             copy_slots_array_from(other);
@@ -1630,19 +1630,19 @@ private:
     }
 
     JSTD_FORCED_INLINE
-    void copy_groups_array_from(group15_flat_table const & other) {
+    void copy_groups_array_from(group30_flat_table const & other) {
         this->copy_groups_array_from(other, std::is_trivially_copy_assignable<group_type>{});
     }
 
     JSTD_FORCED_INLINE
-    void copy_groups_array_from(group15_flat_table const & other, std::true_type /* -> memcpy */) {
+    void copy_groups_array_from(group30_flat_table const & other, std::true_type /* -> memcpy */) {
         std::memcpy(
             this->groups(), other.groups(),
             other.group_capacity() * sizeof(group_type));
     }
 
     JSTD_FORCED_INLINE
-    void copy_groups_array_from(group15_flat_table const & other, std::false_type /* -> manual */) {
+    void copy_groups_array_from(group30_flat_table const & other, std::false_type /* -> manual */) {
         const group_type * other_group = other.groups();
         group_type * group = this->groups();
         size_type index = 0;
@@ -1654,7 +1654,7 @@ private:
     }
 
     JSTD_FORCED_INLINE
-    void copy_slots_array_from(group15_flat_table const & other) {
+    void copy_slots_array_from(group30_flat_table const & other) {
         this->copy_slots_array_from(
             other,
             std::integral_constant<bool, std::is_trivially_copy_constructible<element_type>::value &&
@@ -1664,7 +1664,7 @@ private:
     }
 
     JSTD_FORCED_INLINE
-    void copy_slots_array_from(group15_flat_table const & other, std::true_type /* -> memcpy */) {
+    void copy_slots_array_from(group30_flat_table const & other, std::true_type /* -> memcpy */) {
         /*
          * reinterpret_cast: GCC may complain about value_type not being trivially
          * copy-assignable when we're relying on trivial copy constructibility.
@@ -1676,7 +1676,7 @@ private:
     }
 
     JSTD_FORCED_INLINE
-    void copy_slots_array_from(group15_flat_table const & other, std::false_type /* -> manual */) {
+    void copy_slots_array_from(group30_flat_table const & other, std::false_type /* -> manual */) {
         const ctrl_type * ctrl = this->ctrls();
         const ctrl_type * last_ctrl = this->last_ctrl();
         const slot_type * other_slot = other.slots();
@@ -1746,7 +1746,7 @@ private:
     // move_slots_from()
     //
     JSTD_FORCED_INLINE
-    void move_slots_from(group15_flat_table & other) {
+    void move_slots_from(group30_flat_table & other) {
         assert(this->empty());
         assert(this != std::addressof(other));
         assert(other.size() > 0);
@@ -1767,7 +1767,7 @@ private:
     }
 
     JSTD_FORCED_INLINE
-    void fast_move_slots_from(group15_flat_table & other) {
+    void fast_move_slots_from(group30_flat_table & other) {
         if (this->slots() != nullptr && other.slots() != nullptr) {
             move_groups_array_from(other);
             move_slots_array_from(other);
@@ -1777,12 +1777,12 @@ private:
     }
 
     JSTD_FORCED_INLINE
-    void move_groups_array_from(group15_flat_table & other) {
+    void move_groups_array_from(group30_flat_table & other) {
         this->copy_groups_array_from(other, std::is_trivially_copy_assignable<group_type>{});
     }
 
     JSTD_FORCED_INLINE
-    void move_groups_array_from(group15_flat_table & other, std::true_type /* -> memcpy */) {
+    void move_groups_array_from(group30_flat_table & other, std::true_type /* -> memcpy */) {
         std::memcpy(
             this->groups(), other.groups(),
             other.group_capacity() * sizeof(group_type));
@@ -1792,7 +1792,7 @@ private:
     }
 
     JSTD_FORCED_INLINE
-    void move_groups_array_from(group15_flat_table & other, std::false_type /* -> manual */) {
+    void move_groups_array_from(group30_flat_table & other, std::false_type /* -> manual */) {
         group_type * other_group = other.groups();
         group_type * group = this->groups();
         size_type index = 0;
@@ -1806,7 +1806,7 @@ private:
     }
 
     JSTD_FORCED_INLINE
-    void move_slots_array_from(group15_flat_table & other) {
+    void move_slots_array_from(group30_flat_table & other) {
         this->move_slots_array_from(
             other,
             std::integral_constant<bool, std::is_trivially_copy_constructible<element_type>::value &&
@@ -1816,7 +1816,7 @@ private:
     }
 
     JSTD_FORCED_INLINE
-    void move_slots_array_from(group15_flat_table & other, std::true_type /* -> memcpy */) {
+    void move_slots_array_from(group30_flat_table & other, std::true_type /* -> memcpy */) {
         /*
          * reinterpret_cast: GCC may complain about value_type not being trivially
          * copy-assignable when we're relying on trivial copy constructibility.
@@ -1831,7 +1831,7 @@ private:
     }
 
     JSTD_FORCED_INLINE
-    void move_slots_array_from(group15_flat_table & other, std::false_type /* -> manual */) {
+    void move_slots_array_from(group30_flat_table & other, std::false_type /* -> manual */) {
         const ctrl_type * ctrl = this->ctrls();
         const ctrl_type * last_ctrl = this->last_ctrl();
         slot_type * other_slot = other.slots();
@@ -1999,7 +1999,7 @@ private:
     void create_slots(size_type new_capacity) {
         assert(pow2::is_pow2(new_capacity));
         if (JSTD_LIKELY(IsInitialize || (new_capacity != 0))) {
-#if GROUP15_USE_HASH_POLICY
+#if GROUP30_USE_HASH_POLICY
             auto hash_policy_setting = this->hash_policy_.calc_next_capacity(new_capacity);
             this->hash_policy_.commit(hash_policy_setting);
 #endif
@@ -2011,7 +2011,7 @@ private:
             size_type indirect_slot_capacity = new_capacity * this->mlf_ / kLoadFactorAmplify;
             size_type new_slot_capacity = (!kIsIndirectKV) ? direct_slot_capacity : indirect_slot_capacity;
 
-#if GROUP15_USE_SEPARATE_SLOTS
+#if GROUP30_USE_SEPARATE_SLOTS
             size_type total_group_alloc_count = this->TotalGroupAllocCount<kGroupAlignment>(new_group_capacity);
             group_type * new_groups_alloc = GroupAllocTraits::allocate(this->group_allocator_, total_group_alloc_count);
             group_type * new_groups = this->AlignedGroups<kGroupAlignment>(new_groups_alloc);
@@ -2039,10 +2039,10 @@ private:
             assert(new_capacity > 0);
             // Because (new_capacity != 0), so (group_mask_ != -1) too.
             this->group_mask_ = this_type::calc_group_mask(new_group_capacity, new_capacity);
-#if GROUP15_USE_INDEX_SHIFT
+#if GROUP30_USE_INDEX_SHIFT
             this->index_shift_ = this_type::calc_index_shift(new_capacity);
 #endif
-#if GROUP15_USE_SEPARATE_SLOTS
+#if GROUP30_USE_SEPARATE_SLOTS
             this->groups_alloc_ = new_groups_alloc;
 #endif
         } else {
@@ -2104,7 +2104,7 @@ private:
 
             assert(this->slot_size() == old_slot_size);
 
-#if GROUP15_USE_SEPARATE_SLOTS
+#if GROUP30_USE_SEPARATE_SLOTS
             if (old_groups != this_type::default_empty_groups()) {
                 assert(old_groups_alloc != nullptr);
                 size_type total_group_alloc_count = this->TotalGroupAllocCount<kGroupAlignment>(old_group_capacity);
@@ -2253,7 +2253,7 @@ private:
                 return {};
             }
 
-#if GROUP15_DISPLAY_DEBUG_INFO
+#if GROUP30_DISPLAY_DEBUG_INFO
             if (JSTD_UNLIKELY(prober.steps() > kSkipGroupsLimit)) {
                 std::cout << "find_impl(): key = " << key <<
                              ", skip_groups = " << prober.steps() <<
@@ -2288,7 +2288,7 @@ private:
                 assert(group->is_empty(empty_pos));
                 group->set_used(empty_pos, ctrl_hash);
                 if (!IsNoCheck) {
-#if GROUP15_USE_NEW_OVERFLOW
+#if GROUP30_USE_NEW_OVERFLOW
                     // If any overflow bit is not 0, it means that the group was once full.
                     bool maybe_overflow = group->has_any_overflow();
                     bool is_deleted_slot;
@@ -2307,14 +2307,14 @@ private:
                     }
                     this->slot_threshold_ += is_deleted_slot;
                     assert(this->slot_threshold_ < this->slot_capacity());
-#endif // GROUP15_USE_NEW_OVERFLOW
+#endif // GROUP30_USE_NEW_OVERFLOW
                 }
                 return { group, empty_pos, slot };
             } else {
                 // If it's not overflow, set the overflow bit.
                 group->set_overflow(ctrl_hash);
             }
-#if GROUP15_DISPLAY_DEBUG_INFO
+#if GROUP30_DISPLAY_DEBUG_INFO
             if (JSTD_UNLIKELY(prober.steps() > kSkipGroupsLimit)) {
                 std::cout << "find_empty_to_insert(): key = " << key <<
                              ", skip_groups = " << prober.steps() <<
@@ -2395,7 +2395,7 @@ private:
     }
 
     JSTD_FORCED_INLINE
-    void move_no_grow_unique_insert(group15_flat_table * other, slot_type * old_slot) {
+    void move_no_grow_unique_insert(group30_flat_table * other, slot_type * old_slot) {
         assert(old_slot != nullptr);
         locator_t locator = this->no_grow_unique_insert(old_slot->get_key());
         slot_type * new_slot = locator.slot();
@@ -2439,7 +2439,7 @@ private:
     }
 
     JSTD_FORCED_INLINE
-    void move_unique_insert(group15_flat_table & other, iterator first, iterator last) {
+    void move_unique_insert(group30_flat_table & other, iterator first, iterator last) {
         for (; first != last; ++first) {
             slot_type * old_slot = first.slot();
             this->move_no_grow_unique_insert(&other, old_slot);
@@ -2455,7 +2455,7 @@ private:
     std::pair<iterator, bool> emplace_impl(const ValueT & value) {
         auto find_info = this->find_or_insert(value.first);
         locator_t & locator = find_info.first;
-        bool need_insert = find_info.second;        
+        bool need_insert = find_info.second;
         if (need_insert) {
             // The key to be inserted is not exists.
             slot_type * slot = locator.slot();
@@ -2722,7 +2722,7 @@ private:
     void reset_ctrl(locator_t & locator) {
         group_type * group = locator.group();
         size_type group_pos = locator.pos();
-#if GROUP15_USE_NEW_OVERFLOW
+#if GROUP30_USE_NEW_OVERFLOW
         bool maybe_overflow = this->maybe_is_deleted_slot(group, group_pos);
 #else
         bool maybe_overflow = this->maybe_caused_overflow(group, group_pos);
@@ -2782,15 +2782,15 @@ private:
         swap(this->groups_, other.groups_);
         swap(this->slots_, other.slots_);
         swap(this->slot_size_, other.slot_size_);
-        swap(this->slot_mask_, other.slot_mask_);        
+        swap(this->slot_mask_, other.slot_mask_);
         swap(this->slot_threshold_, other.slot_threshold_);
         swap(this->slot_capacity_, other.slot_capacity_);
         swap(this->group_mask_, other.group_mask_);
-#if GROUP15_USE_INDEX_SHIFT
+#if GROUP30_USE_INDEX_SHIFT
         swap(this->index_shift_, other.index_shift_);
 #endif
         swap(this->mlf_, other.mlf_);
-#if GROUP15_USE_SEPARATE_SLOTS
+#if GROUP30_USE_SEPARATE_SLOTS
         swap(this->groups_alloc_, other.groups_alloc_);
 #endif
     }
@@ -2798,7 +2798,7 @@ private:
     JSTD_FORCED_INLINE
     void swap_policy(this_type & other) noexcept {
         using std::swap;
-#if GROUP15_USE_HASH_POLICY
+#if GROUP30_USE_HASH_POLICY
         swap(this->hash_policy_, other.hash_policy_ref());
 #endif
         swap(this->hasher_, other.hash_function_ref());
@@ -2823,4 +2823,4 @@ private:
 
 } // namespace jstd
 
-#endif // JSTD_HASHMAP_GROUP15_FLAT_TABLE_HPP
+#endif // JSTD_HASHMAP_GROUP30_FLAT_TABLE_HPP

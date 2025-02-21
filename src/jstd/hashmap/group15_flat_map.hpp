@@ -83,10 +83,10 @@ template <typename Key, typename Value,
 class JSTD_DLL group15_flat_map
 {
 public:
-    typedef flat_map_type_policy<Key, Value>    type_policy;
-    typedef std::size_t                         size_type;
-    typedef std::intptr_t                       ssize_type;
-    typedef std::ptrdiff_t                      difference_type;
+    typedef jstd::flat_map_type_policy<Key, Value>  type_policy;
+    typedef std::size_t                             size_type;
+    typedef std::intptr_t                           ssize_type;
+    typedef std::ptrdiff_t                          difference_type;
 
     typedef typename type_policy::key_type      key_type;
     typedef typename type_policy::mapped_type   mapped_type;
@@ -103,7 +103,7 @@ public:
     typedef typename std::allocator_traits<allocator_type>::pointer         pointer;
     typedef typename std::allocator_traits<allocator_type>::const_pointer   const_pointer;
 
-    typedef group15_flat_table<type_policy, Hash, KeyEqual,
+    typedef jstd::group15_flat_table<type_policy, Hash, KeyEqual,
         typename std::allocator_traits<Allocator>::template rebind_alloc<value_type>>
                                                 table_type;
 
@@ -113,7 +113,7 @@ public:
     typedef typename table_type::iterator       iterator;
     typedef typename table_type::const_iterator const_iterator;
 
-    using this_type = group15_flat_map<Key, Value, Hash, KeyEqual, Allocator>;
+    using this_type = jstd::group15_flat_map<Key, Value, Hash, KeyEqual, Allocator>;
 
 private:
     table_type table_;

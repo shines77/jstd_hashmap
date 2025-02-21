@@ -340,6 +340,15 @@
     <ClInclude Include="..\..\..\src\jstd\config\config_hw_use.h">
       <Filter>src\config</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\hashmap\group30_flat_map.hpp">
+      <Filter>src\hashmap</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\hashmap\group30_flat_table.hpp">
+      <Filter>src\hashmap</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\jstd\hashmap\flat_map_group30.hpp">
+      <Filter>src\hashmap</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\src\jstd\dll_main.cpp">
