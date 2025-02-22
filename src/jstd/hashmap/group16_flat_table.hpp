@@ -92,6 +92,8 @@
 #define GROUP16_USE_GROUP_SCAN      1
 #define GROUP16_USE_INDEX_SHIFT     1
 
+#define GROUP16_USE_NEW_OVERFLOW    1
+
 #ifdef _DEBUG
 #define GROUP16_DISPLAY_DEBUG_INFO  0
 #endif
@@ -1953,6 +1955,7 @@ private:
 
             slot_type * new_slots = SlotAllocTraits::allocate(this->slot_allocator_, total_slot_alloc_count);
             group_type * new_groups = this->AlignedSlotsAndGroups<kGroupAlignment>(new_slots, new_slot_capacity);
+            assert((void *)new_slots != (void *)new_groups);
 #endif
             // Reset groups to default state
             this->clear_groups(new_groups, new_group_capacity);
@@ -2180,10 +2183,12 @@ private:
                 assert(group->is_empty(empty_pos));
                 group->set_used(empty_pos, ctrl_hash);
                 if (!IsNoCheck) {
+#if GROUP16_USE_NEW_OVERFLOW
                     // If overflow bit is 1, and found a empty slot, the slot must be a deleted slot.
                     bool is_deleted_slot = group->is_overflow(ctrl_hash);
                     this->slot_threshold_ += is_deleted_slot;
-                    assert(this->slot_threshold_ < this->slot_capacity());
+                    assert(this->slot_threshold_ <= this->slot_capacity());
+#endif
                 }
                 size_type slot_index = slot_base + empty_pos;
                 return slot_index;

@@ -1212,11 +1212,11 @@ private:
         return (group_index * kGroupSize + group_pos);
     }
 
-    inline size_type calc_slot_capacity(size_type group_capacity, size_type init_capacity) noexcept {
-        // Exclude a sentinel mark
+    static inline constexpr size_type calc_slot_capacity(size_type group_capacity, size_type init_capacity) noexcept {
         assert(init_capacity >= kMinCapacity);
         JSTD_UNUSED(init_capacity);
-        return (this->slots() != nullptr) ? (group_capacity * kGroupSize - 1) : 0;
+        // Exclude a sentinel mark
+        return (group_capacity * kGroupSize - 1);
     }
 
     static inline constexpr size_type calc_slot_threshold(size_type mlf, size_type slot_capacity) noexcept {
@@ -2050,8 +2050,8 @@ private:
 
             slot_type * new_slots = SlotAllocTraits::allocate(this->slot_allocator_, total_slot_alloc_count);
             group_type * new_groups = this->AlignedSlotsAndGroups<kGroupAlignment>(new_slots, new_slot_capacity);
+            assert((void *)new_slots != (void *)new_groups);
 #endif
-
             // Reset groups to default state
             this->clear_groups(new_groups, new_group_capacity);
 
@@ -2335,7 +2335,7 @@ private:
                         is_deleted_slot = true;
                     }
                     this->slot_threshold_ += is_deleted_slot;
-                    assert(this->slot_threshold_ < this->slot_capacity());
+                    assert(this->slot_threshold_ <= this->slot_capacity());
 #endif // GROUP30_USE_NEW_OVERFLOW
                 }
                 return { group, empty_pos, slot };
