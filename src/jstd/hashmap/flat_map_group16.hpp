@@ -341,15 +341,15 @@ public:
     JSTD_FORCED_INLINE bool has_any_overflow() const {
         static constexpr std::size_t kSizeofSizeT = sizeof(std::size_t);
         if (kSizeofSizeT == 8) {
-            std::uint64_t * part0 = reinterpret_cast<std::uint64_t *>((ctrl *)&ctrls[0]);
-            std::uint64_t * part1 = reinterpret_cast<std::uint64_t *>((ctrl *)&ctrls[kSizeofSizeT]);
+            std::uint64_t * part0 = reinterpret_cast<std::uint64_t *>((ctrl_type *)&ctrls[0]);
+            std::uint64_t * part1 = reinterpret_cast<std::uint64_t *>((ctrl_type *)&ctrls[kSizeofSizeT]);
             // return ((((*part0) & kOverflowMask64) != 0) || (((*part1) & kOverflowMask64) != 0));
             return (((*part0) & (*part1) & kOverflowMask64) != 0);
         } else {
-            std::uint32_t * part0 = reinterpret_cast<std::uint32_t *>((ctrl *)&ctrls[0]);
-            std::uint32_t * part1 = reinterpret_cast<std::uint32_t *>((ctrl *)&ctrls[kSizeofSizeT]);
-            std::uint32_t * part2 = reinterpret_cast<std::uint32_t *>((ctrl *)&ctrls[kSizeofSizeT * 2]);
-            std::uint32_t * part3 = reinterpret_cast<std::uint32_t *>((ctrl *)&ctrls[kSizeofSizeT * 3]);
+            std::uint32_t * part0 = reinterpret_cast<std::uint32_t *>((ctrl_type *)&ctrls[0]);
+            std::uint32_t * part1 = reinterpret_cast<std::uint32_t *>((ctrl_type *)&ctrls[kSizeofSizeT]);
+            std::uint32_t * part2 = reinterpret_cast<std::uint32_t *>((ctrl_type *)&ctrls[kSizeofSizeT * 2]);
+            std::uint32_t * part3 = reinterpret_cast<std::uint32_t *>((ctrl_type *)&ctrls[kSizeofSizeT * 3]);
             // return ((((*part0) & kOverflowMask32) != 0) || (((*part1) & kOverflowMask32) != 0) ||
             //         (((*part2) & kOverflowMask32) != 0) || (((*part3) & kOverflowMask32) != 0));
             return ((((*part0) & (*part1) & kOverflowMask32) != 0) ||
