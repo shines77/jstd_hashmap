@@ -1505,8 +1505,8 @@ private:
     JSTD_FORCED_INLINE
     size_type calc_capacity(size_type init_capacity) const noexcept {
         size_type new_capacity = (std::max)(init_capacity, kMinCapacity);
-        if (!pow2::is_pow2(new_capacity)) {
-            new_capacity = pow2::round_up<size_type, kMinCapacity>(new_capacity);
+        if (!run_time::is_pow2(new_capacity)) {
+            new_capacity = run_time::round_up<size_type, kMinCapacity>(new_capacity);
         }
         return new_capacity;
     }
@@ -1556,7 +1556,7 @@ private:
     }
 
     size_type round_index(size_type index, size_type slot_mask) const {
-        assert(pow2::is_pow2(slot_mask + 1));
+        assert(run_time::is_pow2(slot_mask + 1));
         return (index & slot_mask);
     }
 
@@ -1572,7 +1572,7 @@ private:
     }
 
     inline size_type index_for(hash_code_t hash_code, size_type slot_mask) const noexcept {
-        assert(pow2::is_pow2(slot_mask + 1));
+        assert(run_time::is_pow2(slot_mask + 1));
         if (kUseIndexSalt)
             return (((size_type)hash_code ^ this->index_salt()) & slot_mask);
         else

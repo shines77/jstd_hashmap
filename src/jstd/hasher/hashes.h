@@ -1739,13 +1739,13 @@ public:
 
     std::uint8_t calc_next_capacity(size_type & new_capacity) const noexcept {
         assert(new_capacity > 1);
-        assert(pow2::is_pow2(new_capacity));
+        assert(run_time::is_pow2(new_capacity));
 #if 1
         // Fast to get log2_int, if the new_size is power of 2.
         // Use bsf(n) has the same effect.
         return std::uint8_t(kWordLength - BitUtils::bsr(new_capacity));
 #else
-        return std::uint8_t(kWordLength - pow2::log2_int<size_type, size_type(2)>(new_capacity));
+        return std::uint8_t(kWordLength - run_time::log2_int<size_type, size_type(2)>(new_capacity));
 #endif
     }
 
@@ -1802,13 +1802,13 @@ public:
 
     std::uint8_t calc_next_capacity(size_type & new_capacity) const noexcept {
         assert(new_capacity > 1);
-        assert(pow2::is_pow2(new_capacity));
+        assert(run_time::is_pow2(new_capacity));
 #if 1
         // Fast to get log2_int, if the new_size is power of 2.
         // Use bsf(n) has the same effect.
         return std::uint8_t(kWordLength - BitUtils::bsr(new_capacity));
 #else
-        return std::uint8_t(kWordLength - pow2::log2_int<size_type, size_type(2)>(new_capacity));
+        return std::uint8_t(kWordLength - run_time::log2_int<size_type, size_type(2)>(new_capacity));
 #endif
     }
 

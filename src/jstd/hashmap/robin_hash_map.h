@@ -3843,8 +3843,8 @@ private:
     JSTD_FORCED_INLINE
     size_type calc_capacity(size_type init_capacity) const noexcept {
         size_type new_capacity = (std::max)(init_capacity, kMinCapacity);
-        if (!pow2::is_pow2(new_capacity)) {
-            new_capacity = pow2::round_up<size_type, kMinCapacity>(new_capacity);
+        if (!run_time::is_pow2(new_capacity)) {
+            new_capacity = run_time::round_up<size_type, kMinCapacity>(new_capacity);
         }
         return new_capacity;
     }
@@ -3855,13 +3855,13 @@ private:
 
     size_type calc_max_lookups(size_type new_capacity) const {
         assert(new_capacity > 1);
-        assert(pow2::is_pow2(new_capacity));
+        assert(run_time::is_pow2(new_capacity));
 #if 1
         // Fast to get log2_int, if the new_size is power of 2.
         // Use bsf(n) has the same effect.
         size_type max_lookups = size_type(BitUtils::bsr(new_capacity));
 #else
-        size_type max_lookups = size_type(pow2::log2_int<size_type, size_type(2)>(new_capacity));
+        size_type max_lookups = size_type(run_time::log2_int<size_type, size_type(2)>(new_capacity));
 #endif
         return max_lookups;
     }
@@ -4295,7 +4295,7 @@ private:
     }
 
     bool isValidCapacity(size_type capacity) const {
-        return ((capacity >= kMinCapacity) && pow2::is_pow2(capacity));
+        return ((capacity >= kMinCapacity) && run_time::is_pow2(capacity));
     }
 
     // Given the pointer of ctrls and the capacity of ctrl, computes the padding of

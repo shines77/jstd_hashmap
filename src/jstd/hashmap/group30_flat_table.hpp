@@ -1191,15 +1191,15 @@ private:
     size_type calc_capacity(size_type init_capacity) const noexcept {
         size_type new_capacity = (std::max)(init_capacity, kMinCapacity);
                   new_capacity = (std::max)(new_capacity, this->slot_size());
-        if (!pow2::is_pow2(new_capacity)) {
-            new_capacity = pow2::round_up<size_type, kMinCapacity>(new_capacity);
+        if (!run_time::is_pow2(new_capacity)) {
+            new_capacity = run_time::round_up<size_type, kMinCapacity>(new_capacity);
         }
         return new_capacity;
     }
 
     static inline constexpr size_type round_up_pow2(size_type capacity) noexcept {
-        if (!pow2::is_pow2(capacity)) {
-            capacity = pow2::round_up<size_type, 0>(capacity);
+        if (!run_time::is_pow2(capacity)) {
+            capacity = run_time::round_up<size_type, 0>(capacity);
         }
         return capacity;
     }
@@ -1225,7 +1225,7 @@ private:
     }
 
     static inline constexpr size_type calc_index_shift(size_type capacity) noexcept {
-        assert(jstd::pow2::is_pow2(capacity));
+        assert(jstd::run_time::is_pow2(capacity));
 #if GROUP30_USE_INDEX_SHIFT && (GROUP30_USE_HASH_POLICY == 0)
         return (kWordLength - (((capacity / kGroupWidth) <= 2) ? 1 : BitUtils::bsr((capacity / kGroupWidth))));
 #else
@@ -1238,9 +1238,9 @@ private:
     }
 
     static inline size_type calc_group_capacity(size_type capacity) noexcept {
-        assert(pow2::is_pow2(capacity));
+        assert(run_time::is_pow2(capacity));
         size_type group_capacity = (capacity + (kGroupWidth - 1)) / kGroupWidth;
-        assert(pow2::is_pow2(group_capacity));
+        assert(run_time::is_pow2(group_capacity));
         return group_capacity;
     }
 
@@ -1939,7 +1939,7 @@ private:
     }
 
     inline bool is_valid_capacity(size_type capacity) const noexcept {
-        return ((capacity >= kMinCapacity) && pow2::is_pow2(capacity));
+        return ((capacity >= kMinCapacity) && run_time::is_pow2(capacity));
     }
 
     //
@@ -2025,7 +2025,7 @@ private:
     template <bool IsInitialize>
     JSTD_FORCED_INLINE
     void create_slots(size_type new_capacity) {
-        assert(pow2::is_pow2(new_capacity));
+        assert(run_time::is_pow2(new_capacity));
         if (JSTD_LIKELY(IsInitialize || (new_capacity != 0))) {
 #if GROUP30_USE_HASH_POLICY
             auto hash_policy_setting = this->hash_policy_.calc_next_capacity(new_capacity);

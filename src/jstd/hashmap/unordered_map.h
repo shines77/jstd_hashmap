@@ -1466,8 +1466,8 @@ private:
     JSTD_FORCED_INLINE
     size_type calc_capacity(size_type init_capacity) const noexcept {
         size_type new_capacity = (std::max)(init_capacity, kMinCapacity);
-        if (!pow2::is_pow2(new_capacity)) {
-            new_capacity = pow2::round_up<size_type, kMinCapacity>(new_capacity);
+        if (!run_time::is_pow2(new_capacity)) {
+            new_capacity = run_time::round_up<size_type, kMinCapacity>(new_capacity);
         }
         return new_capacity;
     }
@@ -1655,14 +1655,14 @@ private:
     }
 
     void assert_bucket_capacity(size_type bucket_capacity) {
-        assert(pow2::is_pow2(bucket_capacity));
+        assert(run_time::is_pow2(bucket_capacity));
         assert(bucket_capacity >= this->min_bucket_count(kMinCapacity));
         assert(bucket_capacity >= this->min_bucket_count());
         (void)bucket_capacity;
     }
 
     void assert_entry_capacity(size_type entry_capacity) {
-        assert(pow2::is_pow2(entry_capacity));
+        assert(run_time::is_pow2(entry_capacity));
         assert(entry_capacity >= kMinCapacity);
         assert(entry_capacity >= this->entry_size());
         (void)entry_capacity;

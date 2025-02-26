@@ -45,7 +45,7 @@ struct size_type_t {
     typedef typename std::make_signed<type>::type   signed_type;
 };
 
-namespace pow2 {
+namespace run_time {
 
 template <typename SizeType>
 inline
@@ -81,9 +81,9 @@ std::uint32_t bitScanForward(SizeType N)
     if (sizeof(SizeType) <= 4) {
         return BitUtils::bsf32((std::uint32_t)n);
     } if (sizeof(SizeType) == 8) {
-        return BitUtils::bsf64(n);
-    } else {
         return BitUtils::bsf64((std::uint64_t)n);
+    } else {
+        return BitUtils::bsf(n);
     }
 }
 
@@ -99,9 +99,9 @@ std::uint32_t bitScanReverse(SizeType N)
     if (sizeof(SizeType) <= 4) {
         return BitUtils::bsr32((std::uint32_t)n);
     } if (sizeof(SizeType) == 8) {
-        return BitUtils::bsr64(n);
-    } else {
         return BitUtils::bsr64((std::uint64_t)n);
+    } else {
+        return BitUtils::bsr(n);
     }
 }
 
@@ -117,9 +117,9 @@ std::uint32_t countTrailingZeros(SizeType N)
     if (sizeof(SizeType) <= 4) {
         return BitUtils::countTrailingZeros32((std::uint32_t)n);
     } if (sizeof(SizeType) == 8) {
-        return BitUtils::countTrailingZeros64(n);
-    } else {
         return BitUtils::countTrailingZeros64((std::uint64_t)n);
+    } else {
+        return BitUtils::countTrailingZeros(n);
     }
 }
 
@@ -135,9 +135,9 @@ std::uint32_t countLeadingZeros(SizeType N)
     if (sizeof(SizeType) <= 4) {
         return BitUtils::countLeadingZeros32((std::uint32_t)n);
     } if (sizeof(SizeType) == 8) {
-        return BitUtils::countLeadingZeros64(n);
-    } else {
         return BitUtils::countLeadingZeros64((std::uint64_t)n);
+    } else {
+        return BitUtils::countLeadingZeros(n);
     }
 }
 
