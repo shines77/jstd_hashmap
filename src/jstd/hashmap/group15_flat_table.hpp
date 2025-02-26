@@ -1287,7 +1287,7 @@ private:
 
     inline iterator iterator_at(size_type ctrl_index, size_type slot_index) noexcept {
         if (!kIsIndirectKV) {
-#if ITERATOR15_USE_LOCATOR15
+#if ITERATOR15_USE_LOCATOR
             return { this->group_at(ctrl_index / kGroupWidth),
                      (ctrl_index % kGroupWidth),
                      this->slot_at(slot_index) };
@@ -1301,7 +1301,7 @@ private:
 
     inline const_iterator iterator_at(size_type ctrl_index, size_type slot_index) const noexcept {
         if (!kIsIndirectKV) {
-#if ITERATOR15_USE_LOCATOR15
+#if ITERATOR15_USE_LOCATOR
             return { this->group_at(ctrl_index / kGroupWidth),
                      (ctrl_index % kGroupWidth),
                      this->slot_at(slot_index) };

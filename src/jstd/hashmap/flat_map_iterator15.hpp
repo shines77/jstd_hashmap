@@ -60,8 +60,8 @@
 
 #include "jstd/basic/stddef.h"
 
-#define ITERATOR15_USE_GROUP_SCAN  0
-#define ITERATOR15_USE_LOCATOR15   0
+#define ITERATOR15_USE_GROUP_SCAN   0
+#define ITERATOR15_USE_LOCATOR      0
 
 namespace jstd {
 
@@ -223,7 +223,7 @@ protected:
     const slot_type *   slot_;
 };
 
-#if ITERATOR15_USE_LOCATOR15
+#if ITERATOR15_USE_LOCATOR
 
 template <typename HashMap, typename T, bool IsIndirectKV /* = false */>
 class flat_map_iterator15 {
@@ -396,7 +396,7 @@ private:
     }
 };
 
-#else // !(ITERATOR15_USE_LOCATOR15 != 0)
+#else // !(ITERATOR15_USE_LOCATOR != 0)
 
 template <typename HashMap, typename T, bool IsIndirectKV /* = false */>
 class flat_map_iterator15 {
@@ -627,7 +627,7 @@ private:
     }
 };
 
-#endif // ITERATOR15_USE_LOCATOR15 != 0
+#endif // ITERATOR15_USE_LOCATOR != 0
 
 template <typename HashMap, typename T>
 class flat_map_iterator15<HashMap, T, true> {
