@@ -581,7 +581,8 @@ public:
 
     inline size_type slot_capacity() const noexcept {
         assert(this->slots() != nullptr);
-        return (this->group_capacity() * kGroupSize - 1);
+        // = (this->group_capacity() * kGroupSize - 1);
+        return this_type::calc_slot_capacity(this->group_capacity());
     }
 
     bool is_valid() const noexcept { return (this->groups() != nullptr); }
@@ -691,9 +692,32 @@ public:
             return (this->slots() + this->slot_size());
     }
 
+    slot_type * safe_last_slot() {
+        if (!kIsIndirectKV)
+            return (this->slots() + this->safe_slot_capacity());
+        else
+            return (this->slots() + this->slot_size());
+    }
+    const slot_type * safe_last_slot() const {
+        if (!kIsIndirectKV)
+            return (this->slots() + this->safe_slot_capacity());
+        else
+            return (this->slots() + this->slot_size());
+    }
+
     ///
     /// Hash policy
     ///
+
+    JSTD_FORCED_INLINE
+    void reserve_for_insert(size_type init_capacity) {
+        assert(init_capacity > 0);
+        size_type new_capacity = this->shrink_to_fit_capacity(init_capacity);
+        new_capacity = this->calc_capacity(new_capacity);
+        assert(new_capacity > 0);
+        assert(new_capacity >= kMinCapacity);
+        this->create_slots<true>(new_capacity);
+    }
 
     //
     // See: https://en.cppreference.com/w/cpp/container/unordered_map/reserve
@@ -714,16 +738,6 @@ public:
         }
     }
 
-    JSTD_FORCED_INLINE
-    void reserve_for_insert(size_type init_capacity) {
-        assert(init_capacity > 0);
-        size_type new_capacity = this->shrink_to_fit_capacity(init_capacity);
-        new_capacity = this->calc_capacity(new_capacity);
-        assert(new_capacity > 0);
-        assert(new_capacity >= kMinCapacity);
-        this->create_slots<true>(new_capacity);
-    }
-
     //
     // See: https://en.cppreference.com/w/cpp/container/unordered_map/rehash
     //
@@ -737,7 +751,7 @@ public:
         size_type fit_to_now = this->shrink_to_fit_capacity(this->size());
         new_capacity = (std::max)(fit_to_now, new_capacity);
         if (JSTD_LIKELY(new_capacity != 0)) {
-            this->rehash_impl<true>(new_capacity);
+            this->rehash_impl<false>(new_capacity);
         } else {
             this->destroy<true>();
         }
@@ -2010,7 +2024,7 @@ private:
     //
     // Given the pointer of slots, the capacity of a group and slot,
     // computes the total allocate count of the backing slot array.
-    //clear_data
+    //
     template <size_type GroupAlignment>
     JSTD_FORCED_INLINE
     size_type TotalSlotAllocCount(size_type group_capacity, size_type slot_capacity) noexcept {
@@ -2107,15 +2121,15 @@ private:
             size_type old_group_capacity = this->group_capacity();
 
             slot_type * old_slots = this->slots();
-            slot_type * old_last_slot = this->last_slot();
+            slot_type * old_last_slot = this->safe_last_slot();
             size_type old_slot_size = this->slot_size();
-            size_type old_slot_threshold = this->slot_threshold();
-            size_type old_ctrl_mask = this->ctrl_mask();
-            size_type old_slot_capacity = this->slot_capacity();
 
             this->create_slots<false>(new_capacity);
 
             if (old_groups != this_type::default_empty_groups()) {
+                assert(old_groups != nullptr);
+                assert(old_slots != nullptr);
+                assert(old_group_capacity > 0);
                 group_type * group = old_groups;
                 group_type * last_group = old_groups + old_group_capacity;
                 slot_type * slot_base = old_slots;
@@ -2130,7 +2144,7 @@ private:
                             if (JSTD_LIKELY(!group->is_sentinel(used_pos))) {
                                 slot_type * old_slot = slot_base + used_pos;
                                 assert(old_slot < old_last_slot);
-                                this->move_no_grow_unique_insert(old_slot);
+                                this->no_grow_unique_transfer_insert(old_slot);
                                 //this->destroy_slot(old_slot);
                             } else {
                                 break;
@@ -2151,10 +2165,14 @@ private:
                 GroupAllocTraits::deallocate(this->group_allocator_, old_groups_alloc, total_group_alloc_count);
             }
             if (old_slots != nullptr) {
+                size_type old_slot_capacity = this_type::calc_slot_capacity(old_group_capacity);
+                assert(old_slot_capacity != 0);
                 SlotAllocTraits::deallocate(this->slot_allocator_, old_slots, old_slot_capacity);
             }
 #else
             if (old_slots != nullptr) {
+                size_type old_slot_capacity = this_type::calc_slot_capacity(old_group_capacity);
+                assert(old_slot_capacity != 0);
                 size_type total_slot_alloc_count = this->TotalSlotAllocCount<kGroupAlignment>(
                                                          old_group_capacity, old_slot_capacity);
                 SlotAllocTraits::deallocate(this->slot_allocator_, old_slots, total_slot_alloc_count);
@@ -2422,7 +2440,7 @@ private:
     /// Use in rehash_impl()
     ///
     JSTD_FORCED_INLINE
-    void move_no_grow_unique_insert(slot_type * old_slot) {
+    void no_grow_unique_transfer_insert(slot_type * old_slot) {
         assert(old_slot != nullptr);
         locator_t locator = this->no_grow_unique_insert(old_slot->get_key());
         slot_type * new_slot = locator.slot();
@@ -2435,7 +2453,7 @@ private:
     }
 
     JSTD_FORCED_INLINE
-    void move_no_grow_unique_insert(group15_flat_table * other, slot_type * old_slot) {
+    void no_grow_unique_transfer_insert(group15_flat_table * other, slot_type * old_slot) {
         assert(old_slot != nullptr);
         locator_t locator = this->no_grow_unique_insert(old_slot->get_key());
         slot_type * new_slot = locator.slot();
@@ -2474,7 +2492,7 @@ private:
     void move_unique_insert(iterator first, iterator last) {
         for (; first != last; ++first) {
             slot_type * old_slot = first.slot();
-            this->move_no_grow_unique_insert(old_slot);
+            this->no_grow_unique_transfer_insert(old_slot);
         }
     }
 
@@ -2482,7 +2500,7 @@ private:
     void move_unique_insert(group15_flat_table & other, iterator first, iterator last) {
         for (; first != last; ++first) {
             slot_type * old_slot = first.slot();
-            this->move_no_grow_unique_insert(&other, old_slot);
+            this->no_grow_unique_transfer_insert(&other, old_slot);
         }
     }
 

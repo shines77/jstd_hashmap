@@ -2017,7 +2017,7 @@ private:
                         used_mask = BitUtils::clearLowBit32(used_mask);
                         slot_type * old_slot = slot_base + used_pos;
                         assert(old_slot < old_last_slot);
-                        this->move_no_grow_unique_insert(old_slot);
+                        this->no_grow_unique_transfer_insert(old_slot);
                         //this->destroy_slot(old_slot);
                     }
                     slot_base += kGroupWidth;
@@ -2264,7 +2264,7 @@ private:
     /// Use in rehash_impl()
     ///
     JSTD_FORCED_INLINE
-    void move_no_grow_unique_insert(slot_type * old_slot) {
+    void no_grow_unique_transfer_insert(slot_type * old_slot) {
         assert(old_slot != nullptr);
         size_type slot_index = this->no_grow_unique_insert(old_slot->value.first);
         slot_type * new_slot = this->slot_at(slot_index);
@@ -2277,7 +2277,7 @@ private:
     }
 
     JSTD_FORCED_INLINE
-    void move_no_grow_unique_insert(group16_flat_table * other, slot_type * old_slot) {
+    void no_grow_unique_transfer_insert(group16_flat_table * other, slot_type * old_slot) {
         assert(old_slot != nullptr);
         size_type slot_index = this->no_grow_unique_insert(old_slot->value.first);
         slot_type * new_slot = this->slot_at(slot_index);
@@ -2322,7 +2322,7 @@ private:
         assert(other != this);
         for (; first != last; ++first) {
             slot_type * old_slot = first.slot();
-            this->move_no_grow_unique_insert(old_slot);
+            this->no_grow_unique_transfer_insert(old_slot);
         }
     }
 
@@ -2330,7 +2330,7 @@ private:
     void move_unique_insert(group16_flat_table & other, iterator first, iterator last) {
         for (; first != last; ++first) {
             slot_type * old_slot = first.slot();
-            this->move_no_grow_unique_insert(other, old_slot);
+            this->no_grow_unique_transfer_insert(other, old_slot);
         }
     }
 
