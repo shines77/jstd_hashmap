@@ -56,9 +56,9 @@
 #include <assert.h>
 
 #include "jstd/basic/stddef.h"
-#include "jstd/traits/type_traits.h"    // For jstd::narrow_cast<T>()
 #include "jstd/support/BitVec.h"
 #include "jstd/memory/memory_barrier.h"
+#include "jstd/traits/type_traits.h"    // For jstd::narrow_cast<T>()
 
 #define GROUP30_USE_LOOK_UP_TABLE   1
 #define GROUP30_USE_SHIFT_TABLE     1

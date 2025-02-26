@@ -534,7 +534,7 @@ public:
     ///
     bool empty() const noexcept { return (this->size() == 0); }
     size_type size() const noexcept { return this->slot_size(); }
-    size_type capacity() const noexcept { return this->slot_capacity(); }
+    size_type capacity() const noexcept { return this->safe_slot_capacity(); }
     size_type max_size() const noexcept {
         return (std::numeric_limits<difference_type>::max)() / sizeof(value_type);
     }
@@ -575,8 +575,13 @@ public:
     size_type slot_size() const noexcept { return this->slot_size_; }
     size_type slot_threshold() const noexcept { return this->slot_threshold_; }
 
-    size_type slot_capacity() const noexcept {
-        return (this->slots() != nullptr) ? (this->group_capacity() * kGroupSize - 1) : 0;
+    inline size_type safe_slot_capacity() const noexcept {
+        return (this->slots() != nullptr) ? this->slot_capacity() : 0;
+    }
+
+    inline size_type slot_capacity() const noexcept {
+        assert(this->slots() != nullptr);
+        return (this->group_capacity() * kGroupSize - 1);
     }
 
     bool is_valid() const noexcept { return (this->groups() != nullptr); }
@@ -586,7 +591,7 @@ public:
     /// Bucket interface
     ///
     size_type bucket_size(size_type n) const noexcept { return 1; }
-    size_type bucket_count() const noexcept { return this->slot_capacity(); }
+    size_type bucket_count() const noexcept { return this->safe_slot_capacity(); }
     size_type max_bucket_count() const noexcept {
         return (std::numeric_limits<difference_type>::max)() / sizeof(ctrl_type);
     }
@@ -600,8 +605,9 @@ public:
     /// Hash policy
     ///
     float load_factor() const {
-        if (this->slot_capacity() != 0)
-            return ((float)this->slot_size() / this->slot_capacity());
+        size_type slot_capacity = this->safe_slot_capacity();
+        if (slot_capacity != 0)
+            return ((float)this->slot_size() / slot_capacity);
         else
             return 0.0;
     }
@@ -1214,9 +1220,7 @@ private:
         return (group_index * kGroupSize + group_pos);
     }
 
-    static inline constexpr size_type calc_slot_capacity(size_type group_capacity, size_type init_capacity) noexcept {
-        assert(init_capacity >= kMinCapacity);
-        JSTD_UNUSED(init_capacity);
+    static inline constexpr size_type calc_slot_capacity(size_type group_capacity) noexcept {
         // Exclude a sentinel mark
         return (group_capacity * kGroupSize - 1);
     }
@@ -1567,6 +1571,9 @@ private:
         // Note!!: clear_slots() need use this->ctrls(), so must clear slots first.
         this->clear_slots();
         this->clear_groups(this->groups(), this->group_capacity());
+
+        // Set the sentinel mark
+        this_type::set_sentinel_mark(this->groups(), this->group_capacity());
     }
 
     JSTD_FORCED_INLINE
@@ -2003,7 +2010,7 @@ private:
     //
     // Given the pointer of slots, the capacity of a group and slot,
     // computes the total allocate count of the backing slot array.
-    //
+    //clear_data
     template <size_type GroupAlignment>
     JSTD_FORCED_INLINE
     size_type TotalSlotAllocCount(size_type group_capacity, size_type slot_capacity) noexcept {
@@ -2017,9 +2024,8 @@ private:
     static inline void set_sentinel_mark(group_type * groups, size_type group_capacity) noexcept {
         assert(groups != nullptr);
         assert(group_capacity > 0);
-        group_type * last_group = groups + group_capacity;
         group_type * tail_group = groups + group_capacity - 1;
-        ctrl_type * ctrl = reinterpret_cast<ctrl_type *>(last_group) - 2;
+        ctrl_type * ctrl = reinterpret_cast<ctrl_type *>(tail_group) + (kGroupSize - 1);
         assert(ctrl->is_empty());
         tail_group->set_sentinel();
     }
@@ -2028,7 +2034,9 @@ private:
     JSTD_FORCED_INLINE
     void create_slots(size_type new_capacity) {
         assert(run_time::is_pow2(new_capacity));
-        if (JSTD_LIKELY(IsInitialize || (new_capacity != 0))) {
+        assert(new_capacity > 0);
+        assert(new_capacity >= kMinCapacity);
+        if (JSTD_LIKELY(IsInitialize || true)) {
 #if GROUP15_USE_HASH_POLICY
             auto hash_policy_setting = this->hash_policy_.calc_next_capacity(new_capacity);
             this->hash_policy_.commit(hash_policy_setting);
@@ -2037,9 +2045,10 @@ private:
             size_type new_group_capacity = this_type::calc_group_capacity(new_ctrl_capacity);
             assert(new_group_capacity > 0);
 
-            size_type direct_slot_capacity = this_type::calc_slot_capacity(new_group_capacity, new_capacity);
+            size_type direct_slot_capacity = this_type::calc_slot_capacity(new_group_capacity);
             size_type indirect_slot_capacity = new_capacity * this->mlf_ / kLoadFactorAmplify;
             size_type new_slot_capacity = (!kIsIndirectKV) ? direct_slot_capacity : indirect_slot_capacity;
+            assert(new_slot_capacity > 0);
 
 #if GROUP15_USE_SEPARATE_SLOTS
             size_type total_group_alloc_count = this->TotalGroupAllocCount<kGroupAlignment>(new_group_capacity);
